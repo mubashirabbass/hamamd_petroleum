@@ -1,0 +1,144 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * { box-sizing: border-box; }
+  html { font-family: 'Inter', system-ui, sans-serif; }
+
+  /* ── Light theme (default) ───────────────────────────── */
+  body {
+    @apply bg-slate-100 text-slate-800 antialiased;
+    min-height: 100vh;
+  }
+
+  /* ── Dark theme ──────────────────────────────────────── */
+  html.dark body {
+    @apply bg-dark-950 text-dark-100;
+  }
+
+  /* Scrollbar — light */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { @apply bg-slate-200; }
+  ::-webkit-scrollbar-thumb { @apply bg-slate-400 rounded-full; }
+  html.dark ::-webkit-scrollbar-track { @apply bg-dark-800; }
+  html.dark ::-webkit-scrollbar-thumb { @apply bg-dark-600 rounded-full; }
+}
+
+@layer components {
+
+  /* ── Glass card ─────────────────────────────────────── */
+  .glass {
+    @apply bg-white/80 backdrop-blur-md border border-slate-200 shadow-sm;
+  }
+  html.dark .glass {
+    @apply bg-dark-800/60 border-dark-700/50 shadow-none;
+  }
+  .glass-card {
+    @apply glass rounded-xl p-4;
+  }
+
+  /* ── Buttons ────────────────────────────────────────── */
+  .btn-primary {
+    @apply bg-primary-600 hover:bg-primary-500 text-white font-medium px-4 py-2 rounded-lg
+           transition-all duration-200 flex items-center gap-2 text-sm active:scale-95;
+  }
+  .btn-secondary {
+    @apply bg-slate-200 hover:bg-slate-300 text-slate-700 font-medium px-4 py-2 rounded-lg
+           transition-all duration-200 flex items-center gap-2 text-sm active:scale-95;
+  }
+  html.dark .btn-secondary {
+    @apply bg-dark-700 hover:bg-dark-600 text-dark-100;
+  }
+  .btn-danger {
+    @apply bg-red-50 hover:bg-red-100 text-red-600 border border-red-200
+           font-medium px-4 py-2 rounded-lg transition-all duration-200 flex items-center gap-2 text-sm;
+  }
+  html.dark .btn-danger {
+    @apply bg-red-600/20 hover:bg-red-600/40 text-red-400 border-red-600/30;
+  }
+
+  /* ── Inputs ─────────────────────────────────────────── */
+  .input {
+    @apply bg-white border border-slate-300 text-slate-800 rounded-lg px-3 py-2 text-sm w-full
+           focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:border-primary-500
+           transition-all placeholder-slate-400;
+  }
+  html.dark .input {
+    @apply bg-dark-800 border-dark-600 text-dark-100 placeholder-dark-500;
+  }
+  .label {
+    @apply block text-xs font-medium text-slate-500 mb-1.5 uppercase tracking-wide;
+  }
+  html.dark .label {
+    @apply text-dark-400;
+  }
+
+  /* ── Table ──────────────────────────────────────────── */
+  .table-header {
+    @apply bg-slate-100 text-slate-500 text-xs font-semibold uppercase tracking-wider;
+  }
+  html.dark .table-header {
+    @apply bg-dark-800 text-dark-400;
+  }
+  .table-row {
+    @apply border-b border-slate-100 hover:bg-slate-50 transition-colors;
+  }
+  html.dark .table-row {
+    @apply border-dark-700/50 hover:bg-dark-800/50;
+  }
+  .table-cell {
+    @apply px-4 py-3 text-sm text-slate-700;
+  }
+  html.dark .table-cell {
+    @apply text-dark-200;
+  }
+
+  /* ── Badges ─────────────────────────────────────────── */
+  .badge { @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium; }
+  .badge-hsd { @apply badge bg-amber-100 text-amber-700 border border-amber-300; }
+  .badge-pmg { @apply badge bg-emerald-100 text-emerald-700 border border-emerald-300; }
+  html.dark .badge-hsd { @apply bg-amber-500/20 text-amber-400 border-amber-500/30; }
+  html.dark .badge-pmg { @apply bg-emerald-500/20 text-emerald-400 border-emerald-500/30; }
+
+  /* ── Stat card ──────────────────────────────────────── */
+  .stat-card {
+    @apply glass rounded-xl p-5 flex flex-col gap-2;
+  }
+
+  /* ── Page header ────────────────────────────────────── */
+  .page-header {
+    @apply text-xl font-bold text-slate-900 flex items-center gap-3 mb-6;
+  }
+  html.dark .page-header { @apply text-white; }
+
+  /* ── Modal ──────────────────────────────────────────── */
+  .modal-overlay {
+    @apply fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center animate-fade-in;
+  }
+  html.dark .modal-overlay { @apply bg-black/60; }
+  .modal-box {
+    @apply bg-white rounded-2xl p-6 w-full max-w-md animate-slide-up shadow-2xl border border-slate-200;
+  }
+  html.dark .modal-box {
+    @apply bg-dark-800 border-dark-700/50;
+  }
+
+  /* ── Sidebar item ───────────────────────────────────── */
+  .sidebar-item { @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer; }
+  .sidebar-item-active { @apply sidebar-item bg-primary-50 text-primary-700 border border-primary-200; }
+  .sidebar-item-inactive { @apply sidebar-item text-slate-500 hover:text-slate-800 hover:bg-slate-100; }
+  html.dark .sidebar-item-active { @apply bg-primary-600/20 text-primary-400 border-primary-500/20; }
+  html.dark .sidebar-item-inactive { @apply text-dark-400 hover:text-dark-100 hover:bg-dark-700/50; }
+}
+
+/* ── Animations ──────────────────────────────────────── */
+@keyframes fadeIn  { from { opacity: 0 }         to { opacity: 1 } }
+@keyframes slideUp { from { transform: translateY(10px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
+@keyframes slideIn { from { transform: translateX(-10px); opacity: 0 } to { transform: translateX(0); opacity: 1 } }
+
+.animate-fade-in { animation: fadeIn  0.2s ease-out; }
+.animate-slide-up{ animation: slideUp 0.25s ease-out; }
+.animate-slide-in{ animation: slideIn 0.25s ease-out; }

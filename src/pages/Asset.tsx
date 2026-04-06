@@ -1,0 +1,117 @@
+import React, { useState, useMemo } from 'react';
+import { Plus, Trash2, Package, FolderPlus } from 'lucide-react';
+import { useStore } from '../store/useStore';
+import { formatCurrency, formatDate, today, paginate } from '../lib/utils';
+import { useToast } from '../components/ui/Toast';
+import SearchBar from '../components/ui/SearchBar';
+import Pagination from '../components/ui/Pagination';
+import Modal from '../components/ui/Modal';
+
+const PER_PAGE = 10;
+
+export default function AssetPage() {
+  const { assetCategories, assetEntries, addAssetCategory, deleteAssetCategory, addAssetEntry, deleteAssetEntry } = useStore();
+  const { toast } = useToast();
+  const [selectedCat, setSelectedCat] = useState<string | null>(null);
+  const [showCatForm, setShowCatForm] = useState(false);
+  const [showEntryForm, setShowEntryForm] = useState(false);
+  const [catName, setCatName] = useState('');
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [form, setForm] = useState({ date: today(), description: '', debit: '', credit: '' });
+
+  const cat = assetCategories.find((c) => c.id === selectedCat);
+
+  const filtered = useMemo(() => {
+    if (!selectedCat) return [];
+    return assetEntries
+      .filter((e) => e.categoryId === selectedCat)
+      .filter((e) => !search || e.description.toLowerCase().includes(search.toLowerCase()) || e.date.includes(search));
+  }, [assetEntries, selectedCat, search]);
+
+  const withBalance = useMemo(() => {
+    const sorted = [...filtered].reverse();
+    let bal = 0;
+    return sorted.map((e) => { bal += e.debit - e.credit; return { ...e, balance: bal }; }).reverse();
+  }, [filtered]);
+
+  const paged = paginate(withBalance, page, PER_PAGE);
+  const totals = { debit: filtered.reduce((s, e) => s + e.debit, 0), credit: filtered.reduce((s, e) => s + e.credit, 0) };
+
+  const handleAddCat = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!catName.trim()) { toast('Enter name', 'error'); return; }
+    addAssetCategory(catName.trim()); toast('Asset category created', 'success'); setCatName(''); setShowCatForm(false);
+  };
+
+  const handleAddEntry = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedCat || !form.date) { toast('Fill required fields', 'error'); return; }
+    addAssetEntry({ categoryId: selectedCat, date: form.date, description: form.description, debit: parseFloat(form.debit) || 0, credit: parseFloat(form.credit) || 0, balance: 0 });
+    toast('Asset entry added', 'success'); setForm({ date: today(), description: '', debit: '', credit: '' }); setShowEntryForm(false);
+  };
+
+  return (
+    <div className="animate-fade-in flex gap-4 h-full">
+      <div className="w-52 flex-shrink-0">
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-sm font-semibold text-slate-500 dark:text-dark-300">Categories</h2>
+          <button onClick={() => setShowCatForm(true)} className="p-1.5 rounded-lg bg-primary-600/10 dark:bg-primary-600/20 text-primary-600 dark:text-primary-400 hover:bg-primary-600/20 dark:hover:bg-primary-600/30 transition-colors"><FolderPlus className="w-4 h-4" /></button>
+        </div>
+        {assetCategories.length === 0 && <p className="text-xs text-slate-400 dark:text-dark-500 text-center mt-4">No categories yet.</p>}
+        {assetCategories.map((c) => (
+          <div key={c.id} onClick={() => { setSelectedCat(c.id); setSearch(''); setPage(1); }}
+            className={`flex items-center justify-between px-3 py-2.5 rounded-lg cursor-pointer text-sm transition-all mb-1 group ${selectedCat === c.id ? 'bg-primary-50 dark:bg-primary-600/20 text-primary-600 dark:text-primary-400 border border-primary-200 dark:border-primary-500/20' : 'text-slate-500 dark:text-dark-400 hover:bg-slate-100 dark:hover:bg-dark-700/50 hover:text-slate-900 dark:hover:text-dark-100'}`}>
+            <span className="truncate font-medium">{c.name}</span>
+            <button onClick={(e) => { e.stopPropagation(); deleteAssetCategory(c.id); if (selectedCat === c.id) setSelectedCat(null); toast('Deleted', 'warning'); }}
+              className="opacity-0 group-hover:opacity-100 text-slate-400 dark:text-dark-500 hover:text-red-500 dark:hover:text-red-400 transition-all"><Trash2 className="w-3.5 h-3.5" /></button>
+          </div>
+        ))}
+      </div>
+      <div className="flex-1 min-w-0">
+        {showCatForm && <Modal title="New Asset Category" onClose={() => setShowCatForm(false)}><form onSubmit={handleAddCat} className="space-y-3"><div><label className="label">Category Name *</label><input className="input" value={catName} onChange={(e) => setCatName(e.target.value)} placeholder="e.g. Vehicle, Equipment" required /></div><div className="flex justify-end gap-2"><button type="button" onClick={() => setShowCatForm(false)} className="btn-secondary">Cancel</button><button type="submit" className="btn-primary"><Plus className="w-4 h-4" />Create</button></div></form></Modal>}
+        {showEntryForm && <Modal title={`Add Entry — ${cat?.name}`} onClose={() => setShowEntryForm(false)}><form onSubmit={handleAddEntry} className="space-y-3"><div><label className="label">Date *</label><input type="date" className="input" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required /></div><div><label className="label">Description</label><input className="input" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div><div className="grid grid-cols-2 gap-3"><div><label className="label">Debit (₨)</label><input type="number" step="0.01" className="input" value={form.debit} onChange={(e) => setForm({ ...form, debit: e.target.value })} /></div><div><label className="label">Credit (₨)</label><input type="number" step="0.01" className="input" value={form.credit} onChange={(e) => setForm({ ...form, credit: e.target.value })} /></div></div><div className="flex justify-end gap-2"><button type="button" onClick={() => setShowEntryForm(false)} className="btn-secondary">Cancel</button><button type="submit" className="btn-primary"><Plus className="w-4 h-4" />Add Entry</button></div></form></Modal>}
+
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-blue-600/10 dark:bg-blue-600/20 flex items-center justify-center"><Package className="w-5 h-5 text-blue-600 dark:text-blue-400" /></div>
+            <div><h1 className="text-xl font-bold text-slate-900 dark:text-white">Asset</h1>{cat && <span className="text-xs text-slate-500 dark:text-dark-400">{cat.name}</span>}</div>
+          </div>
+          {selectedCat && <button onClick={() => setShowEntryForm(true)} className="btn-primary"><Plus className="w-4 h-4" /> Add Entry</button>}
+        </div>
+
+        {selectedCat ? (
+          <>
+            <div className="grid grid-cols-3 gap-3 mb-4">
+              {[{ label: 'Total Debit', value: totals.debit, color: 'text-red-600 dark:text-red-400' }, { label: 'Total Credit', value: totals.credit, color: 'text-emerald-600 dark:text-emerald-400' }, { label: 'Net Asset', value: totals.debit - totals.credit, color: 'text-blue-600 dark:text-blue-400' }].map((s) => (
+                <div key={s.label} className="stat-card"><p className="text-xs text-slate-500 dark:text-dark-400 uppercase tracking-wide">{s.label}</p><p className={`text-lg font-bold ${s.color}`}>₨ {formatCurrency(s.value)}</p></div>
+              ))}
+            </div>
+            <div className="glass rounded-xl overflow-hidden">
+              <div className="p-4 border-b border-slate-200 dark:border-dark-700/50"><SearchBar value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search assets..." /></div>
+              <table className="w-full">
+                <thead><tr className="table-header"><th className="table-cell text-left">Date</th><th className="table-cell text-left">Description</th><th className="table-cell text-right">Debit</th><th className="table-cell text-right">Credit</th><th className="table-cell text-right">Balance</th><th className="table-cell"></th></tr></thead>
+                <tbody>
+                  {paged.length === 0 ? <tr><td colSpan={6} className="table-cell text-center text-slate-400 dark:text-dark-500 py-12">No entries yet</td></tr>
+                    : paged.map((e) => (
+                      <tr key={e.id} className="table-row">
+                        <td className="table-cell">{formatDate(e.date)}</td>
+                        <td className="table-cell text-slate-600 dark:text-dark-300">{e.description || '—'}</td>
+                        <td className="table-cell text-right text-red-600 dark:text-red-400">{e.debit ? `₨ ${formatCurrency(e.debit)}` : '—'}</td>
+                        <td className="table-cell text-right text-emerald-600 dark:text-emerald-400">{e.credit ? `₨ ${formatCurrency(e.credit)}` : '—'}</td>
+                        <td className="table-cell text-right font-semibold text-slate-900 dark:text-white">₨ {formatCurrency(e.balance)}</td>
+                        <td className="table-cell text-right"><button onClick={() => { deleteAssetEntry(e.id); toast('Entry deleted', 'warning'); }} className="text-slate-400 dark:text-dark-500 hover:text-red-500 dark:hover:text-red-400 transition-colors p-1"><Trash2 className="w-4 h-4" /></button></td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+              <Pagination page={page} total={withBalance.length} perPage={PER_PAGE} onChange={setPage} />
+            </div>
+          </>
+        ) : (
+          <div className="flex flex-col items-center justify-center h-64 text-slate-400 dark:text-dark-500"><Package className="w-12 h-12 mb-3 opacity-20 dark:opacity-30" /><p>Select a category from the left</p></div>
+        )}
+      </div>
+    </div>
+  );
+}
