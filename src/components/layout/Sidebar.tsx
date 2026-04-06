@@ -54,8 +54,8 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
         </div>
         {!collapsed && (
           <div className="animate-fade-in overflow-hidden">
-            <p className="text-slate-900 dark:text-white font-bold text-sm leading-tight">EBS Manager</p>
-            <p className="text-slate-500 dark:text-dark-500 text-[10px]">Business Suite</p>
+            <p className="text-slate-900 dark:text-white font-bold text-[15px] leading-tight">EBS Manager</p>
+            <p className="text-slate-500 dark:text-dark-500 text-[11px]">Business Suite</p>
           </div>
         )}
       </div>
@@ -89,7 +89,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                       key={child.path}
                       to={child.path}
                       className={({ isActive }) => cn(
-                        'flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all duration-200',
+                        'flex items-center gap-2 px-3 py-1.5 rounded-lg text-[13px] font-bold transition-all duration-200',
                         isActive 
                           ? 'bg-primary-50 text-primary-600 dark:bg-primary-900/20 dark:text-primary-400' 
                           : 'text-slate-400 dark:text-dark-500 hover:text-slate-600 dark:hover:text-dark-300'
@@ -156,8 +156,8 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
               {currentUser.name.charAt(0).toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[11px] font-bold text-slate-900 dark:text-white truncate">{currentUser.name}</p>
-              <p className="text-[9px] text-slate-500 dark:text-dark-500 uppercase tracking-wider">{currentUser.role}</p>
+              <p className="text-[13px] font-bold text-slate-900 dark:text-white truncate">{currentUser.name}</p>
+              <p className="text-[11px] text-slate-500 dark:text-dark-500 uppercase tracking-wider">{currentUser.role}</p>
             </div>
           </div>
         </div>

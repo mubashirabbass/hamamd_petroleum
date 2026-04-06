@@ -148,7 +148,7 @@
   }
 
   /* ── Sidebar item ───────────────────────────────────── */
-  .sidebar-item { @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer border border-transparent; }
+  .sidebar-item { @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-[15px] font-semibold transition-all duration-200 cursor-pointer border border-transparent; }
   .sidebar-item-active { @apply sidebar-item bg-primary-50 text-primary-700 border-primary-200/60 shadow-sm shadow-primary-500/5; }
   .sidebar-item-inactive { @apply sidebar-item text-slate-500 hover:text-slate-800 hover:bg-slate-50 hover:border-slate-200/50; }
   html.dark .sidebar-item-active { @apply bg-primary-600/10 text-primary-400 border-primary-500/10 shadow-none; }
@@ -187,3 +187,34 @@
 .animate-fade-in { animation: fadeIn  0.2s ease-out; }
 .animate-slide-up{ animation: slideUp 0.25s ease-out; }
 .animate-slide-in{ animation: slideIn 0.25s ease-out; }
+
+/* ── Smart Scrollbar ────────────────────────────────── */
+.smart-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.1) transparent;
+  overflow-y: auto;
+}
+.smart-scroll::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.smart-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.smart-scroll::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+}
+.smart-scroll:hover::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+html.dark .smart-scroll {
+  scrollbar-color: rgba(255, 255, 255, 0.05) transparent;
+}
+html.dark .smart-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.05);
+}
+html.dark .smart-scroll:hover::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+}

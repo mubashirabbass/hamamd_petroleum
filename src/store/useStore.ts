@@ -116,6 +116,7 @@ interface AppState {
   ledgerCategories: Category[];
   ledgerEntries: LedgerEntry[];
   addLedgerCategory: (name: string) => void;
+  updateLedgerCategory: (id: string, name: string) => void;
   deleteLedgerCategory: (id: string) => void;
   addLedgerEntry: (e: Omit<LedgerEntry, 'id'>) => void;
   deleteLedgerEntry: (id: string) => void;
@@ -124,6 +125,7 @@ interface AppState {
   expenseCategories: Category[];
   expenseEntries: ExpenseEntry[];
   addExpenseCategory: (name: string) => void;
+  updateExpenseCategory: (id: string, name: string) => void;
   deleteExpenseCategory: (id: string) => void;
   addExpenseEntry: (e: Omit<ExpenseEntry, 'id'>) => void;
   deleteExpenseEntry: (id: string) => void;
@@ -132,6 +134,7 @@ interface AppState {
   assetCategories: Category[];
   assetEntries: AssetEntry[];
   addAssetCategory: (name: string) => void;
+  updateAssetCategory: (id: string, name: string) => void;
   deleteAssetCategory: (id: string) => void;
   addAssetEntry: (e: Omit<AssetEntry, 'id'>) => void;
   deleteAssetEntry: (id: string) => void;
@@ -140,6 +143,7 @@ interface AppState {
   liabilityCategories: Category[];
   liabilityEntries: LiabilityEntry[];
   addLiabilityCategory: (name: string) => void;
+  updateLiabilityCategory: (id: string, name: string) => void;
   deleteLiabilityCategory: (id: string) => void;
   addLiabilityEntry: (e: Omit<LiabilityEntry, 'id'>) => void;
   deleteLiabilityEntry: (id: string) => void;
@@ -148,6 +152,7 @@ interface AppState {
   customers: Customer[];
   customerEntries: CustomerEntry[];
   addCustomer: (c: Omit<Customer, 'id'>) => void;
+  updateCustomer: (id: string, c: Partial<Customer>) => void;
   deleteCustomer: (id: string) => void;
   addCustomerEntry: (e: Omit<CustomerEntry, 'id'>) => void;
   deleteCustomerEntry: (id: string) => void;
@@ -156,6 +161,7 @@ interface AppState {
   settings: Settings;
   updateSettings: (s: Partial<Settings>) => void;
   addUser: (u: Omit<User, 'id' | 'createdAt'>) => void;
+  updateUser: (id: string, u: Partial<User>) => void;
   deleteUser: (id: string) => void;
 
   // Auth
@@ -183,6 +189,9 @@ export const useStore = create<AppState>()(
       ledgerCategories: [],
       ledgerEntries: [],
       addLedgerCategory: (name) => set((s) => ({ ledgerCategories: [...s.ledgerCategories, { id: uid(), name }] })),
+      updateLedgerCategory: (id, name) => set((s) => ({
+        ledgerCategories: s.ledgerCategories.map((c) => (c.id === id ? { ...c, name } : c)),
+      })),
       deleteLedgerCategory: (id) => set((s) => ({
         ledgerCategories: s.ledgerCategories.filter((c) => c.id !== id),
         ledgerEntries: s.ledgerEntries.filter((e) => e.categoryId !== id),
@@ -194,6 +203,9 @@ export const useStore = create<AppState>()(
       expenseCategories: [],
       expenseEntries: [],
       addExpenseCategory: (name) => set((s) => ({ expenseCategories: [...s.expenseCategories, { id: uid(), name }] })),
+      updateExpenseCategory: (id, name) => set((s) => ({
+        expenseCategories: s.expenseCategories.map((c) => (c.id === id ? { ...c, name } : c)),
+      })),
       deleteExpenseCategory: (id) => set((s) => ({
         expenseCategories: s.expenseCategories.filter((c) => c.id !== id),
         expenseEntries: s.expenseEntries.filter((e) => e.categoryId !== id),
@@ -205,6 +217,9 @@ export const useStore = create<AppState>()(
       assetCategories: [],
       assetEntries: [],
       addAssetCategory: (name) => set((s) => ({ assetCategories: [...s.assetCategories, { id: uid(), name }] })),
+      updateAssetCategory: (id, name) => set((s) => ({
+        assetCategories: s.assetCategories.map((c) => (c.id === id ? { ...c, name } : c)),
+      })),
       deleteAssetCategory: (id) => set((s) => ({
         assetCategories: s.assetCategories.filter((c) => c.id !== id),
         assetEntries: s.assetEntries.filter((e) => e.categoryId !== id),
@@ -216,6 +231,9 @@ export const useStore = create<AppState>()(
       liabilityCategories: [],
       liabilityEntries: [],
       addLiabilityCategory: (name) => set((s) => ({ liabilityCategories: [...s.liabilityCategories, { id: uid(), name }] })),
+      updateLiabilityCategory: (id, name) => set((s) => ({
+        liabilityCategories: s.liabilityCategories.map((c) => (c.id === id ? { ...c, name } : c)),
+      })),
       deleteLiabilityCategory: (id) => set((s) => ({
         liabilityCategories: s.liabilityCategories.filter((c) => c.id !== id),
         liabilityEntries: s.liabilityEntries.filter((e) => e.categoryId !== id),
@@ -227,6 +245,9 @@ export const useStore = create<AppState>()(
       customers: [],
       customerEntries: [],
       addCustomer: (c) => set((s) => ({ customers: [...s.customers, { ...c, id: uid() }] })),
+      updateCustomer: (id, data) => set((s) => ({
+        customers: s.customers.map((c) => (c.id === id ? { ...c, ...data } : c)),
+      })),
       deleteCustomer: (id) => set((s) => ({
         customers: s.customers.filter((c) => c.id !== id),
         customerEntries: s.customerEntries.filter((e) => e.customerId !== id),
@@ -243,6 +264,12 @@ export const useStore = create<AppState>()(
       },
       updateSettings: (sets) => set((s) => ({ settings: { ...s.settings, ...sets } })),
       addUser: (u) => set((s) => ({ settings: { ...s.settings, users: [{ ...u, id: uid(), createdAt: new Date().toISOString() }, ...s.settings.users ] } })),
+      updateUser: (id, data) => set((s) => ({
+        settings: {
+          ...s.settings,
+          users: s.settings.users.map((u) => (u.id === id ? { ...u, ...data } : u)),
+        },
+      })),
       deleteUser: (id) => set((s) => ({ settings: { ...s.settings, users: s.settings.users.filter(x => x.id !== id) } })),
 
       // ── Auth ───────────────────────────────────────────────────────────
