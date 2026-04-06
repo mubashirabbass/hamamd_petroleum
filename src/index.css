@@ -60,6 +60,17 @@
     @apply bg-red-600/20 hover:bg-red-600/40 text-red-400 border-red-600/30;
   }
 
+  .btn-primary-emerald {
+    @apply bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-4 py-2 rounded-lg
+           transition-all duration-200 flex items-center gap-2 text-sm active:scale-95;
+  }
+  html.dark .btn-primary-emerald { @apply bg-emerald-600/80 hover:bg-emerald-500/80; }
+
+  .btn-icon {
+    @apply p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 transition-all active:scale-90;
+  }
+  html.dark .btn-icon { @apply bg-dark-800 hover:bg-dark-700 text-dark-400; }
+
   /* ── Inputs ─────────────────────────────────────────── */
   .input {
     @apply bg-white border border-slate-300 text-slate-800 rounded-lg px-3 py-2 text-sm w-full
@@ -127,11 +138,35 @@
   }
 
   /* ── Sidebar item ───────────────────────────────────── */
-  .sidebar-item { @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer; }
-  .sidebar-item-active { @apply sidebar-item bg-primary-50 text-primary-700 border border-primary-200; }
-  .sidebar-item-inactive { @apply sidebar-item text-slate-500 hover:text-slate-800 hover:bg-slate-100; }
-  html.dark .sidebar-item-active { @apply bg-primary-600/20 text-primary-400 border-primary-500/20; }
-  html.dark .sidebar-item-inactive { @apply text-dark-400 hover:text-dark-100 hover:bg-dark-700/50; }
+  .sidebar-item { @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer border border-transparent; }
+  .sidebar-item-active { @apply sidebar-item bg-primary-50 text-primary-700 border-primary-200/60 shadow-sm shadow-primary-500/5; }
+  .sidebar-item-inactive { @apply sidebar-item text-slate-500 hover:text-slate-800 hover:bg-slate-50 hover:border-slate-200/50; }
+  html.dark .sidebar-item-active { @apply bg-primary-600/10 text-primary-400 border-primary-500/10 shadow-none; }
+  html.dark .sidebar-item-inactive { @apply text-dark-400 hover:text-dark-100 hover:bg-dark-800/40 hover:border-dark-700/30; }
+
+  /* ── Category Panel ─────────────────────────────────── */
+  .category-panel {
+    @apply glass border-r-0 rounded-2xl flex flex-col p-2 space-y-1;
+  }
+  .category-item {
+    @apply flex items-center justify-between px-3 py-2.5 rounded-xl cursor-pointer text-sm font-medium transition-all duration-200 border border-transparent;
+  }
+  .category-item-active {
+    @apply category-item bg-primary-600/5 text-primary-600 border-primary-600/10 shadow-sm shadow-primary-600/5 relative overflow-hidden;
+  }
+  .category-item-active::before {
+    content: '';
+    @apply absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-primary-600 rounded-r-full;
+  }
+  .category-item-inactive {
+    @apply category-item text-slate-500 hover:bg-slate-100 hover:text-slate-900 hover:border-slate-200;
+  }
+  html.dark .category-item-active {
+    @apply bg-primary-600/20 text-primary-400 border-primary-500/20 shadow-none;
+  }
+  html.dark .category-item-inactive {
+    @apply text-dark-400 hover:bg-dark-700/50 hover:text-dark-100 hover:border-dark-600/50;
+  }
 }
 
 /* ── Animations ──────────────────────────────────────── */

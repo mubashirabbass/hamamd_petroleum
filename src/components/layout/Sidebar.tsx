@@ -3,12 +3,13 @@ import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, ShoppingCart, TrendingUp, BookOpen,
   DollarSign, Package, AlertTriangle, BarChart3, Users,
-  ChevronLeft, ChevronRight, Fuel, Sun, Moon, ChevronDown
+  ChevronLeft, ChevronRight, Fuel, Sun, Moon
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useTheme } from '../../contexts/ThemeContext';
 
 const navItems = [
+// ... existing items ...
   { label: 'Dashboard',  path: '/',           icon: LayoutDashboard },
   { label: 'Purchase',   path: '/purchase',   icon: ShoppingCart },
   { label: 'Sale',       path: '/sale',       icon: TrendingUp },
@@ -16,14 +17,13 @@ const navItems = [
   { label: 'Expense',    path: '/expense',    icon: DollarSign },
   { label: 'Asset',      path: '/asset',      icon: Package },
   { label: 'Liability',  path: '/liability',  icon: AlertTriangle },
-  {
-    label: 'Stock',
-    path: '/stock',
+  { 
+    label: 'Stock',     
+    path: '/stock',     
     icon: BarChart3,
     children: [
-      { label: 'Overview',   path: '/stock' },
-      { label: 'HSD Details', path: '/stock/hsd' },
-      { label: 'PMG Details', path: '/stock/pmg' },
+      { label: 'HSD Stock', path: '/stock/hsd' },
+      { label: 'PMG Stock', path: '/stock/pmg' }
     ]
   },
   { label: 'Customer',   path: '/customer',   icon: Users },
@@ -34,16 +34,10 @@ interface SidebarProps { collapsed: boolean; onToggle: () => void; }
 export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const location = useLocation();
   const { theme, toggle: toggleTheme } = useTheme();
-  const [expandedMenus, setExpandedMenus] = React.useState<string[]>(['Stock']);
-
-  const toggleMenu = (label: string) => {
-    setExpandedMenus(prev =>
-      prev.includes(label) ? prev.filter(l => l !== label) : [...prev, label]
-    );
-  };
 
   return (
     <aside
+// ... layout ...
       className={cn(
         'relative h-screen flex-shrink-0 flex flex-col transition-all duration-300 ease-in-out border-r',
         'bg-white/90 dark:bg-dark-900/95 backdrop-blur-xl border-slate-200 dark:border-dark-700/50',
@@ -66,59 +60,48 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
       {/* Nav */}
       <nav className="flex-1 py-3 px-2 space-y-1 overflow-y-auto">
         {navItems.map((item) => {
-          const { label, path, icon: Icon, children } = item;
+          const { label, path, icon: Icon, children } = item as any;
           const active = path === '/' ? location.pathname === '/' : location.pathname.startsWith(path);
-          const isExpanded = expandedMenus.includes(label);
-
-          if (children && !collapsed) {
-            return (
-              <div key={label} className="space-y-1">
-                <button
-                  onClick={() => toggleMenu(label)}
-                  className={cn(
-                    'sidebar-item w-full',
-                    active ? 'sidebar-item-active' : 'sidebar-item-inactive'
-                  )}
-                >
-                  <Icon className="w-4 h-4 flex-shrink-0" />
-                  <span className="flex-1 text-left truncate animate-fade-in">{label}</span>
-                  <ChevronDown className={cn('w-3.5 h-3.5 transition-transform duration-200', isExpanded && 'rotate-180')} />
-                </button>
-                {isExpanded && (
-                  <div className="ml-7 space-y-1 animate-slide-up">
-                    {children.map(sub => (
-                      <NavLink
-                        key={sub.path}
-                        to={sub.path}
-                        end={sub.path === '/stock'}
-                        className={({ isActive }) => cn(
-                          'flex items-center px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200',
-                          isActive
-                            ? 'text-primary-600 dark:text-primary-400 bg-primary-600/10 dark:bg-primary-600/20'
-                            : 'text-slate-500 dark:text-dark-400 hover:text-slate-900 dark:hover:text-dark-100 hover:bg-slate-100 dark:hover:bg-dark-700/50'
-                        )}
-                      >
-                        {sub.label}
-                      </NavLink>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          }
+          const hasChildren = children && children.length > 0;
 
           return (
-            <NavLink key={path} to={path}
-              className={cn(
-                'sidebar-item',
-                active ? 'sidebar-item-active' : 'sidebar-item-inactive',
-                collapsed && 'justify-center px-2'
+            <React.Fragment key={path}>
+              <NavLink to={path}
+                className={cn(
+                  'sidebar-item',
+                  active ? 'sidebar-item-active' : 'sidebar-item-inactive font-medium',
+                  collapsed && 'justify-center px-2'
+                )}
+                title={collapsed ? label : undefined}
+                end={path === '/stock'} // Don't match /stock/hsd for the main /stock link color if we show children
+              >
+                <Icon className="w-4 h-4 flex-shrink-0" />
+                {!collapsed && <span className="truncate animate-fade-in">{label}</span>}
+              </NavLink>
+
+              {hasChildren && !collapsed && (
+                <div className="mt-1 space-y-1 ml-4 border-l border-slate-100 dark:border-dark-700/50 pl-2">
+                  {children.map((child: any) => (
+                    <NavLink
+                      key={child.path}
+                      to={child.path}
+                      className={({ isActive }) => cn(
+                        'flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all duration-200',
+                        isActive 
+                          ? 'bg-primary-50 text-primary-600 dark:bg-primary-900/20 dark:text-primary-400' 
+                          : 'text-slate-400 dark:text-dark-500 hover:text-slate-600 dark:hover:text-dark-300'
+                      )}
+                    >
+                       <span className={cn(
+                         "w-1 h-1 rounded-full",
+                         child.label.includes('HSD') ? "bg-amber-500" : "bg-emerald-500"
+                       )}></span>
+                       {child.label}
+                    </NavLink>
+                  ))}
+                </div>
               )}
-              title={collapsed ? label : undefined}
-            >
-              <Icon className="w-4 h-4 flex-shrink-0" />
-              {!collapsed && <span className="truncate animate-fade-in">{label}</span>}
-            </NavLink>
+            </React.Fragment>
           );
         })}
       </nav>
