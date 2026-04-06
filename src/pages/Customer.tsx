@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef } from 'react';
 import { Plus, Trash2, Users, UserPlus, Printer } from 'lucide-react';
 import { useStore } from '../store/useStore';
-import { formatCurrency, formatDate, today, paginate } from '../lib/utils';
+import { formatCurrency, formatDate, today, paginate, filterByStartDate } from '../lib/utils';
 import { useToast } from '../components/ui/Toast';
 import SearchBar from '../components/ui/SearchBar';
 import Pagination from '../components/ui/Pagination';
@@ -10,7 +10,7 @@ import Modal from '../components/ui/Modal';
 const PER_PAGE = 10;
 
 export default function CustomerPage() {
-  const { customers, customerEntries, addCustomer, deleteCustomer, addCustomerEntry, deleteCustomerEntry } = useStore();
+  const { customers, customerEntries, addCustomer, deleteCustomer, addCustomerEntry, deleteCustomerEntry, settings } = useStore();
   const { toast } = useToast();
   const printRef = useRef<HTMLDivElement>(null);
 
@@ -34,7 +34,7 @@ export default function CustomerPage() {
 
   const filtered = useMemo(() => {
     if (!selectedCust) return [];
-    return customerEntries
+    return filterByStartDate(customerEntries, settings.startDate)
       .filter((e) => e.customerId === selectedCust)
       .filter((e) => {
         const matchesSearch = !search || e.description.toLowerCase().includes(search.toLowerCase()) || e.date.includes(search);
@@ -42,7 +42,7 @@ export default function CustomerPage() {
         const matchesTo   = !toDate   || e.date <= toDate;
         return matchesSearch && matchesFrom && matchesTo;
       });
-  }, [customerEntries, selectedCust, search, fromDate, toDate]);
+  }, [customerEntries, settings.startDate, selectedCust, search, fromDate, toDate]);
 
   const withBalance = useMemo(() => {
     const sorted = [...filtered].reverse();

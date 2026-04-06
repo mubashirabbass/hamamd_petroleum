@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Layout from './components/layout/Layout';
 import { ToastProvider } from './components/ui/Toast';
 import Dashboard  from './pages/Dashboard';
@@ -11,14 +12,29 @@ import Liability  from './pages/Liability';
 import Stock      from './pages/Stock';
 import StockDetail from './pages/StockDetail';
 import Customer   from './pages/Customer';
+import Settings   from './pages/Settings';
+import Login      from './pages/Login';
 
 import { ThemeProvider } from './contexts/ThemeContext';
+import { useStore } from './store/useStore';
 
 export default function App() {
+  const { currentUser } = useStore();
+
+  if (!currentUser) {
+    return (
+      <ThemeProvider>
+        <ToastProvider>
+          <Login />
+        </ToastProvider>
+      </ThemeProvider>
+    );
+  }
+
   return (
     <ThemeProvider>
-      <BrowserRouter>
-        <ToastProvider>
+      <ToastProvider>
+        <Router>
           <Routes>
             <Route path="/" element={<Layout />}>
               <Route index           element={<Dashboard />} />
@@ -31,10 +47,11 @@ export default function App() {
               <Route path="stock"    element={<Stock />} />
               <Route path="stock/:type" element={<StockDetail />} />
               <Route path="customer" element={<Customer />} />
+              <Route path="settings" element={<Settings />} />
             </Route>
           </Routes>
-        </ToastProvider>
-      </BrowserRouter>
+        </Router>
+      </ToastProvider>
     </ThemeProvider>
   );
 }

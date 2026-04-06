@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Plus, Trash2, ShoppingCart, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useStore } from '../store/useStore';
-import { formatCurrency, formatDate, today, paginate } from '../lib/utils';
+import { formatCurrency, formatDate, today, paginate, filterByStartDate } from '../lib/utils';
 import { useToast } from '../components/ui/Toast';
 import SearchBar from '../components/ui/SearchBar';
 import Pagination from '../components/ui/Pagination';
@@ -13,7 +13,7 @@ const PER_PAGE = 10;
 
 export default function PurchasePage() {
 // ... existing state ...
-  const { purchases, addPurchase, deletePurchase } = useStore();
+  const { purchases, addPurchase, deletePurchase, settings } = useStore();
   const { toast } = useToast();
 
   const [fuelType, setFuelType] = useState<FuelType>('HSD');
@@ -35,7 +35,7 @@ export default function PurchasePage() {
   };
 
   const filtered = useMemo(() => {
-    return purchases
+    return filterByStartDate(purchases, settings.startDate)
       .filter((p) => p.type === fuelType)
       .filter((p) => {
         const matchesSearch = !search || p.details.toLowerCase().includes(search.toLowerCase()) || p.date.includes(search);
@@ -43,7 +43,7 @@ export default function PurchasePage() {
         const matchesTo   = !toDate   || p.date <= toDate;
         return matchesSearch && matchesFrom && matchesTo;
       });
-  }, [purchases, fuelType, search, fromDate, toDate]);
+  }, [purchases, settings.startDate, fuelType, search, fromDate, toDate]);
 
   const paged = paginate(filtered, page, PER_PAGE);
 

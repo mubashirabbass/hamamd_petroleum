@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Plus, Trash2, AlertTriangle, FolderPlus } from 'lucide-react';
 import { useStore } from '../store/useStore';
-import { formatCurrency, formatDate, today, paginate } from '../lib/utils';
+import { formatCurrency, formatDate, today, paginate, filterByStartDate } from '../lib/utils';
 import { useToast } from '../components/ui/Toast';
 import SearchBar from '../components/ui/SearchBar';
 import Pagination from '../components/ui/Pagination';
@@ -10,7 +10,7 @@ import Modal from '../components/ui/Modal';
 const PER_PAGE = 10;
 
 export default function LiabilityPage() {
-  const { liabilityCategories, liabilityEntries, addLiabilityCategory, deleteLiabilityCategory, addLiabilityEntry, deleteLiabilityEntry } = useStore();
+  const { liabilityCategories, liabilityEntries, addLiabilityCategory, deleteLiabilityCategory, addLiabilityEntry, deleteLiabilityEntry, settings } = useStore();
   const { toast } = useToast();
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
   const [showCatForm, setShowCatForm] = useState(false);
@@ -26,7 +26,7 @@ export default function LiabilityPage() {
 
   const filtered = useMemo(() => {
     if (!selectedCat) return [];
-    return liabilityEntries
+    return filterByStartDate(liabilityEntries, settings.startDate)
       .filter((e) => e.categoryId === selectedCat)
       .filter((e) => {
         const matchesSearch = !search || e.description.toLowerCase().includes(search.toLowerCase()) || e.date.includes(search);
@@ -34,7 +34,7 @@ export default function LiabilityPage() {
         const matchesTo   = !toDate   || e.date <= toDate;
         return matchesSearch && matchesFrom && matchesTo;
       });
-  }, [liabilityEntries, selectedCat, search, fromDate, toDate]);
+  }, [liabilityEntries, settings.startDate, selectedCat, search, fromDate, toDate]);
 
   const withBalance = useMemo(() => {
     const sorted = [...filtered].reverse();

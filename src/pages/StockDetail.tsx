@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useParams, Navigate, Link } from 'react-router-dom';
 import { Package, LayoutList, ArrowLeft } from 'lucide-react';
 import { useStore, FuelType } from '../store/useStore';
-import { formatDate, paginate } from '../lib/utils';
+import { formatDate, paginate, filterByStartDate } from '../lib/utils';
 import SearchBar from '../components/ui/SearchBar';
 import Pagination from '../components/ui/Pagination';
 
@@ -11,7 +11,7 @@ const PER_PAGE = 20;
 export default function StockDetailPage() {
   const { type } = useParams<{ type: string }>();
   const fuelType = type?.toUpperCase() as FuelType;
-  const { purchases, sales } = useStore();
+  const { purchases, sales, settings } = useStore();
 
   if (fuelType !== 'HSD' && fuelType !== 'PMG') {
     return <Navigate to="/stock" replace />;
@@ -24,11 +24,11 @@ export default function StockDetailPage() {
   const [page, setPage] = useState(1);
 
   const history = useMemo(() => {
-    const rawPurchases = purchases
+    const rawPurchases = filterByStartDate(purchases, settings.startDate)
       .filter((p) => p.type === fuelType)
       .map((p) => ({ id: p.id, date: p.date, type: 'Purchase' as const, qtyIn: p.quantity, qtyOut: 0, details: p.details }));
     
-    const rawSales = sales
+    const rawSales = filterByStartDate(sales, settings.startDate)
       .filter((s) => s.type === fuelType)
       .map((s) => ({ id: s.id, date: s.date, type: 'Sale' as const, qtyIn: 0, qtyOut: s.quantity, details: 'Daily Sale' }));
 
@@ -43,7 +43,7 @@ export default function StockDetailPage() {
     });
 
     return withBal.reverse();
-  }, [purchases, sales, fuelType]);
+  }, [purchases, sales, fuelType, settings.startDate]);
 
   const filtered = history.filter((h) => {
     const matchesSearch = !search || h.details.toLowerCase().includes(search.toLowerCase()) || h.date.includes(search);

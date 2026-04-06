@@ -3,10 +3,11 @@ import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, ShoppingCart, TrendingUp, BookOpen,
   DollarSign, Package, AlertTriangle, BarChart3, Users,
-  ChevronLeft, ChevronRight, Fuel, Sun, Moon
+  ChevronLeft, ChevronRight, Fuel, Sun, Moon, Settings, LogOut, User
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useStore } from '../../store/useStore';
 
 const navItems = [
 // ... existing items ...
@@ -27,6 +28,7 @@ const navItems = [
     ]
   },
   { label: 'Customer',   path: '/customer',   icon: Users },
+  { label: 'Settings',   path: '/settings',   icon: Settings },
 ];
 
 interface SidebarProps { collapsed: boolean; onToggle: () => void; }
@@ -34,6 +36,7 @@ interface SidebarProps { collapsed: boolean; onToggle: () => void; }
 export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const location = useLocation();
   const { theme, toggle: toggleTheme } = useTheme();
+  const { currentUser, logout } = useStore();
 
   return (
     <aside
@@ -129,9 +132,36 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
             collapsed && 'justify-center px-2'
           )}
         >
-          {collapsed ? <ChevronRight className="w-4 h-4" /> : <><ChevronLeft className="w-4 h-4" /><span>Collapse</span></>}
+          {collapsed ? <ChevronRight className="w-4 h-4" /> : <><ChevronLeft className="w-4 h-4" /><span>Collapse Sidebar</span></>}
+        </button>
+
+        <button
+          onClick={logout}
+          className={cn(
+            'w-full flex items-center gap-3 px-2.5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200',
+            'text-red-500 hover:text-red-600 hover:bg-red-500/10',
+            collapsed && 'justify-center px-2'
+          )}
+          title={collapsed ? 'Logout' : undefined}
+        >
+          <LogOut className="w-4 h-4" />
+          {!collapsed && <span className="animate-fade-in">Logout</span>}
         </button>
       </div>
+
+      {!collapsed && currentUser && (
+        <div className="p-4 mt-auto border-t border-slate-200 dark:border-dark-700/50 bg-slate-50/50 dark:bg-dark-800/50">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-primary-600 flex items-center justify-center text-white font-bold text-xs">
+              {currentUser.name.charAt(0).toUpperCase()}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[11px] font-bold text-slate-900 dark:text-white truncate">{currentUser.name}</p>
+              <p className="text-[9px] text-slate-500 dark:text-dark-500 uppercase tracking-wider">{currentUser.role}</p>
+            </div>
+          </div>
+        </div>
+      )}
     </aside>
   );
 }

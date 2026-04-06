@@ -85,6 +85,20 @@ export interface CustomerEntry {
   balance: number;
 }
 
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  password: string;
+  role: 'Admin' | 'Staff';
+  createdAt: string;
+}
+
+export interface Settings {
+  startDate: string;
+  users: User[];
+}
+
 // ─── Store ───────────────────────────────────────────────────────────────────
 
 interface AppState {
@@ -137,6 +151,17 @@ interface AppState {
   deleteCustomer: (id: string) => void;
   addCustomerEntry: (e: Omit<CustomerEntry, 'id'>) => void;
   deleteCustomerEntry: (id: string) => void;
+
+  // Settings & Users
+  settings: Settings;
+  updateSettings: (s: Partial<Settings>) => void;
+  addUser: (u: Omit<User, 'id' | 'createdAt'>) => void;
+  deleteUser: (id: string) => void;
+
+  // Auth
+  currentUser: User | null;
+  login: (u: User) => void;
+  logout: () => void;
 }
 
 const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -208,6 +233,22 @@ export const useStore = create<AppState>()(
       })),
       addCustomerEntry: (e) => set((s) => ({ customerEntries: [{ ...e, id: uid() }, ...s.customerEntries] })),
       deleteCustomerEntry: (id) => set((s) => ({ customerEntries: s.customerEntries.filter((x) => x.id !== id) })),
+
+      // ── Settings & Users ───────────────────────────────────────────────
+      settings: { 
+        startDate: '', 
+        users: [
+          { id: 'master-001', name: 'Master Admin', email: 'master@gmail.com', password: 'master', role: 'Admin', createdAt: new Date().toISOString() }
+        ] 
+      },
+      updateSettings: (sets) => set((s) => ({ settings: { ...s.settings, ...sets } })),
+      addUser: (u) => set((s) => ({ settings: { ...s.settings, users: [{ ...u, id: uid(), createdAt: new Date().toISOString() }, ...s.settings.users ] } })),
+      deleteUser: (id) => set((s) => ({ settings: { ...s.settings, users: s.settings.users.filter(x => x.id !== id) } })),
+
+      // ── Auth ───────────────────────────────────────────────────────────
+      currentUser: null,
+      login: (u) => set({ currentUser: u }),
+      logout: () => set({ currentUser: null }),
     }),
     { name: 'ebs-business-store' }
   )

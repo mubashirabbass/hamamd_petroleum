@@ -26,3 +26,8 @@ export function paginate<T>(items: T[], page: number, perPage: number): T[] {
 export function totalPages(total: number, perPage: number): number {
   return Math.max(1, Math.ceil(total / perPage));
 }
+
+export function filterByStartDate<T extends { date: string }>(items: T[], startDate: string): T[] {
+  if (!startDate) return items;
+  return items.filter(item => item.date >= startDate);
+}

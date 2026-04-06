@@ -1,12 +1,15 @@
 import { useMemo } from 'react';
 import { BarChart3, TrendingUp, TrendingDown } from 'lucide-react';
 import { useStore } from '../store/useStore';
-import { formatCurrency } from '../lib/utils';
+import { formatCurrency, filterByStartDate } from '../lib/utils';
 
 export default function StockPage() {
-  const { purchases, sales } = useStore();
+  const { purchases: rawPurchases, sales: rawSales, settings } = useStore();
 
   const stock = useMemo(() => {
+    const purchases = filterByStartDate(rawPurchases, settings.startDate);
+    const sales = filterByStartDate(rawSales, settings.startDate);
+
     const calc = (type: 'HSD' | 'PMG') => {
       const totalPurchased = purchases.filter((p) => p.type === type).reduce((s, p) => s + p.quantity, 0);
       const totalSold      = sales.filter((s) => s.type === type).reduce((s, x) => s + x.quantity, 0);
@@ -16,7 +19,7 @@ export default function StockPage() {
       return { totalPurchased, totalSold, current, purchaseValue, saleValue };
     };
     return { HSD: calc('HSD'), PMG: calc('PMG') };
-  }, [purchases, sales]);
+  }, [rawPurchases, rawSales, settings.startDate]);
 
   const cards = [
     {

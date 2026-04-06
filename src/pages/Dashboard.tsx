@@ -9,7 +9,11 @@ import { useStore } from '../store/useStore';
 import { formatCurrency } from '../lib/utils';
 
 export default function Dashboard() {
-  const { purchases, sales, customers, expenseEntries, ledgerCategories, expenseCategories, assetCategories, liabilityCategories } = useStore();
+  const { purchases: rawPurchases, sales: rawSales, customers, expenseEntries: rawExpenses, ledgerCategories, expenseCategories, assetCategories, liabilityCategories, settings } = useStore();
+
+  const purchases = useMemo(() => settings.startDate ? rawPurchases.filter(p => p.date >= settings.startDate) : rawPurchases, [rawPurchases, settings.startDate]);
+  const sales = useMemo(() => settings.startDate ? rawSales.filter(s => s.date >= settings.startDate) : rawSales, [rawSales, settings.startDate]);
+  const expenseEntries = useMemo(() => settings.startDate ? rawExpenses.filter(e => e.date >= settings.startDate) : rawExpenses, [rawExpenses, settings.startDate]);
 
   const stats = useMemo(() => {
     const hsdPurchased = purchases.filter((p) => p.type === 'HSD').reduce((s, p) => s + p.totalAmount, 0);
