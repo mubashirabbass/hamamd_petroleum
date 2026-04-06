@@ -10,7 +10,7 @@ import Modal from '../components/ui/Modal';
 const PER_PAGE = 10;
 
 export default function ExpensePage() {
-  const { expenseCategories, expenseEntries, addExpenseCategory, deleteExpenseCategory, addExpenseEntry, deleteExpenseEntry, settings } = useStore();
+  const { expenseCategories, expenseEntries, addExpenseCategory, deleteExpenseCategory, addExpenseEntry, deleteExpenseEntry, settings, currentUser } = useStore();
   const { toast } = useToast();
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
   const [showCatForm, setShowCatForm] = useState(false);
@@ -95,12 +95,14 @@ export default function ExpensePage() {
                    <span className={`w-1.5 h-1.5 rounded-full ${selectedCat === c.id ? 'bg-primary-600 animate-pulse' : 'bg-slate-300 dark:bg-dark-600'}`}></span>
                    <span className="truncate">{c.name}</span>
                 </div>
-                <button
-                  onClick={(e) => { e.stopPropagation(); deleteExpenseCategory(c.id); if (selectedCat === c.id) setSelectedCat(null); toast('Category deleted', 'warning'); }}
-                  className="opacity-0 group-hover:opacity-100 text-slate-400 dark:text-dark-500 hover:text-red-500 dark:hover:text-red-400 transition-all p-1"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
+                {currentUser?.role === 'Admin' && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); deleteExpenseCategory(c.id); if (selectedCat === c.id) setSelectedCat(null); toast('Category deleted', 'warning'); }}
+                    className="opacity-0 group-hover:opacity-100 text-slate-400 dark:text-dark-500 hover:text-red-500 dark:hover:text-red-400 transition-all p-1"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
             ))
           )}
@@ -176,7 +178,9 @@ export default function ExpensePage() {
                         <td className="table-cell text-slate-600 dark:text-dark-300 min-w-[200px]">{e.details || '—'}</td>
                         <td className="table-cell text-right font-semibold text-red-600 dark:text-red-400">₨ {formatCurrency(e.amount)}</td>
                         <td className="table-cell text-right">
-                          <button onClick={() => { deleteExpenseEntry(e.id); toast('Expense deleted', 'warning'); }} className="text-slate-400 dark:text-dark-500 hover:text-red-600 dark:hover:text-red-400 transition-colors p-1"><Trash2 className="w-4 h-4" /></button>
+                          {currentUser?.role === 'Admin' && (
+                            <button onClick={() => { deleteExpenseEntry(e.id); toast('Expense deleted', 'warning'); }} className="text-slate-400 dark:text-dark-500 hover:text-red-600 dark:hover:text-red-400 transition-colors p-1"><Trash2 className="w-4 h-4" /></button>
+                          )}
                         </td>
                       </tr>
                     ))}

@@ -12,7 +12,7 @@ import type { FuelType } from '../store/useStore';
 const PER_PAGE = 10;
 
 export default function SalePage() {
-  const { sales, addSale, deleteSale, settings } = useStore();
+  const { sales, addSale, deleteSale, settings, currentUser } = useStore();
   const { toast } = useToast();
 
   const [fuelType, setFuelType] = useState<FuelType>('HSD');
@@ -165,10 +165,12 @@ export default function SalePage() {
                     <td className="table-cell text-right">₨ {formatCurrency(s.rate)}</td>
                     <td className="table-cell text-right font-semibold text-slate-900 dark:text-white">₨ {formatCurrency(s.amount)}</td>
                     <td className="table-cell text-right">
-                      <button onClick={() => { deleteSale(s.id); toast('Sale deleted', 'warning'); }}
-                        className="text-slate-400 dark:text-dark-500 hover:text-red-600 dark:hover:text-red-400 transition-colors p-1">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {currentUser?.role === 'Admin' && (
+                        <button onClick={() => { deleteSale(s.id); toast('Sale deleted', 'warning'); }}
+                          className="text-slate-400 dark:text-dark-500 hover:text-red-600 dark:hover:text-red-400 transition-colors p-1">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}

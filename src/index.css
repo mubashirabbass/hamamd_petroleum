@@ -105,16 +105,16 @@
     @apply bg-dark-800 text-dark-400;
   }
   .table-row {
-    @apply border-b border-slate-100 hover:bg-slate-50 transition-colors;
+    @apply border-b border-slate-100 hover:bg-slate-50/50 transition-colors;
   }
   html.dark .table-row {
-    @apply border-dark-700/50 hover:bg-dark-800/50;
+    @apply border-dark-700/40 hover:bg-dark-800/40;
   }
   .table-cell {
-    @apply px-4 py-3 text-sm text-slate-700;
+    @apply px-4 py-3 text-sm text-slate-700 border-r border-slate-50 last:border-r-0;
   }
   html.dark .table-cell {
-    @apply text-dark-200;
+    @apply text-dark-200 border-dark-800/40 last:border-r-0;
   }
 
   /* ── Badges ─────────────────────────────────────────── */

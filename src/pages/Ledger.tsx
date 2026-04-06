@@ -10,7 +10,7 @@ import Modal from '../components/ui/Modal';
 const PER_PAGE = 10;
 
 export default function LedgerPage() {
-  const { ledgerCategories, ledgerEntries, addLedgerCategory, deleteLedgerCategory, addLedgerEntry, deleteLedgerEntry, settings } = useStore();
+  const { ledgerCategories, ledgerEntries, addLedgerCategory, deleteLedgerCategory, addLedgerEntry, deleteLedgerEntry, settings, currentUser } = useStore();
   const { toast } = useToast();
 
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
@@ -113,12 +113,14 @@ export default function LedgerPage() {
                    <span className={`w-1.5 h-1.5 rounded-full ${selectedCat === c.id ? 'bg-primary-600 animate-pulse' : 'bg-slate-300 dark:bg-dark-600'}`}></span>
                     <span className="truncate">{c.name}</span>
                  </div>
-                 <button
-                   onClick={(e) => { e.stopPropagation(); deleteLedgerCategory(c.id); if (selectedCat === c.id) setSelectedCat(null); toast('Category deleted', 'warning'); }}
-                   className="opacity-0 group-hover:opacity-100 text-slate-400 dark:text-dark-500 hover:text-red-500 dark:hover:text-red-400 transition-all p-1"
-                 >
-                   <Trash2 className="w-3.5 h-3.5" />
-                 </button>
+                 {currentUser?.role === 'Admin' && (
+                   <button
+                     onClick={(e) => { e.stopPropagation(); deleteLedgerCategory(c.id); if (selectedCat === c.id) setSelectedCat(null); toast('Category deleted', 'warning'); }}
+                     className="opacity-0 group-hover:opacity-100 text-slate-400 dark:text-dark-500 hover:text-red-500 dark:hover:text-red-400 transition-all p-1"
+                   >
+                     <Trash2 className="w-3.5 h-3.5" />
+                   </button>
+                 )}
                </div>
              ))
            )}
@@ -215,7 +217,9 @@ export default function LedgerPage() {
                          <td className="table-cell text-right text-emerald-600 dark:text-emerald-400">{e.credit ? `₨ ${formatCurrency(e.credit)}` : '—'}</td>
                          <td className="table-cell text-right font-semibold text-slate-900 dark:text-white">₨ {formatCurrency(e.balance)}</td>
                          <td className="table-cell text-right">
-                           <button onClick={() => { deleteLedgerEntry(e.id); toast('Entry deleted', 'warning'); }} className="text-slate-400 dark:text-dark-500 hover:text-red-600 dark:hover:text-red-400 transition-colors p-1"><Trash2 className="w-4 h-4" /></button>
+                           {currentUser?.role === 'Admin' && (
+                             <button onClick={() => { deleteLedgerEntry(e.id); toast('Entry deleted', 'warning'); }} className="text-slate-400 dark:text-dark-500 hover:text-red-600 dark:hover:text-red-400 transition-colors p-1"><Trash2 className="w-4 h-4" /></button>
+                           )}
                          </td>
                        </tr>
                      ))}

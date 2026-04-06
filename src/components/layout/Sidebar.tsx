@@ -62,7 +62,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
       {/* Nav */}
       <nav className="flex-1 py-3 px-2 space-y-1 overflow-y-auto">
-        {navItems.map((item) => {
+        {navItems.filter(item => item.label !== 'Settings' || currentUser?.role === 'Admin').map((item) => {
           const { label, path, icon: Icon, children } = item as any;
           const active = path === '/' ? location.pathname === '/' : location.pathname.startsWith(path);
           const hasChildren = children && children.length > 0;

@@ -10,7 +10,7 @@ import Modal from '../components/ui/Modal';
 const PER_PAGE = 10;
 
 export default function CustomerPage() {
-  const { customers, customerEntries, addCustomer, deleteCustomer, addCustomerEntry, deleteCustomerEntry, settings } = useStore();
+  const { customers, customerEntries, addCustomer, deleteCustomer, addCustomerEntry, deleteCustomerEntry, settings, currentUser } = useStore();
   const { toast } = useToast();
   const printRef = useRef<HTMLDivElement>(null);
 
@@ -163,12 +163,14 @@ export default function CustomerPage() {
                       {c.phone && <p className="text-[10px] opacity-70 truncate mt-0.5">{c.phone}</p>}
                     </div>
                   </div>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); deleteCustomer(c.id); if (selectedCust === c.id) setSelectedCust(null); toast('Customer deleted', 'warning'); }}
-                    className="opacity-0 group-hover:opacity-100 text-slate-400 dark:text-dark-500 hover:text-red-500 dark:hover:text-red-400 transition-all p-1 flex-shrink-0"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  {currentUser?.role === 'Admin' && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); deleteCustomer(c.id); if (selectedCust === c.id) setSelectedCust(null); toast('Customer deleted', 'warning'); }}
+                      className="opacity-0 group-hover:opacity-100 text-slate-400 dark:text-dark-500 hover:text-red-500 dark:hover:text-red-400 transition-all p-1 flex-shrink-0"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
               ))
             )}
@@ -262,7 +264,9 @@ export default function CustomerPage() {
                         <td className="table-cell text-right text-emerald-600 dark:text-emerald-400">{e.credit ? `₨ ${formatCurrency(e.credit)}` : '—'}</td>
                         <td className="table-cell text-right font-semibold text-slate-900 dark:text-white">₨ {formatCurrency(e.balance)}</td>
                         <td className="table-cell text-right">
-                          <button onClick={() => { deleteCustomerEntry(e.id); toast('Entry deleted', 'warning'); }} className="text-slate-400 dark:text-dark-500 hover:text-red-500 dark:hover:text-red-400 transition-colors p-1"><Trash2 className="w-4 h-4" /></button>
+                          {currentUser?.role === 'Admin' && (
+                            <button onClick={() => { deleteCustomerEntry(e.id); toast('Entry deleted', 'warning'); }} className="text-slate-400 dark:text-dark-500 hover:text-red-500 dark:hover:text-red-400 transition-colors p-1"><Trash2 className="w-4 h-4" /></button>
+                          )}
                         </td>
                       </tr>
                     ))}

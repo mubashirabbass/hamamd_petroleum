@@ -13,7 +13,7 @@ const PER_PAGE = 10;
 
 export default function PurchasePage() {
 // ... existing state ...
-  const { purchases, addPurchase, deletePurchase, settings } = useStore();
+  const { purchases, addPurchase, deletePurchase, settings, currentUser } = useStore();
   const { toast } = useToast();
 
   const [fuelType, setFuelType] = useState<FuelType>('HSD');
@@ -208,10 +208,12 @@ export default function PurchasePage() {
                     <td className="table-cell text-right">₨ {formatCurrency(p.amount)}</td>
                     <td className="table-cell text-right font-semibold text-slate-900 dark:text-white">₨ {formatCurrency(p.totalAmount)}</td>
                     <td className="table-cell text-right">
-                      <button onClick={() => { deletePurchase(p.id); toast('Purchase deleted', 'warning'); }}
-                        className="text-slate-400 dark:text-dark-500 hover:text-red-600 dark:hover:text-red-400 transition-colors p-1">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {currentUser?.role === 'Admin' && (
+                        <button onClick={() => { deletePurchase(p.id); toast('Purchase deleted', 'warning'); }}
+                          className="text-slate-400 dark:text-dark-500 hover:text-red-600 dark:hover:text-red-400 transition-colors p-1">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </td>
                  </tr>
                ))}
