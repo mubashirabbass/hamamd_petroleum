@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Plus, Trash2, DollarSign, FolderPlus } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { formatCurrency, formatDate, today, paginate, filterByStartDate } from '../lib/utils';
@@ -21,6 +21,12 @@ export default function ExpensePage() {
   const [toDate, setToDate] = useState('');
   const [page, setPage] = useState(1);
   const [form, setForm] = useState({ date: today(), details: '', amount: '' });
+  
+  useEffect(() => {
+    if (!selectedCat && expenseCategories.length > 0) {
+      setSelectedCat(expenseCategories[0].id);
+    }
+  }, [expenseCategories, selectedCat]);
 
   const cat = expenseCategories.find((c) => c.id === selectedCat);
 

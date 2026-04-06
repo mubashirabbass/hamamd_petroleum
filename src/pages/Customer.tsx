@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { Plus, Trash2, Users, UserPlus, Printer } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { formatCurrency, formatDate, today, paginate, filterByStartDate } from '../lib/utils';
@@ -24,6 +24,12 @@ export default function CustomerPage() {
   const [page, setPage] = useState(1);
   const [custForm, setCustForm] = useState({ name: '', phone: '' });
   const [form, setForm] = useState({ date: today(), description: '', debit: '', credit: '' });
+  
+  useEffect(() => {
+    if (!selectedCust && customers.length > 0) {
+      setSelectedCust(customers[0].id);
+    }
+  }, [customers, selectedCust]);
 
   const cust = customers.find((c) => c.id === selectedCust);
 

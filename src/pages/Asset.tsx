@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Plus, Trash2, Package, FolderPlus } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { formatCurrency, formatDate, today, paginate, filterByStartDate } from '../lib/utils';
@@ -21,6 +21,12 @@ export default function AssetPage() {
   const [toDate, setToDate] = useState('');
   const [page, setPage] = useState(1);
   const [form, setForm] = useState({ date: today(), description: '', debit: '', credit: '' });
+  
+  useEffect(() => {
+    if (!selectedCat && assetCategories.length > 0) {
+      setSelectedCat(assetCategories[0].id);
+    }
+  }, [assetCategories, selectedCat]);
 
   const cat = assetCategories.find((c) => c.id === selectedCat);
 
@@ -84,7 +90,7 @@ export default function AssetPage() {
             assetCategories.map((c) => (
               <div
                 key={c.id}
-                onClick={() => { setSelectedCat(c.id); setSearch(''); setPage( page => 1); }}
+                onClick={() => { setSelectedCat(c.id); setSearch(''); setPage(1); }}
                 className={selectedCat === c.id ? 'category-item-active' : 'category-item-inactive'}
               >
                 <div className="flex items-center gap-2.5 min-w-0">

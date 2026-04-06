@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Plus, Trash2, BookOpen, FolderPlus } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { formatCurrency, formatDate, today, paginate, filterByStartDate } from '../lib/utils';
@@ -22,6 +22,12 @@ export default function LedgerPage() {
   const [toDate, setToDate] = useState('');
   const [page, setPage] = useState(1);
   const [form, setForm] = useState({ date: today(), description: '', debit: '', credit: '' });
+  
+  useEffect(() => {
+    if (!selectedCat && ledgerCategories.length > 0) {
+      setSelectedCat(ledgerCategories[0].id);
+    }
+  }, [ledgerCategories, selectedCat]);
 
   const cat = ledgerCategories.find((c) => c.id === selectedCat);
 
