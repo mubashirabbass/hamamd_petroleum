@@ -105,11 +105,13 @@ interface AppState {
   // Purchase
   purchases: Purchase[];
   addPurchase: (p: Omit<Purchase, 'id'>) => void;
+  updatePurchase: (id: string, p: Partial<Purchase>) => void;
   deletePurchase: (id: string) => void;
 
   // Sale
   sales: Sale[];
   addSale: (s: Omit<Sale, 'id'>) => void;
+  updateSale: (id: string, s: Partial<Sale>) => void;
   deleteSale: (id: string) => void;
 
   // Ledger
@@ -119,6 +121,7 @@ interface AppState {
   updateLedgerCategory: (id: string, name: string) => void;
   deleteLedgerCategory: (id: string) => void;
   addLedgerEntry: (e: Omit<LedgerEntry, 'id'>) => void;
+  updateLedgerEntry: (id: string, e: Partial<LedgerEntry>) => void;
   deleteLedgerEntry: (id: string) => void;
 
   // Expense
@@ -128,6 +131,7 @@ interface AppState {
   updateExpenseCategory: (id: string, name: string) => void;
   deleteExpenseCategory: (id: string) => void;
   addExpenseEntry: (e: Omit<ExpenseEntry, 'id'>) => void;
+  updateExpenseEntry: (id: string, e: Partial<ExpenseEntry>) => void;
   deleteExpenseEntry: (id: string) => void;
 
   // Asset
@@ -137,6 +141,7 @@ interface AppState {
   updateAssetCategory: (id: string, name: string) => void;
   deleteAssetCategory: (id: string) => void;
   addAssetEntry: (e: Omit<AssetEntry, 'id'>) => void;
+  updateAssetEntry: (id: string, e: Partial<AssetEntry>) => void;
   deleteAssetEntry: (id: string) => void;
 
   // Liability
@@ -146,6 +151,7 @@ interface AppState {
   updateLiabilityCategory: (id: string, name: string) => void;
   deleteLiabilityCategory: (id: string) => void;
   addLiabilityEntry: (e: Omit<LiabilityEntry, 'id'>) => void;
+  updateLiabilityEntry: (id: string, e: Partial<LiabilityEntry>) => void;
   deleteLiabilityEntry: (id: string) => void;
 
   // Customer
@@ -155,6 +161,7 @@ interface AppState {
   updateCustomer: (id: string, c: Partial<Customer>) => void;
   deleteCustomer: (id: string) => void;
   addCustomerEntry: (e: Omit<CustomerEntry, 'id'>) => void;
+  updateCustomerEntry: (id: string, e: Partial<CustomerEntry>) => void;
   deleteCustomerEntry: (id: string) => void;
 
   // Settings & Users
@@ -178,11 +185,13 @@ export const useStore = create<AppState>()(
       // ── Purchase ──────────────────────────────────────────────────────
       purchases: [],
       addPurchase: (p) => set((s) => ({ purchases: [{ ...p, id: uid() }, ...s.purchases] })),
+      updatePurchase: (id, data) => set((s) => ({ purchases: s.purchases.map(x => x.id === id ? { ...x, ...data } : x) })),
       deletePurchase: (id) => set((s) => ({ purchases: s.purchases.filter((x) => x.id !== id) })),
 
       // ── Sale ─────────────────────────────────────────────────────────
       sales: [],
       addSale: (sale) => set((s) => ({ sales: [{ ...sale, id: uid() }, ...s.sales] })),
+      updateSale: (id, data) => set((s) => ({ sales: s.sales.map(x => x.id === id ? { ...x, ...data } : x) })),
       deleteSale: (id) => set((s) => ({ sales: s.sales.filter((x) => x.id !== id) })),
 
       // ── Ledger ────────────────────────────────────────────────────────
@@ -197,6 +206,7 @@ export const useStore = create<AppState>()(
         ledgerEntries: s.ledgerEntries.filter((e) => e.categoryId !== id),
       })),
       addLedgerEntry: (e) => set((s) => ({ ledgerEntries: [{ ...e, id: uid() }, ...s.ledgerEntries] })),
+      updateLedgerEntry: (id, data) => set((s) => ({ ledgerEntries: s.ledgerEntries.map(x => x.id === id ? { ...x, ...data } : x) })),
       deleteLedgerEntry: (id) => set((s) => ({ ledgerEntries: s.ledgerEntries.filter((x) => x.id !== id) })),
 
       // ── Expense ───────────────────────────────────────────────────────
@@ -211,6 +221,7 @@ export const useStore = create<AppState>()(
         expenseEntries: s.expenseEntries.filter((e) => e.categoryId !== id),
       })),
       addExpenseEntry: (e) => set((s) => ({ expenseEntries: [{ ...e, id: uid() }, ...s.expenseEntries] })),
+      updateExpenseEntry: (id, data) => set((s) => ({ expenseEntries: s.expenseEntries.map(x => x.id === id ? { ...x, ...data } : x) })),
       deleteExpenseEntry: (id) => set((s) => ({ expenseEntries: s.expenseEntries.filter((x) => x.id !== id) })),
 
       // ── Asset ─────────────────────────────────────────────────────────
@@ -225,6 +236,7 @@ export const useStore = create<AppState>()(
         assetEntries: s.assetEntries.filter((e) => e.categoryId !== id),
       })),
       addAssetEntry: (e) => set((s) => ({ assetEntries: [{ ...e, id: uid() }, ...s.assetEntries] })),
+      updateAssetEntry: (id, data) => set((s) => ({ assetEntries: s.assetEntries.map(x => x.id === id ? { ...x, ...data } : x) })),
       deleteAssetEntry: (id) => set((s) => ({ assetEntries: s.assetEntries.filter((x) => x.id !== id) })),
 
       // ── Liability ─────────────────────────────────────────────────────
@@ -239,6 +251,7 @@ export const useStore = create<AppState>()(
         liabilityEntries: s.liabilityEntries.filter((e) => e.categoryId !== id),
       })),
       addLiabilityEntry: (e) => set((s) => ({ liabilityEntries: [{ ...e, id: uid() }, ...s.liabilityEntries] })),
+      updateLiabilityEntry: (id, data) => set((s) => ({ liabilityEntries: s.liabilityEntries.map(x => x.id === id ? { ...x, ...data } : x) })),
       deleteLiabilityEntry: (id) => set((s) => ({ liabilityEntries: s.liabilityEntries.filter((x) => x.id !== id) })),
 
       // ── Customer ──────────────────────────────────────────────────────
@@ -253,6 +266,7 @@ export const useStore = create<AppState>()(
         customerEntries: s.customerEntries.filter((e) => e.customerId !== id),
       })),
       addCustomerEntry: (e) => set((s) => ({ customerEntries: [{ ...e, id: uid() }, ...s.customerEntries] })),
+      updateCustomerEntry: (id, data) => set((s) => ({ customerEntries: s.customerEntries.map(x => x.id === id ? { ...x, ...data } : x) })),
       deleteCustomerEntry: (id) => set((s) => ({ customerEntries: s.customerEntries.filter((x) => x.id !== id) })),
 
       // ── Settings & Users ───────────────────────────────────────────────

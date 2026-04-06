@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Plus, Trash2, BookOpen } from 'lucide-react';
+import { Plus, Trash2, BookOpen, Eye, Edit2 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import ManageCategoriesModal from '../components/modals/ManageCategoriesModal';
 import { formatCurrency, formatDate, today, paginate, filterByStartDate, cn } from '../lib/utils';
@@ -7,6 +7,7 @@ import { useToast } from '../components/ui/Toast';
 import SearchBar from '../components/ui/SearchBar';
 import Pagination from '../components/ui/Pagination';
 import Modal from '../components/ui/Modal';
+import TransactionReceiptModal from '../components/modals/TransactionReceiptModal';
 
 const PER_PAGE = 10;
 
@@ -25,6 +26,8 @@ export default function LedgerPage() {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [page, setPage] = useState(1);
+  const [editingEntity, setEditingEntity] = useState<any>(null);
+  const [viewingEntity, setViewingEntity] = useState<any>(null);
   const [form, setForm] = useState({ date: today(), description: '', debit: '', credit: '' });
   
   useEffect(() => {
@@ -55,15 +58,39 @@ export default function LedgerPage() {
 
   const paged = paginate(withBalance, page, PER_PAGE);
 
-  const handleAddEntry = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedCat || !form.date) { toast('Fill required fields', 'error'); return; }
+    
     const debit = parseFloat(form.debit) || 0;
     const credit = parseFloat(form.credit) || 0;
-    addLedgerEntry({ categoryId: selectedCat, date: form.date, description: form.description, debit, credit, balance: 0 });
-    toast('Entry added', 'success');
-    setForm({ date: today(), description: '', debit: '', credit: '' });
+    const payload = { categoryId: selectedCat, date: form.date, description: form.description, debit, credit, balance: 0 };
+    
+    if (editingEntity) {
+      useStore.getState().updateLedgerEntry(editingEntity.id, payload);
+      toast('Entry updated', 'success');
+    } else {
+      addLedgerEntry(payload);
+      toast('Entry added', 'success');
+    }
+    closeForm();
+  };
+
+  const closeForm = () => {
     setShowEntryForm(false);
+    setEditingEntity(null);
+    setForm({ date: today(), description: '', debit: '', credit: '' });
+  };
+
+  const handleEdit = (e: any) => {
+    setEditingEntity(e);
+    setForm({
+      date: e.date,
+      description: e.description || '',
+      debit: e.debit ? e.debit.toString() : '',
+      credit: e.credit ? e.credit.toString() : '',
+    });
+    setShowEntryForm(true);
   };
 
   const totals = useMemo(() => ({
@@ -124,8 +151,8 @@ export default function LedgerPage() {
       {/* Main Content */}
       <div className="flex-1 min-w-0">
         {showEntryForm && (
-          <Modal title={`Add Entry — ${cat?.name}`} onClose={() => setShowEntryForm(false)}>
-            <form onSubmit={handleAddEntry} className="space-y-3">
+          <Modal title={editingEntity ? `Edit Entry — ${cat?.name}` : `Add Entry — ${cat?.name}`} onClose={closeForm}>
+            <form onSubmit={handleSubmit} className="space-y-3">
               <div><label className="label">Date *</label><input type="date" className="input" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required /></div>
               <div><label className="label">Description</label><input className="input" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Transaction details" /></div>
               <div className="grid grid-cols-2 gap-3">
@@ -133,25 +160,35 @@ export default function LedgerPage() {
                 <div><label className="label">Credit (₨)</label><input type="number" step="0.01" className="input" value={form.credit} onChange={(e) => setForm({ ...form, credit: e.target.value })} /></div>
               </div>
               <div className="flex justify-end gap-2 pt-2">
-                <button type="button" onClick={() => setShowEntryForm(false)} className="btn-secondary">Cancel</button>
-                <button type="submit" className="btn-primary"><Plus className="w-4 h-4" />Add Entry</button>
+                <button type="button" onClick={closeForm} className="btn-secondary">Cancel</button>
+                <button type="submit" className="btn-primary"><Plus className="w-4 h-4" />{editingEntity ? 'Update' : 'Add'} Entry</button>
               </div>
             </form>
           </Modal>
         )}
 
+        {viewingEntity && (
+          <TransactionReceiptModal
+            entity={viewingEntity}
+            type="ledger"
+            onClose={() => setViewingEntity(null)}
+          />
+        )}
+
         <div className="flex items-center justify-between mb-5">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-violet-600/10 dark:bg-violet-600/20 flex items-center justify-center">
-              <BookOpen className="w-6 h-6 text-violet-600 dark:text-violet-400" />
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-primary-600/10 dark:bg-primary-600/20 flex items-center justify-center">
+              <BookOpen className="w-8 h-8 text-primary-600 dark:text-primary-400" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">General Ledger</h1>
-              {cat && <span className="text-xs text-slate-500 dark:text-dark-400 font-bold uppercase tracking-wider">{cat.name}</span>}
+              <h1 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
+                General Ledger
+              </h1>
+              {cat && <span className="text-xl md:text-2xl font-black text-primary-600 dark:text-primary-500 tracking-widest uppercase block mt-1 drop-shadow-sm">{cat.name}</span>}
             </div>
           </div>
           {selectedCat && (
-            <button onClick={() => setShowEntryForm(true)} className="btn-primary flex items-center gap-2">
+            <button onClick={() => { closeForm(); setShowEntryForm(true); }} className="btn-primary flex items-center gap-2">
               <Plus className="w-4 h-4" /> New Entry
             </button>
           )}
@@ -207,16 +244,28 @@ export default function LedgerPage() {
                     {paged.length === 0 ? (
                       <tr><td colSpan={6} className="table-cell text-center text-slate-400 dark:text-dark-500 py-12 italic">No transactions found for this period</td></tr>
                     ) : paged.map((e) => (
-                      <tr key={e.id} className="table-row">
+                      <tr key={e.id} className="table-row group hover:bg-slate-50 dark:hover:bg-dark-800/50">
                         <td className="table-cell whitespace-nowrap text-xs text-slate-500">{formatDate(e.date)}</td>
                         <td className="table-cell text-slate-600 dark:text-dark-300 min-w-[200px] font-medium">{e.description || '—'}</td>
                         <td className="table-cell text-right text-red-600 dark:text-red-400 font-mono text-xs italic">{e.debit ? `₨ ${formatCurrency(e.debit)}` : '—'}</td>
                         <td className="table-cell text-right text-emerald-600 dark:text-emerald-400 font-mono text-xs italic">{e.credit ? `₨ ${formatCurrency(e.credit)}` : '—'}</td>
                         <td className="table-cell text-right font-black text-slate-900 dark:text-white text-sm">₨ {formatCurrency(e.balance)}</td>
                         <td className="table-cell text-right">
-                          {currentUser?.role === 'Admin' && (
-                            <button onClick={() => { if(confirm('Delete this entry?')) { deleteLedgerEntry(e.id); toast('Entry deleted', 'warning'); } }} className="text-slate-300 hover:text-red-600 dark:hover:text-red-400 transition-colors p-1.5 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-lg"><Trash2 className="w-4 h-4" /></button>
-                          )}
+                          <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={() => setViewingEntity(e)} className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg transition-colors" title="View Details">
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            {currentUser?.role === 'Admin' && (
+                              <>
+                                <button onClick={() => handleEdit(e)} className="p-1.5 text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-lg transition-colors" title="Edit Entry">
+                                  <Edit2 className="w-4 h-4" />
+                                </button>
+                                <button onClick={() => { if(confirm('Delete this entry?')) { deleteLedgerEntry(e.id); toast('Entry deleted', 'warning'); } }} className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors" title="Delete Entry">
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}

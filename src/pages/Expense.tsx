@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Plus, DollarSign, Trash2 } from 'lucide-react';
+import { Plus, DollarSign, Trash2, Eye, Edit2 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import ManageCategoriesModal from '../components/modals/ManageCategoriesModal';
 import { formatCurrency, formatDate, today, paginate, filterByStartDate, cn } from '../lib/utils';
@@ -7,6 +7,7 @@ import { useToast } from '../components/ui/Toast';
 import SearchBar from '../components/ui/SearchBar';
 import Pagination from '../components/ui/Pagination';
 import Modal from '../components/ui/Modal';
+import TransactionReceiptModal from '../components/modals/TransactionReceiptModal';
 
 const PER_PAGE = 10;
 
@@ -25,6 +26,8 @@ export default function ExpensePage() {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [page, setPage] = useState(1);
+  const [editingEntity, setEditingEntity] = useState<any>(null);
+  const [viewingEntity, setViewingEntity] = useState<any>(null);
   const [form, setForm] = useState({ date: today(), details: '', amount: '' });
 
   useEffect(() => {
@@ -49,13 +52,36 @@ export default function ExpensePage() {
 
   const paged = paginate(catEntries, page, PER_PAGE);
 
-  const handleAddEntry = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedCat || !form.date || !form.amount) { toast('Fill required fields', 'error'); return; }
-    addExpenseEntry({ categoryId: selectedCat, date: form.date, details: form.details, amount: parseFloat(form.amount) || 0 });
-    toast('Expense added', 'success');
-    setForm({ date: today(), details: '', amount: '' });
+    
+    const payload = { categoryId: selectedCat, date: form.date, details: form.details, amount: parseFloat(form.amount) || 0 };
+    
+    if (editingEntity) {
+      useStore.getState().updateExpenseEntry(editingEntity.id, payload);
+      toast('Expense updated', 'success');
+    } else {
+      addExpenseEntry(payload);
+      toast('Expense added', 'success');
+    }
+    closeForm();
+  };
+
+  const closeForm = () => {
     setShowEntryForm(false);
+    setEditingEntity(null);
+    setForm({ date: today(), details: '', amount: '' });
+  };
+
+  const handleEdit = (e: any) => {
+    setEditingEntity(e);
+    setForm({
+      date: e.date,
+      details: e.details || '',
+      amount: e.amount ? e.amount.toString() : '',
+    });
+    setShowEntryForm(true);
   };
 
   const total = catEntries.reduce((s, e) => s + e.amount, 0);
@@ -109,31 +135,41 @@ export default function ExpensePage() {
       {/* Main Content */}
       <div className="flex-1 min-w-0">
         {showEntryForm && (
-          <Modal title={`Add Expense — ${cat?.name}`} onClose={() => setShowEntryForm(false)}>
-            <form onSubmit={handleAddEntry} className="space-y-3">
+          <Modal title={editingEntity ? `Edit Expense — ${cat?.name}` : `Add Expense — ${cat?.name}`} onClose={closeForm}>
+            <form onSubmit={handleSubmit} className="space-y-3">
               <div><label className="label">Date *</label><input type="date" className="input" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required /></div>
               <div><label className="label">Amount (₨) *</label><input type="number" step="0.01" className="input" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} placeholder="0.00" required /></div>
               <div><label className="label">Details</label><textarea className="input min-h-[100px]" value={form.details} onChange={(e) => setForm({ ...form, details: e.target.value })} placeholder="Transaction notes..." /></div>
               <div className="flex justify-end gap-2 pt-2">
-                <button type="button" onClick={() => setShowEntryForm(false)} className="btn-secondary">Cancel</button>
-                <button type="submit" className="btn-primary"><Plus className="w-4 h-4" /> Add Expense</button>
+                <button type="button" onClick={closeForm} className="btn-secondary">Cancel</button>
+                <button type="submit" className="btn-primary"><Plus className="w-4 h-4" /> {editingEntity ? 'Update Expense' : 'Add Expense'}</button>
               </div>
             </form>
           </Modal>
         )}
 
+        {viewingEntity && (
+          <TransactionReceiptModal
+            entity={viewingEntity}
+            type="expense"
+            onClose={() => setViewingEntity(null)}
+          />
+        )}
+
         <div className="flex items-center justify-between mb-5">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-red-600/10 dark:bg-red-600/20 flex items-center justify-center">
-              <DollarSign className="w-6 h-6 text-red-600 dark:text-red-400" />
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-red-600/10 dark:bg-red-600/20 flex items-center justify-center">
+              <DollarSign className="w-8 h-8 text-red-600 dark:text-red-400" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Business Expenses</h1>
-              {cat && <span className="text-xs text-slate-500 dark:text-dark-400 font-bold uppercase tracking-wider">{cat.name}</span>}
+              <h1 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
+                Business Expenses
+              </h1>
+              {cat && <span className="text-xl md:text-2xl font-black text-red-600 dark:text-red-500 tracking-widest uppercase block mt-1 drop-shadow-sm">{cat.name}</span>}
             </div>
           </div>
           {selectedCat && (
-            <button onClick={() => setShowEntryForm(true)} className="btn-primary !bg-red-600 hover:!bg-red-500 flex items-center gap-2">
+            <button onClick={() => { closeForm(); setShowEntryForm(true); }} className="btn-primary !bg-red-600 hover:!bg-red-500 flex items-center gap-2">
               <Plus className="w-4 h-4" /> New Expense
             </button>
           )}
@@ -182,14 +218,26 @@ export default function ExpensePage() {
                     {paged.length === 0 ? (
                       <tr><td colSpan={4} className="table-cell text-center text-slate-400 dark:text-dark-500 py-12 italic">No expenses found for this category</td></tr>
                     ) : paged.map((e) => (
-                      <tr key={e.id} className="table-row">
+                      <tr key={e.id} className="table-row group hover:bg-slate-50 dark:hover:bg-dark-800/50">
                         <td className="table-cell whitespace-nowrap text-xs text-slate-500">{formatDate(e.date)}</td>
                         <td className="table-cell text-slate-600 dark:text-dark-300 min-w-[300px] font-medium">{e.details || '—'}</td>
                         <td className="table-cell text-right font-black text-red-600 dark:text-red-400 text-sm">₨ {formatCurrency(e.amount)}</td>
                         <td className="table-cell text-right">
-                          {currentUser?.role === 'Admin' && (
-                            <button onClick={() => { if(confirm('Delete this expense?')) { deleteExpenseEntry(e.id); toast('Expense deleted', 'warning'); } }} className="text-slate-300 hover:text-red-600 dark:hover:text-red-400 transition-colors p-1.5 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-lg"><Trash2 className="w-4 h-4" /></button>
-                          )}
+                          <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={() => setViewingEntity(e)} className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg transition-colors" title="View Details">
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            {currentUser?.role === 'Admin' && (
+                              <>
+                                <button onClick={() => handleEdit(e)} className="p-1.5 text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-lg transition-colors" title="Edit Entry">
+                                  <Edit2 className="w-4 h-4" />
+                                </button>
+                                <button onClick={() => { if(confirm('Delete this expense?')) { deleteExpenseEntry(e.id); toast('Expense deleted', 'warning'); } }} className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors" title="Delete Entry">
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}

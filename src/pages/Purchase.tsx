@@ -1,12 +1,12 @@
-import React, { useState, useMemo } from 'react';
-import { Plus, Trash2, ShoppingCart, ArrowLeft } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Plus, Trash2, ShoppingCart, Eye, Edit2 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { formatCurrency, formatDate, today, paginate, filterByStartDate } from '../lib/utils';
 import { useToast } from '../components/ui/Toast';
 import SearchBar from '../components/ui/SearchBar';
 import Pagination from '../components/ui/Pagination';
 import Modal from '../components/ui/Modal';
+import TransactionReceiptModal from '../components/modals/TransactionReceiptModal';
 import type { FuelType } from '../store/useStore';
 
 const PER_PAGE = 10;
@@ -22,6 +22,8 @@ export default function PurchasePage() {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [page, setPage] = useState(1);
+  const [editingEntity, setEditingEntity] = useState<any>(null);
+  const [viewingEntity, setViewingEntity] = useState<any>(null);
 
   // Form state
   const [form, setForm] = useState({
@@ -68,7 +70,7 @@ export default function PurchasePage() {
       toast('Please fill required fields', 'error');
       return;
     }
-    addPurchase({
+    const payload = {
       type: fuelType,
       date: form.date,
       details: form.details,
@@ -77,10 +79,36 @@ export default function PurchasePage() {
       carriage: parseFloat(form.carriage) || 0,
       amount: parseFloat(form.amount),
       totalAmount: parseFloat(form.totalAmount),
-    });
-    toast(`${fuelType} purchase added successfully`, 'success');
-    setForm({ date: today(), details: '', rate: '', quantity: '', carriage: '', amount: '', totalAmount: '' });
+    };
+
+    if (editingEntity) {
+      useStore.getState().updatePurchase(editingEntity.id, payload);
+      toast('Purchase updated successfully', 'success');
+    } else {
+      addPurchase(payload);
+      toast(`${fuelType} purchase added successfully`, 'success');
+    }
+    closeForm();
+  };
+
+  const closeForm = () => {
     setShowForm(false);
+    setEditingEntity(null);
+    setForm({ date: today(), details: '', rate: '', quantity: '', carriage: '', amount: '', totalAmount: '' });
+  };
+
+  const handleEdit = (p: any) => {
+    setEditingEntity(p);
+    setForm({
+      date: p.date,
+      details: p.details || '',
+      rate: p.rate.toString(),
+      quantity: p.quantity.toString(),
+      carriage: p.carriage.toString(),
+      amount: p.amount.toString(),
+      totalAmount: p.totalAmount.toString(),
+    });
+    setShowForm(true);
   };
 
   const pageTotals = useMemo(() => ({
@@ -90,14 +118,12 @@ export default function PurchasePage() {
     total: paged.reduce((s, p) => s + p.totalAmount, 0),
   }), [paged]);
 
-  const grandTotal = filtered.reduce((s, p) => s + p.totalAmount, 0);
-
   return (
     <div className="animate-fade-in flex gap-4 h-full">
       {/* Sidebar selection */}
       <div className="w-60 flex-shrink-0 flex flex-col gap-3 h-[calc(100vh-140px)]">
         <button
-          onClick={() => setShowForm(true)}
+          onClick={() => { closeForm(); setShowForm(true); }}
           className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-primary-600 text-white font-bold text-sm shadow-lg shadow-primary-600/20 hover:bg-primary-500 transition-all active:scale-95"
         >
           <Plus className="w-4 h-4" />
@@ -126,7 +152,7 @@ export default function PurchasePage() {
 
       <div className="flex-1 min-w-0">
         {showForm && (
-          <Modal title={`Add ${fuelType} Purchase`} onClose={() => setShowForm(false)} wide>
+          <Modal title={editingEntity ? `Edit ${fuelType} Purchase` : `Add ${fuelType} Purchase`} onClose={closeForm} wide>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div><label className="label">Date *</label><input type="date" className="input" value={form.date} onChange={(e) => set('date', e.target.value)} required /></div>
@@ -138,29 +164,37 @@ export default function PurchasePage() {
                 <div className="col-span-2"><label className="label">Total Amount</label><input className="input bg-slate-50 dark:bg-dark-750 text-primary-600 dark:text-primary-400 font-semibold cursor-not-allowed" value={form.totalAmount} readOnly /></div>
               </div>
               <div className="flex justify-end gap-2 pt-2">
-                <button type="button" onClick={() => setShowForm(false)} className="btn-secondary">Cancel</button>
-                <button type="submit" className="btn-primary"><Plus className="w-4 h-4" /> Add Purchase</button>
+                <button type="button" onClick={closeForm} className="btn-secondary">Cancel</button>
+                <button type="submit" className="btn-primary"><Plus className="w-4 h-4" /> {editingEntity ? 'Update Purchase' : 'Add Purchase'}</button>
               </div>
             </form>
           </Modal>
         )}
 
+        {viewingEntity && (
+          <TransactionReceiptModal
+            entity={viewingEntity}
+            type="purchase"
+            onClose={() => setViewingEntity(null)}
+          />
+        )}
+
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-4">
-            <Link to="/" className="btn-icon" title="Back to Dashboard">
-              <ArrowLeft className="w-5 h-5" />
-            </Link>
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-primary-600/10 dark:bg-primary-600/20 flex items-center justify-center">
-                <ShoppingCart className="w-5 h-5 text-primary-600 dark:text-primary-400" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-slate-900 dark:text-white">Purchase</h1>
-                <span className={fuelType === 'HSD' ? 'badge-hsd' : 'badge-pmg'}>{fuelType}</span>
-              </div>
+            <div className="w-14 h-14 rounded-2xl bg-blue-600/10 dark:bg-blue-600/20 flex items-center justify-center">
+              <ShoppingCart className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div>
+              <h1 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-3">
+                Purchase Entries
+                {fuelType && <span className="text-blue-600 dark:text-blue-500 uppercase tracking-widest">{fuelType}</span>}
+              </h1>
             </div>
           </div>
+          <button onClick={() => { closeForm(); setShowForm(true); }} className="btn-primary !bg-blue-600 hover:!bg-blue-500 flex items-center gap-2">
+            <Plus className="w-4 h-4" /> New Entry
+          </button>
         </div>
 
          <div className="glass rounded-xl overflow-hidden">
@@ -199,7 +233,7 @@ export default function PurchasePage() {
                 {paged.length === 0 ? (
                   <tr><td colSpan={8} className="table-cell text-center text-slate-400 dark:text-dark-500 py-12">No {fuelType} purchases found</td></tr>
                 ) : paged.map((p) => (
-                  <tr key={p.id} className="table-row">
+                  <tr key={p.id} className="table-row group hover:bg-slate-50 dark:hover:bg-dark-800/50">
                     <td className="table-cell">{formatDate(p.date)}</td>
                     <td className="table-cell text-slate-600 dark:text-dark-300">{p.details || '—'}</td>
                     <td className="table-cell text-right">₨ {formatCurrency(p.rate)}</td>
@@ -208,29 +242,33 @@ export default function PurchasePage() {
                     <td className="table-cell text-right">₨ {formatCurrency(p.amount)}</td>
                     <td className="table-cell text-right font-semibold text-slate-900 dark:text-white">₨ {formatCurrency(p.totalAmount)}</td>
                     <td className="table-cell text-right">
-                      {currentUser?.role === 'Admin' && (
-                        <button onClick={() => { deletePurchase(p.id); toast('Purchase deleted', 'warning'); }}
-                          className="text-slate-400 dark:text-dark-500 hover:text-red-600 dark:hover:text-red-400 transition-colors p-1">
-                          <Trash2 className="w-4 h-4" />
+                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => setViewingEntity(p)} className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg transition-colors" title="View Details">
+                          <Eye className="w-4 h-4" />
                         </button>
-                      )}
+                        {currentUser?.role === 'Admin' && (
+                          <>
+                            <button onClick={() => handleEdit(p)} className="p-1.5 text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-lg transition-colors" title="Edit Entry">
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button onClick={() => { deletePurchase(p.id); toast('Purchase deleted', 'warning'); }} className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors" title="Delete Entry">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </td>
                  </tr>
                ))}
              </tbody>
              {paged.length > 0 && (
-               <tfoot className="bg-slate-50/50 dark:bg-dark-800/50 font-semibold border-t border-slate-200 dark:border-dark-700/50">
+               <tfoot className="bg-slate-50/50 dark:bg-dark-800/50 font-semibold border-t-[3px] border-double border-slate-300 dark:border-dark-600">
                  <tr>
-                   <td colSpan={3} className="table-cell text-right text-xs uppercase tracking-wider text-slate-500">Page Totals:</td>
-                   <td className="table-cell text-right text-slate-900 dark:text-white">{pageTotals.qty.toLocaleString()} L</td>
-                   <td className="table-cell text-right text-slate-900 dark:text-white">₨ {formatCurrency(pageTotals.carriage)}</td>
-                   <td className="table-cell text-right text-slate-900 dark:text-white">₨ {formatCurrency(pageTotals.amount)}</td>
-                   <td className="table-cell text-right text-primary-600 dark:text-primary-400">₨ {formatCurrency(pageTotals.total)}</td>
-                   <td className="table-cell"></td>
-                 </tr>
-                 <tr className="bg-primary-50/30 dark:bg-primary-900/10 border-t border-primary-100/50 dark:border-primary-800/10">
-                   <td colSpan={6} className="table-cell text-right text-xs uppercase tracking-wider text-primary-600/70 dark:text-primary-400/70">Filtered Grand Total:</td>
-                   <td className="table-cell text-right font-bold text-primary-600 dark:text-primary-400">₨ {formatCurrency(grandTotal)}</td>
+                   <td colSpan={3} className="table-cell text-right text-xs uppercase tracking-wider text-slate-500 py-3">Page Totals:</td>
+                   <td className="table-cell text-right text-slate-900 dark:text-white font-bold py-3">{pageTotals.qty.toLocaleString()} L</td>
+                   <td className="table-cell text-right text-slate-900 dark:text-white font-bold py-3">₨ {formatCurrency(pageTotals.carriage)}</td>
+                   <td className="table-cell text-right text-slate-900 dark:text-white font-bold py-3">₨ {formatCurrency(pageTotals.amount)}</td>
+                   <td className="table-cell text-right text-primary-600 dark:text-primary-400 font-bold py-3">₨ {formatCurrency(pageTotals.total)}</td>
                    <td className="table-cell"></td>
                  </tr>
                </tfoot>

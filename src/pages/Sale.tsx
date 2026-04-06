@@ -1,12 +1,12 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, Trash2, TrendingUp, ArrowLeft } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Plus, Trash2, Droplet, Eye, Edit2 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { formatCurrency, formatDate, today, paginate, filterByStartDate } from '../lib/utils';
 import { useToast } from '../components/ui/Toast';
 import SearchBar from '../components/ui/SearchBar';
 import Pagination from '../components/ui/Pagination';
 import Modal from '../components/ui/Modal';
+import TransactionReceiptModal from '../components/modals/TransactionReceiptModal';
 import type { FuelType } from '../store/useStore';
 
 const PER_PAGE = 10;
@@ -21,6 +21,8 @@ export default function SalePage() {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [page, setPage] = useState(1);
+  const [editingEntity, setEditingEntity] = useState<any>(null);
+  const [viewingEntity, setViewingEntity] = useState<any>(null);
   const [form, setForm] = useState({ date: today(), quantity: '', rate: '', amount: '' });
 
   const handleFuelSelect = (type: FuelType) => {
@@ -50,16 +52,38 @@ export default function SalePage() {
     qty: paged.reduce((s, x) => s + x.quantity, 0),
     amount: paged.reduce((s, x) => s + x.amount, 0),
   }), [paged]);
-  
-  const grandTotal = filtered.reduce((s, x) => s + x.amount, 0);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.date || !form.quantity || !form.rate) { toast('Fill required fields', 'error'); return; }
-    addSale({ type: fuelType, date: form.date, quantity: parseFloat(form.quantity), rate: parseFloat(form.rate), amount: parseFloat(form.amount) });
-    toast(`${fuelType} sale added`, 'success');
-    setForm({ date: today(), quantity: '', rate: '', amount: '' });
+    
+    const payload = { type: fuelType, date: form.date, quantity: parseFloat(form.quantity), rate: parseFloat(form.rate), amount: parseFloat(form.amount) };
+    
+    if (editingEntity) {
+      useStore.getState().updateSale(editingEntity.id, payload);
+      toast('Sale updated successfully', 'success');
+    } else {
+      addSale(payload);
+      toast(`${fuelType} sale added`, 'success');
+    }
+    closeForm();
+  };
+
+  const closeForm = () => {
     setShowForm(false);
+    setEditingEntity(null);
+    setForm({ date: today(), quantity: '', rate: '', amount: '' });
+  };
+
+  const handleEdit = (s: any) => {
+    setEditingEntity(s);
+    setForm({
+      date: s.date,
+      quantity: s.quantity.toString(),
+      rate: s.rate.toString(),
+      amount: s.amount.toString(),
+    });
+    setShowForm(true);
   };
 
   return (
@@ -67,7 +91,7 @@ export default function SalePage() {
       {/* Sidebar selection */}
       <div className="w-60 flex-shrink-0 flex flex-col gap-3 h-[calc(100vh-140px)]">
         <button
-          onClick={() => setShowForm(true)}
+          onClick={() => { closeForm(); setShowForm(true); }}
           className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-emerald-600 text-white font-bold text-sm shadow-lg shadow-emerald-600/20 hover:bg-emerald-500 transition-all active:scale-95"
         >
           <Plus className="w-4 h-4" />
@@ -96,34 +120,39 @@ export default function SalePage() {
 
       <div className="flex-1 min-w-0">
         {showForm && (
-          <Modal title={`Add ${fuelType} Sale`} onClose={() => setShowForm(false)}>
+          <Modal title={editingEntity ? `Edit ${fuelType} Sale` : `Add ${fuelType} Sale`} onClose={closeForm}>
             <form onSubmit={handleSubmit} className="space-y-3">
               <div><label className="label">Date *</label><input type="date" className="input" value={form.date} onChange={(e) => set('date', e.target.value)} required /></div>
               <div><label className="label">Quantity (L) *</label><input type="number" step="0.01" className="input" value={form.quantity} onChange={(e) => set('quantity', e.target.value)} required /></div>
               <div><label className="label">Rate (₨) *</label><input type="number" step="0.01" className="input" value={form.rate} onChange={(e) => set('rate', e.target.value)} required /></div>
               <div><label className="label">Amount</label><input className="input cursor-not-allowed text-primary-600 dark:text-primary-400 font-semibold" value={form.amount} readOnly /></div>
               <div className="flex justify-end gap-2 pt-2">
-                <button type="button" onClick={() => setShowForm(false)} className="btn-secondary">Cancel</button>
-                <button type="submit" className="btn-primary-emerald"><Plus className="w-4 h-4" /> Add Sale</button>
+                <button type="button" onClick={closeForm} className="btn-secondary">Cancel</button>
+                <button type="submit" className="btn-primary-emerald"><Plus className="w-4 h-4" /> {editingEntity ? 'Update Sale' : 'Add Sale'}</button>
               </div>
             </form>
           </Modal>
         )}
 
+        {viewingEntity && (
+          <TransactionReceiptModal
+            entity={viewingEntity}
+            type="sale"
+            onClose={() => setViewingEntity(null)}
+          />
+        )}
+
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-4">
-            <Link to="/" className="btn-icon" title="Back to Dashboard">
-              <ArrowLeft className="w-5 h-5" />
-            </Link>
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-emerald-600/10 dark:bg-emerald-600/20 flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold text-slate-900 dark:text-white leading-tight">Sale</h2>
-                <span className={fuelType === 'HSD' ? 'badge-hsd' : 'badge-pmg'}>{fuelType}</span>
-              </div>
+            <div className="w-14 h-14 rounded-2xl bg-emerald-600/10 dark:bg-emerald-600/20 flex items-center justify-center">
+              <Droplet className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <div>
+              <h1 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-3">
+                Sales Entries
+                {fuelType && <span className="text-emerald-600 dark:text-emerald-500 uppercase tracking-widest">{fuelType}</span>}
+              </h1>
             </div>
           </div>
         </div>
@@ -159,34 +188,38 @@ export default function SalePage() {
                 {paged.length === 0 ? (
                   <tr><td colSpan={5} className="table-cell text-center text-slate-400 dark:text-dark-500 py-12">No {fuelType} sales found</td></tr>
                 ) : paged.map((s) => (
-                  <tr key={s.id} className="table-row">
+                  <tr key={s.id} className="table-row group hover:bg-slate-50 dark:hover:bg-dark-800/50">
                     <td className="table-cell">{formatDate(s.date)}</td>
                     <td className="table-cell text-right">{s.quantity.toLocaleString()}</td>
                     <td className="table-cell text-right">₨ {formatCurrency(s.rate)}</td>
                     <td className="table-cell text-right font-semibold text-slate-900 dark:text-white">₨ {formatCurrency(s.amount)}</td>
                     <td className="table-cell text-right">
-                      {currentUser?.role === 'Admin' && (
-                        <button onClick={() => { deleteSale(s.id); toast('Sale deleted', 'warning'); }}
-                          className="text-slate-400 dark:text-dark-500 hover:text-red-600 dark:hover:text-red-400 transition-colors p-1">
-                          <Trash2 className="w-4 h-4" />
+                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => setViewingEntity(s)} className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg transition-colors" title="View Details">
+                          <Eye className="w-4 h-4" />
                         </button>
-                      )}
+                        {currentUser?.role === 'Admin' && (
+                          <>
+                            <button onClick={() => handleEdit(s)} className="p-1.5 text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-lg transition-colors" title="Edit Entry">
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button onClick={() => { deleteSale(s.id); toast('Sale deleted', 'warning'); }} className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors" title="Delete Entry">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
               {paged.length > 0 && (
-                <tfoot className="bg-slate-50/50 dark:bg-dark-800/50 font-semibold border-t border-slate-200 dark:border-dark-700/50">
+                <tfoot className="bg-slate-50/50 dark:bg-dark-800/50 font-semibold border-t-[3px] border-double border-slate-300 dark:border-dark-600">
                   <tr>
-                    <td className="table-cell text-right text-xs uppercase tracking-wider text-slate-500">Page Totals:</td>
-                    <td className="table-cell text-right text-slate-900 dark:text-white">{pageTotals.qty.toLocaleString()} L</td>
-                    <td className="table-cell text-right text-slate-900 dark:text-white">—</td>
-                    <td className="table-cell text-right text-emerald-600 dark:text-emerald-400">₨ {formatCurrency(pageTotals.amount)}</td>
-                    <td className="table-cell"></td>
-                  </tr>
-                  <tr className="bg-emerald-50/30 dark:bg-emerald-900/10 border-t border-emerald-100/50 dark:border-emerald-800/10">
-                    <td colSpan={3} className="table-cell text-right text-xs uppercase tracking-wider text-emerald-600/70 dark:text-emerald-400/70">Filtered Grand Total:</td>
-                    <td className="table-cell text-right font-bold text-emerald-600 dark:text-emerald-400">₨ {formatCurrency(grandTotal)}</td>
+                    <td className="table-cell text-right text-xs uppercase tracking-wider text-slate-500 py-3">Page Totals:</td>
+                    <td className="table-cell text-right text-slate-900 dark:text-white font-bold py-3">{pageTotals.qty.toLocaleString()} L</td>
+                    <td className="table-cell text-right text-slate-900 dark:text-white font-bold py-3">—</td>
+                    <td className="table-cell text-right text-emerald-600 dark:text-emerald-400 font-bold py-3">₨ {formatCurrency(pageTotals.amount)}</td>
                     <td className="table-cell"></td>
                   </tr>
                 </tfoot>
