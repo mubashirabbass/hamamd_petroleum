@@ -28,7 +28,7 @@ const ALL_MENUS = [
 export default function DeveloperSettings() {
   const { settings, updateSettings, resetAllData } = useStore();
   const { toast } = useToast();
-  const [softwareName, setSoftwareName] = useState(settings?.softwareName || 'EBS Petroleum');
+  const [softwareName, setSoftwareName] = useState(settings?.softwareName || 'HRM Filling Station');
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [resetCode, setResetCode] = useState('');
 

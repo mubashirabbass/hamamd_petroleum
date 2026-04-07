@@ -215,6 +215,11 @@
 @keyframes fadeIn  { from { opacity: 0 }         to { opacity: 1 } }
 @keyframes slideUp { from { transform: translateY(10px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
 @keyframes slideIn { from { transform: translateX(-10px); opacity: 0 } to { transform: translateX(0); opacity: 1 } }
+@keyframes loading {
+  0%   { transform: translateX(-100%); width: 40%; }
+  50%  { transform: translateX(150%);  width: 60%; }
+  100% { transform: translateX(300%);  width: 40%; }
+}
 
 .animate-fade-in { animation: fadeIn  0.2s ease-out; }
 .animate-slide-up{ animation: slideUp 0.25s ease-out; }

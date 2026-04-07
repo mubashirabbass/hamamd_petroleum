@@ -3,10 +3,12 @@ import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, ShoppingCart, TrendingUp, BookOpen,
   DollarSign, Package, AlertTriangle, BarChart3, Users,
-  Fuel, Settings, LogOut
+  Settings, LogOut
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useStore } from '../../store/useStore';
+import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
+import { Plus, Minus, RotateCcw } from 'lucide-react';
 
 const navItems = [
   { label: 'Dashboard',  path: '/',           icon: LayoutDashboard, shortcut: 'F1' },
@@ -32,15 +34,34 @@ const navItems = [
 
 export default function Sidebar() {
   const location = useLocation();
-  const { currentUser, logout, settings } = useStore();
+  const { currentUser, logout, settings, updateSettings } = useStore();
+
+  const handleZoom = async (delta: number) => {
+    const newZoom = Math.min(Math.max(settings.zoomLevel + delta, 0.5), 2.0);
+    await updateSettings({ zoomLevel: newZoom });
+    document.documentElement.style.zoom = ''; // Clear CSS zoom just in case
+    try {
+      const appWindow = getCurrentWebviewWindow();
+      if ((appWindow as any).setZoom) (appWindow as any).setZoom(newZoom).catch(() => {});
+    } catch(e) {}
+  };
+
+  const resetZoom = async () => {
+    await updateSettings({ zoomLevel: 1.0 });
+    document.documentElement.style.zoom = ''; // Clear CSS zoom just in case
+    try {
+      const appWindow = getCurrentWebviewWindow();
+      if ((appWindow as any).setZoom) (appWindow as any).setZoom(1.0).catch(() => {});
+    } catch(e) {}
+  };
 
   return (
     <aside className="relative h-screen flex-shrink-0 flex flex-col border-r w-56 bg-white/90 dark:bg-dark-900/95 backdrop-blur-xl border-slate-200 dark:border-dark-700/50">
 
       {/* Logo */}
       <div className="h-16 flex items-center px-4 border-b border-slate-200 dark:border-dark-700/50 gap-3">
-        <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-primary-600 flex items-center justify-center shadow-lg">
-          <Fuel className="w-4 h-4 text-white" />
+        <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-white flex items-center justify-center shadow-lg p-1 border border-slate-200">
+          <img src="/assets/logo-hr.png" alt="HRM" className="w-full h-full object-contain" />
         </div>
         <div>
           <p className="text-slate-900 dark:text-white font-bold text-[15px] leading-tight truncate max-w-[140px]">
@@ -111,6 +132,39 @@ export default function Sidebar() {
             );
           })}
       </nav>
+
+      {/* Zoom Controls */}
+      <div className="px-4 py-3 border-t border-slate-200 dark:border-dark-700/50 space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-dark-500">Interface Zoom</span>
+          <span className="text-[10px] font-black text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 px-1.5 py-0.5 rounded">
+            {Math.round(settings.zoomLevel * 100)}%
+          </span>
+        </div>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => handleZoom(-0.1)}
+            title="Zoom Out"
+            className="flex-1 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-dark-700/50 hover:bg-slate-50 dark:hover:bg-dark-800 text-slate-600 dark:text-dark-400 transition-colors"
+          >
+            <Minus className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={resetZoom}
+            title="Reset Zoom"
+            className="flex-1 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-dark-700/50 hover:bg-slate-50 dark:hover:bg-dark-800 text-slate-600 dark:text-dark-400 transition-colors"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={() => handleZoom(0.1)}
+            title="Zoom In"
+            className="flex-1 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-dark-700/50 hover:bg-slate-50 dark:hover:bg-dark-800 text-slate-600 dark:text-dark-400 transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
 
       {/* Logout only */}
       <div className="p-2 border-t border-slate-200 dark:border-dark-700/50">

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Fuel, ShieldCheck, Mail, ArrowRight, Lock } from 'lucide-react';
+import { ShieldCheck, Mail, ArrowRight, Lock } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { useToast } from '../components/ui/Toast';
+import loginBg from '../assets/login-bg.jpg';
 
 export default function Login() {
   const { settings, login } = useStore();
@@ -51,7 +52,7 @@ export default function Login() {
   return (
     <div 
       className="min-h-screen w-full flex items-center justify-center p-6 bg-cover bg-center bg-no-repeat relative font-sans"
-      style={{ backgroundImage: `url('/src/assets/login-bg.jpg')` }}
+      style={{ backgroundImage: `url(${loginBg})` }}
     >
       {/* Lighter, high-end overlay for iPhone-style contrast */}
       <div className="absolute inset-0 bg-white/20 backdrop-blur-[2px]" />
@@ -59,11 +60,18 @@ export default function Login() {
       <div className="relative z-10 w-full max-w-sm animate-fade-in-up">
         {/* Branding */}
         <div className="text-center mb-10">
-          <div className="flex items-center justify-center gap-3 mb-1">
-            <div className="w-12 h-12 rounded-2xl bg-slate-900 flex items-center justify-center shadow-2xl">
-               <Fuel className="w-6 h-6 text-white" />
+          <div className="flex flex-col items-center justify-center gap-3 mb-2">
+            <div className="flex items-center gap-4">
+              <div className="w-[72px] h-[72px] bg-white rounded-2xl flex items-center justify-center shadow-xl p-1 border border-slate-200">
+                 <img src="/assets/logo-hr.png" alt="HRM" className="w-full h-full object-contain" />
+              </div>
+              <div className="w-[72px] h-[72px] bg-white rounded-2xl flex items-center justify-center shadow-xl p-1 border border-slate-200">
+                 <img src="/assets/logo-go.png" alt="GO" className="w-full h-full object-contain" />
+              </div>
             </div>
-            <h1 className="text-3xl font-black text-slate-900 tracking-tighter">{settings.softwareName || 'EBS Petroleum'}</h1>
+            <h1 className="text-3xl font-black text-slate-900 tracking-tighter text-center leading-none mt-2">
+              {settings.softwareName || 'HRM Filling Station'}
+            </h1>
           </div>
           <p className="text-slate-600 text-[10px] uppercase tracking-[0.4em] font-black">Authorized Personnel Only</p>
         </div>

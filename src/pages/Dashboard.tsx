@@ -284,12 +284,12 @@ export default function Dashboard() {
 
         {/* Left: Logo + Title */}
         <div className="flex items-center gap-5">
-          <div className="w-14 h-14 rounded-3xl bg-gradient-to-br from-primary-600 to-primary-800 flex items-center justify-center shadow-xl shadow-primary-900/40 border-2 border-white/20 flex-shrink-0">
-            <Fuel className="w-7 h-7 text-white" />
+          <div className="w-14 h-14 bg-white rounded-3xl flex items-center justify-center p-1.5 shadow-xl border border-slate-200 flex-shrink-0">
+            <img src="/assets/logo-hr.png" alt="HRM" className="w-full h-full object-contain" />
           </div>
           <div>
-            <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Business Dashboard</h1>
-            <p className="text-slate-500 dark:text-dark-400 text-sm font-bold uppercase tracking-widest">EBS Management Suite</p>
+            <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">HRM Filling Station</h1>
+            <p className="text-slate-500 dark:text-dark-400 text-sm font-bold uppercase tracking-widest">Business Dashboard</p>
           </div>
         </div>
 
