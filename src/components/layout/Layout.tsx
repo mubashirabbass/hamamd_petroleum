@@ -1,6 +1,7 @@
 import { useEffect, useCallback } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
+import { useStore } from '../../store/useStore';
 
 const KEY_ROUTES: Record<string, string> = {
   F1:  '/',
@@ -16,14 +17,38 @@ const KEY_ROUTES: Record<string, string> = {
 };
 
 export default function Layout() {
+  const { settings, currentUser } = useStore();
   const navigate = useNavigate();
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     const tag = (e.target as HTMLElement).tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+    
     const route = KEY_ROUTES[e.key];
-    if (route) { e.preventDefault(); navigate(route); }
-  }, [navigate]);
+    if (route) {
+      // Map route back to label for filtering
+      const labelMap: Record<string, string> = {
+        '/': 'Dashboard',
+        '/purchase': 'Purchase',
+        '/sale': 'Sale',
+        '/ledger': 'Ledger',
+        '/expense': 'Expense',
+        '/asset': 'Asset',
+        '/liability': 'Liability',
+        '/stock': 'Stock',
+        '/customer': 'Customer',
+        '/settings': 'Settings',
+      };
+      
+      const label = labelMap[route];
+      const hiddenMenus = settings.hiddenMenus || [];
+      if (currentUser?.role !== 'Developer' && hiddenMenus.includes(label)) return;
+      if (label === 'Settings' && currentUser?.role === 'Staff') return;
+
+      e.preventDefault(); 
+      navigate(route); 
+    }
+  }, [navigate, settings.hiddenMenus, currentUser?.role]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);

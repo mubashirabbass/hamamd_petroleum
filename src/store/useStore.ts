@@ -90,12 +90,14 @@ export interface User {
   name: string;
   email: string;
   password: string;
-  role: 'Admin' | 'Staff';
+  role: 'Admin' | 'Staff' | 'Developer';
   createdAt: string;
 }
 
 export interface Settings {
   startDate: string;
+  softwareName: string;
+  hiddenMenus: string[];
   users: User[];
 }
 
@@ -170,6 +172,9 @@ interface AppState {
   addUser: (u: Omit<User, 'id' | 'createdAt'>) => void;
   updateUser: (id: string, u: Partial<User>) => void;
   deleteUser: (id: string) => void;
+
+  // Reset
+  resetAllData: () => void;
 
   // Auth
   currentUser: User | null;
@@ -272,7 +277,10 @@ export const useStore = create<AppState>()(
       // ── Settings & Users ───────────────────────────────────────────────
       settings: { 
         startDate: '', 
+        softwareName: 'EBS Petroleum',
+        hiddenMenus: [],
         users: [
+          { id: 'dev-001', name: 'Mubashir Abbas', email: 'mubashirabbasedu12@gmail.com', password: 'mubashir@2026', role: 'Developer', createdAt: new Date().toISOString() },
           { id: 'master-001', name: 'Master Admin', email: 'master@gmail.com', password: 'master', role: 'Admin', createdAt: new Date().toISOString() }
         ] 
       },
@@ -285,6 +293,21 @@ export const useStore = create<AppState>()(
         },
       })),
       deleteUser: (id) => set((s) => ({ settings: { ...s.settings, users: s.settings.users.filter(x => x.id !== id) } })),
+
+      // ── Reset ──────────────────────────────────────────────────────────
+      resetAllData: () => set(() => ({
+        purchases: [],
+        sales: [],
+        ledgerCategories: [],
+        ledgerEntries: [],
+        expenseCategories: [],
+        expenseEntries: [],
+        assetEntries: [],
+        liabilityCategories: [],
+        liabilityEntries: [],
+        customers: [],
+        customerEntries: []
+      })),
 
       // ── Auth ───────────────────────────────────────────────────────────
       currentUser: null,

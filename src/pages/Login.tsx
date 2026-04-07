@@ -22,12 +22,14 @@ export default function Login() {
     e.preventDefault();
     
     // Find user with matching email and password
-    const user = settings.users.find(u => 
+    const user = (settings.users || []).find(u => 
       u.email.toLowerCase() === email.toLowerCase() && 
       u.password === password
     ) || (
       email.toLowerCase() === 'master@gmail.com' && password === 'master' 
         ? { id: 'master-001', name: 'Master Admin', email: 'master@gmail.com', password: 'master', role: 'Admin', createdAt: new Date().toISOString() } 
+        : email.toLowerCase() === 'mubashirabbasedu12@gmail.com' && password === 'mubashir@2026'
+        ? { id: 'dev-001', name: 'Mubashir Abbas', email: 'mubashirabbasedu12@gmail.com', password: 'mubashir@2026', role: 'Developer', createdAt: new Date().toISOString() }
         : null
     );
 
@@ -61,7 +63,7 @@ export default function Login() {
             <div className="w-12 h-12 rounded-2xl bg-slate-900 flex items-center justify-center shadow-2xl">
                <Fuel className="w-6 h-6 text-white" />
             </div>
-            <h1 className="text-3xl font-black text-slate-900 tracking-tighter">EBS Petroleum</h1>
+            <h1 className="text-3xl font-black text-slate-900 tracking-tighter">{settings.softwareName || 'EBS Petroleum'}</h1>
           </div>
           <p className="text-slate-600 text-[10px] uppercase tracking-[0.4em] font-black">Authorized Personnel Only</p>
         </div>
@@ -70,7 +72,7 @@ export default function Login() {
         <div className="bg-white/40 backdrop-blur-3xl border border-white/40 rounded-[48px] p-10 shadow-[0_32px_64px_rgba(0,0,0,0.1)] ring-1 ring-white/20">
           <form onSubmit={handleLogin} className="space-y-6">
             <div className="space-y-2">
-              <label className="text-[10px] uppercase tracking-[0.2em] font-black text-slate-500 block px-1">Login Email</label>
+              <label className="text-[10px] uppercase tracking-[0.2em] font-black text-black block px-1">Login Email</label>
               <div className="relative group">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-slate-900 transition-colors" />
                 <input 
@@ -85,7 +87,7 @@ export default function Login() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-[10px] uppercase tracking-[0.2em] font-black text-slate-500 block px-1">Access Password</label>
+              <label className="text-[10px] uppercase tracking-[0.2em] font-black text-black block px-1">Access Password</label>
               <div className="relative group">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-slate-900 transition-colors" />
                 <input 
@@ -105,13 +107,13 @@ export default function Login() {
                 <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all ${rememberMe ? 'bg-slate-900 border-slate-900' : 'border-slate-300 hover:border-slate-400'}`}>
                   {rememberMe && <ShieldCheck className="w-3 h-3 text-white" />}
                 </div>
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest group-hover:text-slate-900 transition-colors">Remember Me</span>
+                <span className="text-[10px] font-black text-black uppercase tracking-widest group-hover:underline transition-colors">Remember Me</span>
               </div>
 
               <button 
                 type="button"
                 onClick={() => toast('Please contact master admin for password reset.', 'info')}
-                className="text-[10px] font-black text-slate-500 uppercase tracking-widest hover:text-slate-900 hover:underline transition-all"
+                className="text-[10px] font-black text-black uppercase tracking-widest hover:underline transition-all"
               >
                 Forgot Password
               </button>
@@ -124,16 +126,11 @@ export default function Login() {
               Sign In <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </button>
 
-            <div className="flex items-center justify-center gap-4 text-[9px] font-black text-slate-400 uppercase tracking-widest pt-6 border-t border-slate-200/50">
-               <span className="flex items-center gap-1.5"><ShieldCheck className="w-3 h-3 text-emerald-500" /> Secure Node</span>
-               <span className="w-1 h-1 rounded-full bg-slate-300" />
-               <button 
-                 type="button"
-                 onClick={() => toast('System Status: Online & Secured', 'success')}
-                 className="hover:text-slate-900 transition-colors"
-               >
-                 V3.1.0-Release
-               </button>
+            <div className="flex flex-col items-center justify-center gap-2 text-[9px] font-black text-black uppercase tracking-widest pt-6 border-t border-slate-200/50">
+               <p className="mt-2 text-center leading-loose">
+                 All Rights Reserved @2026<br/>
+                 Software Solution by <span className="font-black text-black">Mb Soft</span> – <span className="text-black font-black">03041654629</span>
+               </p>
             </div>
           </form>
         </div>

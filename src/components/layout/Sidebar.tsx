@@ -31,7 +31,7 @@ const navItems = [
 
 export default function Sidebar() {
   const location = useLocation();
-  const { currentUser, logout } = useStore();
+  const { currentUser, logout, settings } = useStore();
 
   return (
     <aside className="relative h-screen flex-shrink-0 flex flex-col border-r w-56 bg-white/90 dark:bg-dark-900/95 backdrop-blur-xl border-slate-200 dark:border-dark-700/50">
@@ -42,7 +42,9 @@ export default function Sidebar() {
           <Fuel className="w-4 h-4 text-white" />
         </div>
         <div>
-          <p className="text-slate-900 dark:text-white font-bold text-[15px] leading-tight">EBS Manager</p>
+          <p className="text-slate-900 dark:text-white font-bold text-[15px] leading-tight truncate max-w-[140px]">
+            {settings.softwareName || 'EBS Petroleum'}
+          </p>
           <p className="text-slate-500 dark:text-dark-500 text-[11px]">Business Suite</p>
         </div>
       </div>
@@ -50,7 +52,12 @@ export default function Sidebar() {
       {/* Nav */}
       <nav className="flex-1 py-3 px-2 space-y-1 overflow-y-auto">
         {navItems
-          .filter(item => item.label !== 'Settings' || currentUser?.role === 'Admin')
+          .filter(item => {
+            if (currentUser?.role === 'Developer') return true;
+            if (item.label === 'Settings' && currentUser?.role !== 'Admin') return false;
+            const hiddenMenus = settings.hiddenMenus || [];
+            return !hiddenMenus.includes(item.label);
+          })
           .map(item => {
             const { label, path, icon: Icon, children } = item as any;
             const active = path === '/' ? location.pathname === '/' : location.pathname.startsWith(path);

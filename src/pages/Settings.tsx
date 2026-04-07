@@ -4,14 +4,16 @@ import { useStore } from '../store/useStore';
 import ManageUsersModal from '../components/modals/ManageUsersModal';
 import { useToast } from '../components/ui/Toast';
 import { cn } from '../lib/utils';
+import DeveloperSettings from '../components/settings/DeveloperSettings';
+import { Terminal } from 'lucide-react';
 
 export default function SettingsPage() {
   const { settings, updateSettings, currentUser } = useStore();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<'general' | 'users'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'users' | 'developer'>('general');
   const [showManageUsers, setShowManageUsers] = useState(false);
   
-  if (currentUser?.role !== 'Admin') {
+  if (currentUser?.role === 'Staff') {
     return (
       <div className="flex flex-col items-center justify-center h-[60vh] text-slate-400 dark:text-dark-500 animate-fade-in">
         <AlertCircle className="w-16 h-16 mb-4 opacity-20" />
@@ -27,10 +29,12 @@ export default function SettingsPage() {
     updateSettings({ startDate: date });
     toast(`Software start date set to ${date}`, 'success');
   };
-
   const tabs = [
     { id: 'general', label: 'General Setup', icon: Settings, color: 'bg-primary-600', text: 'text-primary-600' },
     { id: 'users', label: 'User Management', icon: ShieldCheck, color: 'bg-emerald-600', text: 'text-emerald-600' },
+    ...(currentUser?.role === 'Developer' ? [
+      { id: 'developer', label: 'Developer Tools', icon: Terminal, color: 'bg-slate-900', text: 'text-slate-900' }
+    ] : []),
   ];
 
   return (
@@ -105,7 +109,7 @@ export default function SettingsPage() {
                 </div>
               </div>
             </div>
-          ) : (
+          ) : activeTab === 'users' ? (
             <div className="glass rounded-2xl overflow-hidden border border-slate-200/50 dark:border-dark-700/50 h-full flex flex-col items-center justify-center p-12 text-center">
                <div className="w-20 h-20 rounded-3xl bg-emerald-600/10 flex items-center justify-center mb-6">
                   <ShieldCheck className="w-10 h-10 text-emerald-600" />
@@ -134,6 +138,8 @@ export default function SettingsPage() {
                   </div>
                </div>
             </div>
+          ) : (
+            <DeveloperSettings />
           )}
         </div>
       </div>
