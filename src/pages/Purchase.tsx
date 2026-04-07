@@ -289,7 +289,7 @@ export default function PurchasePage() {
                       <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button 
                           onClick={() => setViewingEntity(p)} 
-                          className="flex items-center gap-1.5 px-2 py-0.5 text-[9px] font-black uppercase tracking-tighter text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/20 border border-blue-200/50 dark:border-blue-800/30 rounded hover:bg-blue-100 dark:hover:bg-blue-800/40 transition-all" 
+                          className="flex items-center gap-1.5 px-2 py-0.5 text-[9px] font-black uppercase tracking-tighter text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/20 border border-blue-200/50 dark:border-emerald-800/30 rounded hover:bg-blue-100 dark:hover:bg-blue-800/40 transition-all" 
                           title={`Print ${p.billNo || 'Bill'}`}
                         >
                           <Printer className="w-3 h-3" />
@@ -311,25 +311,25 @@ export default function PurchasePage() {
                       </div>
                     </td>
                  </tr>
-               ))}
-             </tbody>
-             {paged.length > 0 && (
-               <tfoot className="bg-slate-50/50 dark:bg-dark-800/50 font-semibold border-t-[3px] border-double border-slate-300 dark:border-dark-600">
-                 <tr>
-                   <td colSpan={3} className="table-cell text-right text-xs uppercase tracking-wider text-slate-500 py-3">Page Totals:</td>
-                   <td className="table-cell text-right text-slate-900 dark:text-white font-bold py-3">{pageTotals.qty.toLocaleString()} L</td>
-                   <td className="table-cell text-right text-slate-900 dark:text-white font-bold py-3">₨ {formatCurrency(pageTotals.carriage)}</td>
-                   <td className="table-cell text-right text-slate-900 dark:text-white font-bold py-3">₨ {formatCurrency(pageTotals.amount)}</td>
-                   <td className="table-cell text-right text-primary-600 dark:text-primary-400 font-bold py-3">₨ {formatCurrency(pageTotals.total)}</td>
-                   <td className="table-cell"></td>
-                 </tr>
-               </tfoot>
-             )}
-           </table>
+                ))}
+              </tbody>
+              {paged.length > 0 && (
+                <tfoot className="bg-slate-50/50 dark:bg-dark-800/50 font-semibold border-t-[3px] border-double border-slate-300 dark:border-dark-600">
+                  <tr>
+                    <td colSpan={4} className="table-cell text-right text-xs uppercase tracking-wider text-slate-500 py-3">Page Totals:</td>
+                    <td className="table-cell text-right text-slate-900 dark:text-white font-bold py-3">{pageTotals.qty.toLocaleString()} L</td>
+                    <td className="table-cell text-right text-slate-900 dark:text-white font-bold py-3">₨ {formatCurrency(pageTotals.carriage)}</td>
+                    <td className="table-cell text-right text-slate-900 dark:text-white font-bold py-3">₨ {formatCurrency(pageTotals.amount)}</td>
+                    <td className="table-cell text-right text-primary-600 dark:text-primary-400 font-bold py-3">₨ {formatCurrency(pageTotals.total)}</td>
+                    <td className="table-cell"></td>
+                  </tr>
+                </tfoot>
+              )}
+            </table>
+          </div>
+           <Pagination page={page} total={filtered.length} perPage={PER_PAGE} onChange={setPage} />
          </div>
-          <Pagination page={page} total={filtered.length} perPage={PER_PAGE} onChange={setPage} />
-        </div>
-      </div>
-    </div>
+       </div>
+     </div>
   );
 }

@@ -212,8 +212,9 @@ export default function SalePage() {
               <thead><tr className="table-header">
                 <th className="table-cell text-left">Bill No</th>
                 <th className="table-cell text-left">Date</th>
-                <th className="table-cell text-right">Qty (L)</th>
+                <th className="table-cell text-left uppercase tracking-tighter">Product</th>
                 <th className="table-cell text-right">Rate (₨)</th>
+                <th className="table-cell text-right">Qty (L)</th>
                 <th className="table-cell text-right">Amount (₨)</th>
                 <th className="table-cell"></th>
               </tr></thead>
@@ -224,8 +225,9 @@ export default function SalePage() {
                   <tr key={s.id} className="table-row group hover:bg-slate-50 dark:hover:bg-dark-800/50 text-[11px]">
                     <td className="table-cell font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-tighter">{s.billNo || 'Legacy'}</td>
                     <td className="table-cell">{formatDate(s.date)}</td>
-                    <td className="table-cell text-right">{s.quantity.toLocaleString()} L</td>
+                    <td className="table-cell uppercase font-bold text-slate-500 dark:text-dark-400">{s.type || 'N/A'}</td>
                     <td className="table-cell text-right">₨ {formatCurrency(s.rate)}</td>
+                    <td className="table-cell text-right">{s.quantity.toLocaleString()} L</td>
                     <td className="table-cell text-right font-semibold text-slate-900 dark:text-white">₨ {formatCurrency(s.amount)}</td>
                     <td className="table-cell text-right">
                       <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -258,9 +260,8 @@ export default function SalePage() {
               {paged.length > 0 && (
                 <tfoot className="bg-slate-50/50 dark:bg-dark-800/50 font-semibold border-t-[3px] border-double border-slate-300 dark:border-dark-600">
                   <tr>
-                    <td colSpan={2} className="table-cell text-right text-xs uppercase tracking-wider text-slate-500 py-3">Page Totals:</td>
+                    <td colSpan={4} className="table-cell text-right text-xs uppercase tracking-wider text-slate-500 py-3">Page Totals:</td>
                     <td className="table-cell text-right text-slate-900 dark:text-white font-bold py-3">{pageTotals.qty.toLocaleString()} L</td>
-                    <td className="table-cell text-right text-slate-900 dark:text-white font-bold py-3">—</td>
                     <td className="table-cell text-right text-emerald-600 dark:text-emerald-400 font-bold py-3">₨ {formatCurrency(pageTotals.amount)}</td>
                     <td className="table-cell"></td>
                   </tr>

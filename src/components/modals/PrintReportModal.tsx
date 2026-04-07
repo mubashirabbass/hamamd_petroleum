@@ -210,6 +210,8 @@ table {
   width: 100%;
   border-collapse: collapse;
   font-size: 10px;
+  border-left: 1.5px solid #111;
+  border-right: 1.5px solid #111;
 }
 thead tr {
   border-top: 1.5px solid #111;
@@ -233,12 +235,14 @@ tbody td {
 }
 tbody td:last-child { border-right: none; }
 tfoot tr {
-  border-top: 1.5px solid #111;
+  border-top: 2px solid #111;
+  border-bottom: 2px solid #111;
   background: #fafafa;
 }
 tfoot td {
-  padding: 5px 6px;
+  padding: 8px 6px;
   border-right: 1px solid #ccc;
+  font-weight: 950;
 }
 tfoot td:last-child { border-right: none; }
 @media print {
@@ -343,7 +347,7 @@ export default function PrintReportModal({ data, type, onClose }: Props) {
             </div>
 
               <div className="mt-4">
-                <table className="w-full border-collapse text-[10px]">
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px', borderLeft: '1.5px solid #111', borderRight: '1.5px solid #111' }}>
                   <thead>
                     <tr className="bg-slate-50/50 dark:bg-dark-900/50 border-y-[1.5px] border-[#111]">
                       <th className="px-2 py-1.5 text-center border-r border-slate-300 w-8">Sr.</th>
@@ -373,8 +377,8 @@ export default function PrintReportModal({ data, type, onClose }: Props) {
                     ))}
                   </tbody>
                   <tfoot>
-                    <tr className="bg-slate-50 font-bold border-t-[1.5px] border-[#111]">
-                      <td colSpan={5} className="px-2 py-1.5 text-right border-r border-[#111]">Sub-Total</td>
+                    <tr className="bg-slate-50/80 font-bold border-y-[2px] border-[#111]">
+                      <td colSpan={5} className="px-2 py-2 text-right border-r border-[#111] font-black uppercase text-[9px] text-slate-700">Page Sub-Total Accumulation:</td>
                       <td className="px-2 py-1.5 text-right border-r border-[#111]">{(chunk.reduce((s, x) => s + (x.quantity || 0), 0) || 0).toLocaleString()}</td>
                       {isPurchase && <td className="px-2 py-1.5 text-right border-r border-[#111] text-nowrap">₨ {formatCurrency(chunk.reduce((s, x) => s + (x.carriage || 0), 0))}</td>}
                       <td className="px-2 py-1.5 text-right border-r border-[#111] text-nowrap">₨ {formatCurrency(chunk.reduce((s, x) => s + (x.amount || 0), 0))}</td>

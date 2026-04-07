@@ -90,7 +90,7 @@ export default function TransactionReceiptModal({ entity, type, title, onClose }
   .address { font-size: 10.5px; font-weight: 700; font-style: italic; text-transform: uppercase; margin-bottom: 3px; }
   .contact { display: flex; justify-content: center; gap: 15px; font-size: 10px; font-weight: 900; }
   .meta-bar { display: flex; justify-content: space-between; border: 1.5px solid #111; padding: 5px 12px; margin-bottom: 10px; font-size: 10.5px; font-weight: 1000; text-transform: uppercase; background: #f5f5f5; }
-  table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 15px; border-left: 1.5px solid #111; border-right: 1.5px solid #111; }
   th { border-top: 1.5px solid #111; border-bottom: 1.5px solid #111; background: #ececec; padding: 4px 6px; font-size: 10.5px; font-weight: 1000; text-transform: uppercase; text-align: left; border-right: 1px solid #bbb; }
   th:last-child { border-right: none; }
   td { padding: 10px 8px; border-bottom: 1.5px solid #111; font-size: 14px; font-weight: 700; vertical-align: top; }
@@ -162,9 +162,9 @@ export default function TransactionReceiptModal({ entity, type, title, onClose }
         </tr>
       </tbody>
       <tfoot>
-        <tr style="border-top: 1.5px solid #111; background: #fafafa;">
-          <td colspan="4" style="text-align: right; padding: 10px 12px; font-weight: 1000; text-transform: uppercase;">Total Bill Amount</td>
-          <td style="text-align: right; padding: 10px 12px; font-weight: 1000; font-size: 16px; border-left: 1px solid #ddd; white-space: nowrap;">₨ ${formatCurrency(total)}</td>
+        <tr style="border-top: 2px solid #111; border-bottom: 2px solid #111; background: #fafafa;">
+          <td colspan="4" style="text-align: right; padding: 12px 12px; font-weight: 1000; text-transform: uppercase;">Total Bill Amount</td>
+          <td style="text-align: right; padding: 12px 12px; font-weight: 1000; font-size: 16px; border-left: 1px solid #ddd; white-space: nowrap;">₨ ${formatCurrency(total)}</td>
         </tr>
       </tfoot>
     </table>
@@ -281,7 +281,7 @@ export default function TransactionReceiptModal({ entity, type, title, onClose }
 
               {/* Table Restoration */}
               <div className="mt-4">
-                <table className="w-full border-collapse">
+                <table className="w-full border-collapse border-x-[1.5px] border-[#111]">
                    <thead>
                       <tr className="border-y-[1.5px] border-[#111] bg-[#ececec]">
                          <th className="p-[4px_6px] text-left text-[10.5px] font-[1000] uppercase border-r border-[#bbb]">Description (Bill Details)</th>
@@ -303,9 +303,9 @@ export default function TransactionReceiptModal({ entity, type, title, onClose }
                       </tr>
                    </tbody>
                    <tfoot>
-                     <tr className="bg-[#fcfcfc] border-t-[1.5px] border-[#111]">
-                       <td colSpan={4} className="p-[10px_12px] text-right text-[12px] font-[1000] uppercase border-r border-[#bbb]">Total Bill Amount</td>
-                       <td className="p-[10px_12px] text-right font-black text-[18px] text-nowrap">₨ {formatCurrency(total)}</td>
+                     <tr className="bg-[#fcfcfc] border-y-[2px] border-[#111]">
+                       <td colSpan={4} className="p-[12px_12px] text-right text-[12px] font-[1000] uppercase border-r border-[#bbb]">Total Bill Amount</td>
+                       <td className="p-[12px_12px] text-right font-black text-[18px] text-nowrap">₨ {formatCurrency(total)}</td>
                      </tr>
                    </tfoot>
                 </table>
