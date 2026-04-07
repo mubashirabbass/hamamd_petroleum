@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Package, Plus, Trash2, Eye, Edit2, Search, Check, X, FileText, Settings, UserPlus } from 'lucide-react';
+import { Briefcase, Plus, Trash2, Eye, Edit2, Search, Check, X, FileText, Settings, UserPlus, Printer } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { formatCurrency, formatDate, today, paginate, filterByStartDate, cn } from '../lib/utils';
 import { useToast } from '../components/ui/Toast';
@@ -7,6 +7,7 @@ import SearchBar from '../components/ui/SearchBar';
 import Pagination from '../components/ui/Pagination';
 import Modal from '../components/ui/Modal';
 import TransactionReceiptModal from '../components/modals/TransactionReceiptModal';
+import PrintReportModal from '../components/modals/PrintReportModal';
 
 // const PER_PAGE = 40; // Replaced by state
 
@@ -21,6 +22,7 @@ export default function AssetPage() {
   const [activeTab, setActiveTab] = useState<'database' | 'register' | 'manage'>('database');
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
   const [showEntryForm, setShowEntryForm] = useState(false);
+  const [showReport, setShowReport] = useState(false);
   
   // Registration Form State
   const [newName, setNewName] = useState('');
@@ -132,6 +134,13 @@ export default function AssetPage() {
   const handleAddCategory = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newName.trim()) return;
+
+    const normalized = newName.trim().toLowerCase();
+    if (assetCategories.some(c => c.name.toLowerCase() === normalized)) {
+      toast('An asset account with this name already exists!', 'error');
+      return;
+    }
+
     addAssetCategory(newName.trim());
     setNewName('');
     toast('Account registered successfully', 'success');
@@ -145,6 +154,13 @@ export default function AssetPage() {
 
   const handleSaveEdit = (id: string) => {
     if (!editForm.name.trim()) return;
+
+    const normalized = editForm.name.trim().toLowerCase();
+    if (assetCategories.some(c => c.id !== id && c.name.toLowerCase() === normalized)) {
+      toast('Another asset account already has this name!', 'error');
+      return;
+    }
+
     updateAssetCategory(id, editForm.name.trim());
     setEditingId(null);
     toast('Account details updated', 'success');
@@ -152,6 +168,7 @@ export default function AssetPage() {
 
   return (
     <div className="animate-fade-in space-y-6 flex flex-col h-full min-h-[calc(100vh-4rem)]">
+      {/* Parallel Horizontal Tabs */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex bg-slate-100 dark:bg-dark-800 p-1 rounded-2xl border border-slate-200 dark:border-dark-700/50 w-full md:w-auto">
           <button 
@@ -163,7 +180,7 @@ export default function AssetPage() {
                 : "text-slate-500 hover:text-slate-800 dark:hover:text-white"
             )}
           >
-            <Package className="w-4 h-4" /> Asset Register
+            <Briefcase className="w-4 h-4" /> Asset Register
           </button>
           <button 
             onClick={() => setActiveTab('register')}
@@ -190,6 +207,12 @@ export default function AssetPage() {
         </div>
         {activeTab === 'database' && cat && (
           <div className="flex gap-2">
+            <button 
+              onClick={() => setShowReport(true)} 
+              className="px-4 py-2 bg-slate-100 dark:bg-dark-700 text-slate-700 dark:text-dark-200 rounded-lg hover:bg-slate-200 dark:hover:bg-dark-600 transition-colors font-bold text-sm flex items-center gap-2 border border-slate-200 dark:border-dark-700"
+            >
+              <Printer className="w-4 h-4" /> Print Report
+            </button>
             <button onClick={() => { closeForm(); setShowEntryForm(true); }} className="btn-primary !bg-emerald-600 hover:opacity-90 flex items-center gap-2">
               <Plus className="w-4 h-4" /> New Entry
             </button>
@@ -200,6 +223,7 @@ export default function AssetPage() {
       <div className="flex gap-4 h-[calc(100vh-160px)] overflow-hidden">
         {activeTab === 'database' ? (
           <>
+            {/* Sidebar List */}
             <div className="w-64 flex-shrink-0 flex flex-col h-full bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700/50 rounded-2xl overflow-hidden shadow-sm">
                <div className="p-3 bg-slate-50/50 dark:bg-dark-800/30 border-b border-slate-100 dark:border-dark-700/30 flex items-center justify-between">
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Assets</p>
@@ -233,13 +257,14 @@ export default function AssetPage() {
               </div>
             </div>
 
+            {/* Main Content (Database View) */}
             <div className="flex-1 min-w-0 smart-scroll h-full pr-1">
               {cat ? (
                 <>
                   <div className="flex items-center justify-between mb-5 animate-in slide-in-from-bottom duration-350">
                     <div className="flex items-center gap-4">
                       <div className="w-14 h-14 rounded-2xl bg-emerald-600/10 dark:bg-emerald-600/20 flex items-center justify-center">
-                        <Package className="w-8 h-8 text-emerald-600 dark:text-emerald-600" />
+                        <Briefcase className="w-8 h-8 text-emerald-600 dark:text-emerald-600" />
                       </div>
                       <div>
                         <h1 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
@@ -252,15 +277,15 @@ export default function AssetPage() {
                   {/* Summary Cards */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 animate-in slide-in-from-bottom duration-350 delay-75">
                     <div className="glass p-5 rounded-2xl border-l-4 border-slate-400 shadow-sm">
-                      <p className="text-[10px] font-black text-slate-400 dark:text-dark-500 uppercase tracking-widest mb-1">Total Debit (Purchased)</p>
+                      <p className="text-[10px] font-black text-slate-400 dark:text-dark-500 uppercase tracking-widest mb-1">Total Debit (Addition)</p>
                       <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 tabular-nums">₨ {formatCurrency(totals.debit)}</p>
                     </div>
-                    <div className="glass p-5 rounded-2xl border-l-4 border-emerald-500 shadow-sm">
-                      <p className="text-[10px] font-black text-slate-400 dark:text-dark-500 uppercase tracking-widest mb-1">Total Credit (Sold/Used)</p>
-                      <p className="text-2xl font-black text-slate-500 dark:text-slate-400 tabular-nums">₨ {formatCurrency(totals.credit)}</p>
+                    <div className="glass p-5 rounded-2xl border-l-4 border-orange-500 shadow-sm">
+                      <p className="text-[10px] font-black text-slate-400 dark:text-dark-500 uppercase tracking-widest mb-1">Total Credit (Disposal)</p>
+                      <p className="text-2xl font-black text-orange-600 dark:text-orange-400 tabular-nums">₨ {formatCurrency(totals.credit)}</p>
                     </div>
                     <div className="glass p-5 rounded-2xl border-l-4 border-emerald-600 shadow-sm">
-                      <p className="text-[10px] font-black text-slate-400 dark:text-dark-500 uppercase tracking-widest mb-1">Current Book Value</p>
+                      <p className="text-[10px] font-black text-slate-400 dark:text-dark-500 uppercase tracking-widest mb-1">Current Valuation</p>
                       <p className={cn("text-2xl font-black tabular-nums text-emerald-600")}>
                         ₨ {formatCurrency(Math.abs(totals.debit - totals.credit))}
                       </p>
@@ -283,9 +308,9 @@ export default function AssetPage() {
                             <th className="px-4 py-3 text-left w-12 border-r border-slate-300 dark:border-dark-700/50">S.No</th>
                             <th className="px-4 py-3 text-left">Date</th>
                             <th className="px-4 py-3 text-left">Description</th>
-                            <th className="px-4 py-3 text-right">Debit (+)</th>
-                            <th className="px-4 py-3 text-right">Credit (-)</th>
-                            <th className="px-4 py-3 text-right">Balance</th>
+                            <th className="px-4 py-3 text-right">Debit (In)</th>
+                            <th className="px-4 py-3 text-right">Credit (Out)</th>
+                            <th className="px-4 py-3 text-right">Valuation</th>
                             <th className="px-4 py-3 w-20"></th>
                           </tr>
                         </thead>
@@ -298,11 +323,19 @@ export default function AssetPage() {
                               <td className="whitespace-nowrap text-[11px] font-medium uppercase tracking-tighter text-slate-500 dark:text-dark-400">{formatDate(e.date)}</td>
                               <td className="text-black dark:text-white font-medium text-[13px]">{e.description || '—'}</td>
                               <td className="amount !text-emerald-600 dark:!text-emerald-400">{e.debit ? formatCurrency(e.debit) : '—'}</td>
-                              <td className="amount !text-slate-600 dark:!text-slate-400">{e.credit ? formatCurrency(e.credit) : '—'}</td>
-                              <td className="amount !text-black dark:!text-white !text-sm">₨ {formatCurrency(e.balance)}</td>
+                              <td className="amount !text-orange-600 dark:!text-orange-400">{e.credit ? formatCurrency(e.credit) : '—'}</td>
+                              <td className="amount !text-black dark:!text-white !text-sm font-medium">₨ {formatCurrency(e.balance)}</td>
                               <td className="text-right">
                                 <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <button onClick={() => setViewingEntity(e)} className="p-1 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded transition-colors">
+                                  <button 
+                                    onClick={() => setViewingEntity(e)} 
+                                    className="flex items-center gap-1.5 px-2 py-0.5 text-[9px] font-black uppercase tracking-tighter text-emerald-600 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-900/20 border border-emerald-200/50 dark:border-emerald-800/30 rounded hover:bg-emerald-100 dark:hover:bg-emerald-800/40 transition-all font-serif" 
+                                    title="Quick Print Invoice"
+                                  >
+                                    <Printer className="w-3 h-3" />
+                                    <span>PRINT</span>
+                                  </button>
+                                  <button onClick={() => setViewingEntity(e)} className="p-1 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded transition-colors" title="View Details">
                                     <Eye className="w-3.5 h-3.5" />
                                   </button>
                                   {currentUser?.role === 'Admin' && (
@@ -324,14 +357,14 @@ export default function AssetPage() {
                           <tr className="font-bold text-slate-900 dark:text-white">
                             <td colSpan={3} className="px-4 py-3 text-right uppercase tracking-widest text-[10px]">Page Total</td>
                             <td className="px-4 py-3 text-right text-emerald-600">₨ {formatCurrency(pageTotals.debit)}</td>
-                            <td className="px-4 py-3 text-right text-slate-600">₨ {formatCurrency(pageTotals.credit)}</td>
+                            <td className="px-4 py-3 text-right text-orange-600">₨ {formatCurrency(pageTotals.credit)}</td>
                             <td colSpan={2}></td>
                           </tr>
                           {page === Math.ceil(withBalance.length / perPage) && (
                             <tr className="font-black text-slate-900 dark:text-white bg-emerald-600/5 border-t border-emerald-600/20">
-                              <td colSpan={3} className="px-4 py-4 text-right uppercase tracking-widest text-xs text-emerald-600">Grand Total</td>
+                              <td colSpan={3} className="px-4 py-4 text-right uppercase tracking-widest text-xs text-emerald-600">Grand Total Valuation</td>
                               <td className="px-4 py-4 text-right text-emerald-700 dark:text-emerald-400 text-base">₨ {formatCurrency(totals.debit)}</td>
-                              <td className="px-4 py-4 text-right text-slate-700 dark:text-slate-400 text-base">₨ {formatCurrency(totals.credit)}</td>
+                              <td className="px-4 py-4 text-right text-orange-700 dark:text-orange-400 text-base">₨ {formatCurrency(totals.credit)}</td>
                               <td colSpan={2}></td>
                             </tr>
                           )}
@@ -349,7 +382,7 @@ export default function AssetPage() {
                 </>
               ) : (
                 <div className="flex flex-col items-center justify-center h-[50vh] text-slate-400 opacity-40">
-                  <Package className="w-16 h-16 mb-4" />
+                  <Briefcase className="w-16 h-16 mb-4" />
                   <p className="font-medium font-bold">Select an account to view statement</p>
                 </div>
               )}
@@ -363,7 +396,7 @@ export default function AssetPage() {
                   <Plus className="w-7 h-7 text-emerald-600" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">New Account Registration</h2>
+                  <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">New Asset Registration</h2>
                   <p className="text-sm text-slate-500 font-medium">Create a new entry in your Asset database</p>
                 </div>
               </div>
@@ -371,12 +404,12 @@ export default function AssetPage() {
               <form onSubmit={handleAddCategory} className="space-y-6">
                 <div className="grid grid-cols-1 gap-6">
                   <div>
-                    <label className="label text-[10px] font-black uppercase tracking-widest text-emerald-600 mb-2 block">Account Name *</label>
+                    <label className="label text-[10px] font-black uppercase tracking-widest text-emerald-600 mb-2 block">Asset Name *</label>
                     <div className="relative">
                       <FileText className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                       <input 
                         className="input !pl-12 !py-4 !text-lg !font-bold" 
-                        placeholder="e.g. Machinery, Vehicles, etc." 
+                        placeholder="e.g. Building, Generator, Land, etc." 
                         value={newName} 
                         onChange={e => setNewName(e.target.value)} 
                         required 
@@ -417,7 +450,7 @@ export default function AssetPage() {
                <div className="overflow-y-auto smart-scroll">
                   <table className="w-full">
                     <thead className="sticky top-0 bg-slate-50/90 dark:bg-dark-800/90 backdrop-blur-sm z-10"><tr className="border-b border-slate-200 dark:border-dark-700/50">
-                      <th className="px-6 py-4 text-left text-[10px] font-black uppercase text-slate-400 tracking-widest">Account Name</th>
+                      <th className="px-6 py-4 text-left text-[10px] font-black uppercase text-slate-400 tracking-widest">Asset Name</th>
                       <th className="px-6 py-4 text-right text-[10px] font-black uppercase text-slate-400 tracking-widest">Actions</th>
                     </tr></thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-dark-800/50">
@@ -479,8 +512,8 @@ export default function AssetPage() {
             <div><label className="label">Date *</label><input type="date" className="input" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required /></div>
             <div><label className="label">Description</label><input className="input" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Transaction details" /></div>
             <div className="grid grid-cols-2 gap-3">
-              <div><label className="label">Debit (₨)</label><input type="number" step="0.01" className="input" value={form.debit} onChange={(e) => setForm({ ...form, debit: e.target.value })} /></div>
-              <div><label className="label">Credit (₨)</label><input type="number" step="0.01" className="input" value={form.credit} onChange={(e) => setForm({ ...form, credit: e.target.value })} /></div>
+              <div><label className="label">Debit (Addition) (₨)</label><input type="number" step="0.01" className="input" value={form.debit} onChange={(e) => setForm({ ...form, debit: e.target.value })} /></div>
+              <div><label className="label">Credit (Disposal) (₨)</label><input type="number" step="0.01" className="input" value={form.credit} onChange={(e) => setForm({ ...form, credit: e.target.value })} /></div>
             </div>
             <div className="flex justify-end gap-2 pt-2">
               <button type="button" onClick={closeForm} className="btn-secondary">Cancel</button>
@@ -495,6 +528,15 @@ export default function AssetPage() {
           entity={viewingEntity}
           type="asset"
           onClose={() => setViewingEntity(null)}
+        />
+      )}
+
+      {showReport && (
+        <PrintReportModal
+          data={catEntries}
+          type="asset"
+          title={`${cat?.name} Asset Report`}
+          onClose={() => setShowReport(false)}
         />
       )}
     </div>

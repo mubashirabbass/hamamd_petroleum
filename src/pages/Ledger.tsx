@@ -7,6 +7,7 @@ import SearchBar from '../components/ui/SearchBar';
 import Pagination from '../components/ui/Pagination';
 import Modal from '../components/ui/Modal';
 import TransactionReceiptModal from '../components/modals/TransactionReceiptModal';
+import PrintReportModal from '../components/modals/PrintReportModal';
 
 // const PER_PAGE = 40; // Replaced by state
 
@@ -21,6 +22,7 @@ export default function LedgerPage() {
   const [activeTab, setActiveTab] = useState<'database' | 'register' | 'manage'>('database');
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
   const [showEntryForm, setShowEntryForm] = useState(false);
+  const [showReport, setShowReport] = useState(false);
   
   // Registration Form State
   const [newName, setNewName] = useState('');
@@ -129,14 +131,19 @@ export default function LedgerPage() {
     credit: catEntries.reduce((s, e) => s + e.credit, 0),
   }), [catEntries]);
 
-
-
   const handleAddCategory = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newName.trim()) return;
+
+    const normalized = newName.trim().toLowerCase();
+    if (ledgerCategories.some(c => c.name.toLowerCase() === normalized)) {
+      toast('An account with this name already exists!', 'error');
+      return;
+    }
+
     addLedgerCategory(newName.trim());
     setNewName('');
-    toast('Ledger registered successfully', 'success');
+    toast('Account registered successfully', 'success');
     setActiveTab('database');
   };
 
@@ -147,9 +154,16 @@ export default function LedgerPage() {
 
   const handleSaveEdit = (id: string) => {
     if (!editForm.name.trim()) return;
+
+    const normalized = editForm.name.trim().toLowerCase();
+    if (ledgerCategories.some(c => c.id !== id && c.name.toLowerCase() === normalized)) {
+      toast('Another account already has this name!', 'error');
+      return;
+    }
+
     updateLedgerCategory(id, editForm.name.trim());
     setEditingId(null);
-    toast('Ledger details updated', 'success');
+    toast('Account details updated', 'success');
   };
 
   return (
@@ -193,6 +207,12 @@ export default function LedgerPage() {
         </div>
         {activeTab === 'database' && cat && (
           <div className="flex gap-2">
+            <button 
+              onClick={() => setShowReport(true)} 
+              className="px-4 py-2 bg-slate-100 dark:bg-dark-700 text-slate-700 dark:text-dark-200 rounded-lg hover:bg-slate-200 dark:hover:bg-dark-600 transition-colors font-bold text-sm flex items-center gap-2 border border-slate-200 dark:border-dark-700"
+            >
+              <Printer className="w-4 h-4" /> Print Report
+            </button>
             <button onClick={() => { closeForm(); setShowEntryForm(true); }} className="btn-primary !bg-primary-600 hover:opacity-90 flex items-center gap-2">
               <Plus className="w-4 h-4" /> New Entry
             </button>
@@ -285,7 +305,7 @@ export default function LedgerPage() {
                       <table className="table-excel">
                         <thead>
                           <tr className="table-header">
-                            <th className="px-4 py-3 text-left w-12">S.No</th>
+                            <th className="px-4 py-3 text-left w-12 border-r border-slate-300 dark:border-dark-700/50">S.No</th>
                             <th className="px-4 py-3 text-left">Date</th>
                             <th className="px-4 py-3 text-left">Description</th>
                             <th className="px-4 py-3 text-right">Debit</th>
@@ -304,7 +324,7 @@ export default function LedgerPage() {
                               <td className="text-black dark:text-white font-medium text-[13px]">{e.description || '—'}</td>
                               <td className="amount !text-red-600 dark:!text-red-400">{e.debit ? formatCurrency(e.debit) : '—'}</td>
                               <td className="amount !text-emerald-600 dark:!text-emerald-500">{e.credit ? formatCurrency(e.credit) : '—'}</td>
-                              <td className="amount !text-black dark:!text-white !text-sm">₨ {formatCurrency(e.balance)}</td>
+                              <td className="amount !text-black dark:!text-white !text-sm font-medium">₨ {formatCurrency(e.balance)}</td>
                               <td className="text-right">
                                 <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                   <button 
@@ -369,12 +389,16 @@ export default function LedgerPage() {
             </div>
           </>
         ) : activeTab === 'register' ? (
+          /* Register Tab Content... */
           <div className="flex-1 animate-in zoom-in-95 duration-300">
             <div className="max-w-2xl mx-auto glass p-8 rounded-3xl border border-slate-200 dark:border-dark-700/50 shadow-2xl mt-8">
               <div className="flex items-center gap-4 mb-8">
+                <div className="w-14 h-14 rounded-2xl bg-primary-600/10 flex items-center justify-center">
+                  <Plus className="w-7 h-7 text-primary-600" />
+                </div>
                 <div>
                   <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">New Ledger Registration</h2>
-                  <p className="text-sm text-slate-500 font-medium">Create a new entry in your account database</p>
+                  <p className="text-sm text-slate-500 font-medium">Create a new ledger account in your business database</p>
                 </div>
               </div>
 
@@ -386,7 +410,7 @@ export default function LedgerPage() {
                       <FileText className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                       <input 
                         className="input !pl-12 !py-4 !text-lg !font-bold" 
-                        placeholder="e.g. Utilities, Tools, etc." 
+                        placeholder="e.g. Bank Account, Supplier Name, etc." 
                         value={newName} 
                         onChange={e => setNewName(e.target.value)} 
                         required 
@@ -398,7 +422,7 @@ export default function LedgerPage() {
 
                 <div className="pt-6 border-t border-slate-100 dark:border-dark-800 flex items-center justify-between">
                    <p className="text-xs text-slate-400 font-medium italic">All required fields marked with *</p>
-                   <button type="submit" className="btn-primary !px-12 !py-4 font-black shadow-xl shadow-primary-600/20 text-base flex items-center gap-2 !bg-primary-600 hover:opacity-90">
+                   <button type="submit" className="btn-primary !px-12 !py-4 font-black shadow-xl shadow-primary-600/20 text-base flex items-center gap-2">
                      <Check className="w-5 h-5" /> Complete Registration
                    </button>
                 </div>
@@ -419,7 +443,7 @@ export default function LedgerPage() {
                   />
                 </div>
                 <div className="px-6 py-3 bg-slate-100 dark:bg-dark-800 rounded-2xl text-xs font-black text-slate-500 uppercase tracking-widest border border-slate-200 dark:border-dark-700/50">
-                  {ledgerCategories.length} Ledgers Found
+                  {ledgerCategories.length} Accounts Found
                 </div>
             </div>
 
@@ -463,7 +487,7 @@ export default function LedgerPage() {
                                      <button onClick={() => handleStartEdit(c)} className="p-2 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-xl"><Edit2 className="w-4 h-4" /></button>
                                      {currentUser?.role === 'Admin' && (
                                        <button 
-                                         onClick={(e) => { e.stopPropagation(); if(confirm('Delete account and all history?')) deleteLedgerCategory(c.id); }} 
+                                         onClick={(e) => { e.stopPropagation(); if(confirm('Delete ledger and all history?')) deleteLedgerCategory(c.id); }} 
                                          className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl"
                                        >
                                          <Trash2 className="w-4 h-4" />
@@ -494,7 +518,7 @@ export default function LedgerPage() {
             </div>
             <div className="flex justify-end gap-2 pt-2">
               <button type="button" onClick={closeForm} className="btn-secondary">Cancel</button>
-              <button type="submit" className="btn-primary !bg-primary-600"><Plus className="w-4 h-4" />{editingEntity ? 'Update' : 'Add'} Entry</button>
+              <button type="submit" className="btn-primary"><Plus className="w-4 h-4" />{editingEntity ? 'Update' : 'Add'} Entry</button>
             </div>
           </form>
         </Modal>
@@ -505,6 +529,15 @@ export default function LedgerPage() {
           entity={viewingEntity}
           type="ledger"
           onClose={() => setViewingEntity(null)}
+        />
+      )}
+
+      {showReport && (
+        <PrintReportModal
+          data={catEntries}
+          type="ledger"
+          title={`${cat?.name} Ledger Report`}
+          onClose={() => setShowReport(false)}
         />
       )}
     </div>

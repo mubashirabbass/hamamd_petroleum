@@ -209,7 +209,8 @@ export default function SalePage() {
 
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead><tr className="table-header">
+              <thead><tr className="table-header text-[10px]">
+                <th className="px-4 py-3 text-left w-12 border-r border-slate-300 dark:border-dark-700/50">S.No</th>
                 <th className="table-cell text-left">Bill No</th>
                 <th className="table-cell text-left">Date</th>
                 <th className="table-cell text-left uppercase tracking-tighter">Product</th>
@@ -220,9 +221,10 @@ export default function SalePage() {
               </tr></thead>
               <tbody>
                 {paged.length === 0 ? (
-                  <tr><td colSpan={5} className="table-cell text-center text-slate-400 dark:text-dark-500 py-12">No {fuelType} sales found</td></tr>
-                ) : paged.map((s) => (
+                  <tr><td colSpan={8} className="table-cell text-center text-slate-400 dark:text-dark-500 py-12 italic">No {fuelType} sales found</td></tr>
+                ) : paged.map((s, idx) => (
                   <tr key={s.id} className="table-row group hover:bg-slate-50 dark:hover:bg-dark-800/50 text-[11px]">
+                    <td className="text-[11px] font-bold text-slate-400 border-r border-slate-300 dark:border-dark-700/50 text-center">{(page - 1) * PER_PAGE + idx + 1}</td>
                     <td className="table-cell font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-tighter">{s.billNo || 'Legacy'}</td>
                     <td className="table-cell">{formatDate(s.date)}</td>
                     <td className="table-cell uppercase font-bold text-slate-500 dark:text-dark-400">{s.type || 'N/A'}</td>

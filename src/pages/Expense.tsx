@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { DollarSign, Plus, Trash2, Eye, Edit2, Search, Check, X, FileText, Settings, UserPlus, Printer } from 'lucide-react';
+import { Wallet, Plus, Trash2, Eye, Edit2, Search, Check, X, FileText, Settings, UserPlus, Printer } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { formatCurrency, formatDate, today, paginate, filterByStartDate, cn } from '../lib/utils';
 import { useToast } from '../components/ui/Toast';
@@ -7,6 +7,7 @@ import SearchBar from '../components/ui/SearchBar';
 import Pagination from '../components/ui/Pagination';
 import Modal from '../components/ui/Modal';
 import TransactionReceiptModal from '../components/modals/TransactionReceiptModal';
+import PrintReportModal from '../components/modals/PrintReportModal';
 
 // const PER_PAGE = 40; // Replaced by state
 
@@ -21,6 +22,7 @@ export default function ExpensePage() {
   const [activeTab, setActiveTab] = useState<'database' | 'register' | 'manage'>('database');
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
   const [showEntryForm, setShowEntryForm] = useState(false);
+  const [showReport, setShowReport] = useState(false);
   
   // Registration Form State
   const [newName, setNewName] = useState('');
@@ -38,7 +40,7 @@ export default function ExpensePage() {
   const [editingEntity, setEditingEntity] = useState<any>(null);
   const [viewingEntity, setViewingEntity] = useState<any>(null);
   const [perPage, setPerPage] = useState(40);
-  const [form, setForm] = useState({ date: today(), description: '', amount: '' });
+  const [form, setForm] = useState({ date: today(), details: '', amount: '' });
   
   useEffect(() => {
     if (!selectedCat && expenseCategories.length > 0) {
@@ -63,7 +65,7 @@ export default function ExpensePage() {
     return filterByStartDate(expenseEntries, settings.startDate)
       .filter((e) => e.categoryId === selectedCat)
       .filter((e) => {
-        const matchesSearch = !search || e.details?.toLowerCase().includes(search.toLowerCase()) || e.date.includes(search);
+        const matchesSearch = !search || e.details.toLowerCase().includes(search.toLowerCase()) || e.date.includes(search);
         const matchesFrom = !fromDate || e.date >= fromDate;
         const matchesTo   = !toDate   || e.date <= toDate;
         return matchesSearch && matchesFrom && matchesTo;
@@ -72,16 +74,14 @@ export default function ExpensePage() {
 
   const paged = paginate(catEntries, page, perPage);
 
-  const pageTotals = useMemo(() => ({
-    amount: paged.reduce((s, e) => s + (e.amount || 0), 0),
-  }), [paged]);
+  const pageTotals = paged.reduce((s, e) => s + (e.amount || 0), 0);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedCat || !form.date || !form.amount) { toast('Fill required fields', 'error'); return; }
     
     const amount = parseFloat(form.amount) || 0;
-    const payload = { categoryId: selectedCat, date: form.date, details: form.description, amount };
+    const payload = { categoryId: selectedCat, date: form.date, details: form.details, amount };
     
     if (editingEntity) {
       updateExpenseEntry(editingEntity.id, payload);
@@ -96,37 +96,40 @@ export default function ExpensePage() {
 
   const resetFormForNext = () => {
     setEditingEntity(null);
-    setForm(prev => ({ ...prev, description: '', amount: '' }));
+    setForm(prev => ({ ...prev, details: '', amount: '' }));
   };
 
   const closeForm = () => {
     setShowEntryForm(false);
     setEditingEntity(null);
-    setForm({ date: today(), description: '', amount: '' });
+    setForm({ date: today(), details: '', amount: '' });
   };
 
   const handleEdit = (e: any) => {
     setEditingEntity(e);
     setForm({
       date: e.date,
-      description: e.details || '',
-      amount: e.amount ? e.amount.toString() : '',
+      details: e.details || '',
+      amount: e.amount.toString(),
     });
     setShowEntryForm(true);
   };
 
-  const totals = useMemo(() => ({
-    amount: catEntries.reduce((s, e) => s + e.amount, 0),
-  }), [catEntries]);
-
-
+  const totals = catEntries.reduce((s, e) => s + e.amount, 0);
 
   const handleAddCategory = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newName.trim()) return;
+
+    const normalized = newName.trim().toLowerCase();
+    if (expenseCategories.some(c => c.name.toLowerCase() === normalized)) {
+      toast('An expense category with this name already exists!', 'error');
+      return;
+    }
+
     addExpenseCategory(newName.trim());
     setNewName('');
-    toast('Category registered successfully', 'success');
+    toast('Account registered successfully', 'success');
     setActiveTab('database');
   };
 
@@ -137,13 +140,21 @@ export default function ExpensePage() {
 
   const handleSaveEdit = (id: string) => {
     if (!editForm.name.trim()) return;
+
+    const normalized = editForm.name.trim().toLowerCase();
+    if (expenseCategories.some(c => c.id !== id && c.name.toLowerCase() === normalized)) {
+      toast('Another expense category already has this name!', 'error');
+      return;
+    }
+
     updateExpenseCategory(id, editForm.name.trim());
     setEditingId(null);
-    toast('Category details updated', 'success');
+    toast('Account details updated', 'success');
   };
 
   return (
     <div className="animate-fade-in space-y-6 flex flex-col h-full min-h-[calc(100vh-4rem)]">
+      {/* Parallel Horizontal Tabs */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex bg-slate-100 dark:bg-dark-800 p-1 rounded-2xl border border-slate-200 dark:border-dark-700/50 w-full md:w-auto">
           <button 
@@ -155,7 +166,7 @@ export default function ExpensePage() {
                 : "text-slate-500 hover:text-slate-800 dark:hover:text-white"
             )}
           >
-            <DollarSign className="w-4 h-4" /> Business Expenses
+            <Wallet className="w-4 h-4" /> Expense Register
           </button>
           <button 
             onClick={() => setActiveTab('register')}
@@ -182,6 +193,12 @@ export default function ExpensePage() {
         </div>
         {activeTab === 'database' && cat && (
           <div className="flex gap-2">
+            <button 
+              onClick={() => setShowReport(true)} 
+              className="px-4 py-2 bg-slate-100 dark:bg-dark-700 text-slate-700 dark:text-dark-200 rounded-lg hover:bg-slate-200 dark:hover:bg-dark-600 transition-colors font-bold text-sm flex items-center gap-2 border border-slate-200 dark:border-dark-700"
+            >
+              <Printer className="w-4 h-4" /> Print Report
+            </button>
             <button onClick={() => { closeForm(); setShowEntryForm(true); }} className="btn-primary !bg-red-600 hover:opacity-90 flex items-center gap-2">
               <Plus className="w-4 h-4" /> New Entry
             </button>
@@ -194,7 +211,7 @@ export default function ExpensePage() {
           <>
             <div className="w-64 flex-shrink-0 flex flex-col h-full bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700/50 rounded-2xl overflow-hidden shadow-sm">
                <div className="p-3 bg-slate-50/50 dark:bg-dark-800/30 border-b border-slate-100 dark:border-dark-700/30 flex items-center justify-between">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Expenses</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Categories</p>
                 <span className="text-[10px] font-bold text-slate-300">{filteredSidebar.length}</span>
               </div>
               <div className="p-2 border-b border-slate-100 dark:border-dark-700/30">
@@ -202,7 +219,7 @@ export default function ExpensePage() {
               </div>
               <div className="smart-scroll flex-1 p-2 space-y-1">
                 {filteredSidebar.length === 0 ? (
-                  <div className="p-8 text-center text-xs text-slate-400 italic">No Expenses found</div>
+                  <div className="p-8 text-center text-xs text-slate-400 italic">No Categories found</div>
                 ) : (
                   filteredSidebar.map((c) => (
                     <div
@@ -231,20 +248,24 @@ export default function ExpensePage() {
                   <div className="flex items-center justify-between mb-5 animate-in slide-in-from-bottom duration-350">
                     <div className="flex items-center gap-4">
                       <div className="w-14 h-14 rounded-2xl bg-red-600/10 dark:bg-red-600/20 flex items-center justify-center">
-                        <DollarSign className="w-8 h-8 text-red-600 dark:text-red-600" />
+                        <Wallet className="w-8 h-8 text-red-600 dark:text-red-600" />
                       </div>
                       <div>
                         <h1 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
-                          {cat.name} Expense
+                          {cat.name} Expenses
                         </h1>
                       </div>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 mb-6 animate-in slide-in-from-bottom duration-350 delay-75">
-                    <div className="glass p-5 rounded-2xl border-l-4 border-red-600 shadow-sm">
-                      <p className="text-[10px] font-black text-slate-400 dark:text-dark-500 uppercase tracking-widest mb-1">Total Expense Volume</p>
-                      <p className="text-2xl font-black text-red-600 dark:text-red-400 tabular-nums">₨ {formatCurrency(totals.amount)}</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 animate-in slide-in-from-bottom duration-350 delay-75">
+                    <div className="glass p-6 rounded-2xl border-l-4 border-slate-400 shadow-sm">
+                      <p className="text-[10px] font-black text-slate-400 dark:text-dark-500 uppercase tracking-widest mb-1">Total Records</p>
+                      <p className="text-3xl font-black text-slate-800 dark:text-white">{catEntries.length}</p>
+                    </div>
+                    <div className="glass p-6 rounded-2xl border-l-4 border-red-600 shadow-sm">
+                      <p className="text-[10px] font-black text-slate-400 dark:text-dark-500 uppercase tracking-widest mb-1">Total Spending (₨)</p>
+                      <p className="text-3xl font-black text-red-600 tabular-nums">₨ {formatCurrency(totals)}</p>
                     </div>
                   </div>
 
@@ -263,7 +284,7 @@ export default function ExpensePage() {
                           <tr className="table-header">
                             <th className="px-4 py-3 text-left w-12 border-r border-slate-300 dark:border-dark-700/50">S.No</th>
                             <th className="px-4 py-3 text-left">Date</th>
-                            <th className="px-4 py-3 text-left">Description</th>
+                            <th className="px-4 py-3 text-left">Details</th>
                             <th className="px-4 py-3 text-right">Amount</th>
                             <th className="px-4 py-3 w-20"></th>
                           </tr>
@@ -308,14 +329,14 @@ export default function ExpensePage() {
                         <tfoot className="border-t-2 border-slate-200 dark:border-dark-700 bg-slate-50/50 dark:bg-dark-900/50">
                           <tr className="font-bold text-slate-900 dark:text-white">
                             <td colSpan={3} className="px-4 py-3 text-right uppercase tracking-widest text-[10px]">Page Total</td>
-                            <td className="px-4 py-3 text-right text-red-600">₨ {formatCurrency(pageTotals.amount)}</td>
-                            <td></td>
+                            <td className="px-4 py-3 text-right text-red-600">₨ {formatCurrency(pageTotals)}</td>
+                            <td colSpan={1}></td>
                           </tr>
                           {page === Math.ceil(catEntries.length / perPage) && (
                             <tr className="font-black text-slate-900 dark:text-white bg-red-600/5 border-t border-red-600/20">
-                              <td colSpan={3} className="px-4 py-4 text-right uppercase tracking-widest text-xs text-red-600">Grand Total</td>
-                              <td className="px-4 py-4 text-right text-red-700 dark:text-red-400 text-base">₨ {formatCurrency(totals.amount)}</td>
-                              <td></td>
+                              <td colSpan={3} className="px-4 py-4 text-right uppercase tracking-widest text-xs text-red-600">Grand Total Spending</td>
+                              <td className="px-4 py-4 text-right text-red-700 dark:text-red-400 text-base">₨ {formatCurrency(totals)}</td>
+                              <td colSpan={1}></td>
                             </tr>
                           )}
                         </tfoot>
@@ -332,8 +353,8 @@ export default function ExpensePage() {
                 </>
               ) : (
                 <div className="flex flex-col items-center justify-center h-[50vh] text-slate-400 opacity-40">
-                  <DollarSign className="w-16 h-16 mb-4" />
-                  <p className="font-medium font-bold">Select a category to view statement</p>
+                  <Wallet className="w-16 h-16 mb-4" />
+                  <p className="font-medium font-bold">Select an account to view statement</p>
                 </div>
               )}
             </div>
@@ -346,8 +367,8 @@ export default function ExpensePage() {
                   <Plus className="w-7 h-7 text-red-600" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">New Category Registration</h2>
-                  <p className="text-sm text-slate-500 font-medium">Create a new entry in your Expense database</p>
+                  <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">New Expense Category</h2>
+                  <p className="text-sm text-slate-500 font-medium">Create a new category in your Expense database</p>
                 </div>
               </div>
 
@@ -359,7 +380,7 @@ export default function ExpensePage() {
                       <FileText className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                       <input 
                         className="input !pl-12 !py-4 !text-lg !font-bold" 
-                        placeholder="e.g. Utility Bills, Travel, etc." 
+                        placeholder="e.g. Electricity, Staff Salary, Rent, etc." 
                         value={newName} 
                         onChange={e => setNewName(e.target.value)} 
                         required 
@@ -379,6 +400,7 @@ export default function ExpensePage() {
             </div>
           </div>
         ) : (
+          /* Manage View */
           <div className="flex-1 animate-in slide-in-from-right duration-300 flex flex-col gap-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/50 dark:bg-dark-900/50 p-6 rounded-2xl border border-slate-200 dark:border-dark-700/50 shadow-sm mt-4">
                 <div className="relative flex-1">
@@ -435,7 +457,7 @@ export default function ExpensePage() {
                                      <button onClick={() => handleStartEdit(c)} className="p-2 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-xl"><Edit2 className="w-4 h-4" /></button>
                                      {currentUser?.role === 'Admin' && (
                                        <button 
-                                         onClick={(e) => { e.stopPropagation(); if(confirm('Delete account and all history?')) deleteExpenseCategory(c.id); }} 
+                                         onClick={(e) => { e.stopPropagation(); if(confirm('Delete category and all history?')) deleteExpenseCategory(c.id); }} 
                                          className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl"
                                        >
                                          <Trash2 className="w-4 h-4" />
@@ -459,8 +481,8 @@ export default function ExpensePage() {
         <Modal title={editingEntity ? `Edit Entry — ${cat?.name}` : `Add Entry — ${cat?.name}`} onClose={closeForm}>
           <form onSubmit={handleSubmit} className="space-y-3">
             <div><label className="label">Date *</label><input type="date" className="input" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required /></div>
+            <div><label className="label">Details</label><input className="input" value={form.details} onChange={(e) => setForm({ ...form, details: e.target.value })} placeholder="Expense details" /></div>
             <div><label className="label">Amount (₨) *</label><input type="number" step="0.01" className="input" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} required /></div>
-            <div><label className="label">Details</label><textarea className="input" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Transaction details" rows={3}></textarea></div>
             <div className="flex justify-end gap-2 pt-2">
               <button type="button" onClick={closeForm} className="btn-secondary">Cancel</button>
               <button type="submit" className="btn-primary !bg-red-600"><Plus className="w-4 h-4" />{editingEntity ? 'Update' : 'Add'} Entry</button>
@@ -474,6 +496,15 @@ export default function ExpensePage() {
           entity={viewingEntity}
           type="expense"
           onClose={() => setViewingEntity(null)}
+        />
+      )}
+
+      {showReport && (
+        <PrintReportModal
+          data={catEntries}
+          type="expense"
+          title={`${cat?.name} Expense Report`}
+          onClose={() => setShowReport(false)}
         />
       )}
     </div>

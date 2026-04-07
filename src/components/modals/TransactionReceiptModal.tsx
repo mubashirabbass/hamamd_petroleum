@@ -65,12 +65,68 @@ export default function TransactionReceiptModal({ entity, type, title, onClose }
     return `${type.charAt(0).toUpperCase() + type.slice(1)} Receipt`;
   };
 
-  const total = entity.totalAmount || entity.amount || (entity.debit || entity.credit) || 0;
+  const total = entity.amount || (entity.debit || entity.credit) || 0;
+
+  const getHeaders = () => {
+    if (type === 'sale' || type === 'purchase') {
+      return [
+        { label: 'Description (Bill Details)', width: '50%', align: 'left' },
+        { label: 'Unit', width: '15%', align: 'center' },
+        { label: 'Rate (₨)', width: '15%', align: 'right' },
+        { label: 'Qty (L)', width: '15%', align: 'right' },
+        { label: 'Amount (₨)', width: '25%', align: 'right' }
+      ];
+    }
+    if (type === 'ledger' || type === 'asset' || type === 'liability') {
+      return [
+        { label: 'Description (Particulars)', width: '55%', align: 'left' },
+        { label: 'Debit (₨)', width: '20%', align: 'right' },
+        { label: 'Credit (₨)', width: '20%', align: 'right' },
+        { label: 'Balance (₨)', width: '25%', align: 'right' }
+      ];
+    }
+    if (type === 'expense') {
+      return [
+        { label: 'Description (Expense Details)', width: '70%', align: 'left' },
+        { label: 'Amount (₨)', width: '30%', align: 'right' }
+      ];
+    }
+    return [];
+  };
+
+  const getRowData = () => {
+    if (type === 'sale' || type === 'purchase') {
+      return [
+        { value: entity.details || entity.description || 'Petroleum Product Sale', align: 'left', className: 'item-details' },
+        { value: 'Liters', align: 'center' },
+        { value: `₨ ${formatCurrency(entity.rate || 0)}`, align: 'right' },
+        { value: (entity.quantity || 0).toLocaleString(), align: 'right' },
+        { value: `₨ ${formatCurrency(entity.amount || 0)}`, align: 'right', className: 'font-black text-[18px]' }
+      ];
+    }
+    if (type === 'ledger' || type === 'asset' || type === 'liability') {
+      return [
+        { value: entity.description || 'N/A', align: 'left', className: 'item-details' },
+        { value: entity.debit ? `₨ ${formatCurrency(entity.debit)}` : '—', align: 'right' },
+        { value: entity.credit ? `₨ ${formatCurrency(entity.credit)}` : '—', align: 'right' },
+        { value: `₨ ${formatCurrency(entity.balance || 0)}`, align: 'right', className: 'font-black text-[18px]' }
+      ];
+    }
+    if (type === 'expense') {
+      return [
+        { value: entity.details || 'N/A', align: 'left', className: 'item-details' },
+        { value: `₨ ${formatCurrency(entity.amount || 0)}`, align: 'right', className: 'font-black text-[18px]' }
+      ];
+    }
+    return [];
+  };
 
   const handlePrint = () => {
     const invTitle = getInvoiceTitle();
-    const invNo = entity.billNo || entity.invoiceNo || '———';
+    const invNo = entity.billNo || entity.invoiceNo || entity.id?.slice(0, 8).toUpperCase() || '———';
     const invDate = formatDate(entity.date);
+    const headers = getHeaders();
+    const rows = getRowData();
     
     const html = `<!DOCTYPE html>
 <html lang="en">
@@ -136,50 +192,39 @@ export default function TransactionReceiptModal({ entity, type, title, onClose }
 
     <div class="meta-bar">
       <div style="flex: 1; text-align: left;">Invoice No: ${invNo}</div>
-      <div style="flex: 1; text-align: center;">Product: ${entity.type || 'N/A'}</div>
+      <div style="flex: 1; text-align: center;">${type === 'sale' || type === 'purchase' ? `Product: ${entity.type || 'N/A'}` : `Bill Title : ${type.toUpperCase()}`}</div>
       <div style="flex: 1; text-align: right;">Dated: ${invDate}</div>
     </div>
 
     <table>
       <thead>
         <tr>
-          <th style="width: 50%;">Description (Bill Details)</th>
-          <th style="text-align: center; width: 15%;">Unit</th>
-          <th style="text-align: right; width: 15%;">Rate (₨)</th>
-          <th style="text-align: right; width: 15%;">Qty (L)</th>
-          <th style="text-align: right; width: 25%;">Amount (₨)</th>
+          ${headers.map(h => `<th style="width: ${h.width}; text-align: ${h.align};">${h.label}</th>`).join('')}
         </tr>
       </thead>
       <tbody>
         <tr>
-          <td>
-            <div class="item-details">${entity.details || entity.description || 'Petroleum Product Sale'}</div>
-          </td>
-          <td style="text-align: center;">Liters</td>
-          <td style="text-align: right;">₨ ${formatCurrency(entity.rate || 0)}</td>
-          <td style="text-align: right;">${(entity.quantity || 0).toLocaleString()}</td>
-          <td style="text-align: right;">₨ ${formatCurrency(total)}</td>
+          ${rows.map(r => `<td style="text-align: ${r.align};" class="${r.className || r.className === 'item-details' ? r.className : ''}">${r.value}</td>`).join('')}
         </tr>
       </tbody>
       <tfoot>
         <tr style="border-top: 2px solid #111; border-bottom: 2px solid #111; background: #fafafa;">
-          <td colspan="4" style="text-align: right; padding: 12px 12px; font-weight: 1000; text-transform: uppercase;">Total Bill Amount</td>
+          <td colspan="${headers.length - 1}" style="text-align: right; padding: 12px 12px; font-weight: 1000; text-transform: uppercase;">Total Receipt Amount</td>
           <td style="text-align: right; padding: 12px 12px; font-weight: 1000; font-size: 16px; border-left: 1px solid #ddd; white-space: nowrap;">₨ ${formatCurrency(total)}</td>
         </tr>
       </tfoot>
     </table>
 
-        <!-- Spacer -->
-        <div class="flex-spacer"></div>
+    <div class="flex-spacer"></div>
 
     <div class="totals-section">
       <div class="total-grid">
         <div class="total-cell" style="border-right: 1.5px solid #111;">
-          <div class="total-label">Total Quantity (Net)</div>
-          <div class="total-value-qty">${(entity.quantity || 0).toLocaleString()} L</div>
+          <div class="total-label">Transaction Reference</div>
+          <div class="total-value-qty">${invNo}</div>
         </div>
         <div class="total-cell" style="background: #f0f0f0;">
-          <div class="total-label">Gross Bill Amount</div>
+          <div class="total-label">Net Payable Amount</div>
           <div class="total-value-amt">₨ ${formatCurrency(total)}</div>
         </div>
       </div>
@@ -190,8 +235,7 @@ export default function TransactionReceiptModal({ entity, type, title, onClose }
       <div class="footer">
         <div class="legal-note">
           * Verified Computerized Entry <br />
-          * Errors and Omissions Accepted <br />
-          * Official Stamp Required
+          * Errors and Omissions Accepted
         </div>
         <div class="signature-block">
           <div class="sign-img">
@@ -215,6 +259,9 @@ export default function TransactionReceiptModal({ entity, type, title, onClose }
     win.document.close();
     win.onload = () => { win.focus(); setTimeout(() => win.print(), 350); };
   };
+
+  const headers = getHeaders();
+  const rows = getRowData();
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm print:hidden">
@@ -274,8 +321,8 @@ export default function TransactionReceiptModal({ entity, type, title, onClose }
 
               {/* Meta Restoration */}
               <div className="flex items-center border-[1.5px] border-[#111] p-[5px_12px] mb-2 text-[10.5px] font-[1000] uppercase bg-[#f5f5f5]">
-                <div className="flex-1 text-left">Invoice No: {entity.billNo || entity.invoiceNo || '———'}</div>
-                <div className="flex-1 text-center font-black">Product: {entity.type || 'N/A'}</div>
+                <div className="flex-1 text-left">Invoice No: {entity.billNo || entity.invoiceNo || entity.id?.slice(0, 8).toUpperCase() || '———'}</div>
+                  {type === 'sale' || type === 'purchase' ? `Product: ${entity.type || 'N/A'}` : `Bill Title : ${type.toUpperCase()}`}
                 <div className="flex-1 text-right">Dated: {formatDate(entity.date)}</div>
               </div>
 
@@ -284,27 +331,21 @@ export default function TransactionReceiptModal({ entity, type, title, onClose }
                 <table className="w-full border-collapse border-x-[1.5px] border-[#111]">
                    <thead>
                       <tr className="border-y-[1.5px] border-[#111] bg-[#ececec]">
-                         <th className="p-[4px_6px] text-left text-[10.5px] font-[1000] uppercase border-r border-[#bbb]">Description (Bill Details)</th>
-                         <th className="p-[4px_6px] text-center text-[10.5px] font-[1000] uppercase border-r border-[#bbb] w-[60px]">Unit</th>
-                         <th className="p-[4px_6px] text-right text-[10.5px] font-[1000] uppercase border-r border-[#bbb] w-[100px]">Rate (₨)</th>
-                         <th className="p-[4px_6px] text-right text-[10.5px] font-[1000] uppercase border-r border-[#bbb] w-[80px]">Qty (L)</th>
-                         <th className="p-[4px_6px] text-right text-[10.5px] font-[1000] uppercase w-[120px]">Amount (₨)</th>
+                        {headers.map((h, idx) => (
+                           <th key={idx} className={`p-[4px_6px] text-${h.align} text-[10.5px] font-[1000] uppercase border-r border-[#bbb] last:border-r-0`} style={{ width: h.width }}>{h.label}</th>
+                        ))}
                       </tr>
                    </thead>
                    <tbody>
                       <tr>
-                         <td className="p-[15px_8px] text-[17px] font-[1000] text-black align-top border-b-[1.5px] border-[#111]">
-                            {entity.details || entity.description || 'Petroleum Product Sale'}
-                         </td>
-                         <td className="p-[15px_8px] text-center font-bold align-top border-b-[1.5px] border-[#111]">Liters</td>
-                         <td className="p-[15px_8px] text-right font-bold align-top border-b-[1.5px] border-[#111]">₨ {formatCurrency(entity.rate || 0)}</td>
-                         <td className="p-[15px_8px] text-right font-bold align-top border-b-[1.5px] border-[#111]">{(entity.quantity || 0).toLocaleString()}</td>
-                         <td className="p-[15px_8px] text-right font-black text-[18px] align-top border-b-[1.5px] border-[#111]">₨ {formatCurrency(total)}</td>
+                        {rows.map((r, idx) => (
+                           <td key={idx} className={`p-[15px_8px] text-${r.align} align-top border-b-[1.5px] border-[#111] ${r.className || ''}`}>{r.value}</td>
+                        ))}
                       </tr>
                    </tbody>
                    <tfoot>
                      <tr className="bg-[#fcfcfc] border-y-[2px] border-[#111]">
-                       <td colSpan={4} className="p-[12px_12px] text-right text-[12px] font-[1000] uppercase border-r border-[#bbb]">Total Bill Amount</td>
+                       <td colSpan={headers.length - 1} className="p-[12px_12px] text-right text-[12px] font-[1000] uppercase border-r border-[#bbb]">Total Bill Amount</td>
                        <td className="p-[12px_12px] text-right font-black text-[18px] text-nowrap">₨ {formatCurrency(total)}</td>
                      </tr>
                    </tfoot>
@@ -318,8 +359,8 @@ export default function TransactionReceiptModal({ entity, type, title, onClose }
               <div className="pt-8 mb-[10mm]">
                 <div className="border-[1.5px] border-[#111] grid grid-cols-2 bg-white">
                    <div className="p-[8px_12px] border-r-[1.5px] border-[#111]">
-                      <div className="text-[10px] font-black uppercase mb-0.5">Total Quantity (Net)</div>
-                      <div className="text-[18px] font-[1000] italic">{(entity.quantity || 0).toLocaleString()} L</div>
+                      <div className="text-[10px] font-black uppercase mb-0.5">Reference No.</div>
+                      <div className="text-[18px] font-[1000] italic">{entity.billNo || entity.invoiceNo || entity.id?.slice(0, 8).toUpperCase() || '———'}</div>
                    </div>
                    <div className="p-[8px_12px] bg-[#f0f0f0]">
                       <div className="text-[10px] font-black uppercase mb-0.5">Gross Bill Amount</div>
@@ -333,8 +374,7 @@ export default function TransactionReceiptModal({ entity, type, title, onClose }
                 <div className="flex justify-between items-end pt-10">
                    <div className="text-[10.5px] font-bold italic border-l-3 border-[#111] pl-3 leading-tight uppercase text-left">
                       * Verified Computerized Entry <br />
-                      * Errors and Omissions Accepted <br />
-                      * Official Stamp Required
+                      * Errors and Omissions Accepted
                    </div>
                    <div className="text-center w-[280px]">
                       <div className="h-[60px] flex items-end justify-center mb-1">

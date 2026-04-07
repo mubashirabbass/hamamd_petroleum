@@ -7,13 +7,14 @@ import SearchBar from '../components/ui/SearchBar';
 import Pagination from '../components/ui/Pagination';
 import Modal from '../components/ui/Modal';
 import TransactionReceiptModal from '../components/modals/TransactionReceiptModal';
+import PrintReportModal from '../components/modals/PrintReportModal';
 
 // const PER_PAGE = 40; // Replaced by state
 
 export default function CustomerPage() {
   const { 
     customers, customerEntries, 
-    addCustomerEntry, deleteCustomerEntry, addCustomer, updateCustomer, deleteCustomer, settings, currentUser 
+    addCustomerEntry, updateCustomerEntry, deleteCustomerEntry, addCustomer, updateCustomer, deleteCustomer, settings, currentUser 
   } = useStore();
   const { toast } = useToast();
 
@@ -21,6 +22,7 @@ export default function CustomerPage() {
   const [activeTab, setActiveTab] = useState<'database' | 'register' | 'manage'>('database');
   const [selectedCust, setSelectedCust] = useState<string | null>(null);
   const [showEntryForm, setShowEntryForm] = useState(false);
+  const [showReport, setShowReport] = useState(false);
   const [custSearch, setCustSearch] = useState('');
   
   // Registration Form State
@@ -39,6 +41,7 @@ export default function CustomerPage() {
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(40);
   const [viewingEntity, setViewingEntity] = useState<any>(null);
+  const [editingEntity, setEditingEntity] = useState<any>(null);
   const [form, setForm] = useState({ date: today(), description: '', debit: '', credit: '' });
   
   useEffect(() => {
@@ -89,6 +92,20 @@ export default function CustomerPage() {
   const handleAddCustomer = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newName.trim()) return;
+
+    const normalizedName = newName.trim().toLowerCase();
+    const normalizedPhone = newPhone.trim();
+
+    const exists = customers.find(c => 
+      c.name.toLowerCase() === normalizedName && 
+      (c.phone || '') === normalizedPhone
+    );
+
+    if (exists) {
+      toast('A customer with this name and phone number already exists!', 'error');
+      return;
+    }
+
     addCustomer({ name: newName.trim(), phone: newPhone.trim() });
     setNewName(''); setNewPhone('');
     toast('Customer registered successfully', 'success');
@@ -102,74 +119,75 @@ export default function CustomerPage() {
 
   const handleSaveEdit = (id: string) => {
     if (!editForm.name.trim()) return;
+
+    const normalizedName = editForm.name.trim().toLowerCase();
+    const normalizedPhone = editForm.phone.trim();
+
+    const exists = customers.find(c => 
+      c.id !== id &&
+      c.name.toLowerCase() === normalizedName && 
+      (c.phone || '') === normalizedPhone
+    );
+
+    if (exists) {
+      toast('Another customer already has this name and phone number!', 'error');
+      return;
+    }
+
     updateCustomer(id, { name: editForm.name.trim(), phone: editForm.phone.trim() });
     setEditingId(null);
     toast('Customer details updated', 'success');
   };
 
-  const handleAddEntry = (e: React.FormEvent) => {
+  const handleSubmitEntry = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedCust || !form.date) { toast('Fill required fields', 'error'); return; }
-    addCustomerEntry({ customerId: selectedCust, date: form.date, description: form.description, debit: parseFloat(form.debit) || 0, credit: parseFloat(form.credit) || 0, balance: 0 });
-    toast('Entry added', 'success'); 
+    
+    const payload = { 
+        customerId: selectedCust, 
+        date: form.date, 
+        description: form.description, 
+        debit: parseFloat(form.debit) || 0, 
+        credit: parseFloat(form.credit) || 0, 
+        balance: 0 
+    };
+
+    if (editingEntity) {
+        updateCustomerEntry(editingEntity.id, payload);
+        toast('Entry updated', 'success');
+        closeEntryForm();
+    } else {
+        addCustomerEntry(payload);
+        toast('Entry added', 'success'); 
+        resetEntryFormForNext();
+    }
+  };
+
+  const resetEntryFormForNext = () => {
+    setEditingEntity(null);
     setForm(prev => ({ ...prev, description: '', debit: '', credit: '' }));
   };
 
-  const handlePrint = () => {
-    if (!cust) return;
-    const win = window.open('', '_blank');
-    if (!win) return;
-    win.document.write(`
-      <html><head><title>Account Statement — ${cust.name}</title>
-      <style>
-        body { font-family: Arial, sans-serif; padding: 40px; color: #111; }
-        .header { margin-bottom: 30px; border-bottom: 2px solid #eee; padding-bottom: 20px; }
-        h1 { font-size: 24px; margin-bottom: 8px; color: #db2777; }
-        .meta { color: #555; font-size: 14px; margin-bottom: 5px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th { background: #f8fafc; padding: 12px 15px; text-align: left; font-size: 11px; text-transform: uppercase; color: #64748b; border-bottom: 2px solid #e2e8f0; }
-        td { padding: 12px 15px; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
-        .amount { text-align: right; font-family: 'Courier New', Courier, monospace; }
-        .total { font-weight: bold; background: #fff1f2; }
-        .footer { margin-top: 50px; border-top: 1px solid #eee; padding-top: 20px; color: #94a3b8; font-size: 11px; text-align: center; }
-      </style></head><body>
-      <div class="header">
-        <h1>Customer Account Statement</h1>
-        <div class="meta"><strong>Customer:</strong> ${cust.name}</div>
-        ${cust.phone ? `<div class="meta"><strong>Phone:</strong> ${cust.phone}</div>` : ''}
-        <div class="meta"><strong>Report Period:</strong> Since ${formatDate(settings.startDate)}</div>
-        <div class="meta"><strong>Print Date:</strong> ${new Date().toLocaleDateString('en-PK', { day: '2-digit', month: 'long', year: 'numeric' })}</div>
-      </div>
-      <table>
-        <thead><tr><th>Date</th><th>Description</th><th class="amount">Debit (₨)</th><th class="amount">Credit (₨)</th><th class="amount">Balance (₨)</th></tr></thead>
-        <tbody>
-          ${withBalance.map((e) => `
-            <tr>
-              <td>${formatDate(e.date)}</td>
-              <td>${e.description || '—'}</td>
-              <td class="amount">${e.debit ? formatCurrency(e.debit) : '—'}</td>
-              <td class="amount">${e.credit ? formatCurrency(e.credit) : '—'}</td>
-              <td class="amount total" style="color: ${e.balance >= 0 ? '#dc2626' : '#059669'}">${formatCurrency(Math.abs(e.balance))} ${e.balance >= 0 ? '(Dr)' : '(Cr)'}</td>
-            </tr>`).join('')}
-          <tr style="background:#f8fafc; font-weight: bold;">
-            <td colspan="2" style="text-align: right;">Final Summary:</td>
-            <td class="amount">${formatCurrency(totals.debit)}</td>
-            <td class="amount">${formatCurrency(totals.credit)}</td>
-            <td class="amount" style="color: ${balance >= 0 ? '#dc2626' : '#059669'}">${formatCurrency(Math.abs(balance))} ${balance >= 0 ? '(Dr)' : '(Cr)'}</td>
-          </tr>
-        </tbody>
-      </table>
-      <div class="footer">EBS Business Management Suite &bull; System Generated Report</div>
-      </body></html>
-    `);
-    win.document.close();
-    win.focus();
-    setTimeout(() => { win.print(); }, 500);
+  const closeEntryForm = () => {
+    setShowEntryForm(false);
+    setEditingEntity(null);
+    setForm({ date: today(), description: '', debit: '', credit: '' });
+  };
+
+  const handleEditEntry = (e: any) => {
+    setEditingEntity(e);
+    setForm({
+      date: e.date,
+      description: e.description || '',
+      debit: e.debit ? e.debit.toString() : '',
+      credit: e.credit ? e.credit.toString() : '',
+    });
+    setShowEntryForm(true);
   };
 
   return (
     <div className="animate-fade-in space-y-6">
-      {/* Parallel Horizontal Tabs (Perpendicular Layout) */}
+      {/* Parallel Horizontal Tabs */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex bg-slate-100 dark:bg-dark-800 p-1 rounded-2xl border border-slate-200 dark:border-dark-700/50 w-full md:w-auto">
           <button 
@@ -208,7 +226,12 @@ export default function CustomerPage() {
         </div>
         {activeTab === 'database' && cust && (
           <div className="flex gap-2">
-            <button onClick={handlePrint} className="btn-secondary flex items-center gap-2"><Printer className="w-4 h-4" /> Statement</button>
+            <button 
+              onClick={() => setShowReport(true)} 
+              className="btn-secondary flex items-center gap-2 hover:bg-slate-200 transition-colors"
+            >
+              <Printer className="w-4 h-4" /> Statement
+            </button>
             <button onClick={() => setShowEntryForm(true)} className="btn-primary !bg-pink-600 hover:!bg-pink-500 flex items-center gap-2">
               <Plus className="w-4 h-4" /> New Entry
             </button>
@@ -319,9 +342,14 @@ export default function CustomerPage() {
                                     <span>PRINT</span>
                                   </button>
                                   {currentUser?.role === 'Admin' && (
-                                    <button onClick={() => { if(confirm('Delete entry?')) { deleteCustomerEntry(e.id); toast('Entry deleted', 'warning'); } }} className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors" title="Delete Entry">
-                                      <Trash2 className="w-3.5 h-3.5" />
-                                    </button>
+                                    <>
+                                      <button onClick={() => handleEditEntry(e)} className="p-1 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded transition-colors" title="Edit Entry">
+                                        <Edit2 className="w-3.5 h-3.5" />
+                                      </button>
+                                      <button onClick={() => { if(confirm('Delete entry?')) { deleteCustomerEntry(e.id); toast('Entry deleted', 'warning'); } }} className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors" title="Delete Entry">
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    </>
                                   )}
                                 </div>
                               </td>
@@ -475,7 +503,7 @@ export default function CustomerPage() {
                                </td>
                                <td className="px-6 py-4">
                                   <span className="text-sm font-medium text-slate-500 font-mono tracking-tighter">{c.phone || '—'}</span>
-                               </td>
+                                </td>
                                <td className="px-6 py-4 text-right">
                                   <div className="flex items-center gap-2 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
                                      <button onClick={(e) => { e.stopPropagation(); handleStartEdit(c); }} className="p-2 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-xl"><Edit2 className="w-4 h-4" /></button>
@@ -502,8 +530,8 @@ export default function CustomerPage() {
       </div>
 
       {showEntryForm && (
-        <Modal title={`Add Entry — ${cust?.name}`} onClose={() => setShowEntryForm(false)}>
-          <form onSubmit={handleAddEntry} className="space-y-3">
+        <Modal title={editingEntity ? `Edit Entry — ${cust?.name}` : `Add Entry — ${cust?.name}`} onClose={closeEntryForm}>
+          <form onSubmit={handleSubmitEntry} className="space-y-3">
             <div><label className="label">Date *</label><input type="date" className="input" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required /></div>
             <div><label className="label">Description</label><input className="input" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Transaction details" /></div>
             <div className="grid grid-cols-2 gap-3">
@@ -511,8 +539,8 @@ export default function CustomerPage() {
               <div><label className="label">Credit (₨)</label><input type="number" step="0.01" className="input" value={form.credit} onChange={(e) => setForm({ ...form, credit: e.target.value })} /></div>
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <button type="button" onClick={() => setShowEntryForm(false)} className="btn-secondary">Cancel</button>
-              <button type="submit" className="btn-primary-emerald font-black"><Plus className="w-4 h-4" /> Add Entry</button>
+              <button type="button" onClick={closeEntryForm} className="btn-secondary">Cancel</button>
+              <button type="submit" className="btn-primary-emerald font-black"><Plus className="w-4 h-4" /> {editingEntity ? 'Update Entry' : 'Add Entry'}</button>
             </div>
           </form>
         </Modal>
@@ -524,6 +552,16 @@ export default function CustomerPage() {
           type="ledger"
           title={`Customer Receipt — ${cust?.name}`}
           onClose={() => setViewingEntity(null)}
+        />
+      )}
+
+      {showReport && (
+        <PrintReportModal
+          data={withBalance}
+          type="customer"
+          title={`Account Statement — ${cust?.name}`}
+          customerPhone={cust?.phone}
+          onClose={() => setShowReport(false)}
         />
       )}
     </div>

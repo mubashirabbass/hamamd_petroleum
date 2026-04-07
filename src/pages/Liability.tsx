@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Landmark, Plus, Trash2, Eye, Edit2, Search, Check, X, FileText, Settings, UserPlus } from 'lucide-react';
+import { Landmark, Plus, Trash2, Eye, Edit2, Search, Check, X, FileText, Settings, UserPlus, Printer } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { formatCurrency, formatDate, today, paginate, filterByStartDate, cn } from '../lib/utils';
 import { useToast } from '../components/ui/Toast';
@@ -7,6 +7,7 @@ import SearchBar from '../components/ui/SearchBar';
 import Pagination from '../components/ui/Pagination';
 import Modal from '../components/ui/Modal';
 import TransactionReceiptModal from '../components/modals/TransactionReceiptModal';
+import PrintReportModal from '../components/modals/PrintReportModal';
 
 // const PER_PAGE = 40; // Replaced by state
 
@@ -21,6 +22,7 @@ export default function LiabilityPage() {
   const [activeTab, setActiveTab] = useState<'database' | 'register' | 'manage'>('database');
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
   const [showEntryForm, setShowEntryForm] = useState(false);
+  const [showReport, setShowReport] = useState(false);
   
   // Registration Form State
   const [newName, setNewName] = useState('');
@@ -73,7 +75,7 @@ export default function LiabilityPage() {
   const withBalance = useMemo(() => {
     const sorted = [...catEntries].reverse();
     let bal = 0;
-    return sorted.map((e) => { bal += e.credit - e.debit; return { ...e, balance: bal }; }).reverse();
+    return sorted.map((e) => { bal += e.debit - e.credit; return { ...e, balance: bal }; }).reverse();
   }, [catEntries]);
 
   const paged = paginate(withBalance, page, perPage);
@@ -132,6 +134,13 @@ export default function LiabilityPage() {
   const handleAddCategory = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newName.trim()) return;
+
+    const normalized = newName.trim().toLowerCase();
+    if (liabilityCategories.some(c => c.name.toLowerCase() === normalized)) {
+      toast('A liability account with this name already exists!', 'error');
+      return;
+    }
+
     addLiabilityCategory(newName.trim());
     setNewName('');
     toast('Account registered successfully', 'success');
@@ -145,6 +154,13 @@ export default function LiabilityPage() {
 
   const handleSaveEdit = (id: string) => {
     if (!editForm.name.trim()) return;
+
+    const normalized = editForm.name.trim().toLowerCase();
+    if (liabilityCategories.some(c => c.id !== id && c.name.toLowerCase() === normalized)) {
+      toast('Another liability account already has this name!', 'error');
+      return;
+    }
+
     updateLiabilityCategory(id, editForm.name.trim());
     setEditingId(null);
     toast('Account details updated', 'success');
@@ -152,6 +168,7 @@ export default function LiabilityPage() {
 
   return (
     <div className="animate-fade-in space-y-6 flex flex-col h-full min-h-[calc(100vh-4rem)]">
+      {/* Parallel Horizontal Tabs */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex bg-slate-100 dark:bg-dark-800 p-1 rounded-2xl border border-slate-200 dark:border-dark-700/50 w-full md:w-auto">
           <button 
@@ -159,7 +176,7 @@ export default function LiabilityPage() {
             className={cn(
               "flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex-1 md:flex-none justify-center",
               activeTab === 'database' 
-                ? "bg-white dark:bg-dark-900 text-orange-600 shadow-sm shadow-orange-600/10" 
+                ? "bg-white dark:bg-dark-900 text-primary-600 shadow-sm shadow-primary-600/10" 
                 : "text-slate-500 hover:text-slate-800 dark:hover:text-white"
             )}
           >
@@ -170,7 +187,7 @@ export default function LiabilityPage() {
             className={cn(
               "flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex-1 md:flex-none justify-center",
               activeTab === 'register' 
-                ? "bg-white dark:bg-dark-900 text-orange-600 shadow-sm shadow-orange-600/10" 
+                ? "bg-white dark:bg-dark-900 text-primary-600 shadow-sm shadow-primary-600/10" 
                 : "text-slate-500 hover:text-slate-800 dark:hover:text-white"
             )}
           >
@@ -181,7 +198,7 @@ export default function LiabilityPage() {
             className={cn(
               "flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex-1 md:flex-none justify-center",
               activeTab === 'manage' 
-                ? "bg-white dark:bg-dark-900 text-orange-600 shadow-sm shadow-orange-600/10" 
+                ? "bg-white dark:bg-dark-900 text-primary-600 shadow-sm shadow-primary-600/10" 
                 : "text-slate-500 hover:text-slate-800 dark:hover:text-white"
             )}
           >
@@ -190,7 +207,13 @@ export default function LiabilityPage() {
         </div>
         {activeTab === 'database' && cat && (
           <div className="flex gap-2">
-            <button onClick={() => { closeForm(); setShowEntryForm(true); }} className="btn-primary !bg-orange-600 hover:opacity-90 flex items-center gap-2">
+            <button 
+              onClick={() => setShowReport(true)} 
+              className="px-4 py-2 bg-slate-100 dark:bg-dark-700 text-slate-700 dark:text-dark-200 rounded-lg hover:bg-slate-200 dark:hover:bg-dark-600 transition-colors font-bold text-sm flex items-center gap-2 border border-slate-200 dark:border-dark-700"
+            >
+              <Printer className="w-4 h-4" /> Print Report
+            </button>
+            <button onClick={() => { closeForm(); setShowEntryForm(true); }} className="btn-primary !bg-primary-600 hover:opacity-90 flex items-center gap-2">
               <Plus className="w-4 h-4" /> New Entry
             </button>
           </div>
@@ -200,17 +223,18 @@ export default function LiabilityPage() {
       <div className="flex gap-4 h-[calc(100vh-160px)] overflow-hidden">
         {activeTab === 'database' ? (
           <>
+            {/* Sidebar List */}
             <div className="w-64 flex-shrink-0 flex flex-col h-full bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700/50 rounded-2xl overflow-hidden shadow-sm">
                <div className="p-3 bg-slate-50/50 dark:bg-dark-800/30 border-b border-slate-100 dark:border-dark-700/30 flex items-center justify-between">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Liabilities</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Accounts</p>
                 <span className="text-[10px] font-bold text-slate-300">{filteredSidebar.length}</span>
               </div>
               <div className="p-2 border-b border-slate-100 dark:border-dark-700/30">
-                <SearchBar value={search} onChange={setSearch} placeholder="Search Liability..." fullWidth={true} className="!py-1.5 !text-[11px]" />
+                <SearchBar value={search} onChange={setSearch} placeholder="Search Account..." fullWidth={true} className="!py-1.5 !text-[11px]" />
               </div>
               <div className="smart-scroll flex-1 p-2 space-y-1">
                 {filteredSidebar.length === 0 ? (
-                  <div className="p-8 text-center text-xs text-slate-400 italic">No Liabilities found</div>
+                  <div className="p-8 text-center text-xs text-slate-400 italic">No Accounts found</div>
                 ) : (
                   filteredSidebar.map((c) => (
                     <div
@@ -219,11 +243,11 @@ export default function LiabilityPage() {
                       className={cn(
                         'group flex items-center justify-between px-3 py-3 rounded-xl cursor-pointer text-xs font-black transition-all duration-200 border border-transparent',
                         selectedCat === c.id 
-                          ? 'bg-orange-600/10 text-orange-600 border-orange-600/10 shadow-sm relative overflow-hidden' 
+                          ? 'bg-primary-600/10 text-primary-600 border-primary-600/10 shadow-sm relative overflow-hidden' 
                           : 'text-slate-600 dark:text-dark-400 hover:bg-slate-50 dark:hover:bg-dark-800 hover:text-slate-900 dark:hover:text-white hover:border-slate-200 dark:hover:border-dark-700/50'
                       )}
                     >
-                      {selectedCat === c.id && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-orange-600 rounded-r-full"></span>}
+                      {selectedCat === c.id && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-primary-600 rounded-r-full"></span>}
                       <div className="flex flex-col min-w-0">
                         <p className="truncate text-slate-900 dark:text-white">{c.name}</p>
                       </div>
@@ -233,13 +257,14 @@ export default function LiabilityPage() {
               </div>
             </div>
 
+            {/* Main Content (Database View) */}
             <div className="flex-1 min-w-0 smart-scroll h-full pr-1">
               {cat ? (
                 <>
                   <div className="flex items-center justify-between mb-5 animate-in slide-in-from-bottom duration-350">
                     <div className="flex items-center gap-4">
-                      <div className="w-14 h-14 rounded-2xl bg-orange-600/10 dark:bg-orange-600/20 flex items-center justify-center">
-                        <Landmark className="w-8 h-8 text-orange-600 dark:text-orange-600" />
+                      <div className="w-14 h-14 rounded-2xl bg-primary-600/10 dark:bg-primary-600/20 flex items-center justify-center">
+                        <Landmark className="w-8 h-8 text-primary-600 dark:text-primary-600" />
                       </div>
                       <div>
                         <h1 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
@@ -252,17 +277,17 @@ export default function LiabilityPage() {
                   {/* Summary Cards */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 animate-in slide-in-from-bottom duration-350 delay-75">
                     <div className="glass p-5 rounded-2xl border-l-4 border-slate-400 shadow-sm">
-                      <p className="text-[10px] font-black text-slate-400 dark:text-dark-500 uppercase tracking-widest mb-1">Total Debit (Paid)</p>
-                      <p className="text-2xl font-black text-slate-500 tabular-nums">₨ {formatCurrency(totals.debit)}</p>
+                      <p className="text-[10px] font-black text-slate-400 dark:text-dark-500 uppercase tracking-widest mb-1">Total Debit (Payment)</p>
+                      <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 tabular-nums">₨ {formatCurrency(totals.debit)}</p>
                     </div>
-                    <div className="glass p-5 rounded-2xl border-l-4 border-orange-500 shadow-sm">
-                      <p className="text-[10px] font-black text-slate-400 dark:text-dark-500 uppercase tracking-widest mb-1">Total Credit (Borrowed)</p>
-                      <p className="text-2xl font-black text-orange-600 dark:text-orange-400 tabular-nums">₨ {formatCurrency(totals.credit)}</p>
+                    <div className="glass p-5 rounded-2xl border-l-4 border-red-500 shadow-sm">
+                      <p className="text-[10px] font-black text-slate-400 dark:text-dark-500 uppercase tracking-widest mb-1">Total Credit (Owed)</p>
+                      <p className="text-2xl font-black text-red-600 dark:text-red-400 tabular-nums">₨ {formatCurrency(totals.credit)}</p>
                     </div>
-                    <div className="glass p-5 rounded-2xl border-l-4 border-red-600 shadow-sm">
-                      <p className="text-[10px] font-black text-slate-400 dark:text-dark-500 uppercase tracking-widest mb-1">Current Balance Due</p>
-                      <p className={cn("text-2xl font-black tabular-nums text-red-600")}>
-                        ₨ {formatCurrency(Math.abs(totals.credit - totals.debit))}
+                    <div className="glass p-5 rounded-2xl border-l-4 border-primary-600 shadow-sm">
+                      <p className="text-[10px] font-black text-slate-400 dark:text-dark-500 uppercase tracking-widest mb-1">Current Liability</p>
+                      <p className={cn("text-2xl font-black tabular-nums text-primary-600")}>
+                        ₨ {formatCurrency(Math.abs(totals.debit - totals.credit))}
                       </p>
                     </div>
                   </div>
@@ -284,7 +309,7 @@ export default function LiabilityPage() {
                             <th className="px-4 py-3 text-left">Date</th>
                             <th className="px-4 py-3 text-left">Description</th>
                             <th className="px-4 py-3 text-right">Debit (Paid)</th>
-                            <th className="px-4 py-3 text-right">Credit (Borrowed)</th>
+                            <th className="px-4 py-3 text-right">Credit (Owed)</th>
                             <th className="px-4 py-3 text-right">Balance</th>
                             <th className="px-4 py-3 w-20"></th>
                           </tr>
@@ -297,12 +322,20 @@ export default function LiabilityPage() {
                               <td className="text-[11px] font-bold text-slate-400 border-r border-slate-300 dark:border-dark-700/50 text-center">{(page - 1) * perPage + i + 1}</td>
                               <td className="whitespace-nowrap text-[11px] font-medium uppercase tracking-tighter text-slate-500 dark:text-dark-400">{formatDate(e.date)}</td>
                               <td className="text-black dark:text-white font-medium text-[13px]">{e.description || '—'}</td>
-                              <td className="amount !text-slate-600 dark:!text-slate-400">{e.debit ? formatCurrency(e.debit) : '—'}</td>
-                              <td className="amount !text-orange-600 dark:!text-orange-400">{e.credit ? formatCurrency(e.credit) : '—'}</td>
-                              <td className="amount !text-red-600 dark:!text-red-400 !text-sm font-medium">₨ {formatCurrency(Math.abs(e.balance))}</td>
+                              <td className="amount !text-emerald-600 dark:!text-emerald-400">{e.debit ? formatCurrency(e.debit) : '—'}</td>
+                              <td className="amount !text-red-600 dark:!text-red-400">{e.credit ? formatCurrency(e.credit) : '—'}</td>
+                              <td className="amount !text-black dark:!text-white !text-sm font-medium">₨ {formatCurrency(e.balance)}</td>
                               <td className="text-right">
                                 <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <button onClick={() => setViewingEntity(e)} className="p-1 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded transition-colors">
+                                  <button 
+                                    onClick={() => setViewingEntity(e)} 
+                                    className="flex items-center gap-1.5 px-2 py-0.5 text-[9px] font-black uppercase tracking-tighter text-primary-600 dark:text-primary-400 bg-primary-50/50 dark:bg-primary-900/20 border border-primary-200/50 dark:border-primary-800/30 rounded hover:bg-primary-100 dark:hover:bg-primary-800/40 transition-all font-serif" 
+                                    title="Quick Print Invoice"
+                                  >
+                                    <Printer className="w-3 h-3" />
+                                    <span>PRINT</span>
+                                  </button>
+                                  <button onClick={() => setViewingEntity(e)} className="p-1 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded transition-colors" title="View Details">
                                     <Eye className="w-3.5 h-3.5" />
                                   </button>
                                   {currentUser?.role === 'Admin' && (
@@ -323,15 +356,15 @@ export default function LiabilityPage() {
                         <tfoot className="border-t-2 border-slate-200 dark:border-dark-700 bg-slate-50/50 dark:bg-dark-900/50">
                           <tr className="font-bold text-slate-900 dark:text-white">
                             <td colSpan={3} className="px-4 py-3 text-right uppercase tracking-widest text-[10px]">Page Total</td>
-                            <td className="px-4 py-3 text-right text-slate-600">₨ {formatCurrency(pageTotals.debit)}</td>
-                            <td className="px-4 py-3 text-right text-orange-600">₨ {formatCurrency(pageTotals.credit)}</td>
+                            <td className="px-4 py-3 text-right text-emerald-600">₨ {formatCurrency(pageTotals.debit)}</td>
+                            <td className="px-4 py-3 text-right text-red-600">₨ {formatCurrency(pageTotals.credit)}</td>
                             <td colSpan={2}></td>
                           </tr>
                           {page === Math.ceil(withBalance.length / perPage) && (
-                            <tr className="font-black text-slate-900 dark:text-white bg-orange-600/5 border-t border-orange-600/20">
-                              <td colSpan={3} className="px-4 py-4 text-right uppercase tracking-widest text-xs text-orange-600">Grand Total</td>
-                              <td className="px-4 py-4 text-right text-slate-700 dark:text-slate-400 text-base">₨ {formatCurrency(totals.debit)}</td>
-                              <td className="px-4 py-4 text-right text-orange-700 dark:text-orange-400 text-base">₨ {formatCurrency(totals.credit)}</td>
+                            <tr className="font-black text-slate-900 dark:text-white bg-primary-600/5 border-t border-primary-600/20">
+                              <td colSpan={3} className="px-4 py-4 text-right uppercase tracking-widest text-xs text-primary-600">Grand Total liability</td>
+                              <td className="px-4 py-4 text-right text-emerald-700 dark:text-emerald-400 text-base">₨ {formatCurrency(totals.debit)}</td>
+                              <td className="px-4 py-4 text-right text-red-700 dark:text-red-400 text-base">₨ {formatCurrency(totals.credit)}</td>
                               <td colSpan={2}></td>
                             </tr>
                           )}
@@ -359,11 +392,11 @@ export default function LiabilityPage() {
           <div className="flex-1 animate-in zoom-in-95 duration-300">
             <div className="max-w-2xl mx-auto glass p-8 rounded-3xl border border-slate-200 dark:border-dark-700/50 shadow-2xl mt-8">
               <div className="flex items-center gap-4 mb-8">
-                <div className="w-14 h-14 rounded-2xl bg-orange-600/10 flex items-center justify-center">
-                  <Plus className="w-7 h-7 text-orange-600" />
+                <div className="w-14 h-14 rounded-2xl bg-primary-600/10 flex items-center justify-center">
+                  <Plus className="w-7 h-7 text-primary-600" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">New Account Registration</h2>
+                  <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">New Liability Registration</h2>
                   <p className="text-sm text-slate-500 font-medium">Create a new entry in your Liability database</p>
                 </div>
               </div>
@@ -371,12 +404,12 @@ export default function LiabilityPage() {
               <form onSubmit={handleAddCategory} className="space-y-6">
                 <div className="grid grid-cols-1 gap-6">
                   <div>
-                    <label className="label text-[10px] font-black uppercase tracking-widest text-orange-600 mb-2 block">Account Name *</label>
+                    <label className="label text-[10px] font-black uppercase tracking-widest text-primary-600 mb-2 block">Account Name *</label>
                     <div className="relative">
                       <FileText className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                       <input 
                         className="input !pl-12 !py-4 !text-lg !font-bold" 
-                        placeholder="e.g. Bank Loan, Supplier Account, etc." 
+                        placeholder="e.g. Bank Loan, Private Lender, etc." 
                         value={newName} 
                         onChange={e => setNewName(e.target.value)} 
                         required 
@@ -388,7 +421,7 @@ export default function LiabilityPage() {
 
                 <div className="pt-6 border-t border-slate-100 dark:border-dark-800 flex items-center justify-between">
                    <p className="text-xs text-slate-400 font-medium italic">All required fields marked with *</p>
-                   <button type="submit" className="btn-primary !px-12 !py-4 font-black shadow-xl shadow-orange-600/20 text-base flex items-center gap-2 !bg-orange-600 hover:opacity-90">
+                   <button type="submit" className="btn-primary !px-12 !py-4 font-black shadow-xl shadow-primary-600/20 text-base flex items-center gap-2">
                      <Check className="w-5 h-5" /> Complete Registration
                    </button>
                 </div>
@@ -480,11 +513,11 @@ export default function LiabilityPage() {
             <div><label className="label">Description</label><input className="input" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Transaction details" /></div>
             <div className="grid grid-cols-2 gap-3">
               <div><label className="label">Debit (Paid) (₨)</label><input type="number" step="0.01" className="input" value={form.debit} onChange={(e) => setForm({ ...form, debit: e.target.value })} /></div>
-              <div><label className="label">Credit (Borrowed) (₨)</label><input type="number" step="0.01" className="input" value={form.credit} onChange={(e) => setForm({ ...form, credit: e.target.value })} /></div>
+              <div><label className="label">Credit (Owed) (₨)</label><input type="number" step="0.01" className="input" value={form.credit} onChange={(e) => setForm({ ...form, credit: e.target.value })} /></div>
             </div>
             <div className="flex justify-end gap-2 pt-2">
               <button type="button" onClick={closeForm} className="btn-secondary">Cancel</button>
-              <button type="submit" className="btn-primary !bg-orange-600"><Plus className="w-4 h-4" />{editingEntity ? 'Update' : 'Add'} Entry</button>
+              <button type="submit" className="btn-primary !bg-primary-600"><Plus className="w-4 h-4" />{editingEntity ? 'Update' : 'Add'} Entry</button>
             </div>
           </form>
         </Modal>
@@ -495,6 +528,15 @@ export default function LiabilityPage() {
           entity={viewingEntity}
           type="liability"
           onClose={() => setViewingEntity(null)}
+        />
+      )}
+
+      {showReport && (
+        <PrintReportModal
+          data={catEntries}
+          type="liability"
+          title={`${cat?.name} Liability Report`}
+          onClose={() => setShowReport(false)}
         />
       )}
     </div>

@@ -261,7 +261,8 @@ export default function PurchasePage() {
           {/* Table */}
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead><tr className="table-header">
+              <thead><tr className="table-header text-[10px]">
+                <th className="px-4 py-3 text-left w-12 border-r border-slate-300 dark:border-dark-700/50">S.No</th>
                 <th className="table-cell text-left">Bill No</th>
                 <th className="table-cell text-left">Date</th>
                 <th className="table-cell text-left">Details</th>
@@ -274,9 +275,10 @@ export default function PurchasePage() {
               </tr></thead>
               <tbody>
                 {paged.length === 0 ? (
-                  <tr><td colSpan={8} className="table-cell text-center text-slate-400 dark:text-dark-500 py-12">No {fuelType} purchases found</td></tr>
-                ) : paged.map((p) => (
+                  <tr><td colSpan={10} className="table-cell text-center text-slate-400 dark:text-dark-500 py-12 italic">No {fuelType} purchases found</td></tr>
+                ) : paged.map((p, idx) => (
                   <tr key={p.id} className="table-row group hover:bg-slate-50 dark:hover:bg-dark-800/50 text-[11px]">
+                    <td className="text-[11px] font-bold text-slate-400 border-r border-slate-300 dark:border-dark-700/50 text-center">{(page - 1) * PER_PAGE + idx + 1}</td>
                     <td className="table-cell font-black text-blue-600 dark:text-blue-400 uppercase tracking-tighter">{p.billNo || 'Legacy'}</td>
                     <td className="table-cell whitespace-nowrap">{formatDate(p.date)}</td>
                     <td className="table-cell text-slate-600 dark:text-dark-300">{p.details || '—'}</td>
