@@ -8,7 +8,7 @@ import Pagination from '../components/ui/Pagination';
 import Modal from '../components/ui/Modal';
 import TransactionReceiptModal from '../components/modals/TransactionReceiptModal';
 
-const PER_PAGE = 10;
+// const PER_PAGE = 40; // Replaced by state
 
 export default function ExpensePage() {
   const { 
@@ -37,6 +37,7 @@ export default function ExpensePage() {
   const [page, setPage] = useState(1);
   const [editingEntity, setEditingEntity] = useState<any>(null);
   const [viewingEntity, setViewingEntity] = useState<any>(null);
+  const [perPage, setPerPage] = useState(40);
   const [form, setForm] = useState({ date: today(), description: '', amount: '' });
   
   useEffect(() => {
@@ -69,7 +70,11 @@ export default function ExpensePage() {
       });
   }, [expenseEntries, settings.startDate, selectedCat, search, fromDate, toDate]);
 
-  const paged = paginate(catEntries, page, PER_PAGE);
+  const paged = paginate(catEntries, page, perPage);
+
+  const pageTotals = useMemo(() => ({
+    amount: paged.reduce((s, e) => s + (e.amount || 0), 0),
+  }), [paged]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,11 +86,17 @@ export default function ExpensePage() {
     if (editingEntity) {
       updateExpenseEntry(editingEntity.id, payload);
       toast('Entry updated', 'success');
+      closeForm(); // Close after edit
     } else {
       addExpenseEntry(payload);
       toast('Entry added', 'success');
+      resetFormForNext(); // Stay open after add
     }
-    closeForm();
+  };
+
+  const resetFormForNext = () => {
+    setEditingEntity(null);
+    setForm(prev => ({ ...prev, description: '', amount: '' }));
   };
 
   const closeForm = () => {
@@ -250,6 +261,7 @@ export default function ExpensePage() {
                       <table className="table-excel">
                         <thead>
                           <tr className="table-header">
+                            <th className="px-4 py-3 text-left w-12 border-r border-slate-300 dark:border-dark-700/50">S.No</th>
                             <th className="px-4 py-3 text-left">Date</th>
                             <th className="px-4 py-3 text-left">Description</th>
                             <th className="px-4 py-3 text-right">Amount</th>
@@ -258,9 +270,10 @@ export default function ExpensePage() {
                         </thead>
                         <tbody>
                           {paged.length === 0 ? (
-                            <tr><td colSpan={4} className="text-center text-slate-400 py-12 italic">No transactions found</td></tr>
-                          ) : paged.map((e) => (
+                            <tr><td colSpan={5} className="text-center text-slate-400 py-12 italic">No transactions found</td></tr>
+                          ) : paged.map((e, i) => (
                             <tr key={e.id} className="group">
+                              <td className="text-[11px] font-bold text-slate-400 border-r border-slate-300 dark:border-dark-700/50 text-center">{(page - 1) * perPage + i + 1}</td>
                               <td className="whitespace-nowrap text-[11px] font-medium uppercase tracking-tighter text-slate-500 dark:text-dark-400">{formatDate(e.date)}</td>
                               <td className="text-black dark:text-white font-medium text-[13px]">{e.details || '—'}</td>
                               <td className="amount !text-red-600 dark:!text-red-400">₨ {formatCurrency(e.amount)}</td>
@@ -284,9 +297,29 @@ export default function ExpensePage() {
                             </tr>
                           ))}
                         </tbody>
+                        <tfoot className="border-t-2 border-slate-200 dark:border-dark-700 bg-slate-50/50 dark:bg-dark-900/50">
+                          <tr className="font-bold text-slate-900 dark:text-white">
+                            <td colSpan={3} className="px-4 py-3 text-right uppercase tracking-widest text-[10px]">Page Total</td>
+                            <td className="px-4 py-3 text-right text-red-600">₨ {formatCurrency(pageTotals.amount)}</td>
+                            <td></td>
+                          </tr>
+                          {page === Math.ceil(catEntries.length / perPage) && (
+                            <tr className="font-black text-slate-900 dark:text-white bg-red-600/5 border-t border-red-600/20">
+                              <td colSpan={3} className="px-4 py-4 text-right uppercase tracking-widest text-xs text-red-600">Grand Total</td>
+                              <td className="px-4 py-4 text-right text-red-700 dark:text-red-400 text-base">₨ {formatCurrency(totals.amount)}</td>
+                              <td></td>
+                            </tr>
+                          )}
+                        </tfoot>
                       </table>
                     </div>
-                    <Pagination page={page} total={catEntries.length} perPage={PER_PAGE} onChange={setPage} />
+                    <Pagination 
+                      page={page} 
+                      total={catEntries.length} 
+                      perPage={perPage} 
+                      onChange={setPage} 
+                      onPerPageChange={(v) => { setPerPage(v); setPage(1); }}
+                    />
                   </div>
                 </>
               ) : (

@@ -7,7 +7,7 @@ import SearchBar from '../components/ui/SearchBar';
 import Pagination from '../components/ui/Pagination';
 import Modal from '../components/ui/Modal';
 
-const PER_PAGE = 10;
+// const PER_PAGE = 40; // Replaced by state
 
 export default function CustomerPage() {
   const { 
@@ -36,6 +36,7 @@ export default function CustomerPage() {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(40);
   const [form, setForm] = useState({ date: today(), description: '', debit: '', credit: '' });
   
   useEffect(() => {
@@ -74,7 +75,12 @@ export default function CustomerPage() {
     return sorted.map((e) => { bal += e.debit - e.credit; return { ...e, balance: bal }; }).reverse();
   }, [filteredEntries]);
 
-  const paged = paginate(withBalance, page, PER_PAGE);
+  const paged = paginate(withBalance, page, perPage);
+
+  const pageTotals = useMemo(() => ({
+    debit: paged.reduce((s, e) => s + (e.debit || 0), 0),
+    credit: paged.reduce((s, e) => s + (e.credit || 0), 0),
+  }), [paged]);
   const totals = { debit: filteredEntries.reduce((s, e) => s + e.debit, 0), credit: filteredEntries.reduce((s, e) => s + e.credit, 0) };
   const balance = totals.debit - totals.credit;
 
@@ -103,7 +109,8 @@ export default function CustomerPage() {
     e.preventDefault();
     if (!selectedCust || !form.date) { toast('Fill required fields', 'error'); return; }
     addCustomerEntry({ customerId: selectedCust, date: form.date, description: form.description, debit: parseFloat(form.debit) || 0, credit: parseFloat(form.credit) || 0, balance: 0 });
-    toast('Entry added', 'success'); setForm({ date: today(), description: '', debit: '', credit: '' }); setShowEntryForm(false);
+    toast('Entry added', 'success'); 
+    setForm(prev => ({ ...prev, description: '', debit: '', credit: '' }));
   };
 
   const handlePrint = () => {
@@ -279,6 +286,7 @@ export default function CustomerPage() {
                       <table className="table-excel">
                         <thead>
                           <tr className="table-header">
+                            <th className="px-4 py-3 text-left w-12 border-r border-slate-300 dark:border-dark-700/50">S.No</th>
                             <th className="px-4 py-3 text-left">Date</th>
                             <th className="px-4 py-3 text-left">Description</th>
                             <th className="px-4 py-3 text-right">Debit</th>
@@ -289,9 +297,10 @@ export default function CustomerPage() {
                         </thead>
                         <tbody>
                           {paged.length === 0 ? (
-                            <tr><td colSpan={6} className="text-center text-slate-400 py-12 italic">No transactions found</td></tr>
-                          ) : paged.map((e) => (
+                            <tr><td colSpan={7} className="text-center text-slate-400 py-12 italic">No transactions found</td></tr>
+                          ) : paged.map((e, i) => (
                             <tr key={e.id} className="group">
+                              <td className="text-[11px] font-bold text-slate-400 border-r border-slate-300 dark:border-dark-700/50 text-center">{(page - 1) * perPage + i + 1}</td>
                               <td className="whitespace-nowrap text-[11px] font-medium uppercase tracking-tighter text-slate-500 dark:text-dark-400">{formatDate(e.date)}</td>
                               <td className="text-black dark:text-white font-medium text-[13px]">{e.description || '—'}</td>
                               <td className="amount !text-red-600 dark:!text-red-400">{e.debit ? formatCurrency(e.debit) : '—'}</td>
@@ -307,9 +316,31 @@ export default function CustomerPage() {
                             </tr>
                           ))}
                         </tbody>
+                        <tfoot className="border-t-2 border-slate-200 dark:border-dark-700 bg-slate-50/50 dark:bg-dark-900/50">
+                          <tr className="font-bold text-slate-900 dark:text-white">
+                            <td colSpan={3} className="px-4 py-3 text-right uppercase tracking-widest text-[10px]">Page Total</td>
+                            <td className="px-4 py-3 text-right text-red-600">₨ {formatCurrency(pageTotals.debit)}</td>
+                            <td className="px-4 py-3 text-right text-emerald-600">₨ {formatCurrency(pageTotals.credit)}</td>
+                            <td colSpan={2}></td>
+                          </tr>
+                          {page === Math.ceil(withBalance.length / perPage) && (
+                            <tr className="font-black text-slate-900 dark:text-white bg-pink-600/5 border-t border-pink-600/20">
+                              <td colSpan={3} className="px-4 py-4 text-right uppercase tracking-widest text-xs text-pink-600">Grand Total</td>
+                              <td className="px-4 py-4 text-right text-red-700 dark:text-red-400 text-base">₨ {formatCurrency(totals.debit)}</td>
+                              <td className="px-4 py-4 text-right text-emerald-700 dark:text-emerald-400 text-base">₨ {formatCurrency(totals.credit)}</td>
+                              <td colSpan={2}></td>
+                            </tr>
+                          )}
+                        </tfoot>
                       </table>
                     </div>
-                    <Pagination page={page} total={withBalance.length} perPage={PER_PAGE} onChange={setPage} />
+                    <Pagination 
+                      page={page} 
+                      total={withBalance.length} 
+                      perPage={perPage} 
+                      onChange={setPage} 
+                      onPerPageChange={(v) => { setPerPage(v); setPage(1); }}
+                    />
                   </div>
                 </>
               ) : (

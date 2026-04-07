@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, Trash2, ShoppingCart, Eye, Edit2 } from 'lucide-react';
+import { Plus, Trash2, ShoppingCart, Eye, Edit2, Printer } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { formatCurrency, formatDate, today, paginate, filterByStartDate } from '../lib/utils';
 import { useToast } from '../components/ui/Toast';
@@ -7,6 +7,7 @@ import SearchBar from '../components/ui/SearchBar';
 import Pagination from '../components/ui/Pagination';
 import Modal from '../components/ui/Modal';
 import TransactionReceiptModal from '../components/modals/TransactionReceiptModal';
+import PrintReportModal from '../components/modals/PrintReportModal';
 import type { FuelType } from '../store/useStore';
 
 const PER_PAGE = 10;
@@ -24,6 +25,7 @@ export default function PurchasePage() {
   const [page, setPage] = useState(1);
   const [editingEntity, setEditingEntity] = useState<any>(null);
   const [viewingEntity, setViewingEntity] = useState<any>(null);
+  const [showReport, setShowReport] = useState(false);
 
   // Form state
   const [form, setForm] = useState({
@@ -84,11 +86,25 @@ export default function PurchasePage() {
     if (editingEntity) {
       useStore.getState().updatePurchase(editingEntity.id, payload);
       toast('Purchase updated successfully', 'success');
+      closeForm(); // Close after edit
     } else {
       addPurchase(payload);
       toast(`${fuelType} purchase added successfully`, 'success');
+      resetFormForNext(); // Stay open after add
     }
-    closeForm();
+  };
+
+  const resetFormForNext = () => {
+    setEditingEntity(null);
+    setForm(prev => ({
+      ...prev,
+      details: '',
+      rate: '',
+      quantity: '',
+      carriage: '',
+      amount: '',
+      totalAmount: '',
+    }));
   };
 
   const closeForm = () => {
@@ -179,6 +195,14 @@ export default function PurchasePage() {
           />
         )}
 
+        {showReport && (
+          <PrintReportModal
+            data={filtered}
+            type="purchase"
+            onClose={() => setShowReport(false)}
+          />
+        )}
+
         {/* Header */}
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-4">
@@ -192,9 +216,20 @@ export default function PurchasePage() {
               </h1>
             </div>
           </div>
-          <button onClick={() => { closeForm(); setShowForm(true); }} className="btn-primary !bg-blue-600 hover:!bg-blue-500 flex items-center gap-2">
-            <Plus className="w-4 h-4" /> New Entry
-          </button>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => setShowReport(true)} 
+              className="px-4 py-2 bg-slate-100 dark:bg-dark-700 text-slate-700 dark:text-dark-200 rounded-lg hover:bg-slate-200 dark:hover:bg-dark-600 transition-colors font-bold text-sm flex items-center gap-2"
+            >
+              <Printer className="w-4 h-4" /> Print Report
+            </button>
+            <button 
+              onClick={() => { closeForm(); setShowForm(true); }} 
+              className="btn-primary !bg-blue-600 hover:!bg-blue-500 flex items-center gap-2 shadow-lg shadow-blue-600/10"
+            >
+              <Plus className="w-4 h-4" /> New Entry
+            </button>
+          </div>
         </div>
 
          <div className="glass rounded-xl overflow-hidden">

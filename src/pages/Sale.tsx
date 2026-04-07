@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, Trash2, Droplet, Eye, Edit2 } from 'lucide-react';
+import { Plus, Trash2, Droplet, Eye, Edit2, Printer } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { formatCurrency, formatDate, today, paginate, filterByStartDate } from '../lib/utils';
 import { useToast } from '../components/ui/Toast';
@@ -7,6 +7,7 @@ import SearchBar from '../components/ui/SearchBar';
 import Pagination from '../components/ui/Pagination';
 import Modal from '../components/ui/Modal';
 import TransactionReceiptModal from '../components/modals/TransactionReceiptModal';
+import PrintReportModal from '../components/modals/PrintReportModal';
 import type { FuelType } from '../store/useStore';
 
 const PER_PAGE = 10;
@@ -23,6 +24,7 @@ export default function SalePage() {
   const [page, setPage] = useState(1);
   const [editingEntity, setEditingEntity] = useState<any>(null);
   const [viewingEntity, setViewingEntity] = useState<any>(null);
+  const [showReport, setShowReport] = useState(false);
   const [form, setForm] = useState({ date: today(), quantity: '', rate: '', amount: '' });
 
   const handleFuelSelect = (type: FuelType) => {
@@ -62,11 +64,17 @@ export default function SalePage() {
     if (editingEntity) {
       useStore.getState().updateSale(editingEntity.id, payload);
       toast('Sale updated successfully', 'success');
+      closeForm(); // Close after edit
     } else {
       addSale(payload);
       toast(`${fuelType} sale added`, 'success');
+      resetFormForNext(); // Stay open after add
     }
-    closeForm();
+  };
+
+  const resetFormForNext = () => {
+    setEditingEntity(null);
+    setForm(prev => ({ ...prev, quantity: '', rate: '', amount: '' }));
   };
 
   const closeForm = () => {
@@ -88,16 +96,8 @@ export default function SalePage() {
 
   return (
     <div className="animate-fade-in flex gap-4 h-full">
-      {/* Sidebar selection */}
+      {/* Category Sidebar */}
       <div className="w-60 flex-shrink-0 flex flex-col gap-3 h-[calc(100vh-140px)]">
-        <button
-          onClick={() => { closeForm(); setShowForm(true); }}
-          className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-emerald-600 text-white font-bold text-sm shadow-lg shadow-emerald-600/20 hover:bg-emerald-500 transition-all active:scale-95"
-        >
-          <Plus className="w-4 h-4" />
-          Add Sale
-        </button>
-
         <div className="category-panel flex-1 overflow-y-auto custom-scrollbar text-left">
           <div className="px-3 py-2">
             <h2 className="text-[10px] font-black text-slate-400 dark:text-dark-500 uppercase tracking-[0.2em]">Fuel Types</h2>
@@ -142,6 +142,14 @@ export default function SalePage() {
           />
         )}
 
+        {showReport && (
+          <PrintReportModal
+            data={filtered}
+            type="sale"
+            onClose={() => setShowReport(false)}
+          />
+        )}
+
         {/* Header */}
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-4">
@@ -154,6 +162,20 @@ export default function SalePage() {
                 {fuelType && <span className="text-emerald-600 dark:text-emerald-500 uppercase tracking-widest">{fuelType}</span>}
               </h1>
             </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => setShowReport(true)} 
+              className="px-4 py-2 bg-slate-100 dark:bg-dark-700 text-slate-700 dark:text-dark-200 rounded-lg hover:bg-slate-200 dark:hover:bg-dark-600 transition-colors font-bold text-sm flex items-center gap-2"
+            >
+              <Printer className="w-4 h-4" /> Print Report
+            </button>
+            <button 
+              onClick={() => { closeForm(); setShowForm(true); }} 
+              className="btn-primary !bg-emerald-600 hover:!bg-emerald-500 flex items-center gap-2 shadow-lg shadow-emerald-600/10"
+            >
+              <Plus className="w-4 h-4" /> New Sale Entry
+            </button>
           </div>
         </div>
 

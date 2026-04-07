@@ -9,24 +9,25 @@ import { cn } from '../../lib/utils';
 import { useStore } from '../../store/useStore';
 
 const navItems = [
-  { label: 'Dashboard',  path: '/',           icon: LayoutDashboard },
-  { label: 'Purchase',   path: '/purchase',   icon: ShoppingCart },
-  { label: 'Sale',       path: '/sale',       icon: TrendingUp },
-  { label: 'Ledger',     path: '/ledger',     icon: BookOpen },
-  { label: 'Expense',    path: '/expense',    icon: DollarSign },
-  { label: 'Asset',      path: '/asset',      icon: Package },
-  { label: 'Liability',  path: '/liability',  icon: AlertTriangle },
+  { label: 'Dashboard',  path: '/',           icon: LayoutDashboard, shortcut: 'F1' },
+  { label: 'Sale',       path: '/sale',       icon: TrendingUp,      shortcut: 'F2' },
+  { label: 'Purchase',   path: '/purchase',   icon: ShoppingCart,    shortcut: 'F3' },
+  { label: 'Ledger',     path: '/ledger',     icon: BookOpen,        shortcut: 'F4' },
+  { label: 'Expense',    path: '/expense',    icon: DollarSign,      shortcut: 'F5' },
+  { label: 'Asset',      path: '/asset',      icon: Package,         shortcut: 'F6' },
+  { label: 'Liability',  path: '/liability',  icon: AlertTriangle,   shortcut: 'F7' },
   {
     label: 'Stock',
     path: '/stock',
     icon: BarChart3,
+    shortcut: 'F8',
     children: [
       { label: 'HSD Stock', path: '/stock/hsd' },
       { label: 'PMG Stock', path: '/stock/pmg' },
     ],
   },
-  { label: 'Customer',  path: '/customer',  icon: Users },
-  { label: 'Settings',  path: '/settings',  icon: Settings },
+  { label: 'Customer',  path: '/customer',  icon: Users,     shortcut: 'F9' },
+  { label: 'Settings',  path: '/settings',  icon: Settings,  shortcut: 'F10' },
 ];
 
 export default function Sidebar() {
@@ -69,12 +70,22 @@ export default function Sidebar() {
                   to={path}
                   end={path === '/stock'}
                   className={cn(
-                    'sidebar-item',
+                    'sidebar-item group/item',
                     active ? 'sidebar-item-active' : 'sidebar-item-inactive font-medium'
                   )}
                 >
                   <Icon className="w-4 h-4 flex-shrink-0" />
-                  <span className="truncate">{label}</span>
+                  <span className="truncate flex-1">{label}</span>
+                  {item.shortcut && (
+                    <kbd className={cn(
+                      "hidden group-hover/item:inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[10px] font-black border transition-all duration-300",
+                      active 
+                        ? "bg-primary-700/10 border-primary-700/20 text-primary-700 dark:text-primary-400" 
+                        : "bg-slate-100 border-slate-200 text-slate-400 dark:bg-dark-800 dark:border-dark-700 dark:text-dark-500"
+                    )}>
+                      {item.shortcut}
+                    </kbd>
+                  )}
                 </NavLink>
 
                 {hasChildren && (
