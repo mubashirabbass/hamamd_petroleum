@@ -260,7 +260,7 @@ export default function SalePage() {
               {paged.length > 0 && (
                 <tfoot className="bg-slate-50/50 dark:bg-dark-800/50 font-semibold border-t-[3px] border-double border-slate-300 dark:border-dark-600">
                   <tr>
-                    <td colSpan={4} className="table-cell text-right text-xs uppercase tracking-wider text-slate-500 py-3">Page Totals:</td>
+                    <td colSpan={5} className="table-cell text-right text-xs uppercase tracking-wider text-slate-500 py-3">Page Totals:</td>
                     <td className="table-cell text-right text-slate-900 dark:text-white font-bold py-3">{pageTotals.qty.toLocaleString()} L</td>
                     <td className="table-cell text-right text-emerald-600 dark:text-emerald-400 font-bold py-3">₨ {formatCurrency(pageTotals.amount)}</td>
                     <td className="table-cell"></td>

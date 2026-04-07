@@ -103,13 +103,13 @@ function buildPrintHTML(
             * Errors and Omissions Accepted (E&OE) <br />
             * Official Stamp Required
           </div>
-          <div style="text-align:right; width:240px">
-            <div style="height:60px;display:flex;align-items:flex-end;justify-content:flex-end;margin-bottom:4px">
-              <img src="/assets/imtiaz-sign.png" alt="" style="max-height:100%;max-width:160px;object-fit:contain" onerror="this.style.visibility='hidden'" />
+          <div style="text-align:center; width:280px">
+            <div style="height:60px;display:flex;align-items:flex-end;justify-content:center;margin-bottom:4px">
+              <img src="/assets/imtiaz-sign.png" alt="" style="max-height:100%;max-width:180px;object-fit:contain" onerror="this.style.visibility='hidden'" />
             </div>
-            <div style="border-top:2px solid #111;padding-top:6px">
-              <div style="font-size:14px;font-weight:1000;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap">Muhammad Imtiaz ul Hassan</div>
-              <div style="font-size:9.5px;font-weight:1000;color:#000;text-transform:uppercase;margin-top:2px;white-space:nowrap">CEO Hammad Rahim Filling station</div>
+            <div style="border-top:2.2px solid #111;padding-top:6px">
+              <div style="font-size:16px;font-weight:1000;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap">Muhammad Imtiaz ul Hassan</div>
+              <div style="font-size:10.5px;font-weight:1000;color:#000;text-transform:uppercase;margin-top:2px;white-space:nowrap">CEO Hammad Rahim Filling station</div>
             </div>
           </div>
         </div>
@@ -412,22 +412,24 @@ export default function PrintReportModal({ data, type, onClose }: Props) {
                    </div>
                 </div>
                 <div style={{ padding: '6px 10px', fontStyle: 'italic', fontSize: '9.5px', fontWeight: 900, border: '1.5px solid #111', borderTop: 'none', background: '#fdfdfd' }}>
-                   Amount In Words: {toWords(grand.total)}
+                   Amount In Words: <span style={{ textTransform: 'uppercase' }}>{toWords(grand.total)}</span>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', paddingTop: 20 }}>
-                  <div style={{ textAlign: 'left', fontSize: '9.5px', fontWeight: 900, color: '#000', fontStyle: 'italic', whiteSpace: 'nowrap', paddingBottom: 5 }}>
-                    * This is a computerized generated bill. Errors and omissions are accepted (E&OE).
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ height: 60, display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-end', marginBottom: 3 }}>
-                      <img src="/assets/imtiaz-sign.png" alt="" style={{ maxHeight: '100%', maxWidth: '160px', objectFit: 'contain' }} onError={(e) => (e.currentTarget.style.visibility = 'hidden')} />
-                    </div>
-                    <div style={{ width: '200px', borderTop: '2px solid #000', paddingTop: 8, marginLeft: 'auto' }}>
-                      <div style={{ fontSize: '12px', fontWeight: 1000, textTransform: 'uppercase', textAlign: 'right', whiteSpace: 'nowrap' }}>Muhammad Imtiaz ul Hassan</div>
-                      <div style={{ fontSize: '9px', fontWeight: 900, color: '#000', textTransform: 'uppercase', marginTop: 2, textAlign: 'right', whiteSpace: 'nowrap' }}>CEO Hammad Rahim Filling station</div>
-                    </div>
-                  </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', paddingTop: 25 }}>
+                   <div style={{ textAlign: 'left', fontSize: '10px', fontWeight: 700, color: '#000', fontStyle: 'italic', textTransform: 'uppercase' }}>
+                      * Verified Computerized System Entry <br />
+                      * Errors and Omissions Accepted (E&OE) <br />
+                      * Official Stamp Required
+                   </div>
+                   <div style={{ textAlign: 'center', width: '280px' }}>
+                     <div style={{ height: 60, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', marginBottom: 3 }}>
+                       <img src="/assets/imtiaz-sign.png" alt="" style={{ maxHeight: '100%', maxWidth: '180px', objectFit: 'contain' }} onError={(e) => (e.currentTarget.style.visibility = 'hidden')} />
+                     </div>
+                     <div style={{ width: '100%', borderTop: '2.5px solid #000', paddingTop: 8 }}>
+                       <div style={{ fontSize: '16px', fontWeight: 900, textTransform: 'uppercase', whiteSpace: 'nowrap', color: '#000' }}>Muhammad Imtiaz ul Hassan</div>
+                       <div style={{ fontSize: '10.5px', fontWeight: 900, color: '#000', textTransform: 'uppercase', marginTop: 2, whiteSpace: 'nowrap' }}>CEO Hammad Rahim Filling station</div>
+                     </div>
+                   </div>
                 </div>
               </div>
             )}

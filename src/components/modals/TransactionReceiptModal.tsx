@@ -105,11 +105,11 @@ export default function TransactionReceiptModal({ entity, type, title, onClose }
   .words-box { border: 1.5px solid #111; border-top: none; padding: 8px 12px; font-size: 11.5px; font-weight: 1000; font-style: italic; background: #fdfdfd; }
   .footer { display: flex; justify-content: space-between; align-items: flex-end; padding-top: 30px; }
   .legal-note { font-size: 10.5px; font-weight: 800; font-style: italic; border-left: 3px solid #111; padding-left: 12px; line-height: 1.3; text-transform: uppercase; }
-  .signature-block { text-align: right; width: 240px; }
-  .sign-img { height: 60px; display: flex; align-items: flex-end; justify-content: flex-end; margin-bottom: 4px; }
+  .signature-block { text-align: center; width: 280px; }
+  .sign-img { height: 60px; display: flex; align-items: flex-end; justify-content: center; margin-bottom: 4px; }
   .sign-line { border-top: 2px solid #111; padding-top: 4px; margin-top: 4px; }
-  .ceo-name { font-size: 14.5px; font-weight: 1000; text-transform: uppercase; }
-  .ceo-title { font-size: 10px; font-weight: 1000; text-transform: uppercase; color: #444; }
+  .ceo-name { font-size: 16px; font-weight: 1000; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
+  .ceo-title { font-size: 10.5px; font-weight: 900; text-transform: uppercase; color: #111; margin-top: 2px; }
   @media print { @page { size: A4 portrait; margin: 0; } .page { margin: 0; width: 100%; height: 100%; } }
 </style>
 </head>
@@ -330,19 +330,19 @@ export default function TransactionReceiptModal({ entity, type, title, onClose }
                   Amount In Words: <span className="uppercase ml-2 border-b border-black">{toWords(total)}</span>
                 </div>
 
-                <div className="flex justify-between items-end pt-8">
-                   <div className="text-[10.5px] font-bold italic border-l-3 border-[#111] pl-3 leading-tight uppercase">
+                <div className="flex justify-between items-end pt-10">
+                   <div className="text-[10.5px] font-bold italic border-l-3 border-[#111] pl-3 leading-tight uppercase text-left">
                       * Verified Computerized Entry <br />
                       * Errors and Omissions Accepted <br />
                       * Official Stamp Required
                    </div>
-                   <div className="text-right w-[240px]">
-                      <div className="h-[60px] flex items-end justify-end mb-1">
+                   <div className="text-center w-[280px]">
+                      <div className="h-[60px] flex items-end justify-center mb-1">
                          <img src="/assets/imtiaz-sign.png" alt="" className="max-h-full max-w-[170px] object-contain" />
                       </div>
-                      <div className="border-t-2 border-[#111] pt-1">
-                         <div className="text-[14px] font-[1000] uppercase">Muhammad Imtiaz ul Hassan</div>
-                         <div className="text-[9.5px] font-[1000] uppercase text-[#444]">CEO Hammad Rahim Filling station</div>
+                      <div className="border-t-[2.5px] border-[#111] pt-1.5 underline-offset-4">
+                         <div className="text-[16px] font-black uppercase text-black whitespace-nowrap">Muhammad Imtiaz ul Hassan</div>
+                         <div className="text-[10.5px] font-bold uppercase text-[#111] mt-1 whitespace-nowrap">CEO Hammad Rahim Filling station</div>
                       </div>
                    </div>
                 </div>
