@@ -13,7 +13,6 @@ import type { FuelType } from '../store/useStore';
 const PER_PAGE = 10;
 
 export default function PurchasePage() {
-// ... existing state ...
   const { purchases, addPurchase, deletePurchase, settings, currentUser } = useStore();
   const { toast } = useToast();
 
@@ -255,6 +254,7 @@ export default function PurchasePage() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead><tr className="table-header">
+                <th className="table-cell text-left">Bill No</th>
                 <th className="table-cell text-left">Date</th>
                 <th className="table-cell text-left">Details</th>
                 <th className="table-cell text-right">Rate</th>
@@ -268,8 +268,9 @@ export default function PurchasePage() {
                 {paged.length === 0 ? (
                   <tr><td colSpan={8} className="table-cell text-center text-slate-400 dark:text-dark-500 py-12">No {fuelType} purchases found</td></tr>
                 ) : paged.map((p) => (
-                  <tr key={p.id} className="table-row group hover:bg-slate-50 dark:hover:bg-dark-800/50">
-                    <td className="table-cell">{formatDate(p.date)}</td>
+                  <tr key={p.id} className="table-row group hover:bg-slate-50 dark:hover:bg-dark-800/50 text-[11px]">
+                    <td className="table-cell font-black text-blue-600 dark:text-blue-400 uppercase tracking-tighter">{p.billNo || 'Legacy'}</td>
+                    <td className="table-cell whitespace-nowrap">{formatDate(p.date)}</td>
                     <td className="table-cell text-slate-600 dark:text-dark-300">{p.details || '—'}</td>
                     <td className="table-cell text-right">₨ {formatCurrency(p.rate)}</td>
                     <td className="table-cell text-right">{p.quantity.toLocaleString()}</td>
@@ -278,6 +279,14 @@ export default function PurchasePage() {
                     <td className="table-cell text-right font-semibold text-slate-900 dark:text-white">₨ {formatCurrency(p.totalAmount)}</td>
                     <td className="table-cell text-right">
                       <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button 
+                          onClick={() => setViewingEntity(p)} 
+                          className="flex items-center gap-1.5 px-2 py-0.5 text-[9px] font-black uppercase tracking-tighter text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/20 border border-blue-200/50 dark:border-blue-800/30 rounded hover:bg-blue-100 dark:hover:bg-blue-800/40 transition-all" 
+                          title={`Print ${p.billNo || 'Bill'}`}
+                        >
+                          <Printer className="w-3 h-3" />
+                          <span>{p.billNo || 'PRINT'}</span>
+                        </button>
                         <button onClick={() => setViewingEntity(p)} className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg transition-colors" title="View Details">
                           <Eye className="w-4 h-4" />
                         </button>

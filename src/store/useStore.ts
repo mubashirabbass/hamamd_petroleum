@@ -7,6 +7,7 @@ export type FuelType = 'HSD' | 'PMG';
 
 export interface Purchase {
   id: string;
+  billNo: string;
   type: FuelType;
   date: string;
   details: string;
@@ -19,6 +20,7 @@ export interface Purchase {
 
 export interface Sale {
   id: string;
+  billNo: string;
   type: FuelType;
   date: string;
   quantity: number;
@@ -106,13 +108,15 @@ export interface Settings {
 interface AppState {
   // Purchase
   purchases: Purchase[];
-  addPurchase: (p: Omit<Purchase, 'id'>) => void;
+  nextPurchaseNo: number;
+  addPurchase: (p: Omit<Purchase, 'id' | 'billNo'>) => void;
   updatePurchase: (id: string, p: Partial<Purchase>) => void;
   deletePurchase: (id: string) => void;
 
   // Sale
   sales: Sale[];
-  addSale: (s: Omit<Sale, 'id'>) => void;
+  nextSaleNo: number;
+  addSale: (s: Omit<Sale, 'id' | 'billNo'>) => void;
   updateSale: (id: string, s: Partial<Sale>) => void;
   deleteSale: (id: string) => void;
 
@@ -189,13 +193,27 @@ export const useStore = create<AppState>()(
     (set) => ({
       // ── Purchase ──────────────────────────────────────────────────────
       purchases: [],
-      addPurchase: (p) => set((s) => ({ purchases: [{ ...p, id: uid() }, ...s.purchases] })),
+      nextPurchaseNo: 1,
+      addPurchase: (p) => set((s) => {
+        const billNo = `PUR-${String(s.nextPurchaseNo).padStart(4, '0')}`;
+        return { 
+          purchases: [{ ...p, id: uid(), billNo }, ...s.purchases],
+          nextPurchaseNo: s.nextPurchaseNo + 1
+        };
+      }),
       updatePurchase: (id, data) => set((s) => ({ purchases: s.purchases.map(x => x.id === id ? { ...x, ...data } : x) })),
       deletePurchase: (id) => set((s) => ({ purchases: s.purchases.filter((x) => x.id !== id) })),
 
       // ── Sale ─────────────────────────────────────────────────────────
       sales: [],
-      addSale: (sale) => set((s) => ({ sales: [{ ...sale, id: uid() }, ...s.sales] })),
+      nextSaleNo: 1,
+      addSale: (sale) => set((s) => {
+        const billNo = `SAL-${String(s.nextSaleNo).padStart(4, '0')}`;
+        return { 
+          sales: [{ ...sale, id: uid(), billNo }, ...s.sales],
+          nextSaleNo: s.nextSaleNo + 1
+        };
+      }),
       updateSale: (id, data) => set((s) => ({ sales: s.sales.map(x => x.id === id ? { ...x, ...data } : x) })),
       deleteSale: (id) => set((s) => ({ sales: s.sales.filter((x) => x.id !== id) })),
 
@@ -298,6 +316,8 @@ export const useStore = create<AppState>()(
       resetAllData: () => set(() => ({
         purchases: [],
         sales: [],
+        nextPurchaseNo: 1,
+        nextSaleNo: 1,
         ledgerCategories: [],
         ledgerEntries: [],
         expenseCategories: [],

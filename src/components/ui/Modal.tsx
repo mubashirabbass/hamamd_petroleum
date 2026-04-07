@@ -20,35 +20,25 @@ export default function Modal({ title, onClose, children, wide }: Props) {
     const firstElement = focusableElements?.[0] as HTMLElement;
     const lastElement  = focusableElements?.[focusableElements.length - 1] as HTMLElement;
 
-    // 2. Initial Focus
-    // We try to focus the first INPUT if it exists, otherwise the first element (like the X button)
+    // 2. Initial Focus - Only on Mount
     const firstInput = modalRef.current?.querySelector('input') as HTMLElement;
     (firstInput || firstElement)?.focus();
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-        return;
-      }
-
+      if (e.key === 'Escape') { onClose(); return; }
       if (e.key !== 'Tab') return;
 
       if (e.shiftKey) { // Shift + Tab
-        if (document.activeElement === firstElement) {
-          e.preventDefault();
-          lastElement?.focus();
-        }
+        if (document.activeElement === firstElement) { e.preventDefault(); lastElement?.focus(); }
       } else { // Tab
-        if (document.activeElement === lastElement) {
-          e.preventDefault();
-          firstElement?.focus();
-        }
+        if (document.activeElement === lastElement) { e.preventDefault(); firstElement?.focus(); }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run on mount to prevent focus jumps while typing
 
   return (
     <div className="modal-overlay" onClick={onClose} role="dialog" aria-modal="true">

@@ -200,6 +200,7 @@ export default function SalePage() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead><tr className="table-header">
+                <th className="table-cell text-left">Bill No</th>
                 <th className="table-cell text-left">Date</th>
                 <th className="table-cell text-right">Qty (L)</th>
                 <th className="table-cell text-right">Rate (₨)</th>
@@ -210,13 +211,22 @@ export default function SalePage() {
                 {paged.length === 0 ? (
                   <tr><td colSpan={5} className="table-cell text-center text-slate-400 dark:text-dark-500 py-12">No {fuelType} sales found</td></tr>
                 ) : paged.map((s) => (
-                  <tr key={s.id} className="table-row group hover:bg-slate-50 dark:hover:bg-dark-800/50">
+                  <tr key={s.id} className="table-row group hover:bg-slate-50 dark:hover:bg-dark-800/50 text-[11px]">
+                    <td className="table-cell font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-tighter">{s.billNo || 'Legacy'}</td>
                     <td className="table-cell">{formatDate(s.date)}</td>
-                    <td className="table-cell text-right">{s.quantity.toLocaleString()}</td>
+                    <td className="table-cell text-right">{s.quantity.toLocaleString()} L</td>
                     <td className="table-cell text-right">₨ {formatCurrency(s.rate)}</td>
                     <td className="table-cell text-right font-semibold text-slate-900 dark:text-white">₨ {formatCurrency(s.amount)}</td>
                     <td className="table-cell text-right">
                       <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button 
+                          onClick={() => setViewingEntity(s)} 
+                          className="flex items-center gap-1.5 px-2 py-0.5 text-[9px] font-black uppercase tracking-tighter text-emerald-600 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-900/20 border border-emerald-200/50 dark:border-emerald-800/30 rounded hover:bg-emerald-100 dark:hover:bg-emerald-800/40 transition-all" 
+                          title={`Print ${s.billNo || 'Bill'}`}
+                        >
+                          <Printer className="w-3 h-3" />
+                          <span>{s.billNo || 'PRINT'}</span>
+                        </button>
                         <button onClick={() => setViewingEntity(s)} className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg transition-colors" title="View Details">
                           <Eye className="w-4 h-4" />
                         </button>
@@ -238,7 +248,7 @@ export default function SalePage() {
               {paged.length > 0 && (
                 <tfoot className="bg-slate-50/50 dark:bg-dark-800/50 font-semibold border-t-[3px] border-double border-slate-300 dark:border-dark-600">
                   <tr>
-                    <td className="table-cell text-right text-xs uppercase tracking-wider text-slate-500 py-3">Page Totals:</td>
+                    <td colSpan={2} className="table-cell text-right text-xs uppercase tracking-wider text-slate-500 py-3">Page Totals:</td>
                     <td className="table-cell text-right text-slate-900 dark:text-white font-bold py-3">{pageTotals.qty.toLocaleString()} L</td>
                     <td className="table-cell text-right text-slate-900 dark:text-white font-bold py-3">—</td>
                     <td className="table-cell text-right text-emerald-600 dark:text-emerald-400 font-bold py-3">₨ {formatCurrency(pageTotals.amount)}</td>
