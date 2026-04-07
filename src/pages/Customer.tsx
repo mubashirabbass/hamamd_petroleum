@@ -6,6 +6,7 @@ import { useToast } from '../components/ui/Toast';
 import SearchBar from '../components/ui/SearchBar';
 import Pagination from '../components/ui/Pagination';
 import Modal from '../components/ui/Modal';
+import TransactionReceiptModal from '../components/modals/TransactionReceiptModal';
 
 // const PER_PAGE = 40; // Replaced by state
 
@@ -37,6 +38,7 @@ export default function CustomerPage() {
   const [toDate, setToDate] = useState('');
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(40);
+  const [viewingEntity, setViewingEntity] = useState<any>(null);
   const [form, setForm] = useState({ date: today(), description: '', debit: '', credit: '' });
   
   useEffect(() => {
@@ -307,11 +309,21 @@ export default function CustomerPage() {
                               <td className="amount !text-emerald-600 dark:!text-emerald-500">{e.credit ? formatCurrency(e.credit) : '—'}</td>
                               <td className="amount !text-black dark:!text-white !text-sm">₨ {formatCurrency(e.balance)}</td>
                               <td className="text-right">
-                                {currentUser?.role === 'Admin' && (
-                                  <button onClick={() => { if(confirm('Delete entry?')) { deleteCustomerEntry(e.id); toast('Entry deleted', 'warning'); } }} className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors">
-                                    <Trash2 className="w-3.5 h-3.5" />
+                                <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <button 
+                                    onClick={() => setViewingEntity(e)} 
+                                    className="flex items-center gap-1.5 px-2 py-0.5 text-[9px] font-black uppercase tracking-tighter text-pink-600 dark:text-pink-400 bg-pink-50/50 dark:bg-pink-900/20 border border-pink-200/50 dark:border-pink-800/30 rounded hover:bg-pink-100 dark:hover:bg-pink-800/40 transition-all font-serif" 
+                                    title="Quick Print Invoice"
+                                  >
+                                    <Printer className="w-3 h-3" />
+                                    <span>PRINT</span>
                                   </button>
-                                )}
+                                  {currentUser?.role === 'Admin' && (
+                                    <button onClick={() => { if(confirm('Delete entry?')) { deleteCustomerEntry(e.id); toast('Entry deleted', 'warning'); } }} className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors" title="Delete Entry">
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
+                                </div>
                               </td>
                             </tr>
                           ))}
@@ -500,10 +512,19 @@ export default function CustomerPage() {
             </div>
             <div className="flex justify-end gap-2 pt-2">
               <button type="button" onClick={() => setShowEntryForm(false)} className="btn-secondary">Cancel</button>
-              <button type="submit" className="btn-primary"><Plus className="w-4 h-4" /> Add Entry</button>
+              <button type="submit" className="btn-primary-emerald font-black"><Plus className="w-4 h-4" /> Add Entry</button>
             </div>
           </form>
         </Modal>
+      )}
+
+      {viewingEntity && (
+        <TransactionReceiptModal
+          entity={{ ...viewingEntity, amount: (viewingEntity.debit || viewingEntity.credit) }}
+          type="ledger"
+          title={`Customer Receipt — ${cust?.name}`}
+          onClose={() => setViewingEntity(null)}
+        />
       )}
     </div>
   );

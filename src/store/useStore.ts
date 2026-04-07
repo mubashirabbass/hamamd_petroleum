@@ -195,7 +195,7 @@ export const useStore = create<AppState>()(
       purchases: [],
       nextPurchaseNo: 1,
       addPurchase: (p) => set((s) => {
-        const billNo = `PUR-${String(s.nextPurchaseNo).padStart(4, '0')}`;
+        const billNo = `PUR-${String(s.nextPurchaseNo).padStart(2, '0')}`;
         return { 
           purchases: [{ ...p, id: uid(), billNo }, ...s.purchases],
           nextPurchaseNo: s.nextPurchaseNo + 1
@@ -208,7 +208,7 @@ export const useStore = create<AppState>()(
       sales: [],
       nextSaleNo: 1,
       addSale: (sale) => set((s) => {
-        const billNo = `SAL-${String(s.nextSaleNo).padStart(4, '0')}`;
+        const billNo = `SAL-${String(s.nextSaleNo).padStart(2, '0')}`;
         return { 
           sales: [{ ...sale, id: uid(), billNo }, ...s.sales],
           nextSaleNo: s.nextSaleNo + 1

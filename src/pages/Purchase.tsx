@@ -13,7 +13,7 @@ import type { FuelType } from '../store/useStore';
 const PER_PAGE = 10;
 
 export default function PurchasePage() {
-  const { purchases, addPurchase, deletePurchase, settings, currentUser } = useStore();
+  const { purchases, nextPurchaseNo, addPurchase, deletePurchase, settings, currentUser } = useStore();
   const { toast } = useToast();
 
   const [fuelType, setFuelType] = useState<FuelType>('HSD');
@@ -170,8 +170,16 @@ export default function PurchasePage() {
           <Modal title={editingEntity ? `Edit ${fuelType} Purchase` : `Add ${fuelType} Purchase`} onClose={closeForm} wide>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
+                <div className="col-span-2">
+                  <label className="label">Invoice ID (Auto)</label>
+                  <input 
+                    className="input bg-slate-50 dark:bg-dark-750 font-black text-blue-600 dark:text-blue-400 cursor-not-allowed" 
+                    value={editingEntity ? editingEntity.billNo : `PUR-${String(nextPurchaseNo).padStart(2, '0')}`} 
+                    readOnly 
+                  />
+                </div>
                 <div><label className="label">Date *</label><input type="date" className="input" value={form.date} onChange={(e) => set('date', e.target.value)} required /></div>
-                <div><label className="label">Details</label><input className="input" value={form.details} onChange={(e) => set('details', e.target.value)} placeholder="Supplier / Notes" /></div>
+                <div><label className="label">Details / Supplier Info</label><input className="input" value={form.details} onChange={(e) => set('details', e.target.value)} placeholder="e.g. PSO Main Depot" /></div>
                 <div><label className="label">Rate (₨) *</label><input type="number" step="0.01" className="input" value={form.rate} onChange={(e) => set('rate', e.target.value)} required /></div>
                 <div><label className="label">Quantity (L) *</label><input type="number" step="0.01" className="input" value={form.quantity} onChange={(e) => set('quantity', e.target.value)} required /></div>
                 <div><label className="label">Carriage (₨)</label><input type="number" step="0.01" className="input" value={form.carriage} onChange={(e) => set('carriage', e.target.value)} /></div>

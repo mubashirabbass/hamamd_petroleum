@@ -13,7 +13,7 @@ import type { FuelType } from '../store/useStore';
 const PER_PAGE = 10;
 
 export default function SalePage() {
-  const { sales, addSale, deleteSale, settings, currentUser } = useStore();
+  const { sales, nextSaleNo, addSale, deleteSale, settings, currentUser } = useStore();
   const { toast } = useToast();
 
   const [fuelType, setFuelType] = useState<FuelType>('HSD');
@@ -122,10 +122,20 @@ export default function SalePage() {
         {showForm && (
           <Modal title={editingEntity ? `Edit ${fuelType} Sale` : `Add ${fuelType} Sale`} onClose={closeForm}>
             <form onSubmit={handleSubmit} className="space-y-3">
-              <div><label className="label">Date *</label><input type="date" className="input" value={form.date} onChange={(e) => set('date', e.target.value)} required /></div>
-              <div><label className="label">Quantity (L) *</label><input type="number" step="0.01" className="input" value={form.quantity} onChange={(e) => set('quantity', e.target.value)} required /></div>
-              <div><label className="label">Rate (₨) *</label><input type="number" step="0.01" className="input" value={form.rate} onChange={(e) => set('rate', e.target.value)} required /></div>
-              <div><label className="label">Amount</label><input className="input cursor-not-allowed text-primary-600 dark:text-primary-400 font-semibold" value={form.amount} readOnly /></div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="col-span-2">
+                  <label className="label">Invoice ID (Auto)</label>
+                  <input 
+                    className="input bg-slate-50 dark:bg-dark-750 font-black text-emerald-600 dark:text-emerald-400 cursor-not-allowed" 
+                    value={editingEntity ? editingEntity.billNo : `SAL-${String(nextSaleNo).padStart(2, '0')}`} 
+                    readOnly 
+                  />
+                </div>
+                <div><label className="label">Date *</label><input type="date" className="input" value={form.date} onChange={(e) => set('date', e.target.value)} required /></div>
+                <div><label className="label">Quantity (L) *</label><input type="number" step="0.01" className="input" value={form.quantity} onChange={(e) => set('quantity', e.target.value)} required /></div>
+                <div><label className="label">Rate (₨) *</label><input type="number" step="0.01" className="input" value={form.rate} onChange={(e) => set('rate', e.target.value)} required /></div>
+                <div className="col-span-2"><label className="label">Calculation (Auto)</label><input className="input cursor-not-allowed text-primary-600 dark:text-primary-400 font-bold" value={`₨ ${form.amount}`} readOnly /></div>
+              </div>
               <div className="flex justify-end gap-2 pt-2">
                 <button type="button" onClick={closeForm} className="btn-secondary">Cancel</button>
                 <button type="submit" className="btn-primary-emerald"><Plus className="w-4 h-4" /> {editingEntity ? 'Update Sale' : 'Add Sale'}</button>

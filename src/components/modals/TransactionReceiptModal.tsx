@@ -58,8 +58,6 @@ export default function TransactionReceiptModal({ entity, type, title, onClose }
 
   if (!entity) return null;
 
-  const handlePrint = () => { window.print(); };
-
   const getInvoiceTitle = () => {
     if (type === 'sale') return `Sale Invoice - ${entity.type || ''}`;
     if (type === 'purchase') return `Purchase Bill - ${entity.type || ''}`;
@@ -69,124 +67,266 @@ export default function TransactionReceiptModal({ entity, type, title, onClose }
 
   const total = entity.totalAmount || entity.amount || (entity.debit || entity.credit) || 0;
 
+  const handlePrint = () => {
+    const invTitle = getInvoiceTitle();
+    const invNo = entity.billNo || entity.invoiceNo || '———';
+    const invDate = formatDate(entity.date);
+    
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>${invTitle} — ${invNo}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Times New Roman', Times, serif; font-size: 11px; color: #000; background: #fff; }
+  .page { width: 210mm; min-height: 297mm; padding: 10mm 15mm; margin: 0 auto; background: #fff; display: flex; flex-direction: column; }
+  .header-box { border: 3px double #111; padding: 2px; margin-bottom: 8px; }
+  .header-inner { border: 1px solid #111; padding: 6px 10px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .logo-box { width: 70px; height: 70px; display: flex; align-items: center; justify-content: center; }
+  .logo-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
+  .center-info { text-align: center; flex: 1; }
+  h1 { font-size: 24px; font-weight: 1000; text-transform: uppercase; text-decoration: underline; text-underline-offset: 3px; line-height: 1.1; margin-bottom: 2px; }
+  .address { font-size: 10.5px; font-weight: 700; font-style: italic; text-transform: uppercase; margin-bottom: 3px; }
+  .contact { display: flex; justify-content: center; gap: 15px; font-size: 10px; font-weight: 900; }
+  .meta-bar { display: flex; justify-content: space-between; border: 1.5px solid #111; padding: 5px 12px; margin-bottom: 10px; font-size: 10.5px; font-weight: 1000; text-transform: uppercase; background: #f5f5f5; }
+  table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+  th { border-top: 1.5px solid #111; border-bottom: 1.5px solid #111; background: #ececec; padding: 4px 6px; font-size: 10.5px; font-weight: 1000; text-transform: uppercase; text-align: left; border-right: 1px solid #bbb; }
+  th:last-child { border-right: none; }
+  td { padding: 10px 8px; border-bottom: 1.5px solid #111; font-size: 14px; font-weight: 700; vertical-align: top; }
+  .item-details { font-size: 17px; font-weight: 1000; color: #000; margin-bottom: 5px; }
+  .flex-spacer { flex: 1; }
+  .totals-section { padding-top: 20px; }
+  .total-grid { border: 1.5px solid #111; display: grid; grid-template-columns: 1fr 1fr; background: #fff; }
+  .total-cell { padding: 8px 12px; }
+  .total-label { font-size: 10px; font-weight: 1000; text-transform: uppercase; margin-bottom: 2px; }
+  .total-value-qty { font-size: 18px; font-weight: 1000; font-style: italic; }
+  .total-value-amt { font-size: 22px; font-weight: 1000; border-bottom: 2.5px solid #000; display: inline-block; line-height: 1; padding-bottom: 2px; white-space: nowrap; }
+  .words-box { border: 1.5px solid #111; border-top: none; padding: 8px 12px; font-size: 11.5px; font-weight: 1000; font-style: italic; background: #fdfdfd; }
+  .footer { display: flex; justify-content: space-between; align-items: flex-end; padding-top: 30px; }
+  .legal-note { font-size: 10.5px; font-weight: 800; font-style: italic; border-left: 3px solid #111; padding-left: 12px; line-height: 1.3; text-transform: uppercase; }
+  .signature-block { text-align: right; width: 240px; }
+  .sign-img { height: 60px; display: flex; align-items: flex-end; justify-content: flex-end; margin-bottom: 4px; }
+  .sign-line { border-top: 2px solid #111; padding-top: 4px; margin-top: 4px; }
+  .ceo-name { font-size: 14.5px; font-weight: 1000; text-transform: uppercase; }
+  .ceo-title { font-size: 10px; font-weight: 1000; text-transform: uppercase; color: #444; }
+  @media print { @page { size: A4 portrait; margin: 0; } .page { margin: 0; width: 100%; height: 100%; } }
+</style>
+</head>
+<body>
+  <div class="page">
+    <div class="header-box">
+      <div class="header-inner">
+        <div class="logo-box">
+          <img src="/assets/logo-hr.png" alt="HR" onerror="this.style.display='none'"/>
+        </div>
+        <div class="center-info">
+          <h1>HAMMAD RAHIM FILLING STATION</h1>
+          <p class="address">Muzafar Garh Road, Ada Ghyl Pur, District Jhang</p>
+          <div class="contact">
+            <span>📱 WhatsApp: +92-301-7221831</span>
+            <span>📞 Phone: +92-300-0989192</span>
+          </div>
+        </div>
+        <div class="logo-box">
+          <img src="/assets/logo-go.png" alt="GO" onerror="this.style.display='none'"/>
+        </div>
+      </div>
+    </div>
+
+    <div class="meta-bar">
+      <div style="flex: 1; text-align: left;">Invoice No: ${invNo}</div>
+      <div style="flex: 1; text-align: center;">Product: ${entity.type || 'N/A'}</div>
+      <div style="flex: 1; text-align: right;">Dated: ${invDate}</div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 50%;">Description (Bill Details)</th>
+          <th style="text-align: center; width: 15%;">Unit</th>
+          <th style="text-align: right; width: 15%;">Rate (₨)</th>
+          <th style="text-align: right; width: 15%;">Qty (L)</th>
+          <th style="text-align: right; width: 25%;">Amount (₨)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>
+            <div class="item-details">${entity.details || entity.description || 'Petroleum Product Sale'}</div>
+          </td>
+          <td style="text-align: center;">Liters</td>
+          <td style="text-align: right;">₨ ${formatCurrency(entity.rate || 0)}</td>
+          <td style="text-align: right;">${(entity.quantity || 0).toLocaleString()}</td>
+          <td style="text-align: right;">₨ ${formatCurrency(total)}</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr style="border-top: 1.5px solid #111; background: #fafafa;">
+          <td colspan="4" style="text-align: right; padding: 10px 12px; font-weight: 1000; text-transform: uppercase;">Total Bill Amount</td>
+          <td style="text-align: right; padding: 10px 12px; font-weight: 1000; font-size: 16px; border-left: 1px solid #ddd; white-space: nowrap;">₨ ${formatCurrency(total)}</td>
+        </tr>
+      </tfoot>
+    </table>
+
+        <!-- Spacer -->
+        <div class="flex-spacer"></div>
+
+    <div class="totals-section">
+      <div class="total-grid">
+        <div class="total-cell" style="border-right: 1.5px solid #111;">
+          <div class="total-label">Total Quantity (Net)</div>
+          <div class="total-value-qty">${(entity.quantity || 0).toLocaleString()} L</div>
+        </div>
+        <div class="total-cell" style="background: #f0f0f0;">
+          <div class="total-label">Gross Bill Amount</div>
+          <div class="total-value-amt">₨ ${formatCurrency(total)}</div>
+        </div>
+      </div>
+      <div class="words-box">
+        Amount In Words: <span style="text-transform: uppercase;">${toWords(total)}</span>
+      </div>
+
+      <div class="footer">
+        <div class="legal-note">
+          * Verified Computerized Entry <br />
+          * Errors and Omissions Accepted <br />
+          * Official Stamp Required
+        </div>
+        <div class="signature-block">
+          <div class="sign-img">
+            <img src="/assets/imtiaz-sign.png" alt="" style="max-height: 100%; max-width: 160px; object-fit: contain;" onerror="this.style.display='none'"/>
+          </div>
+          <div class="sign-line">
+            <div class="ceo-name">Muhammad Imtiaz ul Hassan</div>
+            <div class="ceo-title">CEO Hammad Rahim Filling station</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>`;
+
+    const win = window.open('', '_blank', 'width=950,height=800');
+    if (!win) { alert('Please allow popups to print the bill.'); return; }
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
+    win.onload = () => { win.focus(); setTimeout(() => win.print(), 350); };
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm print:bg-white print:p-0 print:block overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm print:hidden">
       <div 
         ref={modalRef} 
-        className="w-full max-w-[800px] bg-white shadow-2xl relative print:shadow-none print:w-[210mm] print:m-0 mx-auto"
+        className="w-full max-w-[850px] max-h-[95vh] bg-white shadow-2xl relative mx-auto rounded-xl overflow-hidden flex flex-col"
       >
-        {/* Header Actions - Hidden on Print */}
-        <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-2 border-b border-slate-100 bg-slate-50/95 backdrop-blur print:hidden">
+        {/* Header Actions - Fixed at Top */}
+        <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50">
           <div className="flex items-center gap-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-primary-500 animate-pulse"></div>
+            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
             <h2 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Official Bill Preview</h2>
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-2">
             <button 
               onClick={handlePrint} 
-              className="flex items-center gap-1.5 px-3 py-1 bg-slate-900 text-white rounded hover:bg-slate-800 transition-all font-black text-[10px] uppercase tracking-wider shadow-sm" 
+              className="flex items-center gap-2 px-4 py-1.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-all font-black text-[11px] uppercase tracking-wider shadow-lg shadow-slate-900/20" 
               title="Print Invoice"
             >
-              <Printer className="w-3.5 h-3.5" /> 
+              <Printer className="w-4 h-4" /> 
               Print A4 Bill
             </button>
             <button 
               onClick={onClose} 
-              className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+              className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
             >
-              <X className="w-4 h-4" />
+              <X className="w-5 h-5" />
             </button>
           </div>
         </div>
 
-        {/* The Exact High-Fidelity Bill Restoration */}
-        <div 
-          className="printable-area bg-white text-slate-900 flex flex-col mx-auto" 
-          style={{ fontFamily: "'Times New Roman', Times, serif" }}
-        >
-          
-          {/* Header */}
-          <div className="m-[8mm] border-[3px] border-double border-[#111] p-[2px]">
-            <div className="border border-[#111] p-[6px_10px]">
-              <div className="flex justify-between items-center gap-[10px]">
-                <div className="w-[70px] h-[70px] flex items-center justify-center">
-                   <img src="/assets/logo-hr.png" alt="HR" className="max-w-full max-h-full object-contain" />
-                </div>
-                <div className="text-center flex-1">
-                  <h1 className="text-[24px] font-[1000] uppercase underline underline-offset-[3px] leading-none mb-1">HAMMAD RAHIM FILLING STATION</h1>
-                  <p className="text-[10.5px] font-bold italic uppercase mb-0.5">Muzafar Garh Road, Ada Ghyl Pur, District Jhang</p>
-                  <div className="flex justify-center gap-[15px] text-[10px] font-black">
-                     <span>📱 WhatsApp: +92-301-7221831</span>
-                     <span>📞 Phone: +92-300-0989192</span>
+        {/* Live Bill Preview - PERFECTED A4 LAYOUT */}
+        <div className="p-8 bg-slate-100/50 flex-1 overflow-y-auto custom-scrollbar">
+           <div 
+             className="bg-white shadow-[0_0_40px_rgba(0,0,0,0.05)] mx-auto w-[210mm] min-h-[297mm] p-[10mm_15mm] flex flex-col"
+             style={{ fontFamily: "'Times New Roman', Times, serif" }}
+           >
+              {/* Header Restoration */}
+              <div className="border-[3px] border-double border-[#111] p-[2px] mb-2">
+                <div className="border border-[#111] p-[6px_10px] flex justify-between items-center gap-[10px]">
+                  <div className="w-[70px] h-[70px] flex items-center justify-center">
+                    <img src="/assets/logo-hr.png" alt="HR" className="max-w-full max-h-full object-contain" />
+                  </div>
+                  <div className="text-center flex-1">
+                    <h1 className="text-[24px] font-[1000] uppercase underline underline-offset-[3px] leading-[1.1] mb-1">HAMMAD RAHIM FILLING STATION</h1>
+                    <p className="text-[10.5px] font-bold italic uppercase mb-0.5">Muzafar Garh Road, Ada Ghyl Pur, District Jhang</p>
+                    <div className="flex justify-center gap-[15px] text-[10px] font-black">
+                      <span>📱 WhatsApp: +92-301-7221831</span>
+                      <span>📞 Phone: +92-300-0989192</span>
+                    </div>
+                  </div>
+                  <div className="w-[70px] h-[70px] flex items-center justify-center">
+                    <img src="/assets/logo-go.png" alt="GO" className="max-w-full max-h-full object-contain" />
                   </div>
                 </div>
-                <div className="w-[70px] h-[70px] flex items-center justify-center">
-                   <img src="/assets/logo-go.png" alt="GO" className="max-w-full max-h-full object-contain" />
-                </div>
               </div>
-            </div>
-          </div>
 
-          <div className="mx-[8mm] flex justify-between border-[1.5px] border-[#111] p-[5px_12px] mb-2 text-[10.5px] font-[1000] uppercase bg-[#f5f5f5]">
-            <div className="flex gap-4">
-              <span>Document: {getInvoiceTitle()}</span>
-              <span>Product: {entity.type || 'N/A'}</span>
-            </div>
-            <div className="flex gap-4 text-right">
-              <span>Invoice No: {entity.billNo || entity.invoiceNo || 'LEGACY'}</span>
-              <span>Dated: {formatDate(entity.date)}</span>
-            </div>
-          </div>
+              {/* Meta Restoration */}
+              <div className="flex items-center border-[1.5px] border-[#111] p-[5px_12px] mb-2 text-[10.5px] font-[1000] uppercase bg-[#f5f5f5]">
+                <div className="flex-1 text-left">Invoice No: {entity.billNo || entity.invoiceNo || '———'}</div>
+                <div className="flex-1 text-center font-black">Product: {entity.type || 'N/A'}</div>
+                <div className="flex-1 text-right">Dated: {formatDate(entity.date)}</div>
+              </div>
 
-          <div className="px-[12mm] flex-1 flex flex-col pt-4">
-               <table className="w-full border-collapse">
-                  <thead>
-                     <tr className="border-y-[1.5px] border-[#111] bg-[#ececec]">
-                        <th className="py-1 px-2 text-left border-r border-[#bbb] uppercase text-[10px] font-[1000]">Description (Bill Details)</th>
-                        <th className="py-1 px-2 text-center border-r border-[#bbb] uppercase text-[10px] font-[1000] w-24">Unit</th>
-                        <th className="py-1 px-2 text-right border-r border-[#bbb] uppercase text-[10px] font-[1000] w-32">Rate (₨)</th>
-                        <th className="py-1 px-2 text-right border-r border-[#bbb] uppercase text-[10px] font-[1000] w-32">Qty (L)</th>
-                        <th className="py-1 px-2 text-right uppercase text-[10px] font-[1000] w-40">Amount (₨)</th>
-                     </tr>
-                  </thead>
-                  <tbody>
-                     <tr className="border-b border-slate-300">
-                        <td className="py-5 px-2 align-top font-[1000] text-[17px] text-black">
-                           {entity.details || entity.description || 'Petroleum Product Sale'}
-                        </td>
-                        <td className="py-5 px-2 text-center align-top font-bold text-[14px]">Liters</td>
-                        <td className="py-5 px-2 text-right align-top font-bold text-[14px]">₨ {formatCurrency(entity.rate || 0)}</td>
-                        <td className="py-5 px-2 text-right align-top font-bold text-[14px]">{(entity.quantity || 0).toLocaleString()}</td>
-                        <td className="py-5 px-2 text-right align-top font-[1000] text-[18px]">₨ {formatCurrency(total)}</td>
-                     </tr>
-                     {/* Compact Spacers */}
-                     {Array.from({ length: 12 }).map((_, i) => (
-                        <tr key={i} className="border-b border-slate-50 h-[30px] print:visible invisible">
-                           <td colSpan={5}></td>
-                        </tr>
-                     ))}
-                  </tbody>
-                  <tfoot className="border-t-[1.5px] border-[#111]">
-                      <tr>
-                         <td colSpan={3} className="py-2 px-2 text-right uppercase text-[9.5px] font-[1000] border-r border-[#bbb] bg-[#f9f9f9]">Accumulated Transaction Result:</td>
-                         <td className="py-2 px-2 text-right text-[11px] font-[1000] border-r border-[#bbb]">{(entity.quantity || 0).toLocaleString()} L</td>
-                         <td className="py-2 px-2 text-right text-[11px] font-[1000]">₨ {formatCurrency(total)}</td>
+              {/* Table Restoration */}
+              <div className="mt-4">
+                <table className="w-full border-collapse">
+                   <thead>
+                      <tr className="border-y-[1.5px] border-[#111] bg-[#ececec]">
+                         <th className="p-[4px_6px] text-left text-[10.5px] font-[1000] uppercase border-r border-[#bbb]">Description (Bill Details)</th>
+                         <th className="p-[4px_6px] text-center text-[10.5px] font-[1000] uppercase border-r border-[#bbb] w-[60px]">Unit</th>
+                         <th className="p-[4px_6px] text-right text-[10.5px] font-[1000] uppercase border-r border-[#bbb] w-[100px]">Rate (₨)</th>
+                         <th className="p-[4px_6px] text-right text-[10.5px] font-[1000] uppercase border-r border-[#bbb] w-[80px]">Qty (L)</th>
+                         <th className="p-[4px_6px] text-right text-[10.5px] font-[1000] uppercase w-[120px]">Amount (₨)</th>
                       </tr>
+                   </thead>
+                   <tbody>
+                      <tr>
+                         <td className="p-[15px_8px] text-[17px] font-[1000] text-black align-top border-b-[1.5px] border-[#111]">
+                            {entity.details || entity.description || 'Petroleum Product Sale'}
+                         </td>
+                         <td className="p-[15px_8px] text-center font-bold align-top border-b-[1.5px] border-[#111]">Liters</td>
+                         <td className="p-[15px_8px] text-right font-bold align-top border-b-[1.5px] border-[#111]">₨ {formatCurrency(entity.rate || 0)}</td>
+                         <td className="p-[15px_8px] text-right font-bold align-top border-b-[1.5px] border-[#111]">{(entity.quantity || 0).toLocaleString()}</td>
+                         <td className="p-[15px_8px] text-right font-black text-[18px] align-top border-b-[1.5px] border-[#111]">₨ {formatCurrency(total)}</td>
+                      </tr>
+                   </tbody>
+                   <tfoot>
+                     <tr className="bg-[#fcfcfc] border-t-[1.5px] border-[#111]">
+                       <td colSpan={4} className="p-[10px_12px] text-right text-[12px] font-[1000] uppercase border-r border-[#bbb]">Total Bill Amount</td>
+                       <td className="p-[10px_12px] text-right font-black text-[18px] text-nowrap">₨ {formatCurrency(total)}</td>
+                     </tr>
                    </tfoot>
-               </table>
+                </table>
+              </div>
 
-             <div className="mt-6 pb-[10mm]">
-                <div className="border-[1.5px] border-[#111] grid grid-cols-2">
+              {/* Spacing */}
+              <div className="flex-1"></div>
+
+              {/* Totals Restoration */}
+              <div className="pt-8 mb-[10mm]">
+                <div className="border-[1.5px] border-[#111] grid grid-cols-2 bg-white">
                    <div className="p-[8px_12px] border-r-[1.5px] border-[#111]">
-                      <div className="text-[9.5px] font-[1000] uppercase mb-0.5">Total Quantity (Net)</div>
-                      <div className="text-[17px] font-[1000] italic">{(entity.quantity || 0).toLocaleString()} L</div>
+                      <div className="text-[10px] font-black uppercase mb-0.5">Total Quantity (Net)</div>
+                      <div className="text-[18px] font-[1000] italic">{(entity.quantity || 0).toLocaleString()} L</div>
                    </div>
                    <div className="p-[8px_12px] bg-[#f0f0f0]">
-                      <div className="text-[9.5px] font-[1000] uppercase mb-0.5">Gross Bill Amount</div>
-                      <div className="text-[22px] font-[1000] border-b-2 border-black inline-block leading-none pb-1">₨ {formatCurrency(total)}</div>
+                      <div className="text-[10px] font-black uppercase mb-0.5">Gross Bill Amount</div>
+                      <div className="text-[22px] font-[1000] border-b-2 border-black inline-block leading-none pb-1 whitespace-nowrap">₨ {formatCurrency(total)}</div>
                    </div>
                 </div>
-                <div className="p-[8px_12px] border-[1.5px] border-[#111] border-t-0 italic text-[11px] font-[1000] bg-[#fdfdfd]">
+                <div className="border-[1.5px] border-[#111] border-t-0 p-[8px_12px] italic text-[11px] font-[1000] bg-[#fdfdfd]">
                   Amount In Words: <span className="uppercase ml-2 border-b border-black">{toWords(total)}</span>
                 </div>
 
@@ -206,23 +346,10 @@ export default function TransactionReceiptModal({ entity, type, title, onClose }
                       </div>
                    </div>
                 </div>
-             </div>
-          </div>
+              </div>
+           </div>
         </div>
       </div>
-
-      <style dangerouslySetInnerHTML={{ __html: `
-        @media print {
-          html, body { width: 210mm; height: 297mm; margin: 0; padding: 0; background: white; }
-          body > *:not(.fixed) { display: none !important; }
-          .fixed { position: static !important; display: block !important; background: white !important; padding: 0 !important; margin: 0 !important; }
-          .fixed > div { box-shadow: none !important; border: none !important; max-width: none !important; width: 100% !important; margin: 0 !important; padding: 0 !important; border-radius: 0 !important; }
-          .print-hidden, .print\\:hidden, .sticky, button { display: none !important; }
-          .printable-area { display: flex !important; visibility: visible !important; width: 210mm !important; margin: 0 auto !important; position: static !important; }
-          * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; font-family: 'Times New Roman', Times, serif !important; }
-          @page { size: A4 portrait; margin: 0; }
-        }
-      `}} />
     </div>
   );
 }

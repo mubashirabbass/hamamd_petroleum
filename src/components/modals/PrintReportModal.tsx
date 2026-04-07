@@ -56,6 +56,7 @@ function buildPrintHTML(
       : chunk.map((row, idx) => `
         <tr style="background:${idx % 2 === 0 ? '#fff' : '#f9f9f9'}">
           <td style="text-align:center">${pi * ROWS_PER_PAGE + idx + 1}</td>
+          <td style="white-space:nowrap;font-weight:700;color:#000">${row.billNo || '—'}</td>
           <td style="white-space:nowrap">${formatDate(row.date)}</td>
           ${isPurchase ? `<td>${row.details || '—'}</td>` : `<td style="text-transform:uppercase">${row.type || 'N/A'}</td>`}
           <td style="text-align:right;white-space:nowrap">₨ ${formatCurrency(row.rate)}</td>
@@ -92,21 +93,23 @@ function buildPrintHTML(
             </div>
           </div>
           <div style="padding:6px 10px;font-style:italic;font-size:9.5px;font-weight:900;color:#000;background:#fff">
-            Amount in Words: ${toWords(grand.total)}
+            Amount in Words: <span style="text-transform:uppercase; border-bottom:1px solid #000; padding-bottom:1px">${toWords(grand.total)}</span>
           </div>
         </div>
 
-        <div style="display:flex;justify-content:space-between;align-items:flex-end;padding-top:20px">
-          <div style="text-align:left;font-size:9.5px;font-weight:800;color:#333;font-style:italic;white-space:nowrap;padding-bottom:5px">
-            * This is a computerized generated bill. Errors and omissions are accepted (E&OE).
+        <div style="display:flex;justify-content:space-between;align-items:flex-end;padding-top:25px">
+          <div style="text-align:left;font-size:9.5px;font-weight:1000;color:#000;font-style:italic;line-height:1.4;text-transform:uppercase">
+            * Verified Computerized System Entry <br />
+            * Errors and Omissions Accepted (E&OE) <br />
+            * Official Stamp Required
           </div>
-          <div style="text-align:right">
-            <div style="height:60px;display:flex;align-items:flex-end;justify-content:flex-end;margin-bottom:3px">
+          <div style="text-align:right; width:240px">
+            <div style="height:60px;display:flex;align-items:flex-end;justify-content:flex-end;margin-bottom:4px">
               <img src="/assets/imtiaz-sign.png" alt="" style="max-height:100%;max-width:160px;object-fit:contain" onerror="this.style.visibility='hidden'" />
             </div>
-            <div style="width:200px;border-top:2px solid #111;padding-top:8px;display:inline-block;text-align:right">
-              <div style="font-size:12px;font-weight:1000;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap">Muhammad Imtiaz ul Hassan</div>
-              <div style="font-size:9px;font-weight:800;color:#222;text-transform:uppercase;margin-top:2px;white-space:nowrap">CEO Hammad Rahim Filling station</div>
+            <div style="border-top:2px solid #111;padding-top:6px">
+              <div style="font-size:14px;font-weight:1000;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap">Muhammad Imtiaz ul Hassan</div>
+              <div style="font-size:9.5px;font-weight:1000;color:#000;text-transform:uppercase;margin-top:2px;white-space:nowrap">CEO Hammad Rahim Filling station</div>
             </div>
           </div>
         </div>
@@ -124,7 +127,7 @@ function buildPrintHTML(
               <img src="/assets/logo-hr.png" alt="HR" style="max-width:100%;max-height:100%;object-fit:contain" onerror="this.style.display='none'" />
             </div>
             <div style="text-align:center;flex:1;min-width:0">
-              <div style="font-size:22px;font-weight:900;text-transform:uppercase;text-decoration:underline;text-underline-offset:4px;white-space:nowrap;letter-spacing:0.5px;line-height:1.1;margin-bottom:3px">
+                <div style="font-size:24px;font-weight:1000;text-transform:uppercase;text-decoration:underline;text-underline-offset:3.5px;white-space:nowrap;letter-spacing:0.5px;line-height:1.1;margin-bottom:2px">
                 Hammad Rahim Filling Station
               </div>
               <div style="font-size:9.5px;font-weight:700;font-style:italic;text-transform:uppercase;color:#444;margin-bottom:5px;letter-spacing:0.4px">
@@ -152,6 +155,7 @@ function buildPrintHTML(
         <thead>
           <tr>
             <th style="width:30px;text-align:center">Sr.</th>
+            <th style="width:60px">Inv No</th>
             <th style="width:70px;white-space:nowrap">Date</th>
             <th>${isPurchase ? 'Source / Supplier Info' : 'Product Category'}</th>
             <th style="width:75px;text-align:right;white-space:nowrap">Rate (₨)</th>
@@ -160,11 +164,10 @@ function buildPrintHTML(
             <th style="width:85px;text-align:right;white-space:nowrap">${isPurchase ? 'Net Amt' : 'Amount'}</th>
             ${isPurchase ? '<th style="width:90px;text-align:right;white-space:nowrap">Total Amt</th>' : ''}
           </tr>
-        </thead>
         <tbody>${rows}</tbody>
         <tfoot>
           <tr>
-            <td colspan="${isPurchase ? 4 : 3}" style="text-align:right;font-weight:900;font-size:9px;text-transform:uppercase;letter-spacing:0.5px;color:#111">
+            <td colspan="5" style="text-align:right;font-weight:900;font-size:9px;text-transform:uppercase;letter-spacing:0.5px;color:#111">
               Page Sub-Total Accumulation:
             </td>
             <td style="text-align:right;font-weight:900;">${((chunk.reduce((s, x) => s + (x.quantity || 0), 0) || 0)).toLocaleString()}</td>
@@ -174,6 +177,7 @@ function buildPrintHTML(
           </tr>
         </tfoot>
       </table>
+      <div style="flex:1"></div>
 
       ${grandBlock}
     </div>`;
@@ -338,45 +342,48 @@ export default function PrintReportModal({ data, type, onClose }: Props) {
               <span style={{ fontSize: '9px' }}>Page No. {pi + 1} / {chunks.length}</span>
             </div>
 
-            <div style={{ flex: 1 }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px' }}>
-                <thead>
-                  <tr style={{ borderTop: '1.5px solid #111', borderBottom: '1.5px solid #111', background: '#eee' }}>
-                    <th style={{ padding: '5px 6px', fontSize: '9.5px', textAlign: 'center', borderRight: '1px solid #ccc', width: 30 }}>Sr.</th>
-                    <th style={{ padding: '5px 6px', fontSize: '9.5px', textAlign: 'left', borderRight: '1px solid #ccc', width: 70, whiteSpace: 'nowrap' }}>Date</th>
-                    <th style={{ padding: '5px 6px', fontSize: '9.5px', textAlign: 'left', borderRight: '1px solid #ccc' }}>{isPurchase ? 'Supplier info' : 'Product'}</th>
-                    <th style={{ padding: '5px 6px', fontSize: '9.5px', textAlign: 'right', borderRight: '1px solid #ccc', width: 75, whiteSpace: 'nowrap' }}>Rate (₨)</th>
-                    <th style={{ padding: '5px 6px', fontSize: '9.5px', textAlign: 'right', borderRight: '1px solid #ccc', width: 70 }}>Qty (L)</th>
-                    {isPurchase && <th style={{ padding: '5px 6px', fontSize: '9.5px', textAlign: 'right', borderRight: '1px solid #ccc', width: 75, whiteSpace: 'nowrap' }}>Carriage</th>}
-                    <th style={{ padding: '5px 6px', fontSize: '9.5px', textAlign: 'right', borderRight: '1px solid #ccc', width: 85, whiteSpace: 'nowrap' }}>Amount (₨)</th>
-                    {isPurchase && <th style={{ padding: '5px 6px', fontSize: '9.5px', textAlign: 'right', width: 90, whiteSpace: 'nowrap' }}>Total (₨)</th>}
-                  </tr>
-                </thead>
-                <tbody>
-                  {chunk.map((row, idx) => (
-                    <tr key={idx} style={{ background: idx % 2 === 0 ? '#fff' : '#fafafa' }}>
-                      <td style={{ padding: '4px 6px', fontSize: '10px', textAlign: 'center', borderBottom: '1px solid #ddd', borderRight: '1px solid #ddd' }}>{pi * ROWS_PER_PAGE + idx + 1}</td>
-                      <td style={{ padding: '4px 6px', fontSize: '10px', textAlign: 'left', borderBottom: '1px solid #ddd', borderRight: '1px solid #ddd', whiteSpace: 'nowrap' }}>{formatDate(row.date)}</td>
-                      <td style={{ padding: '4px 6px', fontSize: '10px', textAlign: 'left', borderBottom: '1px solid #ddd', borderRight: '1px solid #ddd' }}>{isPurchase ? (row.details || '—') : (row.type || 'N/A')}</td>
-                      <td style={{ padding: '4px 6px', fontSize: '10px', textAlign: 'right', borderBottom: '1px solid #ddd', borderRight: '1px solid #ddd', whiteSpace: 'nowrap' }}>₨ {formatCurrency(row.rate)}</td>
-                      <td style={{ padding: '4px 6px', fontSize: '10px', textAlign: 'right', borderBottom: '1px solid #ddd', borderRight: '1px solid #ddd', fontWeight: 800 }}>{(row.quantity || 0).toLocaleString()}</td>
-                      {isPurchase && <td style={{ padding: '4px 6px', fontSize: '10px', textAlign: 'right', borderBottom: '1px solid #ddd', borderRight: '1px solid #ddd', whiteSpace: 'nowrap' }}>₨ {formatCurrency(row.carriage)}</td>}
-                      <td style={{ padding: '4px 6px', fontSize: '10px', textAlign: 'right', borderBottom: '1px solid #ddd', borderRight: '1px solid #ddd', whiteSpace: 'nowrap' }}>₨ {formatCurrency(row.amount)}</td>
-                      {isPurchase && <td style={{ padding: '4px 6px', fontSize: '10px', textAlign: 'right', borderBottom: '1px solid #ddd', fontWeight: 1000, whiteSpace: 'nowrap' }}>₨ {formatCurrency(row.totalAmount)}</td>}
+              <div className="mt-4">
+                <table className="w-full border-collapse text-[10px]">
+                  <thead>
+                    <tr className="bg-slate-50/50 dark:bg-dark-900/50 border-y-[1.5px] border-[#111]">
+                      <th className="px-2 py-1.5 text-center border-r border-slate-300 w-8">Sr.</th>
+                      <th className="px-2 py-1.5 text-left border-r border-slate-300 w-20">Inv No</th>
+                      <th className="px-2 py-1.5 text-left border-r border-slate-300 w-24">Date</th>
+                      <th className="px-2 py-1.5 text-left border-r border-slate-300">{isPurchase ? 'Supplier' : 'Product'}</th>
+                      <th className="px-2 py-1.5 text-right border-r border-slate-300 w-20 text-nowrap">Rate</th>
+                      <th className="px-2 py-1.5 text-right border-r border-slate-300 w-16">Qty</th>
+                      {isPurchase && <th className="px-2 py-1.5 text-right border-r border-slate-300 w-20 text-nowrap">Carriage</th>}
+                      <th className="px-2 py-1.5 text-right border-r border-slate-300 w-24 text-nowrap">Amount</th>
+                      {isPurchase && <th className="px-2 py-1.5 text-right w-24 text-nowrap">Total</th>}
                     </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr>
-                    <td colSpan={isPurchase ? 4 : 3} style={{ padding: '5px 6px', fontSize: '9px', textAlign: 'right', borderRight: '1px solid #ccc', fontWeight: 900 }}>Page Sub-Total Accumulation:</td>
-                    <td style={{ padding: '5px 6px', fontSize: '9px', textAlign: 'right', borderRight: '1px solid #ccc', fontWeight: 900 }}>{(chunk.reduce((s, x) => s + (x.quantity || 0), 0) || 0).toLocaleString()}</td>
-                    {isPurchase && <td style={{ padding: '5px 6px', fontSize: '9px', textAlign: 'right', borderRight: '1px solid #ccc', fontWeight: 900, whiteSpace: 'nowrap' }}>₨ {formatCurrency(chunk.reduce((s, x) => s + (x.carriage || 0), 0))}</td>}
-                    <td style={{ padding: '5px 6px', fontSize: '9px', textAlign: 'right', borderRight: '1px solid #ccc', fontWeight: 900, whiteSpace: 'nowrap' }}>₨ {formatCurrency(chunk.reduce((s, x) => s + (x.amount || 0), 0))}</td>
-                    {isPurchase && <td style={{ padding: '5px 6px', fontSize: '9px', textAlign: 'right', fontWeight: 900, whiteSpace: 'nowrap' }}>₨ {formatCurrency(chunk.reduce((s, x) => s + (x.totalAmount ?? x.amount ?? 0), 0))}</td>}
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {chunk.map((row, idx) => (
+                      <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'}>
+                        <td className="px-2 py-1 border-b border-slate-200 border-r border-slate-200 text-center">{pi * ROWS_PER_PAGE + idx + 1}</td>
+                        <td className="px-2 py-1 border-b border-slate-200 border-r border-slate-200 font-bold text-primary-600">{row.billNo || '—'}</td>
+                        <td className="px-2 py-1 border-b border-slate-200 border-r border-slate-200 text-nowrap">{formatDate(row.date)}</td>
+                        <td className="px-2 py-1 border-b border-slate-200 border-r border-slate-200">{isPurchase ? (row.details || '—') : (row.type || 'N/A')}</td>
+                        <td className="px-2 py-1 border-b border-slate-200 border-r border-slate-200 text-right text-nowrap">₨ {formatCurrency(row.rate)}</td>
+                        <td className="px-2 py-1 border-b border-slate-200 border-r border-slate-200 text-right font-bold">{(row.quantity || 0).toLocaleString()}</td>
+                        {isPurchase && <td className="px-2 py-1 border-b border-slate-200 border-r border-slate-200 text-right text-nowrap">₨ {formatCurrency(row.carriage)}</td>}
+                        <td className="px-2 py-1 border-b border-slate-200 border-r border-slate-200 text-right text-nowrap">₨ {formatCurrency(row.amount)}</td>
+                        {isPurchase && <td className="px-2 py-1 border-b border-slate-200 text-right font-black text-nowrap">₨ {formatCurrency(row.totalAmount)}</td>}
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="bg-slate-50 font-bold border-t-[1.5px] border-[#111]">
+                      <td colSpan={5} className="px-2 py-1.5 text-right border-r border-[#111]">Sub-Total</td>
+                      <td className="px-2 py-1.5 text-right border-r border-[#111]">{(chunk.reduce((s, x) => s + (x.quantity || 0), 0) || 0).toLocaleString()}</td>
+                      {isPurchase && <td className="px-2 py-1.5 text-right border-r border-[#111] text-nowrap">₨ {formatCurrency(chunk.reduce((s, x) => s + (x.carriage || 0), 0))}</td>}
+                      <td className="px-2 py-1.5 text-right border-r border-[#111] text-nowrap">₨ {formatCurrency(chunk.reduce((s, x) => s + (x.amount || 0), 0))}</td>
+                      {isPurchase && <td className="px-2 py-1.5 text-right text-nowrap font-black">₨ {formatCurrency(chunk.reduce((s, x) => s + (x.totalAmount ?? x.amount ?? 0), 0))}</td>}
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+              <div className="flex-1"></div>
 
             {isLast && (
               <div style={{ marginTop: 'auto', paddingTop: '10px' }}>

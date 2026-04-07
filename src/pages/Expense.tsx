@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { DollarSign, Plus, Trash2, Eye, Edit2, Search, Check, X, FileText, Settings, UserPlus } from 'lucide-react';
+import { DollarSign, Plus, Trash2, Eye, Edit2, Search, Check, X, FileText, Settings, UserPlus, Printer } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { formatCurrency, formatDate, today, paginate, filterByStartDate, cn } from '../lib/utils';
 import { useToast } from '../components/ui/Toast';
@@ -279,7 +279,15 @@ export default function ExpensePage() {
                               <td className="amount !text-red-600 dark:!text-red-400">₨ {formatCurrency(e.amount)}</td>
                               <td className="text-right">
                                 <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <button onClick={() => setViewingEntity(e)} className="p-1 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded transition-colors">
+                                  <button 
+                                    onClick={() => setViewingEntity(e)} 
+                                    className="flex items-center gap-1.5 px-2 py-0.5 text-[9px] font-black uppercase tracking-tighter text-red-600 dark:text-red-400 bg-red-50/50 dark:bg-red-900/20 border border-red-200/50 dark:border-red-800/30 rounded hover:bg-red-100 dark:hover:bg-red-800/40 transition-all font-serif" 
+                                    title="Quick Print Invoice"
+                                  >
+                                    <Printer className="w-3 h-3" />
+                                    <span>PRINT</span>
+                                  </button>
+                                  <button onClick={() => setViewingEntity(e)} className="p-1 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded transition-colors" title="View Details">
                                     <Eye className="w-3.5 h-3.5" />
                                   </button>
                                   {currentUser?.role === 'Admin' && (
