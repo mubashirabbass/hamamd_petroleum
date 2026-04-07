@@ -215,6 +215,8 @@ export async function restoreFromDrive(
   const zipPath = await invoke<string>('download_drive_backup', { fileId, accessToken });
 
   onProgress?.('Restoring database...');
+  const { closeDB } = await import('./db');
+  await closeDB();
   await invoke('restore_from_zip', { zipPath });
 
   onProgress?.('Restore complete — reloading...');
@@ -248,5 +250,7 @@ export async function restoreFromLocalFile(file: File): Promise<void> {
     await writeFile(fullTempPath, uint8);
   });
 
+  const { closeDB } = await import('./db');
+  await closeDB();
   await invoke('restore_from_zip', { zipPath: fullTempPath });
 }

@@ -28,6 +28,13 @@ export async function getDB(): Promise<Database> {
   return _db;
 }
 
+export async function closeDB(): Promise<void> {
+  if (_db) {
+    await _db.close();
+    _db = null;
+  }
+}
+
 async function initSchema(db: Database): Promise<void> {
   // Use a transaction for atomic schema creation
   await db.execute(`PRAGMA journal_mode=WAL`);

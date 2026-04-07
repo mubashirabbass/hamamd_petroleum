@@ -60,11 +60,27 @@ async fn create_backup_zip(app: tauri::AppHandle) -> Result<String, String> {
     zip.write_all(meta.to_string().as_bytes())
         .map_err(|e| e.to_string())?;
 
-    // 2. SQLite database file
+    // 2. Main SQLite database file
     zip.start_file("ebs_business.db", options)
         .map_err(|e| e.to_string())?;
     let db_data = std::fs::read(&db_path).map_err(|e| e.to_string())?;
     zip.write_all(&db_data).map_err(|e| e.to_string())?;
+
+    // 3. Write-Ahead Logs (WAL) if they exist (Crucial for real-time uncommitted data)
+    let wal_path = app_dir.join("ebs_business.db-wal");
+    if wal_path.exists() {
+        zip.start_file("ebs_business.db-wal", options).map_err(|e| e.to_string())?;
+        let wal_data = std::fs::read(&wal_path).map_err(|e| e.to_string())?;
+        zip.write_all(&wal_data).map_err(|e| e.to_string())?;
+    }
+
+    // 4. Shared memory file (SHM)
+    let shm_path = app_dir.join("ebs_business.db-shm");
+    if shm_path.exists() {
+        zip.start_file("ebs_business.db-shm", options).map_err(|e| e.to_string())?;
+        let shm_data = std::fs::read(&shm_path).map_err(|e| e.to_string())?;
+        zip.write_all(&shm_data).map_err(|e| e.to_string())?;
+    }
 
     zip.finish().map_err(|e| e.to_string())?;
 
@@ -92,19 +108,38 @@ async fn restore_from_zip(zip_path: String, app: tauri::AppHandle) -> Result<(),
         format!("Invalid ZIP archive: {}", e)
     })?;
 
+    let mut found_db = false;
+    let mut has_wal_in_zip = false;
+
+    // First pass: extract files
     for i in 0..archive.len() {
         let mut entry = archive.by_index(i).map_err(|e| e.to_string())?;
-        if entry.name() == "ebs_business.db" {
+        let name = entry.name().to_string();
+        
+        if name == "ebs_business.db" || name == "ebs_business.db-wal" || name == "ebs_business.db-shm" {
             let mut data = Vec::new();
-            entry
-                .read_to_end(&mut data)
-                .map_err(|e| e.to_string())?;
-            // Write to a temp file first to avoid corruption if interrupted
-            let tmp_path = db_path.with_extension("db.restoring");
+            entry.read_to_end(&mut data).map_err(|e| e.to_string())?;
+            
+            let target_path = app_dir.join(&name);
+            let ext = target_path.extension().map(|s| s.to_string_lossy().to_string()).unwrap_or_else(|| "db".to_string());
+            let tmp_path = target_path.with_extension(format!("restoring.{}", ext));
+            
             std::fs::write(&tmp_path, &data).map_err(|e| e.to_string())?;
-            std::fs::rename(&tmp_path, &db_path).map_err(|e| e.to_string())?;
-            return Ok(());
+            std::fs::rename(&tmp_path, &target_path).map_err(|e| e.to_string())?;
+
+            if name == "ebs_business.db" { found_db = true; }
+            if name == "ebs_business.db-wal" { has_wal_in_zip = true; }
         }
+    }
+
+    if found_db {
+        // If the backup did not contain a WAL file, we MUST proactively delete any local WAL files
+        // so that SQLite doesn't overwrite the fresh backup with stale memory logs!
+        if !has_wal_in_zip {
+            let _ = std::fs::remove_file(app_dir.join("ebs_business.db-wal"));
+            let _ = std::fs::remove_file(app_dir.join("ebs_business.db-shm"));
+        }
+        return Ok(());
     }
 
     Err("Backup ZIP does not contain a valid database file (ebs_business.db).".to_string())
@@ -324,6 +359,10 @@ async fn find_or_create_drive_folder(
         .await
         .map_err(|e| e.to_string())?;
 
+    if let Some(err) = search.get("error") {
+        return Err(format!("Drive API Search Error: {}", err));
+    }
+
     if let Some(files) = search["files"].as_array() {
         if !files.is_empty() {
             return Ok(files[0]["id"].as_str().unwrap_or("").to_string());
@@ -389,6 +428,10 @@ async fn upload_zip_to_drive(
         .await
         .map_err(|e| e.to_string())?;
 
+    if let Some(err) = search.get("error") {
+        return Err(format!("Drive API Error: {}", err));
+    }
+
     let existing = search["files"].as_array().cloned().unwrap_or_default();
 
     let boundary = "EBS_BACKUP_BOUNDARY_7A3F9B2C";
@@ -443,6 +486,10 @@ async fn upload_zip_to_drive(
             .map_err(|e| e.to_string())?
     };
 
+    if let Some(err) = response.get("error") {
+        return Err(format!("Drive API Upload Error: {}", err));
+    }
+
     Ok(response)
 }
 
@@ -472,6 +519,10 @@ async fn list_drive_backups(access_token: String) -> Result<Vec<serde_json::Valu
         .await
         .map_err(|e| e.to_string())?;
 
+    if let Some(err) = result.get("error") {
+        return Err(format!("Drive API Error: {}", err));
+    }
+
     Ok(result["files"].as_array().cloned().unwrap_or_default())
 }
 
@@ -498,10 +549,12 @@ async fn download_drive_backup(
         .await
         .map_err(|e| format!("Drive download failed: {}", e))?;
 
-    if !response.status().is_success() {
+    let status_code = response.status();
+    if !status_code.is_success() {
+        let err_text = response.text().await.unwrap_or_default();
         return Err(format!(
-            "Drive returned HTTP {}: cannot download backup",
-            response.status()
+            "Drive returned HTTP {}: {}",
+            status_code, err_text
         ));
     }
 

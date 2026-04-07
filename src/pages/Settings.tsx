@@ -169,9 +169,8 @@ function BackupPanel() {
       const zipPath = await downloadLocalBackup();
       // Open the folder so the user can find the file
       try {
-        const { openPath } = await import('@tauri-apps/plugin-opener');
-        const folder = zipPath.split(/[\\/]/).slice(0, -1).join('\\');
-        await openPath(folder);
+        const { revealItemInDir } = await import('@tauri-apps/plugin-opener');
+        await revealItemInDir(zipPath);
       } catch (_) { /* folder open is best-effort */ }
       toast(`Local backup saved to:\n${zipPath}`, 'success');
     } catch (err: any) {
@@ -213,6 +212,8 @@ function BackupPanel() {
       const { writeFile } = await import('@tauri-apps/plugin-fs');
       await writeFile(tempPath, new Uint8Array(uint8));
       setProgress({ msg: 'Restoring database…', active: true });
+      const { closeDB } = await import('../lib/db');
+      await closeDB();
       await invoke('restore_from_zip', { zipPath: tempPath });
       toast('Restore complete! Reloading app…', 'success');
       setTimeout(() => window.location.reload(), 1200);

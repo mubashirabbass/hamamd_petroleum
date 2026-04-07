@@ -100,9 +100,9 @@ export default function SalePage() {
   };
 
   return (
-    <div className="animate-fade-in flex gap-4 h-full">
-      {/* Category Sidebar */}
-      <div className="w-60 flex-shrink-0 flex flex-col gap-3 h-[calc(100vh-140px)]">
+    <div className="animate-fade-in flex flex-col md:flex-row gap-4 h-full">
+      {/* Sidebar selection */}
+      <div className="w-full md:w-60 flex-shrink-0 flex flex-col gap-3 md:h-[calc(100vh-140px)] h-auto">
         <div className="category-panel flex-1 overflow-y-auto custom-scrollbar text-left">
           <div className="px-3 py-2">
             <h2 className="text-[10px] font-black text-slate-400 dark:text-dark-500 uppercase tracking-[0.2em]">Fuel Types</h2>
@@ -126,8 +126,8 @@ export default function SalePage() {
       <div className="flex-1 min-w-0">
         {showForm && (
           <Modal title={editingEntity ? `Edit ${fuelType} Sale` : `Add ${fuelType} Sale`} onClose={closeForm}>
-            <form onSubmit={handleSubmit} className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="col-span-2">
                   <label className="label">Invoice ID (Auto)</label>
                   <input
