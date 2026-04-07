@@ -124,7 +124,7 @@ export default function LedgerPage() {
     if (!newName.trim()) return;
     addLedgerCategory(newName.trim());
     setNewName('');
-    toast('Department registered successfully', 'success');
+    toast('Ledger registered successfully', 'success');
     setActiveTab('database');
   };
 
@@ -137,7 +137,7 @@ export default function LedgerPage() {
     if (!editForm.name.trim()) return;
     updateLedgerCategory(id, editForm.name.trim());
     setEditingId(null);
-    toast('Department details updated', 'success');
+    toast('Ledger details updated', 'success');
   };
 
   return (
@@ -165,7 +165,7 @@ export default function LedgerPage() {
                 : "text-slate-500 hover:text-slate-800 dark:hover:text-white"
             )}
           >
-            <UserPlus className="w-4 h-4" /> Register Department
+            <UserPlus className="w-4 h-4" /> Register Ledger
           </button>
           <button 
             onClick={() => setActiveTab('manage')}
@@ -176,7 +176,7 @@ export default function LedgerPage() {
                 : "text-slate-500 hover:text-slate-800 dark:hover:text-white"
             )}
           >
-            <Settings className="w-4 h-4" /> Manage Departments
+            <Settings className="w-4 h-4" /> Manage Ledgers
           </button>
         </div>
         {activeTab === 'database' && cat && (
@@ -194,15 +194,15 @@ export default function LedgerPage() {
             {/* Sidebar List */}
             <div className="w-64 flex-shrink-0 flex flex-col h-full bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700/50 rounded-2xl overflow-hidden shadow-sm">
                <div className="p-3 bg-slate-50/50 dark:bg-dark-800/30 border-b border-slate-100 dark:border-dark-700/30 flex items-center justify-between">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Departments</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Ledgers</p>
                 <span className="text-[10px] font-bold text-slate-300">{filteredSidebar.length}</span>
               </div>
               <div className="p-2 border-b border-slate-100 dark:border-dark-700/30">
-                <SearchBar value={search} onChange={setSearch} placeholder="Search Department..." fullWidth={true} className="!py-1.5 !text-[11px]" />
+                <SearchBar value={search} onChange={setSearch} placeholder="Search Ledger..." fullWidth={true} className="!py-1.5 !text-[11px]" />
               </div>
               <div className="smart-scroll flex-1 p-2 space-y-1">
                 {filteredSidebar.length === 0 ? (
-                  <div className="p-8 text-center text-xs text-slate-400 italic">No Departments found</div>
+                  <div className="p-8 text-center text-xs text-slate-400 italic">No Ledgers found</div>
                 ) : (
                   filteredSidebar.map((c) => (
                     <div
@@ -236,9 +236,8 @@ export default function LedgerPage() {
                       </div>
                       <div>
                         <h1 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
-                          General Ledger
+                          {cat.name} Ledger
                         </h1>
-                        <span className="text-xl md:text-2xl font-black text-primary-600 tracking-widest uppercase block mt-1 drop-shadow-sm">{cat.name}</span>
                       </div>
                     </div>
                   </div>
@@ -327,19 +326,16 @@ export default function LedgerPage() {
           <div className="flex-1 animate-in zoom-in-95 duration-300">
             <div className="max-w-2xl mx-auto glass p-8 rounded-3xl border border-slate-200 dark:border-dark-700/50 shadow-2xl mt-8">
               <div className="flex items-center gap-4 mb-8">
-                <div className="w-14 h-14 rounded-2xl bg-primary-600/10 flex items-center justify-center">
-                  <Plus className="w-7 h-7 text-primary-600" />
-                </div>
                 <div>
-                  <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">New Department Registration</h2>
-                  <p className="text-sm text-slate-500 font-medium">Create a new entry in your General Ledger database</p>
+                  <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">New Ledger Registration</h2>
+                  <p className="text-sm text-slate-500 font-medium">Create a new entry in your account database</p>
                 </div>
               </div>
 
               <form onSubmit={handleAddCategory} className="space-y-6">
                 <div className="grid grid-cols-1 gap-6">
                   <div>
-                    <label className="label text-[10px] font-black uppercase tracking-widest text-primary-600 mb-2 block">Department Name *</label>
+                    <label className="label text-[10px] font-black uppercase tracking-widest text-primary-600 mb-2 block">Ledger Name *</label>
                     <div className="relative">
                       <FileText className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                       <input 
@@ -377,7 +373,7 @@ export default function LedgerPage() {
                   />
                 </div>
                 <div className="px-6 py-3 bg-slate-100 dark:bg-dark-800 rounded-2xl text-xs font-black text-slate-500 uppercase tracking-widest border border-slate-200 dark:border-dark-700/50">
-                  {ledgerCategories.length} Departments Found
+                  {ledgerCategories.length} Ledgers Found
                 </div>
             </div>
 
@@ -385,7 +381,7 @@ export default function LedgerPage() {
                <div className="overflow-y-auto smart-scroll">
                   <table className="w-full">
                     <thead className="sticky top-0 bg-slate-50/90 dark:bg-dark-800/90 backdrop-blur-sm z-10"><tr className="border-b border-slate-200 dark:border-dark-700/50">
-                      <th className="px-6 py-4 text-left text-[10px] font-black uppercase text-slate-400 tracking-widest">Department Name</th>
+                      <th className="px-6 py-4 text-left text-[10px] font-black uppercase text-slate-400 tracking-widest">Ledger Name</th>
                       <th className="px-6 py-4 text-right text-[10px] font-black uppercase text-slate-400 tracking-widest">Actions</th>
                     </tr></thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-dark-800/50">

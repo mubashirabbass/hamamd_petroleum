@@ -173,7 +173,7 @@ export default function AssetPage() {
                 : "text-slate-500 hover:text-slate-800 dark:hover:text-white"
             )}
           >
-            <Settings className="w-4 h-4" /> Manage Accounts
+            <Settings className="w-4 h-4" /> Manage Assets
           </button>
         </div>
         {activeTab === 'database' && cat && (
@@ -190,15 +190,15 @@ export default function AssetPage() {
           <>
             <div className="w-64 flex-shrink-0 flex flex-col h-full bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700/50 rounded-2xl overflow-hidden shadow-sm">
                <div className="p-3 bg-slate-50/50 dark:bg-dark-800/30 border-b border-slate-100 dark:border-dark-700/30 flex items-center justify-between">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Accounts</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Assets</p>
                 <span className="text-[10px] font-bold text-slate-300">{filteredSidebar.length}</span>
               </div>
               <div className="p-2 border-b border-slate-100 dark:border-dark-700/30">
-                <SearchBar value={search} onChange={setSearch} placeholder="Search Account..." fullWidth={true} className="!py-1.5 !text-[11px]" />
+                <SearchBar value={search} onChange={setSearch} placeholder="Search Asset..." fullWidth={true} className="!py-1.5 !text-[11px]" />
               </div>
               <div className="smart-scroll flex-1 p-2 space-y-1">
                 {filteredSidebar.length === 0 ? (
-                  <div className="p-8 text-center text-xs text-slate-400 italic">No Accounts found</div>
+                  <div className="p-8 text-center text-xs text-slate-400 italic">No Assets found</div>
                 ) : (
                   filteredSidebar.map((c) => (
                     <div
@@ -231,9 +231,8 @@ export default function AssetPage() {
                       </div>
                       <div>
                         <h1 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
-                          Asset Register
+                          {cat.name} Asset
                         </h1>
-                        <span className="text-xl md:text-2xl font-black text-emerald-600 tracking-widest uppercase block mt-1 drop-shadow-sm">{cat.name}</span>
                       </div>
                     </div>
                   </div>

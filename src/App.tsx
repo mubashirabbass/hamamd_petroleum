@@ -9,7 +9,6 @@ import Expense    from './pages/Expense';
 import Asset      from './pages/Asset';
 import Liability  from './pages/Liability';
 import Stock      from './pages/Stock';
-import StockDetail from './pages/StockDetail';
 import Customer   from './pages/Customer';
 import Settings   from './pages/Settings';
 import Login      from './pages/Login';
@@ -44,7 +43,7 @@ export default function App() {
               <Route path="asset"    element={<Asset />} />
               <Route path="liability"element={<Liability />} />
               <Route path="stock"    element={<Stock />} />
-              <Route path="stock/:type" element={<StockDetail />} />
+              <Route path="stock/:type" element={<Stock />} />
               <Route path="customer" element={<Customer />} />
               <Route path="settings" element={<Settings />} />
             </Route>
