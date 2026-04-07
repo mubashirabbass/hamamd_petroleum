@@ -142,11 +142,11 @@ export default function TransactionReceiptModal({ entity, type, title, onClose }
   .logo-box { width: 70px; height: 70px; display: flex; align-items: center; justify-content: center; }
   .logo-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
   .center-info { text-align: center; flex: 1; }
-  h1 { font-size: 24px; font-weight: 1000; text-transform: uppercase; text-decoration: underline; text-underline-offset: 3px; line-height: 1.1; margin-bottom: 2px; }
+  h1 { font-size: 24px; font-weight: 1000; text-transform: uppercase; line-height: 1.1; margin-bottom: 2px; }
   .address { font-size: 10.5px; font-weight: 700; font-style: italic; text-transform: uppercase; margin-bottom: 3px; }
   .contact { display: flex; justify-content: center; gap: 15px; font-size: 10px; font-weight: 900; }
   .meta-bar { display: flex; justify-content: space-between; border: 1.5px solid #111; padding: 5px 12px; margin-bottom: 10px; font-size: 10.5px; font-weight: 1000; text-transform: uppercase; background: #f5f5f5; }
-  table { width: 100%; border-collapse: collapse; margin-top: 15px; border-left: 1.5px solid #111; border-right: 1.5px solid #111; }
+  table { width: 100%; border-collapse: collapse; margin-top: 15px; border-left: 1.5px solid #111; border-right: 1.5px solid #111; border-bottom: 1.5px solid #111; }
   th { border-top: 1.5px solid #111; border-bottom: 1.5px solid #111; background: #ececec; padding: 4px 6px; font-size: 10.5px; font-weight: 1000; text-transform: uppercase; text-align: left; border-right: 1px solid #bbb; }
   th:last-child { border-right: none; }
   td { padding: 10px 8px; border-bottom: 1.5px solid #111; font-size: 14px; font-weight: 700; vertical-align: top; }
@@ -157,7 +157,7 @@ export default function TransactionReceiptModal({ entity, type, title, onClose }
   .total-cell { padding: 8px 12px; }
   .total-label { font-size: 10px; font-weight: 1000; text-transform: uppercase; margin-bottom: 2px; }
   .total-value-qty { font-size: 18px; font-weight: 1000; font-style: italic; }
-  .total-value-amt { font-size: 22px; font-weight: 1000; border-bottom: 2.5px solid #000; display: inline-block; line-height: 1; padding-bottom: 2px; white-space: nowrap; }
+  .total-value-amt { font-size: 22px; font-weight: 1000; display: inline-block; line-height: 1; padding-bottom: 2px; white-space: nowrap; }
   .words-box { border: 1.5px solid #111; border-top: none; padding: 8px 12px; font-size: 11.5px; font-weight: 1000; font-style: italic; background: #fdfdfd; }
   .footer { display: flex; justify-content: space-between; align-items: flex-end; padding-top: 30px; }
   .legal-note { font-size: 10.5px; font-weight: 800; font-style: italic; border-left: 3px solid #111; padding-left: 12px; line-height: 1.3; text-transform: uppercase; }
@@ -306,7 +306,7 @@ export default function TransactionReceiptModal({ entity, type, title, onClose }
                     <img src="/assets/logo-hr.png" alt="HR" className="max-w-full max-h-full object-contain" />
                   </div>
                   <div className="text-center flex-1">
-                    <h1 className="text-[24px] font-[1000] uppercase underline underline-offset-[3px] leading-[1.1] mb-1">HAMMAD RAHIM FILLING STATION</h1>
+                    <h1 className="text-[24px] font-black uppercase leading-[1.1] mb-1">HAMMAD RAHIM FILLING STATION</h1>
                     <p className="text-[10.5px] font-bold italic uppercase mb-0.5">Muzafar Garh Road, Ada Ghyl Pur, District Jhang</p>
                     <div className="flex justify-center gap-[15px] text-[10px] font-black">
                       <span>📱 WhatsApp: +92-301-7221831</span>
@@ -320,7 +320,7 @@ export default function TransactionReceiptModal({ entity, type, title, onClose }
               </div>
 
               {/* Meta Restoration */}
-              <div className="flex items-center border-[1.5px] border-[#111] p-[5px_12px] mb-2 text-[10.5px] font-[1000] uppercase bg-[#f5f5f5]">
+              <div className="flex items-center border-[1.5px] border-[#111] p-[5px_12px] mb-2 text-[10.5px] font-black uppercase bg-[#f5f5f5]">
                 <div className="flex-1 text-left">Invoice No: {entity.billNo || entity.invoiceNo || entity.id?.slice(0, 8).toUpperCase() || '———'}</div>
                   {type === 'sale' || type === 'purchase' ? `Product: ${entity.type || 'N/A'}` : `Bill Title : ${type.toUpperCase()}`}
                 <div className="flex-1 text-right">Dated: {formatDate(entity.date)}</div>
@@ -328,11 +328,11 @@ export default function TransactionReceiptModal({ entity, type, title, onClose }
 
               {/* Table Restoration */}
               <div className="mt-4">
-                <table className="w-full border-collapse border-x-[1.5px] border-[#111]">
+                <table className="w-full border-collapse border-x-[1.5px] border-b-[1.5px] border-[#111]">
                    <thead>
                       <tr className="border-y-[1.5px] border-[#111] bg-[#ececec]">
                         {headers.map((h, idx) => (
-                           <th key={idx} className={`p-[4px_6px] text-${h.align} text-[10.5px] font-[1000] uppercase border-r border-[#bbb] last:border-r-0`} style={{ width: h.width }}>{h.label}</th>
+                           <th key={idx} className={`p-[4px_6px] text-${h.align} text-[10.5px] font-black uppercase border-r border-[#bbb] last:border-r-0`} style={{ width: h.width }}>{h.label}</th>
                         ))}
                       </tr>
                    </thead>
@@ -345,7 +345,7 @@ export default function TransactionReceiptModal({ entity, type, title, onClose }
                    </tbody>
                    <tfoot>
                      <tr className="bg-[#fcfcfc] border-y-[2px] border-[#111]">
-                       <td colSpan={headers.length - 1} className="p-[12px_12px] text-right text-[12px] font-[1000] uppercase border-r border-[#bbb]">Total Bill Amount</td>
+                       <td colSpan={headers.length - 1} className="p-[12px_12px] text-right text-[12px] font-black uppercase border-r border-[#bbb]">Total Bill Amount</td>
                        <td className="p-[12px_12px] text-right font-black text-[18px] text-nowrap">₨ {formatCurrency(total)}</td>
                      </tr>
                    </tfoot>
@@ -360,15 +360,15 @@ export default function TransactionReceiptModal({ entity, type, title, onClose }
                 <div className="border-[1.5px] border-[#111] grid grid-cols-2 bg-white">
                    <div className="p-[8px_12px] border-r-[1.5px] border-[#111]">
                       <div className="text-[10px] font-black uppercase mb-0.5">Reference No.</div>
-                      <div className="text-[18px] font-[1000] italic">{entity.billNo || entity.invoiceNo || entity.id?.slice(0, 8).toUpperCase() || '———'}</div>
+                      <div className="text-[18px] font-black italic">{entity.billNo || entity.invoiceNo || entity.id?.slice(0, 8).toUpperCase() || '———'}</div>
                    </div>
                    <div className="p-[8px_12px] bg-[#f0f0f0]">
                       <div className="text-[10px] font-black uppercase mb-0.5">Gross Bill Amount</div>
-                      <div className="text-[22px] font-[1000] border-b-2 border-black inline-block leading-none pb-1 whitespace-nowrap">₨ {formatCurrency(total)}</div>
+                      <div className="text-[22px] font-black inline-block leading-none pb-1 whitespace-nowrap">₨ {formatCurrency(total)}</div>
                    </div>
                 </div>
-                <div className="border-[1.5px] border-[#111] border-t-0 p-[8px_12px] italic text-[11px] font-[1000] bg-[#fdfdfd]">
-                  Amount In Words: <span className="uppercase ml-2 border-b border-black">{toWords(total)}</span>
+                <div className="border-[1.5px] border-[#111] border-t-0 p-[8px_12px] italic text-[11px] font-black bg-[#fdfdfd]">
+                  Amount In Words: <span className="uppercase ml-2">{toWords(total)}</span>
                 </div>
 
                 <div className="flex justify-between items-end pt-10">
@@ -380,7 +380,7 @@ export default function TransactionReceiptModal({ entity, type, title, onClose }
                       <div className="h-[60px] flex items-end justify-center mb-1">
                          <img src="/assets/imtiaz-sign.png" alt="" className="max-h-full max-w-[170px] object-contain" />
                       </div>
-                      <div className="border-t-[2.5px] border-[#111] pt-1.5 underline-offset-4">
+                      <div className="border-t-[2.5px] border-[#111] pt-1.5">
                          <div className="text-[16px] font-black uppercase text-black whitespace-nowrap">Muhammad Imtiaz ul Hassan</div>
                          <div className="text-[10.5px] font-bold uppercase text-[#111] mt-1 whitespace-nowrap">CEO Hammad Rahim Filling station</div>
                       </div>

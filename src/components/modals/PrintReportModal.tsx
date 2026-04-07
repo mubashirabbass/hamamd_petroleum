@@ -93,6 +93,7 @@ function buildPrintHTML(
     } else if (isExpense) {
         headers = `
             <th style="width:30px;text-align:center">Sr.</th>
+            <th style="width:70px">Inv No</th>
             <th style="width:100px">Date</th>
             <th>Expense Description / Details</th>
             <th style="width:120px;text-align:right">Amount (₨)</th>
@@ -100,6 +101,7 @@ function buildPrintHTML(
     } else if (isLedger) {
         headers = `
             <th style="width:30px;text-align:center">Sr.</th>
+            <th style="width:70px">Inv No</th>
             <th style="width:100px">Date</th>
             <th>Transaction Description</th>
             <th style="width:110px;text-align:right">Debit (₨)</th>
@@ -127,6 +129,7 @@ function buildPrintHTML(
               return `
                 <tr style="background:${idx % 2 === 0 ? '#fff' : '#f9f9f9'}">
                   <td style="text-align:center">${pi * ROWS_PER_PAGE + idx + 1}</td>
+                  <td style="font-weight:700">${row.billNo || '—'}</td>
                   <td>${formatDate(row.date)}</td>
                   <td>${row.details || '—'}</td>
                   <td style="text-align:right;font-weight:800">₨ ${formatCurrency(row.amount)}</td>
@@ -140,6 +143,7 @@ function buildPrintHTML(
               return `
                 <tr style="background:${idx % 2 === 0 ? '#fff' : '#f9f9f9'}">
                   <td style="text-align:center">${pi * ROWS_PER_PAGE + idx + 1}</td>
+                  <td style="font-weight:700">${row.billNo || '—'}</td>
                   <td>${formatDate(row.date)}</td>
                   <td>${row.description || '—'}</td>
                   <td style="text-align:right;color:#dc2626">${row.debit ? '₨ ' + formatCurrency(row.debit) : '—'}</td>
@@ -156,24 +160,24 @@ function buildPrintHTML(
         const pQty = chunk.reduce((s, x) => s + (x.quantity || 0), 0);
         const pTotal = chunk.reduce((s, x) => s + (x.totalAmount ?? x.amount ?? 0), 0);
         pageFooter = `
-            <td colspan="5" style="text-align:right;font-weight:900;text-transform:uppercase;font-size:9px">Page Sub-Total:</td>
-            <td style="text-align:right;font-weight:900">${pQty.toLocaleString()} L</td>
-            ${isPurchase ? `<td style="text-align:right"></td>` : ''}
-            <td style="text-align:right;font-weight:950">₨ ${formatCurrency(pTotal)}</td>
+            <td colspan="5" style="text-align:right;font-weight:1000;text-transform:uppercase;font-size:9px;color:#000">Page Total:</td>
+            <td style="text-align:right;font-weight:1000;color:#000">${pQty.toLocaleString()} L</td>
+            ${isPurchase ? `<td style="text-align:right;color:#000"></td>` : ''}
+            <td style="text-align:right;font-weight:1000;color:#000">₨ ${formatCurrency(pTotal)}</td>
         `;
     } else if (isExpense) {
         const pTotal = chunk.reduce((s, x) => s + (x.amount || 0), 0);
         pageFooter = `
-            <td colspan="3" style="text-align:right;font-weight:900;text-transform:uppercase;font-size:9px">Page Sub-Total:</td>
-            <td style="text-align:right;font-weight:950">₨ ${formatCurrency(pTotal)}</td>
+            <td colspan="4" style="text-align:right;font-weight:1000;text-transform:uppercase;font-size:9px;color:#000">Page Total:</td>
+            <td style="text-align:right;font-weight:1000;color:#000">₨ ${formatCurrency(pTotal)}</td>
         `;
     } else if (isLedger) {
         const pDr = chunk.reduce((s, x) => s + (x.debit || 0), 0);
         const pCr = chunk.reduce((s, x) => s + (x.credit || 0), 0);
         pageFooter = `
-            <td colspan="3" style="text-align:right;font-weight:900;text-transform:uppercase;font-size:9px">Page Sub-Total:</td>
-            <td style="text-align:right;font-weight:900">₨ ${formatCurrency(pDr)}</td>
-            <td style="text-align:right;font-weight:900">₨ ${formatCurrency(pCr)}</td>
+            <td colspan="4" style="text-align:right;font-weight:1000;text-transform:uppercase;font-size:9px;color:#000">Page Total:</td>
+            <td style="text-align:right;font-weight:1000;color:#000">₨ ${formatCurrency(pDr)}</td>
+            <td style="text-align:right;font-weight:1000;color:#000">₨ ${formatCurrency(pCr)}</td>
             <td style="text-align:right"></td>
         `;
     }
@@ -188,22 +192,22 @@ function buildPrintHTML(
           <div style="display:grid;grid-template-columns:repeat(${isLedger ? 3 : 2}, 1fr);border-bottom:1.5px solid #111">
             ${isSale || isPurchase ? `
               <div style="padding:10px 15px;border-right:1.5px solid #111">
-                <div style="font-size:8.5px;font-weight:900;text-transform:uppercase;color:#555">Total Quantity</div>
-                <div style="font-size:16px;font-weight:900">${totalQty.toLocaleString()} L</div>
+                <div style="font-size:8.5px;font-weight:1000;text-transform:uppercase;color:#000">Total Quantity</div>
+                <div style="font-size:16px;font-weight:1000;color:#000">${totalQty.toLocaleString()} L</div>
               </div>
             ` : isLedger ? `
               <div style="padding:10px 15px;border-right:1.5px solid #111">
-                <div style="font-size:8.5px;font-weight:900;text-transform:uppercase;color:#555">Total Debit</div>
-                <div style="font-size:16px;font-weight:900;color:#dc2626">₨ ${formatCurrency(totalDebit)}</div>
+                <div style="font-size:8.5px;font-weight:1000;text-transform:uppercase;color:#000">Total Debit</div>
+                <div style="font-size:16px;font-weight:1000;color:#000">₨ ${formatCurrency(totalDebit)}</div>
               </div>
               <div style="padding:10px 15px;border-right:1.5px solid #111">
-                <div style="font-size:8.5px;font-weight:900;text-transform:uppercase;color:#555">Total Credit</div>
-                <div style="font-size:16px;font-weight:900;color:#059669">₨ ${formatCurrency(totalCredit)}</div>
+                <div style="font-size:8.5px;font-weight:1000;text-transform:uppercase;color:#000">Total Credit</div>
+                <div style="font-size:16px;font-weight:1000;color:#000">₨ ${formatCurrency(totalCredit)}</div>
               </div>
             ` : `
               <div style="padding:10px 15px;border-right:1.5px solid #111">
-                <div style="font-size:8.5px;font-weight:900;text-transform:uppercase;color:#555">Total Records</div>
-                <div style="font-size:16px;font-weight:900">${data.length} Transactions</div>
+                <div style="font-size:8.5px;font-weight:1000;text-transform:uppercase;color:#000">Total Records</div>
+                <div style="font-size:16px;font-weight:1000;color:#000">${data.length} Transactions</div>
               </div>
             `}
             <div style="padding:10px 15px;background:#fffaf0">
@@ -214,7 +218,7 @@ function buildPrintHTML(
             </div>
           </div>
           <div style="padding:8px 12px;font-style:italic;font-size:10px;font-weight:900;color:#111;background:#fff">
-            Amount in Words: <span style="text-transform:uppercase;text-decoration:underline">${toWords(grandTotal)}</span>
+            Amount in Words: <span style="text-transform:uppercase">${toWords(grandTotal)}</span>
           </div>
         </div>
 
@@ -248,7 +252,7 @@ function buildPrintHTML(
               <img src="/assets/logo-hr.png" alt="HR" style="max-width:100%;max-height:100%;object-fit:contain" onerror="this.style.display='none'" />
             </div>
             <div style="text-align:center;flex:1;min-width:0">
-                <div style="font-size:28px;font-weight:1000;text-transform:uppercase;text-decoration:underline;text-underline-offset:5px;white-space:nowrap;letter-spacing:1px;line-height:1;margin-bottom:5px">
+                <div style="font-size:28px;font-weight:1000;text-transform:uppercase;white-space:nowrap;letter-spacing:1px;line-height:1;margin-bottom:5px">
                 Hammad Rahim Filling Station
               </div>
               <div style="font-size:10.5px;font-weight:700;font-style:italic;text-transform:uppercase;color:#333;margin-bottom:8px;letter-spacing:0.5px">
@@ -324,6 +328,7 @@ table {
   font-size: 10.5px;
   border-left: 2px solid #111;
   border-right: 2px solid #111;
+  border-bottom: 2px solid #111;
 }
 thead tr {
   border-top: 2px solid #111;
@@ -355,6 +360,7 @@ tfoot td {
   padding: 8px 8px;
   border-right: 1px solid #111;
   font-weight: 1000;
+  color: #000 !important;
 }
 tfoot td:last-child { border-right: none; }
 @media print {
@@ -453,7 +459,7 @@ export default function PrintReportModal({ data, type, onClose, title: customTit
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '20px' }}>
                       <div style={{ width: 85, height: 85, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><img src="/assets/logo-hr.png" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} /></div>
                       <div style={{ textAlign: 'center', flex: 1 }}>
-                        <div style={{ fontSize: '24px', fontWeight: 1000, textTransform: 'uppercase', textDecoration: 'underline', textUnderlineOffset: '5px' }}>Hammad Rahim Filling Station</div>
+                        <div style={{ fontSize: '24px', fontWeight: 1000, textTransform: 'uppercase' }}>Hammad Rahim Filling Station</div>
                         <div style={{ fontSize: '10px', fontWeight: 700, fontStyle: 'italic', textTransform: 'uppercase', color: '#444', marginTop: 4 }}>Muzafar Garh Road, Ada Ghyl Pur, District Jhang</div>
                       </div>
                       <div style={{ width: 85, height: 85, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><img src="/assets/logo-go.png" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} /></div>
@@ -480,7 +486,7 @@ export default function PrintReportModal({ data, type, onClose, title: customTit
                 )}
 
                 {/* Table Data */}
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10.5px', borderLeft: '2px solid #111', borderRight: '2px solid #111' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10.5px', borderLeft: '2px solid #111', borderRight: '2px solid #111', borderBottom: '2px solid #111' }}>
                   <thead style={{ background: '#f0f0f0', borderTop: '2px solid #111', borderBottom: '2px solid #111' }}>
                     <tr>
                         {isSale || isPurchase ? (
@@ -496,6 +502,7 @@ export default function PrintReportModal({ data, type, onClose, title: customTit
                         ) : isLedger ? (
                             <>
                                 <th style={{ padding: '6px 8px', borderRight: '1px solid #111' }}>Sr.</th>
+                                <th style={{ padding: '6px 8px', borderRight: '1px solid #111' }}>Inv No</th>
                                 <th style={{ padding: '6px 8px', borderRight: '1px solid #111' }}>Date</th>
                                 <th style={{ padding: '6px 8px', borderRight: '1px solid #111' }}>Description</th>
                                 <th style={{ padding: '6px 8px', borderRight: '1px solid #111', textAlign: 'right' }}>Debit</th>
@@ -505,6 +512,7 @@ export default function PrintReportModal({ data, type, onClose, title: customTit
                         ) : (
                             <>
                                 <th style={{ padding: '6px 8px', borderRight: '1px solid #111' }}>Sr.</th>
+                                <th style={{ padding: '6px 8px', borderRight: '1px solid #111' }}>Inv No</th>
                                 <th style={{ padding: '6px 8px', borderRight: '1px solid #111' }}>Date</th>
                                 <th style={{ padding: '6px 8px', borderRight: '1px solid #111' }}>Details</th>
                                 <th style={{ padding: '6px 8px', textAlign: 'right' }}>Amount</th>
@@ -533,6 +541,7 @@ export default function PrintReportModal({ data, type, onClose, title: customTit
                               </>
                           ) : isLedger ? (
                               <>
+                                  <td style={{ padding: '5px 8px', borderRight: '1px solid #f0f0f0', fontWeight: 'bold' }}>{row.billNo || '—'}</td>
                                   <td style={{ padding: '5px 8px', borderRight: '1px solid #f0f0f0' }}>{formatDate(row.date)}</td>
                                   <td style={{ padding: '5px 8px', borderRight: '1px solid #f0f0f0' }}>{row.description}</td>
                                   <td style={{ padding: '5px 8px', borderRight: '1px solid #f0f0f0', textAlign: 'right', color: '#dc2626' }}>{row.debit ? formatCurrency(row.debit) : '—'}</td>
@@ -541,15 +550,37 @@ export default function PrintReportModal({ data, type, onClose, title: customTit
                               </>
                           ) : (
                               <>
+                                  <td style={{ padding: '5px 8px', borderRight: '1px solid #f0f0f0', fontWeight: 900 }}>{row.billNo || '—'}</td>
                                   <td style={{ padding: '5px 8px', borderRight: '1px solid #f0f0f0' }}>{formatDate(row.date)}</td>
                                   <td style={{ padding: '5px 8px', borderRight: '1px solid #f0f0f0' }}>{row.details}</td>
-                                  <td style={{ padding: '5px 8px', textAlign: 'right', fontWeight: 'bold' }}>{formatCurrency(row.amount)}</td>
+                                  <td style={{ padding: '5px 8px', textAlign: 'right', fontWeight: 900 }}>{formatCurrency(row.amount)}</td>
                               </>
                           )}
                         </tr>
                       );
                     })}
                   </tbody>
+                  <tfoot style={{ borderTop: '2px solid #111', borderBottom: '2px solid #111', background: '#fdfdfd', fontWeight: 900, color: '#000' }}>
+                    {isSale || isPurchase ? (
+                      <tr>
+                        <td colSpan={5} style={{ padding: '8px', textAlign: 'right', fontWeight: 1000, color: '#000' }}>PAGE TOTAL:</td>
+                        <td style={{ padding: '8px', textAlign: 'right', fontWeight: 1000, color: '#000' }}>{chunk.reduce((s: number, x: any) => s + (x.quantity || 0), 0).toLocaleString()} L</td>
+                        <td style={{ padding: '8px', textAlign: 'right', fontWeight: 1000, color: '#000' }}>₨ {formatCurrency(chunk.reduce((s: number, x: any) => s + (x.totalAmount ?? x.amount ?? 0), 0))}</td>
+                      </tr>
+                    ) : isLedger ? (
+                      <tr>
+                        <td colSpan={4} style={{ padding: '8px', textAlign: 'right', fontWeight: 1000, color: '#000' }}>PAGE TOTAL:</td>
+                        <td style={{ padding: '8px', textAlign: 'right', fontWeight: 1000, color: '#000' }}>₨ {formatCurrency(chunk.reduce((s: number, x: any) => s + (x.debit || 0), 0))}</td>
+                        <td style={{ padding: '8px', textAlign: 'right', fontWeight: 1000, color: '#000' }}>₨ {formatCurrency(chunk.reduce((s: number, x: any) => s + (x.credit || 0), 0))}</td>
+                        <td></td>
+                      </tr>
+                    ) : (
+                      <tr>
+                        <td colSpan={4} style={{ padding: '8px', textAlign: 'right', fontWeight: 1000, color: '#000' }}>PAGE TOTAL:</td>
+                        <td style={{ padding: '8px', textAlign: 'right', fontWeight: 1000, color: '#000' }}>₨ {formatCurrency(chunk.reduce((s: number, x: any) => s + (x.amount || 0), 0))}</td>
+                      </tr>
+                    )}
+                  </tfoot>
                 </table>
                 
                 <div style={{ flex: 1 }}></div>
@@ -559,28 +590,28 @@ export default function PrintReportModal({ data, type, onClose, title: customTit
                     <div style={{ border: '2px solid #000', display: 'grid', gridTemplateColumns: `repeat(${isLedger ? 3 : 2}, 1fr)`, background: '#f8f8f8' }}>
                          {isSale || isPurchase ? (
                              <div style={{ padding: '10px 15px', borderRight: '2px solid #000' }}>
-                                <div style={{ fontSize: '9px', fontWeight: 900, textTransform: 'uppercase' }}>Total Vol</div>
-                                <div style={{ fontSize: '16px', fontWeight: 1000 }}>{totalQty.toLocaleString()} L</div>
+                                <div style={{ fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', color: '#000' }}>Total Vol</div>
+                                <div style={{ fontSize: '16px', fontWeight: 900, color: '#000' }}>{totalQty.toLocaleString()} L</div>
                              </div>
                          ) : isLedger ? (
                              <>
                                 <div style={{ padding: '10px 15px', borderRight: '2px solid #000' }}>
-                                    <div style={{ fontSize: '9px', fontWeight: 900, textTransform: 'uppercase' }}>Total Debit</div>
-                                    <div style={{ fontSize: '16px', fontWeight: 1000 }}>₨ {formatCurrency(totalDebit)}</div>
+                                    <div style={{ fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', color: '#000' }}>Total Debit</div>
+                                    <div style={{ fontSize: '16px', fontWeight: 900, color: '#000' }}>₨ {formatCurrency(totalDebit)}</div>
                                 </div>
                                 <div style={{ padding: '10px 15px', borderRight: '2px solid #000' }}>
-                                    <div style={{ fontSize: '9px', fontWeight: 900, textTransform: 'uppercase' }}>Total Credit</div>
-                                    <div style={{ fontSize: '16px', fontWeight: 1000 }}>₨ {formatCurrency(totalCredit)}</div>
+                                    <div style={{ fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', color: '#000' }}>Total Credit</div>
+                                    <div style={{ fontSize: '16px', fontWeight: 900, color: '#000' }}>₨ {formatCurrency(totalCredit)}</div>
                                 </div>
                              </>
                          ) : (
                             <div style={{ padding: '10px 15px', borderRight: '2px solid #000' }}>
-                                <div style={{ fontSize: '9px', fontWeight: 900, textTransform: 'uppercase' }}>Count</div>
-                                <div style={{ fontSize: '16px', fontWeight: 1000 }}>{data.length} Trans</div>
+                                <div style={{ fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', color: '#000' }}>Count</div>
+                                <div style={{ fontSize: '16px', fontWeight: 900, color: '#000' }}>{data.length} Trans</div>
                             </div>
                          )}
                          <div style={{ padding: '10px 15px', background: '#fff' }}>
-                            <div style={{ fontSize: '9px', fontWeight: 1000, textTransform: 'uppercase' }}>Current Balance</div>
+                            <div style={{ fontSize: '9px', fontWeight: 1000, textTransform: 'uppercase', color: '#000' }}>Current Balance</div>
                             <div style={{ fontSize: '20px', fontWeight: 1000, borderBottom: '3px solid #000', display: 'inline-block' }}>
                                 ₨ {formatCurrency(grandTotal)} {type === 'customer' ? (totalDebit >= totalCredit ? '(Dr)' : '(Cr)') : ''}
                             </div>

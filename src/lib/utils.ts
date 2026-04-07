@@ -19,6 +19,16 @@ export function today(): string {
   return new Date().toISOString().split('T')[0];
 }
 
+export function startOfMonth(): string {
+  const d = new Date();
+  return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0];
+}
+
+export function startOfYear(): string {
+  const d = new Date();
+  return new Date(d.getFullYear(), 0, 1).toISOString().split('T')[0];
+}
+
 export function paginate<T>(items: T[], page: number, perPage: number): T[] {
   return items.slice((page - 1) * perPage, page * perPage);
 }

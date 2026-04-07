@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { BookOpen, Plus, Trash2, Eye, Edit2, Search, Check, X, FileText, Settings, UserPlus, Printer } from 'lucide-react';
 import { useStore } from '../store/useStore';
-import { formatCurrency, formatDate, today, paginate, filterByStartDate, cn } from '../lib/utils';
+import { formatCurrency, formatDate, today, paginate, filterByStartDate, cn, startOfMonth, startOfYear } from '../lib/utils';
 import { useToast } from '../components/ui/Toast';
 import SearchBar from '../components/ui/SearchBar';
 import Pagination from '../components/ui/Pagination';
@@ -13,7 +13,7 @@ import PrintReportModal from '../components/modals/PrintReportModal';
 
 export default function LedgerPage() {
   const { 
-    ledgerCategories, ledgerEntries, 
+    ledgerCategories, ledgerEntries, nextLedgerNo, 
     addLedgerCategory, updateLedgerCategory, deleteLedgerCategory, 
     addLedgerEntry, deleteLedgerEntry, settings, currentUser, updateLedgerEntry 
   } = useStore();
@@ -29,6 +29,7 @@ export default function LedgerPage() {
 
   // Management State
   const [manageSearch, setManageSearch] = useState('');
+  const [sidebarSearch, setSidebarSearch] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ name: '' });
 
@@ -51,8 +52,8 @@ export default function LedgerPage() {
   const cat = ledgerCategories.find((c) => c.id === selectedCat);
 
   const filteredSidebar = useMemo(() =>
-    ledgerCategories.filter((c) => !search || c.name.toLowerCase().includes(search.toLowerCase())),
-    [ledgerCategories, search]
+    ledgerCategories.filter((c) => !sidebarSearch || c.name.toLowerCase().includes(sidebarSearch.toLowerCase())),
+    [ledgerCategories, sidebarSearch]
   );
 
   const filteredManage = useMemo(() =>
@@ -230,7 +231,7 @@ export default function LedgerPage() {
                 <span className="text-[10px] font-bold text-slate-300">{filteredSidebar.length}</span>
               </div>
               <div className="p-2 border-b border-slate-100 dark:border-dark-700/30">
-                <SearchBar value={search} onChange={setSearch} placeholder="Search Ledger..." fullWidth={true} className="!py-1.5 !text-[11px]" />
+                <SearchBar value={sidebarSearch} onChange={setSidebarSearch} placeholder="Search Ledger..." fullWidth={true} className="!py-1.5 !text-[11px]" />
               </div>
               <div className="smart-scroll flex-1 p-2 space-y-1">
                 {filteredSidebar.length === 0 ? (
@@ -239,7 +240,7 @@ export default function LedgerPage() {
                   filteredSidebar.map((c) => (
                     <div
                       key={c.id}
-                      onClick={() => { setSelectedCat(c.id); setSearch(''); setPage(1); }}
+                      onClick={() => { setSelectedCat(c.id); setSidebarSearch(''); setSearch(''); setPage(1); }}
                       className={cn(
                         'group flex items-center justify-between px-3 py-3 rounded-xl cursor-pointer text-xs font-black transition-all duration-200 border border-transparent',
                         selectedCat === c.id 
@@ -295,10 +296,20 @@ export default function LedgerPage() {
                   <div className="glass rounded-2xl overflow-hidden border border-slate-200 dark:border-dark-700/50 animate-in slide-in-from-bottom duration-350 delay-150">
                     <div className="flex flex-col md:flex-row md:items-center justify-between p-4 gap-4 border-b border-slate-200 dark:border-dark-700/50 bg-white/30 dark:bg-dark-800/30">
                       <div className="flex-1 min-w-0"><SearchBar value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search transactions..." /></div>
-                      <div className="flex items-center gap-2">
-                        <input type="date" className="input !py-1 !px-2 !w-32 !text-xs" value={fromDate} onChange={(e) => { setFromDate(e.target.value); setPage(1); }} />
-                        <span className="text-slate-400">→</span>
-                        <input type="date" className="input !py-1 !px-2 !w-32 !text-xs" value={toDate} onChange={(e) => { setToDate(e.target.value); setPage(1); }} />
+                      <div className="flex items-center flex-wrap gap-2">
+                        <div className="flex items-center bg-slate-100 dark:bg-dark-800 p-1 rounded-xl border border-slate-200 dark:border-dark-700/50 mr-2">
+                          <button onClick={() => { setFromDate(today()); setToDate(today()); setPage(1); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-dark-400 hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all">Today</button>
+                          <button onClick={() => { setFromDate(startOfMonth()); setToDate(today()); setPage(1); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-dark-400 hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all border-l border-slate-200 dark:border-dark-700/50">This Month</button>
+                          <button onClick={() => { setFromDate(startOfYear()); setToDate(today()); setPage(1); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-dark-400 hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all border-l border-slate-200 dark:border-dark-700/50">This Year</button>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input type="date" className="input !py-1 !px-2 !w-32 !text-xs" value={fromDate} onChange={(e) => { setFromDate(e.target.value); setPage(1); }} />
+                          <span className="text-slate-400">→</span>
+                          <input type="date" className="input !py-1 !px-2 !w-32 !text-xs" value={toDate} onChange={(e) => { setToDate(e.target.value); setPage(1); }} />
+                        </div>
+                        {(fromDate || toDate) && (
+                          <button onClick={() => { setFromDate(''); setToDate(''); setPage(1); }} className="px-3 py-1.5 text-[10px] font-black uppercase tracking-tighter text-red-600 bg-red-50 dark:bg-red-900/20 rounded-lg hover:bg-red-100 transition-all border border-red-200 dark:border-red-800/30">Clear</button>
+                        )}
                       </div>
                     </div>
                     <div className="overflow-x-auto smart-scroll">
@@ -306,6 +317,7 @@ export default function LedgerPage() {
                         <thead>
                           <tr className="table-header">
                             <th className="px-4 py-3 text-left w-12 border-r border-slate-300 dark:border-dark-700/50">S.No</th>
+                            <th className="px-4 py-3 text-left w-24">Inv No</th>
                             <th className="px-4 py-3 text-left">Date</th>
                             <th className="px-4 py-3 text-left">Description</th>
                             <th className="px-4 py-3 text-right">Debit</th>
@@ -316,10 +328,11 @@ export default function LedgerPage() {
                         </thead>
                         <tbody>
                           {paged.length === 0 ? (
-                            <tr><td colSpan={7} className="text-center text-slate-400 py-12 italic">No transactions found</td></tr>
+                            <tr><td colSpan={8} className="text-center text-slate-400 py-12 italic">No transactions found</td></tr>
                           ) : paged.map((e, i) => (
                             <tr key={e.id} className="group">
                               <td className="text-[11px] font-bold text-slate-400 border-r border-slate-300 dark:border-dark-700/50 text-center">{(page - 1) * perPage + i + 1}</td>
+                              <td className="whitespace-nowrap text-[11px] font-black text-slate-900 dark:text-white uppercase tracking-tighter">{e.billNo}</td>
                               <td className="whitespace-nowrap text-[11px] font-medium uppercase tracking-tighter text-slate-500 dark:text-dark-400">{formatDate(e.date)}</td>
                               <td className="text-black dark:text-white font-medium text-[13px]">{e.description || '—'}</td>
                               <td className="amount !text-red-600 dark:!text-red-400">{e.debit ? formatCurrency(e.debit) : '—'}</td>
@@ -353,21 +366,19 @@ export default function LedgerPage() {
                             </tr>
                           ))}
                         </tbody>
-                        <tfoot className="border-t-2 border-slate-200 dark:border-dark-700 bg-slate-50/50 dark:bg-dark-900/50">
-                          <tr className="font-bold text-slate-900 dark:text-white">
-                            <td colSpan={3} className="px-4 py-3 text-right uppercase tracking-widest text-[10px]">Page Total</td>
-                            <td className="px-4 py-3 text-right text-red-600">₨ {formatCurrency(pageTotals.debit)}</td>
-                            <td className="px-4 py-3 text-right text-emerald-600">₨ {formatCurrency(pageTotals.credit)}</td>
+                        <tfoot className="border-t-2 border-slate-200 dark:border-dark-700 bg-slate-50/50 dark:bg-dark-900/50 font-black text-black">
+                          <tr className="font-black text-black dark:text-white">
+                            <td colSpan={4} className="px-4 py-3 text-right uppercase tracking-widest text-[11px] italic font-black text-black">Page Total</td>
+                            <td className="px-4 py-3 text-right text-black font-black text-sm">₨ {formatCurrency(pageTotals.debit)}</td>
+                            <td className="px-4 py-3 text-right text-black font-black text-sm">₨ {formatCurrency(pageTotals.credit)}</td>
                             <td colSpan={2}></td>
                           </tr>
-                          {page === Math.ceil(withBalance.length / perPage) && (
-                            <tr className="font-black text-slate-900 dark:text-white bg-primary-600/5 border-t border-primary-600/20">
-                              <td colSpan={3} className="px-4 py-4 text-right uppercase tracking-widest text-xs text-primary-600">Grand Total</td>
-                              <td className="px-4 py-4 text-right text-red-700 dark:text-red-400 text-base">₨ {formatCurrency(totals.debit)}</td>
-                              <td className="px-4 py-4 text-right text-emerald-700 dark:text-emerald-400 text-base">₨ {formatCurrency(totals.credit)}</td>
-                              <td colSpan={2}></td>
-                            </tr>
-                          )}
+                          <tr className="font-black text-black dark:text-white bg-slate-200/50 border-t border-slate-300">
+                            <td colSpan={4} className="px-4 py-4 text-right uppercase tracking-widest text-xs text-black font-black">Grand Total</td>
+                            <td className="px-4 py-4 text-right text-black font-black text-lg">₨ {formatCurrency(totals.debit)}</td>
+                            <td className="px-4 py-4 text-right text-black font-black text-lg">₨ {formatCurrency(totals.credit)}</td>
+                            <td colSpan={2}></td>
+                          </tr>
                         </tfoot>
                       </table>
                     </div>
@@ -510,6 +521,12 @@ export default function LedgerPage() {
       {showEntryForm && (
         <Modal title={editingEntity ? `Edit Entry — ${cat?.name}` : `Add Entry — ${cat?.name}`} onClose={closeForm}>
           <form onSubmit={handleSubmit} className="space-y-3">
+            <div className="bg-slate-50 dark:bg-dark-800/50 p-3 rounded-xl border border-slate-200 dark:border-dark-700/50 mb-4 text-center">
+               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Generated Invoice No</p>
+               <p className="text-lg font-black text-primary-600 dark:text-primary-400 leading-none">
+                 {editingEntity ? editingEntity.billNo : `LDG-${String(nextLedgerNo).padStart(2, '0')}`}
+               </p>
+            </div>
             <div><label className="label">Date *</label><input type="date" className="input" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required /></div>
             <div><label className="label">Description</label><input className="input" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Transaction details" /></div>
             <div className="grid grid-cols-2 gap-3">

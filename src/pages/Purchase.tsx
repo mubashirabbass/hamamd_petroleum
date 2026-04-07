@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Plus, Trash2, ShoppingCart, Eye, Edit2, Printer } from 'lucide-react';
 import { useStore } from '../store/useStore';
-import { formatCurrency, formatDate, today, paginate, filterByStartDate } from '../lib/utils';
+import { formatCurrency, formatDate, today, paginate, filterByStartDate, startOfMonth, startOfYear } from '../lib/utils';
 import { useToast } from '../components/ui/Toast';
 import SearchBar from '../components/ui/SearchBar';
 import Pagination from '../components/ui/Pagination';
@@ -133,6 +133,13 @@ export default function PurchasePage() {
     total: paged.reduce((s, p) => s + p.totalAmount, 0),
   }), [paged]);
 
+  const grandTotals = useMemo(() => ({
+    qty: filtered.reduce((s, p) => s + p.quantity, 0),
+    carriage: filtered.reduce((s, p) => s + p.carriage, 0),
+    amount: filtered.reduce((s, p) => s + p.amount, 0),
+    total: filtered.reduce((s, p) => s + p.totalAmount, 0),
+  }), [filtered]);
+
   return (
     <div className="animate-fade-in flex gap-4 h-full">
       {/* Sidebar selection */}
@@ -172,11 +179,11 @@ export default function PurchasePage() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="col-span-2">
                   <label className="label">Invoice ID (Auto)</label>
-                  <input 
-                    className="input bg-slate-50 dark:bg-dark-750 font-black text-blue-600 dark:text-blue-400 cursor-not-allowed" 
-                    value={editingEntity ? editingEntity.billNo : `PUR-${String(nextPurchaseNo).padStart(2, '0')}`} 
-                    readOnly 
-                  />
+                    <input 
+                      className="input bg-slate-50 dark:bg-dark-750 font-medium text-slate-900 dark:text-white cursor-not-allowed" 
+                      value={editingEntity ? editingEntity.billNo : `PUR-${String(nextPurchaseNo).padStart(2, '0')}`} 
+                      readOnly 
+                    />
                 </div>
                 <div><label className="label">Date *</label><input type="date" className="input" value={form.date} onChange={(e) => set('date', e.target.value)} required /></div>
                 <div><label className="label">Details / Supplier Info</label><input className="input" value={form.details} onChange={(e) => set('details', e.target.value)} placeholder="e.g. PSO Main Depot" /></div>
@@ -241,22 +248,27 @@ export default function PurchasePage() {
 
          <div className="glass rounded-xl overflow-hidden">
            {/* Toolbar */}
-           <div className="flex flex-col md:flex-row md:items-center justify-between p-4 gap-4 border-b border-slate-200 dark:border-dark-700/50">
-             <div className="flex-1 min-w-0"><SearchBar value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search..." /></div>
-             <div className="flex items-center gap-2">
-               <div className="flex items-center gap-2">
-                 <span className="text-[10px] font-bold text-slate-400 dark:text-dark-500 uppercase">From</span>
-                 <input type="date" className="input !py-1 !px-2 !w-32 !text-xs" value={fromDate} onChange={(e) => { setFromDate(e.target.value); setPage(1); }} />
-               </div>
-               <div className="flex items-center gap-2">
-                 <span className="text-[10px] font-bold text-slate-400 dark:text-dark-500 uppercase">To</span>
-                 <input type="date" className="input !py-1 !px-2 !w-32 !text-xs" value={toDate} onChange={(e) => { setToDate(e.target.value); setPage(1); }} />
-               </div>
-               {(fromDate || toDate) && (
-                 <button onClick={() => { setFromDate(''); setToDate(''); setPage(1); }} className="text-[10px] font-bold text-primary-600 hover:underline px-1">Clear</button>
-               )}
-             </div>
-           </div>
+            <div className="flex flex-col md:flex-row md:items-center justify-between p-4 gap-4 border-b border-slate-200 dark:border-dark-700/50">
+              <div className="flex-1 min-w-0"><SearchBar value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search transactions..." /></div>
+              <div className="flex items-center flex-wrap gap-2">
+                <div className="flex items-center bg-slate-100 dark:bg-dark-800 p-1 rounded-xl border border-slate-200 dark:border-dark-700/50 mr-2">
+                  <button onClick={() => { setFromDate(today()); setToDate(today()); setPage(1); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-dark-400 hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all">Today</button>
+                  <button onClick={() => { setFromDate(startOfMonth()); setToDate(today()); setPage(1); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-dark-400 hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all border-l border-slate-200 dark:border-dark-700/50">This Month</button>
+                  <button onClick={() => { setFromDate(startOfYear()); setToDate(today()); setPage(1); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-dark-400 hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all border-l border-slate-200 dark:border-dark-700/50">This Year</button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold text-slate-400 dark:text-dark-500 uppercase">From</span>
+                  <input type="date" className="input !py-1 !px-2 !w-32 !text-xs" value={fromDate} onChange={(e) => { setFromDate(e.target.value); setPage(1); }} />
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold text-slate-400 dark:text-dark-500 uppercase">To</span>
+                  <input type="date" className="input !py-1 !px-2 !w-32 !text-xs" value={toDate} onChange={(e) => { setToDate(e.target.value); setPage(1); }} />
+                </div>
+                {(fromDate || toDate) && (
+                  <button onClick={() => { setFromDate(''); setToDate(''); setPage(1); }} className="px-3 py-1.5 text-[10px] font-black uppercase tracking-tighter text-red-600 bg-red-50 dark:bg-red-900/20 rounded-lg hover:bg-red-100 transition-all border border-red-200 dark:border-red-800/30">Clear</button>
+                )}
+              </div>
+            </div>
 
           {/* Table */}
           <div className="overflow-x-auto">
@@ -279,7 +291,7 @@ export default function PurchasePage() {
                 ) : paged.map((p, idx) => (
                   <tr key={p.id} className="table-row group hover:bg-slate-50 dark:hover:bg-dark-800/50 text-[11px]">
                     <td className="text-[11px] font-bold text-slate-400 border-r border-slate-300 dark:border-dark-700/50 text-center">{(page - 1) * PER_PAGE + idx + 1}</td>
-                    <td className="table-cell font-black text-blue-600 dark:text-blue-400 uppercase tracking-tighter">{p.billNo || 'Legacy'}</td>
+                    <td className="table-cell font-medium text-slate-900 dark:text-white uppercase tracking-tighter">{p.billNo || 'Legacy'}</td>
                     <td className="table-cell whitespace-nowrap">{formatDate(p.date)}</td>
                     <td className="table-cell text-slate-600 dark:text-dark-300">{p.details || '—'}</td>
                     <td className="table-cell text-right">₨ {formatCurrency(p.rate)}</td>
@@ -316,13 +328,21 @@ export default function PurchasePage() {
                 ))}
               </tbody>
               {paged.length > 0 && (
-                <tfoot className="bg-slate-50/50 dark:bg-dark-800/50 font-semibold border-t-[3px] border-double border-slate-300 dark:border-dark-600">
-                  <tr>
-                    <td colSpan={5} className="table-cell text-right text-xs uppercase tracking-wider text-slate-500 py-3">Page Totals:</td>
-                    <td className="table-cell text-right text-slate-900 dark:text-white font-bold py-3">{pageTotals.qty.toLocaleString()} L</td>
-                    <td className="table-cell text-right text-slate-900 dark:text-white font-bold py-3">₨ {formatCurrency(pageTotals.carriage)}</td>
-                    <td className="table-cell text-right text-slate-900 dark:text-white font-bold py-3">₨ {formatCurrency(pageTotals.amount)}</td>
-                    <td className="table-cell text-right text-primary-600 dark:text-primary-400 font-bold py-3">₨ {formatCurrency(pageTotals.total)}</td>
+                <tfoot className="bg-slate-50/50 dark:bg-dark-800/50 border-t-[3px] border-double border-slate-300 dark:border-dark-600">
+                  <tr className="text-black dark:text-white font-black">
+                    <td colSpan={5} className="px-4 py-3 text-right uppercase tracking-widest text-[11px] italic font-black">Page Total</td>
+                    <td className="px-4 py-3 text-right text-sm font-black">{pageTotals.qty.toLocaleString()} L</td>
+                    <td className="px-4 py-3 text-right text-sm font-black">₨ {formatCurrency(pageTotals.carriage)}</td>
+                    <td className="px-4 py-3 text-right text-black font-black text-sm">₨ {formatCurrency(pageTotals.amount)}</td>
+                    <td className="px-4 py-3 text-right text-black font-black text-sm">₨ {formatCurrency(pageTotals.total)}</td>
+                    <td className="table-cell"></td>
+                  </tr>
+                  <tr className="font-black text-black dark:text-white bg-slate-200/50 border-t border-slate-300">
+                    <td colSpan={5} className="px-4 py-4 text-right uppercase tracking-widest text-xs text-black font-black">Grand Total</td>
+                    <td className="px-4 py-4 text-right text-black font-black text-base">{grandTotals.qty.toLocaleString()} L</td>
+                    <td className="px-4 py-4 text-right text-black font-black text-base">₨ {formatCurrency(grandTotals.carriage)}</td>
+                    <td className="px-4 py-4 text-right text-black font-black text-base">₨ {formatCurrency(grandTotals.amount)}</td>
+                    <td className="px-4 py-4 text-right text-black font-black text-lg">₨ {formatCurrency(grandTotals.total)}</td>
                     <td className="table-cell"></td>
                   </tr>
                 </tfoot>

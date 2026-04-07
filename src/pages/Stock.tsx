@@ -8,7 +8,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useStore, FuelType } from '../store/useStore';
 import { 
   formatCurrency, filterByStartDate, formatDate, 
-  paginate, cn 
+  paginate, cn, startOfMonth, startOfYear, today
 } from '../lib/utils';
 import SearchBar from '../components/ui/SearchBar';
 import Pagination from '../components/ui/Pagination';
@@ -163,7 +163,12 @@ export default function StockPage() {
           </div>
           
           {/* Quick Date Range */}
-          <div className="flex items-center gap-2 bg-white dark:bg-dark-900 p-2 rounded-2xl border border-slate-200 dark:border-dark-700 shadow-sm">
+          <div className="flex items-center gap-2 bg-white dark:bg-dark-900 p-2 rounded-2xl border border-slate-200 dark:border-dark-700 shadow-sm overflow-x-auto">
+            <div className="flex items-center bg-slate-50 dark:bg-dark-800 p-1 rounded-xl border border-slate-100 dark:border-dark-750 mr-2">
+              <button onClick={() => { setFromDate(today()); setToDate(today()); setPage(1); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all">Today</button>
+              <button onClick={() => { setFromDate(startOfMonth()); setToDate(today()); setPage(1); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all border-l border-slate-200 dark:border-dark-700/50">This Month</button>
+              <button onClick={() => { setFromDate(startOfYear()); setToDate(today()); setPage(1); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all border-l border-slate-200 dark:border-dark-700/50">This Year</button>
+            </div>
             <div className="flex items-center gap-2 px-2">
               <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">From</span>
               <input type="date" value={fromDate} onChange={e => { setFromDate(e.target.value); setPage(1); }} className="input !py-1 !px-2 !w-32 !text-xs" />
@@ -175,10 +180,10 @@ export default function StockPage() {
             {(fromDate || toDate) && (
               <button 
                 onClick={() => { setFromDate(''); setToDate(''); setPage(1); }} 
-                className="ml-2 w-8 h-8 rounded-lg flex items-center justify-center text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors"
+                className="ml-2 px-3 py-1.5 text-[10px] font-black uppercase tracking-tighter text-red-600 bg-red-50 dark:bg-red-900/20 rounded-lg hover:bg-red-100 transition-all border border-red-200 dark:border-red-800/30"
                 title="Clear Filters"
               >
-                <ArrowLeft className="w-4 h-4" />
+                Clear
               </button>
             )}
           </div>
@@ -287,7 +292,7 @@ export default function StockPage() {
                       ) : pagedHistory.map((h, i) => (
                         <tr key={h.id + (h.date) + i} className="hover:bg-slate-50/50 dark:hover:bg-dark-800/30 transition-colors group">
                           <td className="px-6 py-4 text-[11px] font-bold text-slate-400 border-r border-slate-200 dark:border-dark-700/50 text-center">{(page - 1) * perPage + i + 1}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-[12px] font-black text-primary-600 dark:text-primary-400">{(h as any).billNo || '—'}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-[12px] font-black text-slate-900 dark:text-white">{(h as any).billNo || '—'}</td>
                           <td className="px-6 py-4 whitespace-nowrap text-[12px] font-bold text-slate-600 dark:text-dark-300">{formatDate(h.date)}</td>
                           <td className="px-6 py-4 text-[12px] font-black text-slate-900 dark:text-white truncate max-w-[180px]">{h.details || 'Daily Sale'}</td>
                           <td className="px-6 py-4 text-right text-emerald-600 font-mono text-xs font-bold">{h.qtyIn ? `+${h.qtyIn.toLocaleString()}` : '—'}</td>
@@ -296,21 +301,19 @@ export default function StockPage() {
                         </tr>
                       ))}
                     </tbody>
-                    <tfoot className="border-t-2 border-slate-100 dark:border-dark-800 bg-slate-50/50 dark:bg-dark-900/50">
-                      <tr className="font-bold text-slate-900 dark:text-white">
-                        <td colSpan={3} className="px-6 py-4 text-right uppercase tracking-widest text-[10px]">Page Total</td>
-                        <td className="px-6 py-4 text-right text-emerald-600 font-mono">+{pageTotals.qtyIn.toLocaleString()} L</td>
-                        <td className="px-6 py-4 text-right text-red-600 font-mono">-{pageTotals.qtyOut.toLocaleString()} L</td>
+                    <tfoot className="border-t-2 border-slate-100 dark:border-dark-800 font-black text-black">
+                      <tr className="font-black text-black">
+                        <td colSpan={3} className="px-6 py-4 text-right uppercase tracking-widest text-[11px] italic font-black text-black">Page Total</td>
+                        <td className="px-6 py-4 text-right text-black font-black font-mono">+{pageTotals.qtyIn.toLocaleString()} L</td>
+                        <td className="px-6 py-4 text-right text-black font-black font-mono">-{pageTotals.qtyOut.toLocaleString()} L</td>
                         <td></td>
                       </tr>
-                      {page === Math.ceil(filteredHistory.length / perPage) && (
-                        <tr className="font-black text-slate-900 dark:text-white bg-primary-600/5 border-t border-primary-600/20">
-                          <td colSpan={3} className="px-6 py-5 text-right uppercase tracking-widest text-xs text-primary-600">Grand Total</td>
-                          <td className="px-6 py-5 text-right text-emerald-700 dark:text-emerald-400 font-mono">+{detailTotals.in.toLocaleString()} L</td>
-                          <td className="px-6 py-5 text-right text-red-700 dark:text-red-400 font-mono">-{detailTotals.out.toLocaleString()} L</td>
-                          <td></td>
-                        </tr>
-                      )}
+                      <tr className="font-black text-black bg-slate-200/50 border-t border-slate-300">
+                        <td colSpan={3} className="px-6 py-5 text-right uppercase tracking-widest text-xs text-black font-black">Grand Total</td>
+                        <td className="px-6 py-5 text-right text-black font-black font-mono">+{detailTotals.in.toLocaleString()} L</td>
+                        <td className="px-6 py-5 text-right text-black font-black font-mono">-{detailTotals.out.toLocaleString()} L</td>
+                        <td></td>
+                      </tr>
                     </tfoot>
                   </table>
                 </div>
@@ -349,7 +352,12 @@ export default function StockPage() {
         </div>
 
         {/* Global Date Filter for Overview */}
-        <div className="flex items-center gap-2 bg-white dark:bg-dark-900 p-2 rounded-2xl border border-slate-200 dark:border-dark-700 shadow-sm">
+        <div className="flex items-center gap-2 bg-white dark:bg-dark-900 p-2 rounded-2xl border border-slate-200 dark:border-dark-700 shadow-sm overflow-x-auto">
+          <div className="flex items-center bg-slate-50 dark:bg-dark-800 p-1 rounded-xl border border-slate-100 dark:border-dark-750 mr-2">
+            <button onClick={() => { setFromDate(today()); setToDate(today()); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all">Today</button>
+            <button onClick={() => { setFromDate(startOfMonth()); setToDate(today()); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all border-l border-slate-200 dark:border-dark-700/50">This Month</button>
+            <button onClick={() => { setFromDate(startOfYear()); setToDate(today()); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all border-l border-slate-200 dark:border-dark-700/50">This Year</button>
+          </div>
           <div className="flex items-center gap-2 px-3">
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">From</span>
             <input type="date" value={fromDate} onChange={e => { setFromDate(e.target.value); }} className="input !py-1 !px-2 !w-32 !text-xs" />
@@ -361,10 +369,10 @@ export default function StockPage() {
           {(fromDate || toDate) && (
             <button 
               onClick={() => { setFromDate(''); setToDate(''); }} 
-              className="ml-2 w-8 h-8 rounded-lg flex items-center justify-center text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors"
+              className="ml-2 px-3 py-1.5 text-[10px] font-black uppercase tracking-tighter text-red-600 bg-red-50 dark:bg-red-900/20 rounded-lg hover:bg-red-100 transition-all border border-red-200 dark:border-red-800/30"
               title="Clear Filters"
             >
-              <Clock className="w-4 h-4 rotate-180" />
+              Clear
             </button>
           )}
         </div>
@@ -467,7 +475,7 @@ export default function StockPage() {
                   <td className="px-8 py-5 text-sm font-black text-slate-700 dark:text-dark-300 uppercase tracking-tighter">{row.label}</td>
                   <td className="px-8 py-5 text-right font-black tabular-nums text-emerald-600">{row.purchased.toLocaleString()} L</td>
                   <td className="px-8 py-5 text-right font-black tabular-nums text-red-600">{row.sold.toLocaleString()} L</td>
-                  <td className={cn("px-8 py-5 text-right font-black tabular-nums bg-primary-600/5", row.bold ? 'text-2xl text-primary-600' : 'text-slate-900 dark:text-white')}>
+                  <td className={cn("px-8 py-5 text-right font-black tabular-nums bg-primary-600/5", row.bold ? 'text-2xl text-black dark:text-white' : 'text-slate-900 dark:text-white')}>
                     {row.current.toLocaleString()} L
                   </td>
                 </tr>
