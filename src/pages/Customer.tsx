@@ -12,9 +12,9 @@ import PrintReportModal from '../components/modals/PrintReportModal';
 // const PER_PAGE = 40; // Replaced by state
 
 export default function CustomerPage() {
-  const { 
+  const {
     customers, customerEntries, nextCustomerNo,
-    addCustomerEntry, updateCustomerEntry, deleteCustomerEntry, addCustomer, updateCustomer, deleteCustomer, settings, currentUser 
+    addCustomerEntry, updateCustomerEntry, deleteCustomerEntry, addCustomer, updateCustomer, deleteCustomer, settings, currentUser
   } = useStore();
 
   const { toast } = useToast();
@@ -25,7 +25,7 @@ export default function CustomerPage() {
   const [showEntryForm, setShowEntryForm] = useState(false);
   const [showReport, setShowReport] = useState(false);
   const [custSearch, setCustSearch] = useState('');
-  
+
   // Registration Form State
   const [newName, setNewName] = useState('');
   const [newPhone, setNewPhone] = useState('');
@@ -44,7 +44,7 @@ export default function CustomerPage() {
   const [viewingEntity, setViewingEntity] = useState<any>(null);
   const [editingEntity, setEditingEntity] = useState<any>(null);
   const [form, setForm] = useState({ date: today(), description: '', debit: '', credit: '' });
-  
+
   useEffect(() => {
     if (!selectedCust && customers.length > 0) {
       setSelectedCust(customers[0].id);
@@ -70,7 +70,7 @@ export default function CustomerPage() {
       .filter((e) => {
         const matchesSearch = !search || e.description.toLowerCase().includes(search.toLowerCase()) || e.date.includes(search);
         const matchesFrom = !fromDate || e.date >= fromDate;
-        const matchesTo   = !toDate   || e.date <= toDate;
+        const matchesTo = !toDate || e.date <= toDate;
         return matchesSearch && matchesFrom && matchesTo;
       });
   }, [customerEntries, settings.startDate, selectedCust, search, fromDate, toDate]);
@@ -97,8 +97,8 @@ export default function CustomerPage() {
     const normalizedName = newName.trim().toLowerCase();
     const normalizedPhone = newPhone.trim();
 
-    const exists = customers.find(c => 
-      c.name.toLowerCase() === normalizedName && 
+    const exists = customers.find(c =>
+      c.name.toLowerCase() === normalizedName &&
       (c.phone || '') === normalizedPhone
     );
 
@@ -124,9 +124,9 @@ export default function CustomerPage() {
     const normalizedName = editForm.name.trim().toLowerCase();
     const normalizedPhone = editForm.phone.trim();
 
-    const exists = customers.find(c => 
+    const exists = customers.find(c =>
       c.id !== id &&
-      c.name.toLowerCase() === normalizedName && 
+      c.name.toLowerCase() === normalizedName &&
       (c.phone || '') === normalizedPhone
     );
 
@@ -143,24 +143,24 @@ export default function CustomerPage() {
   const handleSubmitEntry = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedCust || !form.date) { toast('Fill required fields', 'error'); return; }
-    
-    const payload = { 
-        customerId: selectedCust, 
-        date: form.date, 
-        description: form.description, 
-        debit: parseFloat(form.debit) || 0, 
-        credit: parseFloat(form.credit) || 0, 
-        balance: 0 
+
+    const payload = {
+      customerId: selectedCust,
+      date: form.date,
+      description: form.description,
+      debit: parseFloat(form.debit) || 0,
+      credit: parseFloat(form.credit) || 0,
+      balance: 0
     };
 
     if (editingEntity) {
-        updateCustomerEntry(editingEntity.id, payload);
-        toast('Entry updated', 'success');
-        closeEntryForm();
+      updateCustomerEntry(editingEntity.id, payload);
+      toast('Entry updated', 'success');
+      closeEntryForm();
     } else {
-        addCustomerEntry(payload);
-        toast('Entry added', 'success'); 
-        resetEntryFormForNext();
+      addCustomerEntry(payload);
+      toast('Entry added', 'success');
+      resetEntryFormForNext();
     }
   };
 
@@ -191,34 +191,34 @@ export default function CustomerPage() {
       {/* Parallel Horizontal Tabs */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex bg-slate-100 dark:bg-dark-800 p-1 rounded-2xl border border-slate-200 dark:border-dark-700/50 w-full md:w-auto">
-          <button 
+          <button
             onClick={() => setActiveTab('database')}
             className={cn(
               "flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex-1 md:flex-none justify-center",
-              activeTab === 'database' 
-                ? "bg-white dark:bg-dark-900 text-pink-600 shadow-sm shadow-pink-600/10" 
+              activeTab === 'database'
+                ? "bg-white dark:bg-dark-900 text-pink-600 shadow-sm shadow-pink-600/10"
                 : "text-slate-500 hover:text-slate-800 dark:hover:text-white"
             )}
           >
             <Users className="w-4 h-4" /> Customer Database
           </button>
-          <button 
+          <button
             onClick={() => setActiveTab('register')}
             className={cn(
               "flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex-1 md:flex-none justify-center",
-              activeTab === 'register' 
-                ? "bg-white dark:bg-dark-900 text-primary-600 shadow-sm shadow-primary-600/10" 
+              activeTab === 'register'
+                ? "bg-white dark:bg-dark-900 text-primary-600 shadow-sm shadow-primary-600/10"
                 : "text-slate-500 hover:text-slate-800 dark:hover:text-white"
             )}
           >
             <UserPlus className="w-4 h-4" /> Register Customer
           </button>
-          <button 
+          <button
             onClick={() => setActiveTab('manage')}
             className={cn(
               "flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex-1 md:flex-none justify-center",
-              activeTab === 'manage' 
-                ? "bg-white dark:bg-dark-900 text-emerald-600 shadow-sm shadow-emerald-600/10" 
+              activeTab === 'manage'
+                ? "bg-white dark:bg-dark-900 text-emerald-600 shadow-sm shadow-emerald-600/10"
                 : "text-slate-500 hover:text-slate-800 dark:hover:text-white"
             )}
           >
@@ -227,8 +227,8 @@ export default function CustomerPage() {
         </div>
         {activeTab === 'database' && cust && (
           <div className="flex gap-2">
-            <button 
-              onClick={() => setShowReport(true)} 
+            <button
+              onClick={() => setShowReport(true)}
               className="btn-secondary flex items-center gap-2 hover:bg-slate-200 transition-colors"
             >
               <Printer className="w-4 h-4" /> Statement
@@ -245,7 +245,7 @@ export default function CustomerPage() {
           <>
             {/* Sidebar List */}
             <div className="w-64 flex-shrink-0 flex flex-col h-full bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700/50 rounded-2xl overflow-hidden shadow-sm">
-               <div className="p-3 bg-slate-50/50 dark:bg-dark-800/30 border-b border-slate-100 dark:border-dark-700/30 flex items-center justify-between">
+              <div className="p-3 bg-slate-50/50 dark:bg-dark-800/30 border-b border-slate-100 dark:border-dark-700/30 flex items-center justify-between">
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Database</p>
                 <span className="text-[10px] font-bold text-slate-300">{filteredSidebar.length}</span>
               </div>
@@ -262,8 +262,8 @@ export default function CustomerPage() {
                       onClick={() => { setSelectedCust(c.id); setSearch(''); setPage(1); }}
                       className={cn(
                         'group flex items-center justify-between px-3 py-3 rounded-xl cursor-pointer text-xs font-black transition-all duration-200 border border-transparent',
-                        selectedCust === c.id 
-                          ? 'bg-pink-600/10 text-pink-600 border-pink-600/10 shadow-sm relative overflow-hidden' 
+                        selectedCust === c.id
+                          ? 'bg-pink-600/10 text-pink-600 border-pink-600/10 shadow-sm relative overflow-hidden'
                           : 'text-slate-600 dark:text-dark-400 hover:bg-slate-50 dark:hover:bg-dark-800 hover:text-slate-900 dark:hover:text-white hover:border-slate-200 dark:hover:border-dark-700/50'
                       )}
                     >
@@ -338,7 +338,7 @@ export default function CustomerPage() {
                           ) : paged.map((e, i) => (
                             <tr key={e.id} className="group">
                               <td className="text-[11px] font-bold text-slate-400 border-r border-slate-300 dark:border-dark-700/50 text-center">{(page - 1) * perPage + i + 1}</td>
-                              <td className="whitespace-nowrap text-[11px] font-black text-slate-900 dark:text-white uppercase tracking-tighter">{e.billNo}</td>
+                               <td className="whitespace-nowrap text-[11px] font-medium text-slate-900 dark:text-white uppercase tracking-tighter">{e.billNo}</td>
                               <td className="whitespace-nowrap text-[11px] font-medium uppercase tracking-tighter text-slate-500 dark:text-dark-400">{formatDate(e.date)}</td>
                               <td className="text-black dark:text-white font-medium text-[13px]">{e.description || '—'}</td>
                               <td className="amount !text-red-600 dark:!text-red-400 whitespace-nowrap">₨{e.debit ? formatCurrency(e.debit) : '—'}</td>
@@ -346,9 +346,9 @@ export default function CustomerPage() {
                               <td className="amount !text-black dark:!text-white !text-sm whitespace-nowrap">₨{formatCurrency(e.balance)}</td>
                               <td className="text-right">
                                 <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <button 
-                                    onClick={() => setViewingEntity(e)} 
-                                    className="flex items-center gap-1.5 px-2 py-0.5 text-[9px] font-black uppercase tracking-tighter text-pink-600 dark:text-pink-400 bg-pink-50/50 dark:bg-pink-900/20 border border-pink-200/50 dark:border-pink-800/30 rounded hover:bg-pink-100 dark:hover:bg-pink-800/40 transition-all font-serif" 
+                                  <button
+                                    onClick={() => setViewingEntity(e)}
+                                    className="flex items-center gap-1.5 px-2 py-0.5 text-[9px] font-black uppercase tracking-tighter text-pink-600 dark:text-pink-400 bg-pink-50/50 dark:bg-pink-900/20 border border-pink-200/50 dark:border-pink-800/30 rounded hover:bg-pink-100 dark:hover:bg-pink-800/40 transition-all font-serif"
                                     title="Quick Print Invoice"
                                   >
                                     <Printer className="w-3 h-3" />
@@ -359,7 +359,7 @@ export default function CustomerPage() {
                                       <button onClick={() => handleEditEntry(e)} className="p-1 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded transition-colors" title="Edit Entry">
                                         <Edit2 className="w-3.5 h-3.5" />
                                       </button>
-                                      <button onClick={() => { if(confirm('Delete entry?')) { deleteCustomerEntry(e.id); toast('Entry deleted', 'warning'); } }} className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors" title="Delete Entry">
+                                      <button onClick={() => { if (confirm('Delete entry?')) { deleteCustomerEntry(e.id); toast('Entry deleted', 'warning'); } }} className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors" title="Delete Entry">
                                         <Trash2 className="w-3.5 h-3.5" />
                                       </button>
                                     </>
@@ -385,11 +385,11 @@ export default function CustomerPage() {
                         </tfoot>
                       </table>
                     </div>
-                    <Pagination 
-                      page={page} 
-                      total={withBalance.length} 
-                      perPage={perPage} 
-                      onChange={setPage} 
+                    <Pagination
+                      page={page}
+                      total={withBalance.length}
+                      perPage={perPage}
+                      onChange={setPage}
                       onPerPageChange={(v) => { setPerPage(v); setPage(1); }}
                     />
                   </div>
@@ -421,12 +421,12 @@ export default function CustomerPage() {
                     <label className="label text-[10px] font-black uppercase tracking-widest text-primary-600 mb-2 block">Full Name *</label>
                     <div className="relative">
                       <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                      <input 
-                        className="input !pl-12 !py-4 !text-lg !font-bold" 
-                        placeholder="e.g. Malik Muhammad Abbass" 
-                        value={newName} 
-                        onChange={e => setNewName(e.target.value)} 
-                        required 
+                      <input
+                        className="input !pl-12 !py-4 !text-lg !font-bold"
+                        placeholder="e.g. Malik Muhammad Abbass"
+                        value={newName}
+                        onChange={e => setNewName(e.target.value)}
+                        required
                         autoFocus
                       />
                     </div>
@@ -435,21 +435,21 @@ export default function CustomerPage() {
                     <label className="label text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">Contact Number (Optional)</label>
                     <div className="relative">
                       <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                      <input 
-                        className="input !pl-12 !py-4 !text-lg !font-bold" 
-                        placeholder="e.g. 0300-1234567" 
-                        value={newPhone} 
-                        onChange={e => setNewPhone(e.target.value)} 
+                      <input
+                        className="input !pl-12 !py-4 !text-lg !font-bold"
+                        placeholder="e.g. 0300-1234567"
+                        value={newPhone}
+                        onChange={e => setNewPhone(e.target.value)}
                       />
                     </div>
                   </div>
                 </div>
 
                 <div className="pt-6 border-t border-slate-100 dark:border-dark-800 flex items-center justify-between">
-                   <p className="text-xs text-slate-400 font-medium italic">All required fields marked with *</p>
-                   <button type="submit" className="btn-primary !px-12 !py-4 font-black shadow-xl shadow-primary-600/20 text-base flex items-center gap-2">
-                     <Check className="w-5 h-5" /> Complete Registration
-                   </button>
+                  <p className="text-xs text-slate-400 font-medium italic">All required fields marked with *</p>
+                  <button type="submit" className="btn-primary !px-12 !py-4 font-black shadow-xl shadow-primary-600/20 text-base flex items-center gap-2">
+                    <Check className="w-5 h-5" /> Complete Registration
+                  </button>
                 </div>
               </form>
             </div>
@@ -458,83 +458,83 @@ export default function CustomerPage() {
           /* Manage View */
           <div className="flex-1 animate-in slide-in-from-right duration-300 flex flex-col gap-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/50 dark:bg-dark-900/50 p-6 rounded-2xl border border-slate-200 dark:border-dark-700/50 shadow-sm">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                  <input 
-                    className="input !pl-10 !py-3 !text-lg !font-bold" 
-                    placeholder="Quick search by name or phone..." 
-                    value={manageSearch} 
-                    onChange={e => setManageSearch(e.target.value)} 
-                  />
-                </div>
-                <div className="px-6 py-3 bg-slate-100 dark:bg-dark-800 rounded-2xl text-xs font-black text-slate-500 uppercase tracking-widest border border-slate-200 dark:border-dark-700/50">
-                  {customers.length} Accounts Found
-                </div>
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <input
+                  className="input !pl-10 !py-3 !text-lg !font-bold"
+                  placeholder="Quick search by name or phone..."
+                  value={manageSearch}
+                  onChange={e => setManageSearch(e.target.value)}
+                />
+              </div>
+              <div className="px-6 py-3 bg-slate-100 dark:bg-dark-800 rounded-2xl text-xs font-black text-slate-500 uppercase tracking-widest border border-slate-200 dark:border-dark-700/50">
+                {customers.length} Accounts Found
+              </div>
             </div>
 
             <div className="glass rounded-3xl overflow-hidden border border-slate-200 dark:border-dark-700/50 shadow-xl flex-1 flex flex-col">
-               <div className="overflow-x-auto smart-scroll">
-                  <table className="w-full">
-                    <thead><tr className="bg-slate-50/50 dark:bg-dark-800/50 border-b border-slate-200 dark:border-dark-700/50">
-                      <th className="px-6 py-4 text-left text-[10px] font-black uppercase text-slate-400 tracking-widest">Client Name</th>
-                      <th className="px-6 py-4 text-left text-[10px] font-black uppercase text-slate-400 tracking-widest">Contact</th>
-                      <th className="px-6 py-4 text-right text-[10px] font-black uppercase text-slate-400 tracking-widest">Actions</th>
-                    </tr></thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-dark-800/50">
-                      {filteredManage.length === 0 ? (
-                        <tr><td colSpan={3} className="px-6 py-20 text-center text-slate-400 italic font-medium">No customers found in database</td></tr>
-                      ) : filteredManage.map((c) => (
-                        <tr 
-                          key={c.id} 
-                          className="hover:bg-slate-50 dark:hover:bg-dark-800/20 transition-all group cursor-pointer"
-                          onClick={() => handleStartEdit(c)}
-                        >
-                           {editingId === c.id ? (
-                             <>
-                               <td className="px-6 py-3" colSpan={2} onClick={(e) => e.stopPropagation()}>
-                                  <div className="flex gap-4">
-                                     <input className="input !py-1.5 !text-sm flex-1" value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} autoFocus />
-                                     <input className="input !py-1.5 !text-sm flex-1" value={editForm.phone} onChange={e => setEditForm({...editForm, phone: e.target.value})} placeholder="Phone" />
-                                  </div>
-                               </td>
-                               <td className="px-6 py-3 text-right" onClick={(e) => e.stopPropagation()}>
-                                  <div className="flex items-center gap-2 justify-end">
-                                     <button onClick={() => handleSaveEdit(c.id)} className="p-2 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/10 rounded-xl"><Check className="w-5 h-5" /></button>
-                                     <button onClick={() => setEditingId(null)} className="p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-dark-700 rounded-xl"><X className="w-5 h-5" /></button>
-                                  </div>
-                               </td>
-                             </>
-                           ) : (
-                             <>
-                               <td className="px-6 py-4">
-                                  <div className="flex items-center gap-3">
-                                     <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-dark-800 flex items-center justify-center text-slate-400 font-black text-xs uppercase">{c.name.substring(0, 2)}</div>
-                                     <span className="font-bold text-slate-800 dark:text-white">{c.name}</span>
-                                  </div>
-                               </td>
-                               <td className="px-6 py-4">
-                                  <span className="text-sm font-medium text-slate-500 font-mono tracking-tighter">{c.phone || '—'}</span>
-                                </td>
-                               <td className="px-6 py-4 text-right">
-                                  <div className="flex items-center gap-2 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-                                     <button onClick={(e) => { e.stopPropagation(); handleStartEdit(c); }} className="p-2 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-xl"><Edit2 className="w-4 h-4" /></button>
-                                     {currentUser?.role === 'Admin' && (
-                                       <button 
-                                         onClick={(e) => { e.stopPropagation(); if(confirm('Delete customer and all history?')) deleteCustomer(c.id); }} 
-                                         className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl"
-                                       >
-                                         <Trash2 className="w-4 h-4" />
-                                       </button>
-                                     )}
-                                  </div>
-                               </td>
-                             </>
-                           )}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-               </div>
+              <div className="overflow-x-auto smart-scroll">
+                <table className="w-full">
+                  <thead><tr className="bg-slate-50/50 dark:bg-dark-800/50 border-b border-slate-200 dark:border-dark-700/50">
+                    <th className="px-6 py-4 text-left text-[10px] font-black uppercase text-slate-400 tracking-widest">Client Name</th>
+                    <th className="px-6 py-4 text-left text-[10px] font-black uppercase text-slate-400 tracking-widest">Contact</th>
+                    <th className="px-6 py-4 text-right text-[10px] font-black uppercase text-slate-400 tracking-widest">Actions</th>
+                  </tr></thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-dark-800/50">
+                    {filteredManage.length === 0 ? (
+                      <tr><td colSpan={3} className="px-6 py-20 text-center text-slate-400 italic font-medium">No customers found in database</td></tr>
+                    ) : filteredManage.map((c) => (
+                      <tr
+                        key={c.id}
+                        className="hover:bg-slate-50 dark:hover:bg-dark-800/20 transition-all group cursor-pointer"
+                        onClick={() => handleStartEdit(c)}
+                      >
+                        {editingId === c.id ? (
+                          <>
+                            <td className="px-6 py-3" colSpan={2} onClick={(e) => e.stopPropagation()}>
+                              <div className="flex gap-4">
+                                <input className="input !py-1.5 !text-sm flex-1" value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} autoFocus />
+                                <input className="input !py-1.5 !text-sm flex-1" value={editForm.phone} onChange={e => setEditForm({ ...editForm, phone: e.target.value })} placeholder="Phone" />
+                              </div>
+                            </td>
+                            <td className="px-6 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                              <div className="flex items-center gap-2 justify-end">
+                                <button onClick={() => handleSaveEdit(c.id)} className="p-2 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/10 rounded-xl"><Check className="w-5 h-5" /></button>
+                                <button onClick={() => setEditingId(null)} className="p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-dark-700 rounded-xl"><X className="w-5 h-5" /></button>
+                              </div>
+                            </td>
+                          </>
+                        ) : (
+                          <>
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-dark-800 flex items-center justify-center text-slate-400 font-black text-xs uppercase">{c.name.substring(0, 2)}</div>
+                                <span className="font-bold text-slate-800 dark:text-white">{c.name}</span>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className="text-sm font-medium text-slate-500 font-mono tracking-tighter">{c.phone || '—'}</span>
+                            </td>
+                            <td className="px-6 py-4 text-right">
+                              <div className="flex items-center gap-2 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button onClick={(e) => { e.stopPropagation(); handleStartEdit(c); }} className="p-2 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-xl"><Edit2 className="w-4 h-4" /></button>
+                                {currentUser?.role === 'Admin' && (
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); if (confirm('Delete customer and all history?')) deleteCustomer(c.id); }}
+                                    className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         )}
@@ -544,10 +544,10 @@ export default function CustomerPage() {
         <Modal title={editingEntity ? `Edit Entry — ${cust?.name}` : `Add Entry — ${cust?.name}`} onClose={closeEntryForm}>
           <form onSubmit={handleSubmitEntry} className="space-y-3">
             <div className="bg-slate-50 dark:bg-dark-800/50 p-3 rounded-xl border border-slate-200 dark:border-dark-700/50 mb-4 text-center">
-               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Generated Invoice No</p>
-               <p className="text-lg font-black text-emerald-600 dark:text-emerald-400 leading-none">
-                 {editingEntity ? editingEntity.billNo : `CST-${String(nextCustomerNo).padStart(2, '0')}`}
-               </p>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Generated Invoice No</p>
+              <p className="text-lg font-black text-emerald-600 dark:text-emerald-400 leading-none">
+                {editingEntity ? editingEntity.billNo : `CST-${String(nextCustomerNo).padStart(2, '0')}`}
+              </p>
             </div>
             <div><label className="label">Date *</label><input type="date" className="input" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required /></div>
             <div><label className="label">Description</label><input className="input" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Transaction details" /></div>

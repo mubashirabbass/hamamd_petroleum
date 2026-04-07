@@ -34,7 +34,7 @@ export default function SalePage() {
   const set = (k: string, v: string) => {
     const updated = { ...form, [k]: v };
     const rate = parseFloat(k === 'rate' ? v : updated.rate) || 0;
-    const qty  = parseFloat(k === 'quantity' ? v : updated.quantity) || 0;
+    const qty = parseFloat(k === 'quantity' ? v : updated.quantity) || 0;
     setForm({ ...updated, amount: (rate * qty).toFixed(2) });
   };
 
@@ -44,7 +44,7 @@ export default function SalePage() {
       .filter((s) => {
         const matchesSearch = !search || s.date.includes(search);
         const matchesFrom = !fromDate || s.date >= fromDate;
-        const matchesTo   = !toDate   || s.date <= toDate;
+        const matchesTo = !toDate || s.date <= toDate;
         return matchesSearch && matchesFrom && matchesTo;
       });
   }, [sales, settings.startDate, fuelType, search, fromDate, toDate]);
@@ -63,9 +63,9 @@ export default function SalePage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.date || !form.quantity || !form.rate) { toast('Fill required fields', 'error'); return; }
-    
+
     const payload = { type: fuelType, date: form.date, quantity: parseFloat(form.quantity), rate: parseFloat(form.rate), amount: parseFloat(form.amount) };
-    
+
     if (editingEntity) {
       useStore.getState().updateSale(editingEntity.id, payload);
       toast('Sale updated successfully', 'success');
@@ -107,7 +107,7 @@ export default function SalePage() {
           <div className="px-3 py-2">
             <h2 className="text-[10px] font-black text-slate-400 dark:text-dark-500 uppercase tracking-[0.2em]">Fuel Types</h2>
           </div>
-          
+
           {(['HSD', 'PMG'] as FuelType[]).map((t) => (
             <div
               key={t}
@@ -115,8 +115,8 @@ export default function SalePage() {
               className={fuelType === t ? 'category-item-active' : 'category-item-inactive'}
             >
               <div className="flex items-center gap-2.5 min-w-0">
-                 <span className={`w-1.5 h-1.5 rounded-full ${fuelType === t ? 'bg-primary-600 animate-pulse' : 'bg-slate-300 dark:bg-dark-600'}`}></span>
-                 <span className="truncate">{t} Sales</span>
+                <span className={`w-1.5 h-1.5 rounded-full ${fuelType === t ? 'bg-primary-600 animate-pulse' : 'bg-slate-300 dark:bg-dark-600'}`}></span>
+                <span className="truncate">{t} Sales</span>
               </div>
             </div>
           ))}
@@ -130,10 +130,10 @@ export default function SalePage() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="col-span-2">
                   <label className="label">Invoice ID (Auto)</label>
-                  <input 
-                    className="input bg-slate-50 dark:bg-dark-750 font-medium text-slate-900 dark:text-white cursor-not-allowed" 
-                    value={editingEntity ? editingEntity.billNo : `SAL-${String(nextSaleNo).padStart(2, '0')}`} 
-                    readOnly 
+                  <input
+                    className="input bg-slate-50 dark:bg-dark-750 font-medium text-slate-900 dark:text-white cursor-not-allowed"
+                    value={editingEntity ? editingEntity.billNo : `SAL-${String(nextSaleNo).padStart(2, '0')}`}
+                    readOnly
                   />
                 </div>
                 <div><label className="label">Date *</label><input type="date" className="input" value={form.date} onChange={(e) => set('date', e.target.value)} required /></div>
@@ -179,14 +179,14 @@ export default function SalePage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button 
-              onClick={() => setShowReport(true)} 
+            <button
+              onClick={() => setShowReport(true)}
               className="px-4 py-2 bg-slate-100 dark:bg-dark-700 text-slate-700 dark:text-dark-200 rounded-lg hover:bg-slate-200 dark:hover:bg-dark-600 transition-colors font-bold text-sm flex items-center gap-2"
             >
               <Printer className="w-4 h-4" /> Print Report
             </button>
-            <button 
-              onClick={() => { closeForm(); setShowForm(true); }} 
+            <button
+              onClick={() => { closeForm(); setShowForm(true); }}
               className="btn-primary !bg-emerald-600 hover:!bg-emerald-500 flex items-center gap-2 shadow-lg shadow-emerald-600/10"
             >
               <Plus className="w-4 h-4" /> New Sale Entry
@@ -220,14 +220,14 @@ export default function SalePage() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead><tr className="table-header text-[10px]">
-                <th className="px-4 py-3 text-left w-12 border-r border-slate-300 dark:border-dark-700/50">S.No</th>
+                <th className="px-4 py-3 text-left border-r border-slate-300 dark:border-dark-700/50">S.No</th>
                 <th className="table-cell text-left">Bill No</th>
                 <th className="table-cell text-left">Date</th>
                 <th className="table-cell text-left uppercase tracking-tighter">Product</th>
                 <th className="table-cell text-right">Rate (₨)</th>
                 <th className="table-cell text-right">Qty (L)</th>
-                <th className="table-cell text-right">Amount (₨)</th>
-                <th className="table-cell"></th>
+                <th className="table-cell text-right font-black">Amount (₨)</th>
+                <th className="table-cell w-20"></th>
               </tr></thead>
               <tbody>
                 {paged.length === 0 ? (
@@ -243,9 +243,9 @@ export default function SalePage() {
                     <td className="table-cell text-right font-semibold text-slate-900 dark:text-white">₨ {formatCurrency(s.amount)}</td>
                     <td className="table-cell text-right">
                       <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button 
-                          onClick={() => setViewingEntity(s)} 
-                          className="flex items-center gap-1.5 px-2 py-0.5 text-[9px] font-black uppercase tracking-tighter text-emerald-600 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-900/20 border border-emerald-200/50 dark:border-emerald-800/30 rounded hover:bg-emerald-100 dark:hover:bg-emerald-800/40 transition-all" 
+                        <button
+                          onClick={() => setViewingEntity(s)}
+                          className="flex items-center gap-1.5 px-2 py-0.5 text-[9px] font-black uppercase tracking-tighter text-emerald-600 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-900/20 border border-emerald-200/50 dark:border-emerald-800/30 rounded hover:bg-emerald-100 dark:hover:bg-emerald-800/40 transition-all"
                           title={`Print ${s.billNo || 'Bill'}`}
                         >
                           <Printer className="w-3 h-3" />

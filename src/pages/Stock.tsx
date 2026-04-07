@@ -1,13 +1,13 @@
 import { useState, useMemo, useEffect } from 'react';
-import { 
-  BarChart3, TrendingUp, TrendingDown, ArrowLeft, 
+import {
+  BarChart3, TrendingUp, TrendingDown, ArrowLeft,
   Package, LayoutList, Fuel, Zap, Clock,
   ChevronRight, Calendar
 } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useStore, FuelType } from '../store/useStore';
-import { 
-  formatCurrency, filterByStartDate, formatDate, 
+import {
+  formatCurrency, filterByStartDate, formatDate,
   paginate, cn, startOfMonth, startOfYear, today
 } from '../lib/utils';
 import SearchBar from '../components/ui/SearchBar';
@@ -19,7 +19,7 @@ export default function StockPage() {
   const { purchases: rawPurchases, sales: rawSales, settings } = useStore();
   const { type } = useParams<{ type: string }>();
   const navigate = useNavigate();
-  
+
   // ── View State ──
   const [view, setView] = useState<'overview' | 'manage'>('overview');
   const [selectedType, setSelectedType] = useState<FuelType>('HSD');
@@ -33,7 +33,7 @@ export default function StockPage() {
       setView('overview');
     }
   }, [type]);
-  
+
   // ── Detail View State ──
   const [showHistory, setShowHistory] = useState(false);
   const [search, setSearch] = useState('');
@@ -46,38 +46,38 @@ export default function StockPage() {
   const stockData = useMemo(() => {
     const calc = (type: 'HSD' | 'PMG') => {
       // 1. Period Totals (for Purchase/Sale Volume)
-      const periodPurchases = rawPurchases.filter(p => 
-        p.type === type && 
+      const periodPurchases = rawPurchases.filter(p =>
+        p.type === type &&
         p.date >= settings.startDate &&
         (!fromDate || p.date >= fromDate) &&
         (!toDate || p.date <= toDate)
       );
-      const periodSales = rawSales.filter(s => 
-        s.type === type && 
+      const periodSales = rawSales.filter(s =>
+        s.type === type &&
         s.date >= settings.startDate &&
         (!fromDate || s.date >= fromDate) &&
         (!toDate || s.date <= toDate)
       );
 
       const totalPurchased = periodPurchases.reduce((s, p) => s + p.quantity, 0);
-      const totalSold      = periodSales.reduce((s, x) => s + x.quantity, 0);
-      const purchaseValue  = periodPurchases.reduce((s, p) => s + p.totalAmount, 0);
-      const saleValue      = periodSales.reduce((s, x) => s + x.amount, 0);
+      const totalSold = periodSales.reduce((s, x) => s + x.quantity, 0);
+      const purchaseValue = periodPurchases.reduce((s, p) => s + p.totalAmount, 0);
+      const saleValue = periodSales.reduce((s, x) => s + x.amount, 0);
 
       // 2. Closing Balance (Total ever up to 'toDate')
-      const upToDatePurchases = rawPurchases.filter(p => 
-        p.type === type && 
+      const upToDatePurchases = rawPurchases.filter(p =>
+        p.type === type &&
         p.date >= settings.startDate &&
         (!toDate || p.date <= toDate)
       );
-      const upToDateSales = rawSales.filter(s => 
-        s.type === type && 
+      const upToDateSales = rawSales.filter(s =>
+        s.type === type &&
         s.date >= settings.startDate &&
         (!toDate || s.date <= toDate)
       );
 
-      const current = upToDatePurchases.reduce((s, p) => s + p.quantity, 0) - 
-                      upToDateSales.reduce((s, x) => s + x.quantity, 0);
+      const current = upToDatePurchases.reduce((s, p) => s + p.quantity, 0) -
+        upToDateSales.reduce((s, x) => s + x.quantity, 0);
 
       return { totalPurchased, totalSold, current, purchaseValue, saleValue };
     };
@@ -86,17 +86,17 @@ export default function StockPage() {
 
   const historyData = useMemo(() => {
     if (view !== 'manage') return [];
-    
+
     const pFiltered = filterByStartDate(rawPurchases, settings.startDate)
       .filter((p) => p.type === selectedType)
       .map((p) => ({ id: p.id, date: p.date, type: 'Purchase' as const, qtyIn: p.quantity, qtyOut: 0, details: p.details, billNo: p.billNo }));
-    
+
     const sFiltered = filterByStartDate(rawSales, settings.startDate)
       .filter((s) => s.type === selectedType)
       .map((s) => ({ id: s.id, date: s.date, type: 'Sale' as const, qtyIn: 0, qtyOut: s.quantity, details: 'Daily Sale', billNo: s.billNo }));
 
     const combined = [...pFiltered, ...sFiltered].sort((a, b) => b.date.localeCompare(a.date));
-    
+
     // Sort chronological for balance calc, then reverse back
     const chrono = [...combined].sort((a, b) => a.date.localeCompare(b.date));
     let bal = 0;
@@ -110,8 +110,8 @@ export default function StockPage() {
 
   const filteredHistory = historyData.filter((h) => {
     const matchesSearch = !search || h.details.toLowerCase().includes(search.toLowerCase()) || h.date.includes(search);
-    const matchesFrom   = !fromDate || h.date >= fromDate;
-    const matchesTo     = !toDate || h.date <= toDate;
+    const matchesFrom = !fromDate || h.date >= fromDate;
+    const matchesTo = !toDate || h.date <= toDate;
     return matchesSearch && matchesFrom && matchesTo;
   });
 
@@ -144,7 +144,7 @@ export default function StockPage() {
         {/* Detail Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div className="flex items-center gap-4">
-            <button 
+            <button
               onClick={() => navigate('/stock')}
               className="w-10 h-10 rounded-xl flex items-center justify-center bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700 shadow-sm hover:scale-110 active:scale-95 transition-all text-slate-600 dark:text-dark-400"
               title="Back to Overview"
@@ -161,7 +161,7 @@ export default function StockPage() {
               </div>
             </div>
           </div>
-          
+
           {/* Quick Date Range */}
           <div className="flex items-center gap-2 bg-white dark:bg-dark-900 p-2 rounded-2xl border border-slate-200 dark:border-dark-700 shadow-sm overflow-x-auto">
             <div className="flex items-center bg-slate-50 dark:bg-dark-800 p-1 rounded-xl border border-slate-100 dark:border-dark-750 mr-2">
@@ -178,8 +178,8 @@ export default function StockPage() {
               <input type="date" value={toDate} onChange={e => { setToDate(e.target.value); setPage(1); }} className="input !py-1 !px-2 !w-32 !text-xs" />
             </div>
             {(fromDate || toDate) && (
-              <button 
-                onClick={() => { setFromDate(''); setToDate(''); setPage(1); }} 
+              <button
+                onClick={() => { setFromDate(''); setToDate(''); setPage(1); }}
                 className="ml-2 px-3 py-1.5 text-[10px] font-black uppercase tracking-tighter text-red-600 bg-red-50 dark:bg-red-900/20 rounded-lg hover:bg-red-100 transition-all border border-red-200 dark:border-red-800/30"
                 title="Clear Filters"
               >
@@ -199,7 +199,7 @@ export default function StockPage() {
             <div className="p-4 space-y-2">
               {[
                 { id: 'HSD', label: 'HSD Stock', icon: Fuel, color: 'text-amber-600', bg: 'bg-amber-600/10' },
-                { id: 'PMG', label: 'PMG Stock', icon: Zap,  color: 'text-emerald-600', bg: 'bg-emerald-600/10' },
+                { id: 'PMG', label: 'PMG Stock', icon: Zap, color: 'text-emerald-600', bg: 'bg-emerald-600/10' },
               ].map(fuel => (
                 <button
                   key={fuel.id}
@@ -253,7 +253,7 @@ export default function StockPage() {
 
             {/* Detailed History Toggle */}
             <div className="flex justify-center mt-2">
-              <button 
+              <button
                 onClick={() => setShowHistory(!showHistory)}
                 className="btn-secondary !text-[10px] !py-1 !px-3 flex items-center gap-2 uppercase font-black tracking-widest"
               >
@@ -270,7 +270,7 @@ export default function StockPage() {
                     <h3 className="text-sm font-black uppercase tracking-widest text-slate-900 dark:text-white">Transaction History</h3>
                   </div>
                   <div className="w-64">
-                     <SearchBar value={search} onChange={v => { setSearch(v); setPage(1); }} placeholder="Search History..." />
+                    <SearchBar value={search} onChange={v => { setSearch(v); setPage(1); }} placeholder="Search History..." />
                   </div>
                 </div>
                 <div className="overflow-x-auto">
@@ -292,7 +292,7 @@ export default function StockPage() {
                       ) : pagedHistory.map((h, i) => (
                         <tr key={h.id + (h.date) + i} className="hover:bg-slate-50/50 dark:hover:bg-dark-800/30 transition-colors group">
                           <td className="px-6 py-4 text-[11px] font-bold text-slate-400 border-r border-slate-200 dark:border-dark-700/50 text-center">{(page - 1) * perPage + i + 1}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-[12px] font-black text-slate-900 dark:text-white">{(h as any).billNo || '—'}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-[12px] font-medium text-slate-900 dark:text-white">{(h as any).billNo || '—'}</td>
                           <td className="px-6 py-4 whitespace-nowrap text-[12px] font-bold text-slate-600 dark:text-dark-300">{formatDate(h.date)}</td>
                           <td className="px-6 py-4 text-[12px] font-black text-slate-900 dark:text-white truncate max-w-[180px]">{h.details || 'Daily Sale'}</td>
                           <td className="px-6 py-4 text-right text-emerald-600 font-mono text-xs font-bold">{h.qtyIn ? `+${h.qtyIn.toLocaleString()}` : '—'}</td>
@@ -317,11 +317,11 @@ export default function StockPage() {
                     </tfoot>
                   </table>
                 </div>
-                <Pagination 
-                  page={page} 
-                  total={filteredHistory.length} 
-                  perPage={perPage} 
-                  onChange={setPage} 
+                <Pagination
+                  page={page}
+                  total={filteredHistory.length}
+                  perPage={perPage}
+                  onChange={setPage}
                   onPerPageChange={(v) => { setPerPage(v); setPage(1); }}
                 />
               </div>
@@ -367,8 +367,8 @@ export default function StockPage() {
             <input type="date" value={toDate} onChange={e => { setToDate(e.target.value); }} className="input !py-1 !px-2 !w-32 !text-xs" />
           </div>
           {(fromDate || toDate) && (
-            <button 
-              onClick={() => { setFromDate(''); setToDate(''); }} 
+            <button
+              onClick={() => { setFromDate(''); setToDate(''); }}
               className="ml-2 px-3 py-1.5 text-[10px] font-black uppercase tracking-tighter text-red-600 bg-red-50 dark:bg-red-900/20 rounded-lg hover:bg-red-100 transition-all border border-red-200 dark:border-red-800/30"
               title="Clear Filters"
             >
@@ -382,7 +382,7 @@ export default function StockPage() {
         {cards.map(({ type, label, color, icon, data }) => (
           <div key={type} className="glass rounded-[2.5rem] p-8 border border-slate-200 dark:border-dark-700/50 shadow-2xl relative overflow-hidden group">
             <div className={cn("absolute top-0 right-0 w-40 h-40 rounded-bl-full -mr-20 -mt-20 group-hover:scale-110 transition-transform duration-700 opacity-20", color === 'amber' ? 'bg-amber-500' : 'bg-emerald-500')} />
-            
+
             <div className="flex items-center gap-6 mb-10 relative">
               <div className={cn("w-16 h-16 rounded-3xl flex items-center justify-center border shadow-inner", color === 'amber' ? 'bg-amber-500/10 border-amber-500/20 text-amber-600' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600')}>
                 {icon}
@@ -395,9 +395,9 @@ export default function StockPage() {
 
             <div className="grid grid-cols-3 gap-8 relative border-t border-slate-100 dark:border-dark-800/60 pt-10">
               {[
-                { label: 'Purchase',  qty: data.totalPurchased, value: data.purchaseValue, icon: TrendingUp,   color: 'text-emerald-600' },
-                { label: 'Sale',      qty: data.totalSold,    value: data.saleValue,     icon: TrendingDown, color: 'text-red-600' },
-                { label: 'Remaining', qty: data.current,      value: null,               icon: Package,      color: color === 'amber' ? 'text-amber-600' : 'text-emerald-600', highlight: true },
+                { label: 'Purchase', qty: data.totalPurchased, value: data.purchaseValue, icon: TrendingUp, color: 'text-emerald-600' },
+                { label: 'Sale', qty: data.totalSold, value: data.saleValue, icon: TrendingDown, color: 'text-red-600' },
+                { label: 'Remaining', qty: data.current, value: null, icon: Package, color: color === 'amber' ? 'text-amber-600' : 'text-emerald-600', highlight: true },
               ].map(block => (
                 <div key={block.label} className="space-y-2">
                   <div className="flex items-center gap-1.5">
@@ -419,7 +419,7 @@ export default function StockPage() {
 
             {/* Progress Visualization */}
             <div className="mt-8 pt-8 border-t border-slate-100 dark:border-dark-800/60">
-               <div className="flex justify-between text-[11px] font-black uppercase tracking-wider text-slate-400 mb-3">
+              <div className="flex justify-between text-[11px] font-black uppercase tracking-wider text-slate-400 mb-3">
                 <span>Utilization</span>
                 <span className={color === 'amber' ? 'text-amber-600' : 'text-emerald-600'}>{data.totalPurchased > 0 ? ((data.totalSold / data.totalPurchased) * 100).toFixed(1) : 0}% sold</span>
               </div>
@@ -436,8 +436,8 @@ export default function StockPage() {
               onClick={() => navigate(`/stock/${type.toLowerCase()}`)}
               className={cn(
                 "w-full mt-8 py-4 rounded-3xl font-black text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 border shadow-sm active:scale-95 group",
-                color === 'amber' 
-                  ? "bg-amber-600 text-white border-transparent hover:bg-amber-700 shadow-amber-600/20" 
+                color === 'amber'
+                  ? "bg-amber-600 text-white border-transparent hover:bg-amber-700 shadow-amber-600/20"
                   : "bg-emerald-600 text-white border-transparent hover:bg-emerald-700 shadow-emerald-600/20"
               )}
             >

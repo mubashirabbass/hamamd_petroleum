@@ -12,10 +12,10 @@ import PrintReportModal from '../components/modals/PrintReportModal';
 // const PER_PAGE = 40; // Replaced by state
 
 export default function LedgerPage() {
-  const { 
-    ledgerCategories, ledgerEntries, nextLedgerNo, 
-    addLedgerCategory, updateLedgerCategory, deleteLedgerCategory, 
-    addLedgerEntry, deleteLedgerEntry, settings, currentUser, updateLedgerEntry 
+  const {
+    ledgerCategories, ledgerEntries, nextLedgerNo,
+    addLedgerCategory, updateLedgerCategory, deleteLedgerCategory,
+    addLedgerEntry, deleteLedgerEntry, settings, currentUser, updateLedgerEntry
   } = useStore();
   const { toast } = useToast();
 
@@ -23,7 +23,7 @@ export default function LedgerPage() {
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
   const [showEntryForm, setShowEntryForm] = useState(false);
   const [showReport, setShowReport] = useState(false);
-  
+
   // Registration Form State
   const [newName, setNewName] = useState('');
 
@@ -42,7 +42,7 @@ export default function LedgerPage() {
   const [viewingEntity, setViewingEntity] = useState<any>(null);
   const [perPage, setPerPage] = useState(40);
   const [form, setForm] = useState({ date: today(), description: '', debit: '', credit: '' });
-  
+
   useEffect(() => {
     if (!selectedCat && ledgerCategories.length > 0) {
       setSelectedCat(ledgerCategories[0].id);
@@ -68,7 +68,7 @@ export default function LedgerPage() {
       .filter((e) => {
         const matchesSearch = !search || e.description.toLowerCase().includes(search.toLowerCase()) || e.date.includes(search);
         const matchesFrom = !fromDate || e.date >= fromDate;
-        const matchesTo   = !toDate   || e.date <= toDate;
+        const matchesTo = !toDate || e.date <= toDate;
         return matchesSearch && matchesFrom && matchesTo;
       });
   }, [ledgerEntries, settings.startDate, selectedCat, search, fromDate, toDate]);
@@ -89,11 +89,11 @@ export default function LedgerPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedCat || !form.date) { toast('Fill required fields', 'error'); return; }
-    
+
     const debit = parseFloat(form.debit) || 0;
     const credit = parseFloat(form.credit) || 0;
     const payload = { categoryId: selectedCat, date: form.date, description: form.description, debit, credit, balance: 0 };
-    
+
     if (editingEntity) {
       updateLedgerEntry(editingEntity.id, payload);
       toast('Entry updated', 'success');
@@ -172,34 +172,34 @@ export default function LedgerPage() {
       {/* Parallel Horizontal Tabs */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex bg-slate-100 dark:bg-dark-800 p-1 rounded-2xl border border-slate-200 dark:border-dark-700/50 w-full md:w-auto">
-          <button 
+          <button
             onClick={() => setActiveTab('database')}
             className={cn(
               "flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex-1 md:flex-none justify-center",
-              activeTab === 'database' 
-                ? "bg-white dark:bg-dark-900 text-primary-600 shadow-sm shadow-primary-600/10" 
+              activeTab === 'database'
+                ? "bg-white dark:bg-dark-900 text-primary-600 shadow-sm shadow-primary-600/10"
                 : "text-slate-500 hover:text-slate-800 dark:hover:text-white"
             )}
           >
             <BookOpen className="w-4 h-4" /> General Ledger
           </button>
-          <button 
+          <button
             onClick={() => setActiveTab('register')}
             className={cn(
               "flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex-1 md:flex-none justify-center",
-              activeTab === 'register' 
-                ? "bg-white dark:bg-dark-900 text-primary-600 shadow-sm shadow-primary-600/10" 
+              activeTab === 'register'
+                ? "bg-white dark:bg-dark-900 text-primary-600 shadow-sm shadow-primary-600/10"
                 : "text-slate-500 hover:text-slate-800 dark:hover:text-white"
             )}
           >
             <UserPlus className="w-4 h-4" /> Register Ledger
           </button>
-          <button 
+          <button
             onClick={() => setActiveTab('manage')}
             className={cn(
               "flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex-1 md:flex-none justify-center",
-              activeTab === 'manage' 
-                ? "bg-white dark:bg-dark-900 text-primary-600 shadow-sm shadow-primary-600/10" 
+              activeTab === 'manage'
+                ? "bg-white dark:bg-dark-900 text-primary-600 shadow-sm shadow-primary-600/10"
                 : "text-slate-500 hover:text-slate-800 dark:hover:text-white"
             )}
           >
@@ -208,8 +208,8 @@ export default function LedgerPage() {
         </div>
         {activeTab === 'database' && cat && (
           <div className="flex gap-2">
-            <button 
-              onClick={() => setShowReport(true)} 
+            <button
+              onClick={() => setShowReport(true)}
               className="px-4 py-2 bg-slate-100 dark:bg-dark-700 text-slate-700 dark:text-dark-200 rounded-lg hover:bg-slate-200 dark:hover:bg-dark-600 transition-colors font-bold text-sm flex items-center gap-2 border border-slate-200 dark:border-dark-700"
             >
               <Printer className="w-4 h-4" /> Print Report
@@ -226,7 +226,7 @@ export default function LedgerPage() {
           <>
             {/* Sidebar List */}
             <div className="w-64 flex-shrink-0 flex flex-col h-full bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700/50 rounded-2xl overflow-hidden shadow-sm">
-               <div className="p-3 bg-slate-50/50 dark:bg-dark-800/30 border-b border-slate-100 dark:border-dark-700/30 flex items-center justify-between">
+              <div className="p-3 bg-slate-50/50 dark:bg-dark-800/30 border-b border-slate-100 dark:border-dark-700/30 flex items-center justify-between">
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Ledgers</p>
                 <span className="text-[10px] font-bold text-slate-300">{filteredSidebar.length}</span>
               </div>
@@ -243,8 +243,8 @@ export default function LedgerPage() {
                       onClick={() => { setSelectedCat(c.id); setSidebarSearch(''); setSearch(''); setPage(1); }}
                       className={cn(
                         'group flex items-center justify-between px-3 py-3 rounded-xl cursor-pointer text-xs font-black transition-all duration-200 border border-transparent',
-                        selectedCat === c.id 
-                          ? 'bg-primary-600/10 text-primary-600 border-primary-600/10 shadow-sm relative overflow-hidden' 
+                        selectedCat === c.id
+                          ? 'bg-primary-600/10 text-primary-600 border-primary-600/10 shadow-sm relative overflow-hidden'
                           : 'text-slate-600 dark:text-dark-400 hover:bg-slate-50 dark:hover:bg-dark-800 hover:text-slate-900 dark:hover:text-white hover:border-slate-200 dark:hover:border-dark-700/50'
                       )}
                     >
@@ -332,7 +332,7 @@ export default function LedgerPage() {
                           ) : paged.map((e, i) => (
                             <tr key={e.id} className="group">
                               <td className="text-[11px] font-bold text-slate-400 border-r border-slate-300 dark:border-dark-700/50 text-center">{(page - 1) * perPage + i + 1}</td>
-                              <td className="whitespace-nowrap text-[11px] font-black text-slate-900 dark:text-white uppercase tracking-tighter">{e.billNo}</td>
+                              <td className="whitespace-nowrap text-[11px] font-medium text-slate-900 dark:text-white uppercase tracking-tighter">{e.billNo}</td>
                               <td className="whitespace-nowrap text-[11px] font-medium uppercase tracking-tighter text-slate-500 dark:text-dark-400">{formatDate(e.date)}</td>
                               <td className="text-black dark:text-white font-medium text-[13px]">{e.description || '—'}</td>
                               <td className="amount !text-red-600 dark:!text-red-400">{e.debit ? formatCurrency(e.debit) : '—'}</td>
@@ -340,9 +340,9 @@ export default function LedgerPage() {
                               <td className="amount !text-black dark:!text-white !text-sm font-medium">₨ {formatCurrency(e.balance)}</td>
                               <td className="text-right">
                                 <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <button 
-                                    onClick={() => setViewingEntity(e)} 
-                                    className="flex items-center gap-1.5 px-2 py-0.5 text-[9px] font-black uppercase tracking-tighter text-primary-600 dark:text-primary-400 bg-primary-50/50 dark:bg-primary-900/20 border border-primary-200/50 dark:border-primary-800/30 rounded hover:bg-primary-100 dark:hover:bg-primary-800/40 transition-all font-serif" 
+                                  <button
+                                    onClick={() => setViewingEntity(e)}
+                                    className="flex items-center gap-1.5 px-2 py-0.5 text-[9px] font-black uppercase tracking-tighter text-primary-600 dark:text-primary-400 bg-primary-50/50 dark:bg-primary-900/20 border border-primary-200/50 dark:border-primary-800/30 rounded hover:bg-primary-100 dark:hover:bg-primary-800/40 transition-all font-serif"
                                     title="Quick Print Invoice"
                                   >
                                     <Printer className="w-3 h-3" />
@@ -356,7 +356,7 @@ export default function LedgerPage() {
                                       <button onClick={() => handleEdit(e)} className="p-1 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded transition-colors">
                                         <Edit2 className="w-3.5 h-3.5" />
                                       </button>
-                                      <button onClick={() => { if(confirm('Delete entry?')) { deleteLedgerEntry(e.id); toast('Entry deleted', 'warning'); } }} className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors">
+                                      <button onClick={() => { if (confirm('Delete entry?')) { deleteLedgerEntry(e.id); toast('Entry deleted', 'warning'); } }} className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors">
                                         <Trash2 className="w-3.5 h-3.5" />
                                       </button>
                                     </>
@@ -382,11 +382,11 @@ export default function LedgerPage() {
                         </tfoot>
                       </table>
                     </div>
-                    <Pagination 
-                      page={page} 
-                      total={withBalance.length} 
-                      perPage={perPage} 
-                      onChange={setPage} 
+                    <Pagination
+                      page={page}
+                      total={withBalance.length}
+                      perPage={perPage}
+                      onChange={setPage}
                       onPerPageChange={(v) => { setPerPage(v); setPage(1); }}
                     />
                   </div>
@@ -419,12 +419,12 @@ export default function LedgerPage() {
                     <label className="label text-[10px] font-black uppercase tracking-widest text-primary-600 mb-2 block">Ledger Name *</label>
                     <div className="relative">
                       <FileText className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                      <input 
-                        className="input !pl-12 !py-4 !text-lg !font-bold" 
-                        placeholder="e.g. Bank Account, Supplier Name, etc." 
-                        value={newName} 
-                        onChange={e => setNewName(e.target.value)} 
-                        required 
+                      <input
+                        className="input !pl-12 !py-4 !text-lg !font-bold"
+                        placeholder="e.g. Bank Account, Supplier Name, etc."
+                        value={newName}
+                        onChange={e => setNewName(e.target.value)}
+                        required
                         autoFocus
                       />
                     </div>
@@ -432,10 +432,10 @@ export default function LedgerPage() {
                 </div>
 
                 <div className="pt-6 border-t border-slate-100 dark:border-dark-800 flex items-center justify-between">
-                   <p className="text-xs text-slate-400 font-medium italic">All required fields marked with *</p>
-                   <button type="submit" className="btn-primary !px-12 !py-4 font-black shadow-xl shadow-primary-600/20 text-base flex items-center gap-2">
-                     <Check className="w-5 h-5" /> Complete Registration
-                   </button>
+                  <p className="text-xs text-slate-400 font-medium italic">All required fields marked with *</p>
+                  <button type="submit" className="btn-primary !px-12 !py-4 font-black shadow-xl shadow-primary-600/20 text-base flex items-center gap-2">
+                    <Check className="w-5 h-5" /> Complete Registration
+                  </button>
                 </div>
               </form>
             </div>
@@ -444,75 +444,75 @@ export default function LedgerPage() {
           /* Manage View */
           <div className="flex-1 animate-in slide-in-from-right duration-300 flex flex-col gap-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/50 dark:bg-dark-900/50 p-6 rounded-2xl border border-slate-200 dark:border-dark-700/50 shadow-sm mt-4">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                  <input 
-                    className="input !pl-10 !py-3 !text-lg !font-bold" 
-                    placeholder="Quick search..." 
-                    value={manageSearch} 
-                    onChange={e => setManageSearch(e.target.value)} 
-                  />
-                </div>
-                <div className="px-6 py-3 bg-slate-100 dark:bg-dark-800 rounded-2xl text-xs font-black text-slate-500 uppercase tracking-widest border border-slate-200 dark:border-dark-700/50">
-                  {ledgerCategories.length} Accounts Found
-                </div>
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <input
+                  className="input !pl-10 !py-3 !text-lg !font-bold"
+                  placeholder="Quick search..."
+                  value={manageSearch}
+                  onChange={e => setManageSearch(e.target.value)}
+                />
+              </div>
+              <div className="px-6 py-3 bg-slate-100 dark:bg-dark-800 rounded-2xl text-xs font-black text-slate-500 uppercase tracking-widest border border-slate-200 dark:border-dark-700/50">
+                {ledgerCategories.length} Accounts Found
+              </div>
             </div>
 
             <div className="glass rounded-3xl overflow-hidden border border-slate-200 dark:border-dark-700/50 shadow-xl flex-1 flex flex-col">
-               <div className="overflow-y-auto smart-scroll">
-                  <table className="w-full">
-                    <thead className="sticky top-0 bg-slate-50/90 dark:bg-dark-800/90 backdrop-blur-sm z-10"><tr className="border-b border-slate-200 dark:border-dark-700/50">
-                      <th className="px-6 py-4 text-left text-[10px] font-black uppercase text-slate-400 tracking-widest">Ledger Name</th>
-                      <th className="px-6 py-4 text-right text-[10px] font-black uppercase text-slate-400 tracking-widest">Actions</th>
-                    </tr></thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-dark-800/50">
-                      {filteredManage.length === 0 ? (
-                        <tr><td colSpan={2} className="px-6 py-20 text-center text-slate-400 italic font-medium">No results found</td></tr>
-                      ) : filteredManage.map((c) => (
-                        <tr 
-                          key={c.id} 
-                          className="hover:bg-slate-50 dark:hover:bg-dark-800/20 transition-all group cursor-pointer"
-                          onClick={() => handleStartEdit(c)}
-                        >
-                           {editingId === c.id ? (
-                             <>
-                               <td className="px-6 py-3" onClick={(e) => e.stopPropagation()}>
-                                  <input className="input !py-1.5 !text-sm w-full" value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} autoFocus />
-                               </td>
-                               <td className="px-6 py-3 text-right" onClick={(e) => e.stopPropagation()}>
-                                  <div className="flex items-center gap-2 justify-end">
-                                     <button onClick={() => handleSaveEdit(c.id)} className="p-2 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/10 rounded-xl"><Check className="w-5 h-5" /></button>
-                                     <button onClick={() => setEditingId(null)} className="p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-dark-700 rounded-xl"><X className="w-5 h-5" /></button>
-                                  </div>
-                               </td>
-                             </>
-                           ) : (
-                             <>
-                               <td className="px-6 py-4">
-                                  <div className="flex items-center gap-3">
-                                     <span className="font-bold text-slate-800 dark:text-white text-lg">{c.name}</span>
-                                  </div>
-                               </td>
-                               <td className="px-6 py-4 text-right">
-                                  <div className="flex items-center gap-2 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-                                     <button onClick={() => handleStartEdit(c)} className="p-2 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-xl"><Edit2 className="w-4 h-4" /></button>
-                                     {currentUser?.role === 'Admin' && (
-                                       <button 
-                                         onClick={(e) => { e.stopPropagation(); if(confirm('Delete ledger and all history?')) deleteLedgerCategory(c.id); }} 
-                                         className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl"
-                                       >
-                                         <Trash2 className="w-4 h-4" />
-                                       </button>
-                                     )}
-                                  </div>
-                               </td>
-                             </>
-                           )}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-               </div>
+              <div className="overflow-y-auto smart-scroll">
+                <table className="w-full">
+                  <thead className="sticky top-0 bg-slate-50/90 dark:bg-dark-800/90 backdrop-blur-sm z-10"><tr className="border-b border-slate-200 dark:border-dark-700/50">
+                    <th className="px-6 py-4 text-left text-[10px] font-black uppercase text-slate-400 tracking-widest">Ledger Name</th>
+                    <th className="px-6 py-4 text-right text-[10px] font-black uppercase text-slate-400 tracking-widest">Actions</th>
+                  </tr></thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-dark-800/50">
+                    {filteredManage.length === 0 ? (
+                      <tr><td colSpan={2} className="px-6 py-20 text-center text-slate-400 italic font-medium">No results found</td></tr>
+                    ) : filteredManage.map((c) => (
+                      <tr
+                        key={c.id}
+                        className="hover:bg-slate-50 dark:hover:bg-dark-800/20 transition-all group cursor-pointer"
+                        onClick={() => handleStartEdit(c)}
+                      >
+                        {editingId === c.id ? (
+                          <>
+                            <td className="px-6 py-3" onClick={(e) => e.stopPropagation()}>
+                              <input className="input !py-1.5 !text-sm w-full" value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} autoFocus />
+                            </td>
+                            <td className="px-6 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                              <div className="flex items-center gap-2 justify-end">
+                                <button onClick={() => handleSaveEdit(c.id)} className="p-2 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/10 rounded-xl"><Check className="w-5 h-5" /></button>
+                                <button onClick={() => setEditingId(null)} className="p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-dark-700 rounded-xl"><X className="w-5 h-5" /></button>
+                              </div>
+                            </td>
+                          </>
+                        ) : (
+                          <>
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-3">
+                                <span className="font-bold text-slate-800 dark:text-white text-lg">{c.name}</span>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 text-right">
+                              <div className="flex items-center gap-2 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button onClick={() => handleStartEdit(c)} className="p-2 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-xl"><Edit2 className="w-4 h-4" /></button>
+                                {currentUser?.role === 'Admin' && (
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); if (confirm('Delete ledger and all history?')) deleteLedgerCategory(c.id); }}
+                                    className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         )}
@@ -522,10 +522,10 @@ export default function LedgerPage() {
         <Modal title={editingEntity ? `Edit Entry — ${cat?.name}` : `Add Entry — ${cat?.name}`} onClose={closeForm}>
           <form onSubmit={handleSubmit} className="space-y-3">
             <div className="bg-slate-50 dark:bg-dark-800/50 p-3 rounded-xl border border-slate-200 dark:border-dark-700/50 mb-4 text-center">
-               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Generated Invoice No</p>
-               <p className="text-lg font-black text-primary-600 dark:text-primary-400 leading-none">
-                 {editingEntity ? editingEntity.billNo : `LDG-${String(nextLedgerNo).padStart(2, '0')}`}
-               </p>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Generated Invoice No</p>
+              <p className="text-lg font-black text-primary-600 dark:text-primary-400 leading-none">
+                {editingEntity ? editingEntity.billNo : `LDG-${String(nextLedgerNo).padStart(2, '0')}`}
+              </p>
             </div>
             <div><label className="label">Date *</label><input type="date" className="input" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required /></div>
             <div><label className="label">Description</label><input className="input" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Transaction details" /></div>

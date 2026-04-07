@@ -332,7 +332,7 @@ export default function AssetPage() {
                           ) : paged.map((e, i) => (
                             <tr key={e.id} className="group">
                               <td className="text-[11px] font-bold text-slate-400 border-r border-slate-300 dark:border-dark-700/50 text-center">{(page - 1) * perPage + i + 1}</td>
-                              <td className="whitespace-nowrap text-[11px] font-black text-slate-900 dark:text-white uppercase tracking-tighter">{e.billNo}</td>
+                              <td className="whitespace-nowrap text-[11px] font-medium text-slate-900 dark:text-white uppercase tracking-tighter">{e.billNo}</td>
                               <td className="whitespace-nowrap text-[11px] font-medium uppercase tracking-tighter text-slate-500 dark:text-dark-400">{formatDate(e.date)}</td>
                               <td className="text-black dark:text-white font-medium text-[13px]">{e.description || '—'}</td>
                               <td className="amount !text-emerald-600 dark:!text-emerald-400">{e.debit ? formatCurrency(e.debit) : '—'}</td>

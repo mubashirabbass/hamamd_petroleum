@@ -1,19 +1,18 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { Wallet, Plus, Trash2, Eye, Edit2, Search, Check, X, FileText, Settings, UserPlus, Printer } from 'lucide-react';
+﻿import React, { useState, useMemo, useEffect } from 'react';
+import { DollarSign, Plus, Trash2, Eye, Edit2, Search, Check, X, FileText, Settings, UserPlus } from 'lucide-react';
 import { useStore } from '../store/useStore';
-import { formatCurrency, formatDate, today, paginate, filterByStartDate, cn, startOfMonth, startOfYear } from '../lib/utils';
+import { formatCurrency, formatDate, today, paginate, filterByStartDate, cn } from '../lib/utils';
 import { useToast } from '../components/ui/Toast';
 import SearchBar from '../components/ui/SearchBar';
 import Pagination from '../components/ui/Pagination';
 import Modal from '../components/ui/Modal';
 import TransactionReceiptModal from '../components/modals/TransactionReceiptModal';
-import PrintReportModal from '../components/modals/PrintReportModal';
 
-// const PER_PAGE = 40; // Replaced by state
+const PER_PAGE = 10;
 
 export default function ExpensePage() {
   const { 
-    expenseCategories, expenseEntries, nextExpenseNo, 
+    expenseCategories, expenseEntries, 
     addExpenseCategory, updateExpenseCategory, deleteExpenseCategory, 
     addExpenseEntry, deleteExpenseEntry, settings, currentUser, updateExpenseEntry 
   } = useStore();
@@ -22,14 +21,12 @@ export default function ExpensePage() {
   const [activeTab, setActiveTab] = useState<'database' | 'register' | 'manage'>('database');
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
   const [showEntryForm, setShowEntryForm] = useState(false);
-  const [showReport, setShowReport] = useState(false);
   
   // Registration Form State
   const [newName, setNewName] = useState('');
 
   // Management State
   const [manageSearch, setManageSearch] = useState('');
-  const [sidebarSearch, setSidebarSearch] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ name: '' });
 
@@ -40,8 +37,7 @@ export default function ExpensePage() {
   const [page, setPage] = useState(1);
   const [editingEntity, setEditingEntity] = useState<any>(null);
   const [viewingEntity, setViewingEntity] = useState<any>(null);
-  const [perPage, setPerPage] = useState(40);
-  const [form, setForm] = useState({ date: today(), details: '', amount: '' });
+  const [form, setForm] = useState({ date: today(), description: '', amount: '' });
   
   useEffect(() => {
     if (!selectedCat && expenseCategories.length > 0) {
@@ -52,8 +48,8 @@ export default function ExpensePage() {
   const cat = expenseCategories.find((c) => c.id === selectedCat);
 
   const filteredSidebar = useMemo(() =>
-    expenseCategories.filter((c) => !sidebarSearch || c.name.toLowerCase().includes(sidebarSearch.toLowerCase())),
-    [expenseCategories, sidebarSearch]
+    expenseCategories.filter((c) => !search || c.name.toLowerCase().includes(search.toLowerCase())),
+    [expenseCategories, search]
   );
 
   const filteredManage = useMemo(() =>
@@ -66,71 +62,60 @@ export default function ExpensePage() {
     return filterByStartDate(expenseEntries, settings.startDate)
       .filter((e) => e.categoryId === selectedCat)
       .filter((e) => {
-        const matchesSearch = !search || e.details.toLowerCase().includes(search.toLowerCase()) || e.date.includes(search);
+        const matchesSearch = !search || e.details?.toLowerCase().includes(search.toLowerCase()) || e.date.includes(search);
         const matchesFrom = !fromDate || e.date >= fromDate;
         const matchesTo   = !toDate   || e.date <= toDate;
         return matchesSearch && matchesFrom && matchesTo;
       });
   }, [expenseEntries, settings.startDate, selectedCat, search, fromDate, toDate]);
 
-  const paged = paginate(catEntries, page, perPage);
-
-  const pageTotals = paged.reduce((s, e) => s + (e.amount || 0), 0);
+  const paged = paginate(catEntries, page, PER_PAGE);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedCat || !form.date || !form.amount) { toast('Fill required fields', 'error'); return; }
     
     const amount = parseFloat(form.amount) || 0;
-    const payload = { categoryId: selectedCat, date: form.date, details: form.details, amount };
+    const payload = { categoryId: selectedCat, date: form.date, details: form.description, amount };
     
     if (editingEntity) {
       updateExpenseEntry(editingEntity.id, payload);
       toast('Entry updated', 'success');
-      closeForm(); // Close after edit
     } else {
       addExpenseEntry(payload);
       toast('Entry added', 'success');
-      resetFormForNext(); // Stay open after add
     }
-  };
-
-  const resetFormForNext = () => {
-    setEditingEntity(null);
-    setForm(prev => ({ ...prev, details: '', amount: '' }));
+    closeForm();
   };
 
   const closeForm = () => {
     setShowEntryForm(false);
     setEditingEntity(null);
-    setForm({ date: today(), details: '', amount: '' });
+    setForm({ date: today(), description: '', amount: '' });
   };
 
   const handleEdit = (e: any) => {
     setEditingEntity(e);
     setForm({
       date: e.date,
-      details: e.details || '',
-      amount: e.amount.toString(),
+      description: e.details || '',
+      amount: e.amount ? e.amount.toString() : '',
     });
     setShowEntryForm(true);
   };
 
-  const totals = catEntries.reduce((s, e) => s + e.amount, 0);
+  const totals = useMemo(() => ({
+    amount: catEntries.reduce((s, e) => s + e.amount, 0),
+  }), [catEntries]);
+
+
 
   const handleAddCategory = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newName.trim()) return;
-
-    const normalized = newName.trim().toLowerCase();
-    if (expenseCategories.some(c => c.name.toLowerCase() === normalized)) {
-      toast('An expense category with this name already exists!', 'error');
-      return;
-    }
-
     addExpenseCategory(newName.trim());
     setNewName('');
-    toast('Account registered successfully', 'success');
+    toast('Category registered successfully', 'success');
     setActiveTab('database');
   };
 
@@ -141,21 +126,13 @@ export default function ExpensePage() {
 
   const handleSaveEdit = (id: string) => {
     if (!editForm.name.trim()) return;
-
-    const normalized = editForm.name.trim().toLowerCase();
-    if (expenseCategories.some(c => c.id !== id && c.name.toLowerCase() === normalized)) {
-      toast('Another expense category already has this name!', 'error');
-      return;
-    }
-
     updateExpenseCategory(id, editForm.name.trim());
     setEditingId(null);
-    toast('Account details updated', 'success');
+    toast('Category details updated', 'success');
   };
 
   return (
     <div className="animate-fade-in space-y-6 flex flex-col h-full min-h-[calc(100vh-4rem)]">
-      {/* Parallel Horizontal Tabs */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex bg-slate-100 dark:bg-dark-800 p-1 rounded-2xl border border-slate-200 dark:border-dark-700/50 w-full md:w-auto">
           <button 
@@ -167,7 +144,7 @@ export default function ExpensePage() {
                 : "text-slate-500 hover:text-slate-800 dark:hover:text-white"
             )}
           >
-            <Wallet className="w-4 h-4" /> Expense Register
+            <DollarSign className="w-4 h-4" /> Business Expenses
           </button>
           <button 
             onClick={() => setActiveTab('register')}
@@ -194,12 +171,6 @@ export default function ExpensePage() {
         </div>
         {activeTab === 'database' && cat && (
           <div className="flex gap-2">
-            <button 
-              onClick={() => setShowReport(true)} 
-              className="px-4 py-2 bg-slate-100 dark:bg-dark-700 text-slate-700 dark:text-dark-200 rounded-lg hover:bg-slate-200 dark:hover:bg-dark-600 transition-colors font-bold text-sm flex items-center gap-2 border border-slate-200 dark:border-dark-700"
-            >
-              <Printer className="w-4 h-4" /> Print Report
-            </button>
             <button onClick={() => { closeForm(); setShowEntryForm(true); }} className="btn-primary !bg-red-600 hover:opacity-90 flex items-center gap-2">
               <Plus className="w-4 h-4" /> New Entry
             </button>
@@ -212,20 +183,20 @@ export default function ExpensePage() {
           <>
             <div className="w-64 flex-shrink-0 flex flex-col h-full bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700/50 rounded-2xl overflow-hidden shadow-sm">
                <div className="p-3 bg-slate-50/50 dark:bg-dark-800/30 border-b border-slate-100 dark:border-dark-700/30 flex items-center justify-between">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Categories</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Expenses</p>
                 <span className="text-[10px] font-bold text-slate-300">{filteredSidebar.length}</span>
               </div>
               <div className="p-2 border-b border-slate-100 dark:border-dark-700/30">
-                <SearchBar value={sidebarSearch} onChange={setSidebarSearch} placeholder="Search Expense..." fullWidth={true} className="!py-1.5 !text-[11px]" />
+                <SearchBar value={search} onChange={setSearch} placeholder="Search Expense..." fullWidth={true} className="!py-1.5 !text-[11px]" />
               </div>
               <div className="smart-scroll flex-1 p-2 space-y-1">
                 {filteredSidebar.length === 0 ? (
-                  <div className="p-8 text-center text-xs text-slate-400 italic">No Categories found</div>
+                  <div className="p-8 text-center text-xs text-slate-400 italic">No Expenses found</div>
                 ) : (
                   filteredSidebar.map((c) => (
                     <div
                       key={c.id}
-                      onClick={() => { setSelectedCat(c.id); setSidebarSearch(''); setSearch(''); setPage(1); }}
+                      onClick={() => { setSelectedCat(c.id); setSearch(''); setPage(1); }}
                       className={cn(
                         'group flex items-center justify-between px-3 py-3 rounded-xl cursor-pointer text-xs font-black transition-all duration-200 border border-transparent',
                         selectedCat === c.id 
@@ -249,79 +220,53 @@ export default function ExpensePage() {
                   <div className="flex items-center justify-between mb-5 animate-in slide-in-from-bottom duration-350">
                     <div className="flex items-center gap-4">
                       <div className="w-14 h-14 rounded-2xl bg-red-600/10 dark:bg-red-600/20 flex items-center justify-center">
-                        <Wallet className="w-8 h-8 text-red-600 dark:text-red-600" />
+                        <DollarSign className="w-8 h-8 text-red-600 dark:text-red-600" />
                       </div>
                       <div>
                         <h1 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
-                          {cat.name} Expenses
+                          {cat.name} Expense
                         </h1>
                       </div>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 animate-in slide-in-from-bottom duration-350 delay-75">
-                    <div className="glass p-6 rounded-2xl border-l-4 border-slate-400 shadow-sm">
-                      <p className="text-[10px] font-black text-slate-400 dark:text-dark-500 uppercase tracking-widest mb-1">Total Records</p>
-                      <p className="text-3xl font-black text-slate-800 dark:text-white">{catEntries.length}</p>
-                    </div>
-                    <div className="glass p-6 rounded-2xl border-l-4 border-red-600 shadow-sm">
-                      <p className="text-[10px] font-black text-slate-400 dark:text-dark-500 uppercase tracking-widest mb-1">Total Spending (₨)</p>
-                      <p className="text-3xl font-black text-red-600 tabular-nums">₨ {formatCurrency(totals)}</p>
+                  <div className="grid grid-cols-1 mb-6 animate-in slide-in-from-bottom duration-350 delay-75">
+                    <div className="glass p-5 rounded-2xl border-l-4 border-red-600 shadow-sm">
+                      <p className="text-[10px] font-black text-slate-400 dark:text-dark-500 uppercase tracking-widest mb-1">Total Expense Volume</p>
+                      <p className="text-2xl font-black text-red-600 dark:text-red-400 tabular-nums">Γé¿ {formatCurrency(totals.amount)}</p>
                     </div>
                   </div>
 
                   <div className="glass rounded-2xl overflow-hidden border border-slate-200 dark:border-dark-700/50 animate-in slide-in-from-bottom duration-350 delay-150">
                     <div className="flex flex-col md:flex-row md:items-center justify-between p-4 gap-4 border-b border-slate-200 dark:border-dark-700/50 bg-white/30 dark:bg-dark-800/30">
                       <div className="flex-1 min-w-0"><SearchBar value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search transactions..." /></div>
-                      <div className="flex items-center flex-wrap gap-2">
-                        <div className="flex items-center bg-slate-100 dark:bg-dark-800 p-1 rounded-xl border border-slate-200 dark:border-dark-700/50 mr-2">
-                          <button onClick={() => { setFromDate(today()); setToDate(today()); setPage(1); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-dark-400 hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all">Today</button>
-                          <button onClick={() => { setFromDate(startOfMonth()); setToDate(today()); setPage(1); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-dark-400 hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all border-l border-slate-200 dark:border-dark-700/50">This Month</button>
-                          <button onClick={() => { setFromDate(startOfYear()); setToDate(today()); setPage(1); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-dark-400 hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all border-l border-slate-200 dark:border-dark-700/50">This Year</button>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <input type="date" className="input !py-1 !px-2 !w-32 !text-xs" value={fromDate} onChange={(e) => { setFromDate(e.target.value); setPage(1); }} />
-                          <span className="text-slate-400">→</span>
-                          <input type="date" className="input !py-1 !px-2 !w-32 !text-xs" value={toDate} onChange={(e) => { setToDate(e.target.value); setPage(1); }} />
-                        </div>
-                        {(fromDate || toDate) && (
-                          <button onClick={() => { setFromDate(''); setToDate(''); setPage(1); }} className="px-3 py-1.5 text-[10px] font-black uppercase tracking-tighter text-red-600 bg-red-50 dark:bg-red-900/20 rounded-lg hover:bg-red-100 transition-all border border-red-200 dark:border-red-800/30">Clear</button>
-                        )}
+                      <div className="flex items-center gap-2">
+                        <input type="date" className="input !py-1 !px-2 !w-32 !text-xs" value={fromDate} onChange={(e) => { setFromDate(e.target.value); setPage(1); }} />
+                        <span className="text-slate-400">ΓåÆ</span>
+                        <input type="date" className="input !py-1 !px-2 !w-32 !text-xs" value={toDate} onChange={(e) => { setToDate(e.target.value); setPage(1); }} />
                       </div>
                     </div>
                     <div className="overflow-x-auto smart-scroll">
                       <table className="table-excel">
                         <thead>
                           <tr className="table-header">
-                            <th className="px-4 py-3 text-left w-12 border-r border-slate-300 dark:border-dark-700/50">S.No</th>
-                            <th className="px-4 py-3 text-left w-24">Inv No</th>
                             <th className="px-4 py-3 text-left">Date</th>
-                            <th className="px-4 py-3 text-left">Details</th>
+                            <th className="px-4 py-3 text-left">Description</th>
                             <th className="px-4 py-3 text-right">Amount</th>
                             <th className="px-4 py-3 w-20"></th>
                           </tr>
                         </thead>
                         <tbody>
                           {paged.length === 0 ? (
-                            <tr><td colSpan={6} className="text-center text-slate-400 py-12 italic">No transactions found</td></tr>
-                          ) : paged.map((e, i) => (
+                            <tr><td colSpan={4} className="text-center text-slate-400 py-12 italic">No transactions found</td></tr>
+                          ) : paged.map((e) => (
                             <tr key={e.id} className="group">
-                              <td className="text-[11px] font-bold text-slate-400 border-r border-slate-300 dark:border-dark-700/50 text-center">{(page - 1) * perPage + i + 1}</td>
-                              <td className="whitespace-nowrap text-[11px] font-medium text-slate-900 dark:text-white uppercase tracking-tighter">{e.billNo}</td>
                               <td className="whitespace-nowrap text-[11px] font-medium uppercase tracking-tighter text-slate-500 dark:text-dark-400">{formatDate(e.date)}</td>
-                              <td className="text-black dark:text-white font-medium text-[13px]">{e.details || '—'}</td>
-                              <td className="amount !text-red-600 dark:!text-red-400">₨ {formatCurrency(e.amount)}</td>
+                              <td className="text-black dark:text-white font-medium text-[13px]">{e.details || 'ΓÇö'}</td>
+                              <td className="amount !text-red-600 dark:!text-red-400">Γé¿ {formatCurrency(e.amount)}</td>
                               <td className="text-right">
                                 <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <button 
-                                    onClick={() => setViewingEntity(e)} 
-                                    className="flex items-center gap-1.5 px-2 py-0.5 text-[9px] font-black uppercase tracking-tighter text-red-600 dark:text-red-400 bg-red-50/50 dark:bg-red-900/20 border border-red-200/50 dark:border-red-800/30 rounded hover:bg-red-100 dark:hover:bg-red-800/40 transition-all font-serif" 
-                                    title="Quick Print Invoice"
-                                  >
-                                    <Printer className="w-3 h-3" />
-                                    <span>PRINT</span>
-                                  </button>
-                                  <button onClick={() => setViewingEntity(e)} className="p-1 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded transition-colors" title="View Details">
+                                  <button onClick={() => setViewingEntity(e)} className="p-1 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded transition-colors">
                                     <Eye className="w-3.5 h-3.5" />
                                   </button>
                                   {currentUser?.role === 'Admin' && (
@@ -339,33 +284,15 @@ export default function ExpensePage() {
                             </tr>
                           ))}
                         </tbody>
-                        <tfoot className="border-t-2 border-slate-200 dark:border-dark-700 bg-slate-50/50 dark:bg-dark-900/50 font-black text-black">
-                          <tr className="font-black text-black dark:text-white">
-                            <td colSpan={4} className="px-4 py-3 text-right uppercase tracking-widest text-[11px] italic font-black text-black">Page Total</td>
-                            <td className="px-4 py-3 text-right text-black font-black text-sm">₨ {formatCurrency(pageTotals)}</td>
-                            <td colSpan={1}></td>
-                          </tr>
-                          <tr className="font-black text-black dark:text-white bg-slate-200/50 border-t border-slate-300">
-                            <td colSpan={4} className="px-4 py-4 text-right uppercase tracking-widest text-xs text-black font-black">Grand Total</td>
-                            <td className="px-4 py-4 text-right text-black font-black text-lg">₨ {formatCurrency(totals)}</td>
-                            <td colSpan={1}></td>
-                          </tr>
-                        </tfoot>
                       </table>
                     </div>
-                    <Pagination 
-                      page={page} 
-                      total={catEntries.length} 
-                      perPage={perPage} 
-                      onChange={setPage} 
-                      onPerPageChange={(v) => { setPerPage(v); setPage(1); }}
-                    />
+                    <Pagination page={page} total={catEntries.length} perPage={PER_PAGE} onChange={setPage} />
                   </div>
                 </>
               ) : (
                 <div className="flex flex-col items-center justify-center h-[50vh] text-slate-400 opacity-40">
-                  <Wallet className="w-16 h-16 mb-4" />
-                  <p className="font-medium font-bold">Select an account to view statement</p>
+                  <DollarSign className="w-16 h-16 mb-4" />
+                  <p className="font-medium font-bold">Select a category to view statement</p>
                 </div>
               )}
             </div>
@@ -378,8 +305,8 @@ export default function ExpensePage() {
                   <Plus className="w-7 h-7 text-red-600" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">New Expense Category</h2>
-                  <p className="text-sm text-slate-500 font-medium">Create a new category in your Expense database</p>
+                  <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">New Category Registration</h2>
+                  <p className="text-sm text-slate-500 font-medium">Create a new entry in your Expense database</p>
                 </div>
               </div>
 
@@ -391,7 +318,7 @@ export default function ExpensePage() {
                       <FileText className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                       <input 
                         className="input !pl-12 !py-4 !text-lg !font-bold" 
-                        placeholder="e.g. Electricity, Staff Salary, Rent, etc." 
+                        placeholder="e.g. Utility Bills, Travel, etc." 
                         value={newName} 
                         onChange={e => setNewName(e.target.value)} 
                         required 
@@ -411,7 +338,6 @@ export default function ExpensePage() {
             </div>
           </div>
         ) : (
-          /* Manage View */
           <div className="flex-1 animate-in slide-in-from-right duration-300 flex flex-col gap-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/50 dark:bg-dark-900/50 p-6 rounded-2xl border border-slate-200 dark:border-dark-700/50 shadow-sm mt-4">
                 <div className="relative flex-1">
@@ -468,7 +394,7 @@ export default function ExpensePage() {
                                      <button onClick={() => handleStartEdit(c)} className="p-2 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-xl"><Edit2 className="w-4 h-4" /></button>
                                      {currentUser?.role === 'Admin' && (
                                        <button 
-                                         onClick={(e) => { e.stopPropagation(); if(confirm('Delete category and all history?')) deleteExpenseCategory(c.id); }} 
+                                         onClick={(e) => { e.stopPropagation(); if(confirm('Delete account and all history?')) deleteExpenseCategory(c.id); }} 
                                          className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl"
                                        >
                                          <Trash2 className="w-4 h-4" />
@@ -489,17 +415,11 @@ export default function ExpensePage() {
       </div>
 
       {showEntryForm && (
-        <Modal title={editingEntity ? `Edit Entry — ${cat?.name}` : `Add Entry — ${cat?.name}`} onClose={closeForm}>
+        <Modal title={editingEntity ? `Edit Entry ΓÇö ${cat?.name}` : `Add Entry ΓÇö ${cat?.name}`} onClose={closeForm}>
           <form onSubmit={handleSubmit} className="space-y-3">
-            <div className="bg-slate-50 dark:bg-dark-800/50 p-3 rounded-xl border border-slate-200 dark:border-dark-700/50 mb-4 text-center">
-               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Generated Invoice No</p>
-               <p className="text-lg font-black text-red-600 dark:text-red-400 leading-none">
-                 {editingEntity ? editingEntity.billNo : `EXP-${String(nextExpenseNo).padStart(2, '0')}`}
-               </p>
-            </div>
             <div><label className="label">Date *</label><input type="date" className="input" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required /></div>
-            <div><label className="label">Details</label><input className="input" value={form.details} onChange={(e) => setForm({ ...form, details: e.target.value })} placeholder="Expense details" /></div>
-            <div><label className="label">Amount (₨) *</label><input type="number" step="0.01" className="input" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} required /></div>
+            <div><label className="label">Amount (Γé¿) *</label><input type="number" step="0.01" className="input" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} required /></div>
+            <div><label className="label">Details</label><textarea className="input" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Transaction details" rows={3}></textarea></div>
             <div className="flex justify-end gap-2 pt-2">
               <button type="button" onClick={closeForm} className="btn-secondary">Cancel</button>
               <button type="submit" className="btn-primary !bg-red-600"><Plus className="w-4 h-4" />{editingEntity ? 'Update' : 'Add'} Entry</button>
@@ -513,15 +433,6 @@ export default function ExpensePage() {
           entity={viewingEntity}
           type="expense"
           onClose={() => setViewingEntity(null)}
-        />
-      )}
-
-      {showReport && (
-        <PrintReportModal
-          data={catEntries}
-          type="expense"
-          title={`${cat?.name} Expense Report`}
-          onClose={() => setShowReport(false)}
         />
       )}
     </div>

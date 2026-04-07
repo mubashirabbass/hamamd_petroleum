@@ -43,7 +43,7 @@ export default function PurchasePage() {
       .filter((p) => {
         const matchesSearch = !search || p.details.toLowerCase().includes(search.toLowerCase()) || p.date.includes(search);
         const matchesFrom = !fromDate || p.date >= fromDate;
-        const matchesTo   = !toDate   || p.date <= toDate;
+        const matchesTo = !toDate || p.date <= toDate;
         return matchesSearch && matchesFrom && matchesTo;
       });
   }, [purchases, settings.startDate, fuelType, search, fromDate, toDate]);
@@ -53,7 +53,7 @@ export default function PurchasePage() {
   // Auto-calc amount and total
   const handleRateQty = (f: typeof form) => {
     const rate = parseFloat(f.rate) || 0;
-    const qty  = parseFloat(f.quantity) || 0;
+    const qty = parseFloat(f.quantity) || 0;
     const carr = parseFloat(f.carriage) || 0;
     const amount = rate * qty;
     const totalAmount = amount + carr;
@@ -156,7 +156,7 @@ export default function PurchasePage() {
           <div className="px-3 py-2">
             <h2 className="text-[10px] font-black text-slate-400 dark:text-dark-500 uppercase tracking-[0.2em]">Fuel Types</h2>
           </div>
-          
+
           {(['HSD', 'PMG'] as FuelType[]).map((t) => (
             <div
               key={t}
@@ -164,8 +164,8 @@ export default function PurchasePage() {
               className={fuelType === t ? 'category-item-active' : 'category-item-inactive'}
             >
               <div className="flex items-center gap-2.5 min-w-0">
-                 <span className={`w-1.5 h-1.5 rounded-full ${fuelType === t ? 'bg-primary-600 animate-pulse' : 'bg-slate-300 dark:bg-dark-600'}`}></span>
-                 <span className="truncate">{t} Purchases</span>
+                <span className={`w-1.5 h-1.5 rounded-full ${fuelType === t ? 'bg-primary-600 animate-pulse' : 'bg-slate-300 dark:bg-dark-600'}`}></span>
+                <span className="truncate">{t} Purchases</span>
               </div>
             </div>
           ))}
@@ -179,11 +179,11 @@ export default function PurchasePage() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="col-span-2">
                   <label className="label">Invoice ID (Auto)</label>
-                    <input 
-                      className="input bg-slate-50 dark:bg-dark-750 font-medium text-slate-900 dark:text-white cursor-not-allowed" 
-                      value={editingEntity ? editingEntity.billNo : `PUR-${String(nextPurchaseNo).padStart(2, '0')}`} 
-                      readOnly 
-                    />
+                  <input 
+                    className="input bg-slate-50 dark:bg-dark-750 font-medium text-slate-900 dark:text-white cursor-not-allowed" 
+                    value={editingEntity ? editingEntity.billNo : `PUR-${String(nextPurchaseNo).padStart(2, '0')}`} 
+                    readOnly 
+                  />
                 </div>
                 <div><label className="label">Date *</label><input type="date" className="input" value={form.date} onChange={(e) => set('date', e.target.value)} required /></div>
                 <div><label className="label">Details / Supplier Info</label><input className="input" value={form.details} onChange={(e) => set('details', e.target.value)} placeholder="e.g. PSO Main Depot" /></div>
@@ -231,14 +231,14 @@ export default function PurchasePage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button 
-              onClick={() => setShowReport(true)} 
+            <button
+              onClick={() => setShowReport(true)}
               className="px-4 py-2 bg-slate-100 dark:bg-dark-700 text-slate-700 dark:text-dark-200 rounded-lg hover:bg-slate-200 dark:hover:bg-dark-600 transition-colors font-bold text-sm flex items-center gap-2"
             >
               <Printer className="w-4 h-4" /> Print Report
             </button>
-            <button 
-              onClick={() => { closeForm(); setShowForm(true); }} 
+            <button
+              onClick={() => { closeForm(); setShowForm(true); }}
               className="btn-primary !bg-blue-600 hover:!bg-blue-500 flex items-center gap-2 shadow-lg shadow-blue-600/10"
             >
               <Plus className="w-4 h-4" /> New Entry
@@ -246,29 +246,29 @@ export default function PurchasePage() {
           </div>
         </div>
 
-         <div className="glass rounded-xl overflow-hidden">
-           {/* Toolbar */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between p-4 gap-4 border-b border-slate-200 dark:border-dark-700/50">
-              <div className="flex-1 min-w-0"><SearchBar value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search transactions..." /></div>
-              <div className="flex items-center flex-wrap gap-2">
-                <div className="flex items-center bg-slate-100 dark:bg-dark-800 p-1 rounded-xl border border-slate-200 dark:border-dark-700/50 mr-2">
-                  <button onClick={() => { setFromDate(today()); setToDate(today()); setPage(1); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-dark-400 hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all">Today</button>
-                  <button onClick={() => { setFromDate(startOfMonth()); setToDate(today()); setPage(1); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-dark-400 hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all border-l border-slate-200 dark:border-dark-700/50">This Month</button>
-                  <button onClick={() => { setFromDate(startOfYear()); setToDate(today()); setPage(1); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-dark-400 hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all border-l border-slate-200 dark:border-dark-700/50">This Year</button>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold text-slate-400 dark:text-dark-500 uppercase">From</span>
-                  <input type="date" className="input !py-1 !px-2 !w-32 !text-xs" value={fromDate} onChange={(e) => { setFromDate(e.target.value); setPage(1); }} />
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold text-slate-400 dark:text-dark-500 uppercase">To</span>
-                  <input type="date" className="input !py-1 !px-2 !w-32 !text-xs" value={toDate} onChange={(e) => { setToDate(e.target.value); setPage(1); }} />
-                </div>
-                {(fromDate || toDate) && (
-                  <button onClick={() => { setFromDate(''); setToDate(''); setPage(1); }} className="px-3 py-1.5 text-[10px] font-black uppercase tracking-tighter text-red-600 bg-red-50 dark:bg-red-900/20 rounded-lg hover:bg-red-100 transition-all border border-red-200 dark:border-red-800/30">Clear</button>
-                )}
+        <div className="glass rounded-xl overflow-hidden">
+          {/* Toolbar */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between p-4 gap-4 border-b border-slate-200 dark:border-dark-700/50">
+            <div className="flex-1 min-w-0"><SearchBar value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search transactions..." /></div>
+            <div className="flex items-center flex-wrap gap-2">
+              <div className="flex items-center bg-slate-100 dark:bg-dark-800 p-1 rounded-xl border border-slate-200 dark:border-dark-700/50 mr-2">
+                <button onClick={() => { setFromDate(today()); setToDate(today()); setPage(1); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-dark-400 hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all">Today</button>
+                <button onClick={() => { setFromDate(startOfMonth()); setToDate(today()); setPage(1); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-dark-400 hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all border-l border-slate-200 dark:border-dark-700/50">This Month</button>
+                <button onClick={() => { setFromDate(startOfYear()); setToDate(today()); setPage(1); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-dark-400 hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all border-l border-slate-200 dark:border-dark-700/50">This Year</button>
               </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold text-slate-400 dark:text-dark-500 uppercase">From</span>
+                <input type="date" className="input !py-1 !px-2 !w-32 !text-xs" value={fromDate} onChange={(e) => { setFromDate(e.target.value); setPage(1); }} />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold text-slate-400 dark:text-dark-500 uppercase">To</span>
+                <input type="date" className="input !py-1 !px-2 !w-32 !text-xs" value={toDate} onChange={(e) => { setToDate(e.target.value); setPage(1); }} />
+              </div>
+              {(fromDate || toDate) && (
+                <button onClick={() => { setFromDate(''); setToDate(''); setPage(1); }} className="px-3 py-1.5 text-[10px] font-black uppercase tracking-tighter text-red-600 bg-red-50 dark:bg-red-900/20 rounded-lg hover:bg-red-100 transition-all border border-red-200 dark:border-red-800/30">Clear</button>
+              )}
             </div>
+          </div>
 
           {/* Table */}
           <div className="overflow-x-auto">
@@ -282,8 +282,8 @@ export default function PurchasePage() {
                 <th className="table-cell text-right">Qty (L)</th>
                 <th className="table-cell text-right">Carriage</th>
                 <th className="table-cell text-right">Amount</th>
-                <th className="table-cell text-right">Total</th>
-                <th className="table-cell"></th>
+                <th className="table-cell text-right font-black">Total</th>
+                <th className="table-cell w-20"></th>
               </tr></thead>
               <tbody>
                 {paged.length === 0 ? (
@@ -301,9 +301,9 @@ export default function PurchasePage() {
                     <td className="table-cell text-right font-semibold text-slate-900 dark:text-white">₨ {formatCurrency(p.totalAmount)}</td>
                     <td className="table-cell text-right">
                       <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button 
-                          onClick={() => setViewingEntity(p)} 
-                          className="flex items-center gap-1.5 px-2 py-0.5 text-[9px] font-black uppercase tracking-tighter text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/20 border border-blue-200/50 dark:border-emerald-800/30 rounded hover:bg-blue-100 dark:hover:bg-blue-800/40 transition-all" 
+                        <button
+                          onClick={() => setViewingEntity(p)}
+                          className="flex items-center gap-1.5 px-2 py-0.5 text-[9px] font-black uppercase tracking-tighter text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/20 border border-blue-200/50 dark:border-emerald-800/30 rounded hover:bg-blue-100 dark:hover:bg-blue-800/40 transition-all"
                           title={`Print ${p.billNo || 'Bill'}`}
                         >
                           <Printer className="w-3 h-3" />
@@ -324,7 +324,7 @@ export default function PurchasePage() {
                         )}
                       </div>
                     </td>
-                 </tr>
+                  </tr>
                 ))}
               </tbody>
               {paged.length > 0 && (
@@ -349,9 +349,9 @@ export default function PurchasePage() {
               )}
             </table>
           </div>
-           <Pagination page={page} total={filtered.length} perPage={PER_PAGE} onChange={setPage} />
-         </div>
-       </div>
-     </div>
+          <Pagination page={page} total={filtered.length} perPage={PER_PAGE} onChange={setPage} />
+        </div>
+      </div>
+    </div>
   );
 }
