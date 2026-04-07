@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -7,21 +7,21 @@
 @layer base {
   * { box-sizing: border-box; }
   html { 
-    font-family: 'Inter', system-ui, sans-serif; 
+    font-family: 'Outfit', 'Segoe UI', system-ui, sans-serif; 
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    text-rendering: optimizeLegibility;
+    text-rendering: geometricPrecision;
   }
 
   /* ── Light theme (default) ───────────────────────────── */
   body {
-    @apply bg-slate-100 text-slate-900 antialiased font-medium;
+    @apply bg-slate-100 text-slate-900 antialiased font-normal;
     min-height: 100vh;
   }
 
   /* ── Dark theme ──────────────────────────────────────── */
   html.dark body {
-    @apply bg-dark-950 text-white;
+    @apply bg-dark-950 text-slate-100;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -111,22 +111,33 @@
 
   /* ── Table ──────────────────────────────────────────── */
   .table-header {
-    @apply bg-slate-50/80 text-slate-900 text-[10px] font-black uppercase tracking-widest;
-  }
-  html.dark .table-header {
-    @apply bg-dark-800/80 text-dark-400;
+    @apply bg-slate-200 dark:bg-dark-800 text-black dark:text-white text-[11px] font-semibold uppercase tracking-widest border-b border-slate-400 dark:border-dark-600;
   }
   .table-row {
-    @apply border-b border-slate-100 hover:bg-slate-50 transition-colors;
+    @apply border-b border-slate-300 dark:border-dark-700/50 hover:bg-slate-200/30 transition-colors;
   }
-  html.dark .table-row {
-    @apply border-dark-700/40 hover:bg-dark-800/40;
+  .table-row:nth-child(even) {
+    @apply bg-slate-100/50 dark:bg-dark-800/40;
   }
   .table-cell {
-    @apply px-5 py-4 text-sm text-slate-900 font-medium;
+    @apply px-4 py-2.5 text-[13px] text-black dark:text-white font-normal border-r border-slate-300 dark:border-dark-700/50 last:border-r-0 tracking-tight;
   }
-  html.dark .table-cell {
-    @apply text-dark-100;
+
+  .table-excel {
+    @apply border-collapse border border-slate-400 dark:border-dark-600 w-full shadow-sm bg-white dark:bg-dark-900;
+  }
+  .table-excel th {
+    @apply bg-slate-200 dark:bg-dark-800 px-4 py-2 text-[11px] font-semibold text-black dark:text-white uppercase tracking-wider border border-slate-400 dark:border-dark-600;
+  }
+  .table-excel td {
+    @apply border border-slate-300 dark:border-dark-700/50 px-4 py-2 text-[13px] text-black dark:text-white font-normal leading-tight;
+  }
+  .table-excel tr:nth-child(even) {
+    @apply bg-slate-50 dark:bg-dark-800/60;
+  }
+  .table-excel .amount {
+    @apply text-right font-medium text-[14px];
+    font-family: 'JetBrains Mono', monospace;
   }
 
   /* ── Badges ─────────────────────────────────────────── */

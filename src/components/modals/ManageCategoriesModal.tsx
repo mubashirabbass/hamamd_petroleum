@@ -99,9 +99,13 @@ export default function ManageCategoriesModal({
             ) : (
               <div className="divide-y divide-slate-100 dark:divide-dark-700/50">
                 {filtered.map((cat) => (
-                  <div key={cat.id} className="p-3 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-dark-800/50 transition-colors group">
+                  <div 
+                    key={cat.id} 
+                    className="p-3 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-dark-800/50 transition-colors group cursor-pointer"
+                    onClick={() => handleStartEdit(cat)}
+                  >
                     {editingId === cat.id ? (
-                      <div className="flex items-center gap-2 flex-1 mr-4">
+                      <div className="flex items-center gap-2 flex-1 mr-4" onClick={(e) => e.stopPropagation()}>
                         <input
                           autoFocus
                           className="input !py-1 !px-2 !text-sm"
@@ -131,7 +135,7 @@ export default function ManageCategoriesModal({
                           {currentUser?.role === 'Admin' && (
                             <button 
                               type="button"
-                              onClick={() => { if(confirm('Delete category and all its entries?')) { onDelete(cat.id); toast('Category deleted', 'warning'); } }} 
+                              onClick={(e) => { e.stopPropagation(); if(confirm('Delete category and all its entries?')) { onDelete(cat.id); toast('Category deleted', 'warning'); } }} 
                               className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-md transition-all"
                               title="Delete"
                             >

@@ -246,34 +246,36 @@ export default function ExpensePage() {
                         <input type="date" className="input !py-1 !px-2 !w-32 !text-xs" value={toDate} onChange={(e) => { setToDate(e.target.value); setPage(1); }} />
                       </div>
                     </div>
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead><tr className="table-header">
-                          <th className="table-cell text-left">Date</th>
-                          <th className="table-cell text-left">Description</th>
-                          <th className="table-cell text-right">Amount</th>
-                          <th className="table-cell"></th>
-                        </tr></thead>
-                        <tbody className="divide-y divide-slate-50 dark:divide-dark-800/50">
+                    <div className="overflow-x-auto smart-scroll">
+                      <table className="table-excel">
+                        <thead>
+                          <tr className="table-header">
+                            <th className="px-4 py-3 text-left">Date</th>
+                            <th className="px-4 py-3 text-left">Description</th>
+                            <th className="px-4 py-3 text-right">Amount</th>
+                            <th className="px-4 py-3 w-20"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
                           {paged.length === 0 ? (
-                            <tr><td colSpan={4} className="table-cell text-center text-slate-400 dark:text-dark-500 py-12 italic">No transactions found</td></tr>
+                            <tr><td colSpan={4} className="text-center text-slate-400 py-12 italic">No transactions found</td></tr>
                           ) : paged.map((e) => (
-                            <tr key={e.id} className="table-row group">
-                              <td className="table-cell whitespace-nowrap text-[10px] font-black text-slate-500 uppercase tracking-tighter">{formatDate(e.date)}</td>
-                              <td className="table-cell text-slate-900 dark:text-dark-100 font-black">{e.details || '—'}</td>
-                              <td className="table-cell text-right text-red-600 dark:text-red-400 font-mono text-sm font-black">₨ {formatCurrency(e.amount)}</td>
-                              <td className="table-cell text-right">
+                            <tr key={e.id} className="group">
+                              <td className="whitespace-nowrap text-[11px] font-medium uppercase tracking-tighter text-slate-500 dark:text-dark-400">{formatDate(e.date)}</td>
+                              <td className="text-black dark:text-white font-medium text-[13px]">{e.details || '—'}</td>
+                              <td className="amount !text-red-600 dark:!text-red-400">₨ {formatCurrency(e.amount)}</td>
+                              <td className="text-right">
                                 <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <button onClick={() => setViewingEntity(e)} className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg transition-colors" title="View Details">
-                                    <Eye className="w-4 h-4" />
+                                  <button onClick={() => setViewingEntity(e)} className="p-1 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded transition-colors">
+                                    <Eye className="w-3.5 h-3.5" />
                                   </button>
                                   {currentUser?.role === 'Admin' && (
                                     <>
-                                      <button onClick={() => handleEdit(e)} className="p-1.5 text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-lg transition-colors" title="Edit Entry">
-                                        <Edit2 className="w-4 h-4" />
+                                      <button onClick={() => handleEdit(e)} className="p-1 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded transition-colors">
+                                        <Edit2 className="w-3.5 h-3.5" />
                                       </button>
-                                      <button onClick={() => { if(confirm('Delete entry?')) { deleteExpenseEntry(e.id); toast('Entry deleted', 'warning'); } }} className="text-slate-300 hover:text-red-600 transition-colors p-1.5 hover:bg-red-50 rounded-lg">
-                                        <Trash2 className="w-4 h-4" />
+                                      <button onClick={() => { if(confirm('Delete entry?')) { deleteExpenseEntry(e.id); toast('Entry deleted', 'warning'); } }} className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors">
+                                        <Trash2 className="w-3.5 h-3.5" />
                                       </button>
                                     </>
                                   )}
@@ -363,13 +365,17 @@ export default function ExpensePage() {
                       {filteredManage.length === 0 ? (
                         <tr><td colSpan={2} className="px-6 py-20 text-center text-slate-400 italic font-medium">No results found</td></tr>
                       ) : filteredManage.map((c) => (
-                        <tr key={c.id} className="hover:bg-slate-50 dark:hover:bg-dark-800/20 transition-all group">
+                        <tr 
+                          key={c.id} 
+                          className="hover:bg-slate-50 dark:hover:bg-dark-800/20 transition-all group cursor-pointer"
+                          onClick={() => handleStartEdit(c)}
+                        >
                            {editingId === c.id ? (
                              <>
-                               <td className="px-6 py-3">
+                               <td className="px-6 py-3" onClick={(e) => e.stopPropagation()}>
                                   <input className="input !py-1.5 !text-sm w-full" value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} autoFocus />
                                </td>
-                               <td className="px-6 py-3 text-right">
+                               <td className="px-6 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                                   <div className="flex items-center gap-2 justify-end">
                                      <button onClick={() => handleSaveEdit(c.id)} className="p-2 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/10 rounded-xl"><Check className="w-5 h-5" /></button>
                                      <button onClick={() => setEditingId(null)} className="p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-dark-700 rounded-xl"><X className="w-5 h-5" /></button>
@@ -387,7 +393,12 @@ export default function ExpensePage() {
                                   <div className="flex items-center gap-2 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
                                      <button onClick={() => handleStartEdit(c)} className="p-2 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-xl"><Edit2 className="w-4 h-4" /></button>
                                      {currentUser?.role === 'Admin' && (
-                                       <button onClick={() => { if(confirm('Delete account and all history?')) deleteExpenseCategory(c.id); }} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl"><Trash2 className="w-4 h-4" /></button>
+                                       <button 
+                                         onClick={(e) => { e.stopPropagation(); if(confirm('Delete account and all history?')) deleteExpenseCategory(c.id); }} 
+                                         className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl"
+                                       >
+                                         <Trash2 className="w-4 h-4" />
+                                       </button>
                                      )}
                                   </div>
                                </td>
