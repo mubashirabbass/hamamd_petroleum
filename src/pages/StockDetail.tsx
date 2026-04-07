@@ -13,10 +13,6 @@ export default function StockDetailPage() {
   const fuelType = type?.toUpperCase() as FuelType;
   const { purchases, sales, settings } = useStore();
 
-  if (fuelType !== 'HSD' && fuelType !== 'PMG') {
-    return <Navigate to="/stock" replace />;
-  }
-
   const [showHistory, setShowHistory] = useState(false);
   const [search, setSearch] = useState('');
   const [fromDate, setFromDate] = useState('');
@@ -44,6 +40,10 @@ export default function StockDetailPage() {
 
     return withBal.reverse();
   }, [purchases, sales, fuelType, settings.startDate]);
+
+  if (fuelType !== 'HSD' && fuelType !== 'PMG') {
+    return <Navigate to="/stock" replace />;
+  }
 
   const filtered = history.filter((h) => {
     const matchesSearch = !search || h.details.toLowerCase().includes(search.toLowerCase()) || h.date.includes(search);
@@ -115,9 +115,9 @@ export default function StockDetailPage() {
             <thead>
               <tr className="table-header">
                 <th className="table-cell">Fuel Type</th>
-                <th className="table-cell text-right whitespace-nowrap">Period Inbound (L)</th>
-                <th className="table-cell text-right whitespace-nowrap">Period Outbound (L)</th>
-                <th className="table-cell text-right whitespace-nowrap bg-primary-500/10 font-bold">Total Physical Stock (L)</th>
+                <th className="table-cell text-right whitespace-nowrap">Purchase</th>
+                <th className="table-cell text-right whitespace-nowrap">Sale</th>
+                <th className="table-cell text-right whitespace-nowrap bg-primary-500/10 font-bold">Remaining</th>
               </tr>
             </thead>
             <tbody>

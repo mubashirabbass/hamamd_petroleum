@@ -3,7 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, ShoppingCart, TrendingUp, BookOpen,
   DollarSign, Package, AlertTriangle, BarChart3, Users,
-  ChevronLeft, ChevronRight, Fuel, Sun, Moon, Settings, LogOut, User
+  ChevronLeft, ChevronRight, Fuel, Sun, Moon, Settings, LogOut
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useTheme } from '../../contexts/ThemeContext';

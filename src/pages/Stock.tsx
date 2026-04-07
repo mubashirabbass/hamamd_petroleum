@@ -63,7 +63,7 @@ export default function StockPage() {
 
             {/* Current Stock Highlight */}
             <div className="px-6 py-5 border-b border-slate-200 dark:border-dark-700/50">
-              <p className="text-xs text-slate-500 dark:text-dark-500 uppercase tracking-wide mb-1">Current Stock</p>
+              <p className="text-xs text-slate-500 dark:text-dark-500 uppercase tracking-wide mb-1">Remaining</p>
               <div className="flex items-end gap-2">
                 <p className={`text-4xl font-black ${color === 'amber' ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>{data.current.toLocaleString(undefined, { maximumFractionDigits: 2 })}</p>
                 <p className="text-slate-500 dark:text-dark-400 text-sm mb-1">Litres</p>
@@ -78,7 +78,7 @@ export default function StockPage() {
               <div className="px-6 py-4">
                 <div className="flex items-center gap-2 mb-1">
                   <TrendingUp className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                  <p className="text-xs text-slate-500 dark:text-dark-500 uppercase tracking-wide">Purchased</p>
+                  <p className="text-xs text-slate-500 dark:text-dark-500 uppercase tracking-wide">Purchase</p>
                 </div>
                 <p className="text-slate-900 dark:text-white font-semibold">{data.totalPurchased.toLocaleString(undefined, { maximumFractionDigits: 2 })} L</p>
                 <p className="text-xs text-slate-500 dark:text-dark-500 mt-0.5">₨ {formatCurrency(data.purchaseValue)}</p>
@@ -86,7 +86,7 @@ export default function StockPage() {
               <div className="px-6 py-4">
                 <div className="flex items-center gap-2 mb-1">
                   <TrendingDown className="w-4 h-4 text-red-600 dark:text-red-400" />
-                  <p className="text-xs text-slate-500 dark:text-dark-500 uppercase tracking-wide">Sold</p>
+                  <p className="text-xs text-slate-500 dark:text-dark-500 uppercase tracking-wide">Sale</p>
                 </div>
                 <p className="text-slate-900 dark:text-white font-semibold">{data.totalSold.toLocaleString(undefined, { maximumFractionDigits: 2 })} L</p>
                 <p className="text-xs text-slate-500 dark:text-dark-500 mt-0.5">₨ {formatCurrency(data.saleValue)}</p>
@@ -120,9 +120,9 @@ export default function StockPage() {
             <thead>
               <tr className="table-header">
                 <th className="table-cell">Fuel Type</th>
-                <th className="table-cell text-right whitespace-nowrap">Total Purchased (L)</th>
-                <th className="table-cell text-right whitespace-nowrap">Total Sold (L)</th>
-                <th className="table-cell text-right whitespace-nowrap bg-primary-500/5 dark:bg-primary-600/10">Current Stock (L)</th>
+                <th className="table-cell text-right whitespace-nowrap">Purchase (L)</th>
+                <th className="table-cell text-right whitespace-nowrap">Sale (L)</th>
+                <th className="table-cell text-right whitespace-nowrap bg-primary-500/5 dark:bg-primary-600/10">Remaining (L)</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-dark-700/50">
@@ -155,8 +155,8 @@ export default function StockPage() {
         <h3 className="text-sm font-semibold text-slate-500 dark:text-dark-300 mb-4">Combined Summary</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
-            { label: 'Total Purchased (L)', value: `${(stock.HSD.totalPurchased + stock.PMG.totalPurchased).toFixed(2)} L`, color: 'text-emerald-600 dark:text-emerald-400' },
-            { label: 'Total Sold (L)', value: `${(stock.HSD.totalSold + stock.PMG.totalSold).toFixed(2)} L`, color: 'text-red-600 dark:text-red-400' },
+            { label: 'Purchase (L)', value: `${(stock.HSD.totalPurchased + stock.PMG.totalPurchased).toFixed(2)} L`, color: 'text-emerald-600 dark:text-emerald-400' },
+            { label: 'Sale (L)', value: `${(stock.HSD.totalSold + stock.PMG.totalSold).toFixed(2)} L`, color: 'text-red-600 dark:text-red-400' },
             { label: 'Total Purchase Value', value: `₨ ${formatCurrency(stock.HSD.purchaseValue + stock.PMG.purchaseValue)}`, color: 'text-primary-600 dark:text-primary-400' },
             { label: 'Total Sale Value', value: `₨ ${formatCurrency(stock.HSD.saleValue + stock.PMG.saleValue)}`, color: 'text-slate-900 dark:text-white' },
           ].map((s) => (
