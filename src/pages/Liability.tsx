@@ -305,13 +305,13 @@ export default function LiabilityPage() {
 
             <div className="flex-1 glass rounded-2xl overflow-hidden border border-slate-200 dark:border-dark-700/50 shadow-sm flex flex-col animate-in slide-in-from-bottom duration-500 delay-200">
               <div className="overflow-y-auto smart-scroll flex-1">
-                <table className="w-full border-collapse">
-                  <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-dark-800 border-b border-slate-200 dark:border-dark-700/50">
-                    <tr>
-                      <th className="px-6 py-4 text-left text-[10px] font-black uppercase text-slate-400 tracking-widest">Liability Account</th>
-                      <th className="px-6 py-4 text-right text-[10px] font-black uppercase text-slate-400 tracking-widest">Current Liability</th>
-                      <th className="px-6 py-4 text-center text-[10px] font-black uppercase text-slate-400 tracking-widest">Entries</th>
-                      <th className="px-6 py-4 w-20"></th>
+                <table className="w-full">
+                  <thead>
+                    <tr className="table-header text-[10px]">
+                      <th className="table-cell text-left">Liability Account</th>
+                      <th className="table-cell text-right">Current Liability</th>
+                      <th className="table-cell text-center">Entries</th>
+                      <th className="table-cell w-10"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-dark-800/50 bg-white/50 dark:bg-dark-900/50">
@@ -343,30 +343,28 @@ export default function LiabilityPage() {
                               <tr 
                                 key={cat.id}
                                 onClick={() => { setSelectedCat(cat.id); setActiveTab('database'); }}
-                                className="hover:bg-orange-50/30 dark:hover:bg-orange-900/10 transition-all cursor-pointer group"
+                                className="table-row hover:bg-slate-50 dark:hover:bg-dark-800/50 transition-all cursor-pointer group text-[11px]"
                               >
-                                <td className="px-6 py-4">
+                                <td className="table-cell">
                                   <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-lg bg-orange-600/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                      <Landmark className="w-4 h-4 text-orange-600" />
+                                    <div className="w-6 h-6 rounded-md bg-orange-600/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                      <Landmark className="w-3 h-3 text-orange-600" />
                                     </div>
                                     <span className="font-bold text-slate-700 dark:text-slate-200">{cat.name}</span>
                                   </div>
                                 </td>
-                                <td className="px-6 py-4 text-right">
-                                  <span className={cn("text-lg font-black tabular-nums", balance >= 0 ? "text-slate-900 dark:text-white" : "text-red-500")}>
+                                <td className="table-cell text-right">
+                                  <span className={cn("text-sm font-black tabular-nums", balance >= 0 ? "text-slate-900 dark:text-white" : "text-red-500")}>
                                     ₨ {formatCurrency(Math.abs(balance))}
-                                    <span className="text-[10px] ml-1 font-bold text-slate-400 uppercase tracking-tighter">{balance >= 0 ? 'DR' : 'CR'}</span>
+                                    <span className="text-[9px] ml-1 font-bold text-slate-400 uppercase tracking-tighter">{balance >= 0 ? 'DR' : 'CR'}</span>
                                   </span>
                                 </td>
-                                <td className="px-6 py-4 text-center">
-                                  <span className="px-3 py-1 bg-slate-100 dark:bg-dark-800 rounded-full text-[10px] font-black text-slate-500 uppercase">
-                                    {entries.length} Entries
-                                  </span>
+                                <td className="table-cell text-center">
+                                  <span className="font-bold text-slate-500 uppercase tracking-widest">{entries.length} Entries</span>
                                 </td>
-                                <td className="px-6 py-4 text-right">
-                                  <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-dark-800 flex items-center justify-center group-hover:bg-orange-600 group-hover:text-white transition-all">
-                                    <ArrowRight className="w-4 h-4" />
+                                <td className="table-cell text-right">
+                                  <div className="w-6 h-6 rounded-md bg-slate-100 dark:bg-dark-800 flex items-center justify-center group-hover:bg-orange-600 group-hover:text-white transition-all float-right">
+                                    <ArrowRight className="w-3 h-3" />
                                   </div>
                                 </td>
                               </tr>
@@ -374,14 +372,14 @@ export default function LiabilityPage() {
                           })}
                           
                           {filtered.length > 0 && (
-                            <tr className="bg-orange-50/30 dark:bg-orange-900/10 font-black sticky bottom-0 border-t-2 border-orange-200 dark:border-orange-800/30 backdrop-blur-md">
-                              <td className="px-6 py-5 text-left text-xs uppercase tracking-widest text-orange-600 font-black">Totals for visible accounts</td>
-                              <td className={cn("px-6 py-5 text-right text-xl tabular-nums font-black", grandSum >= 0 ? "text-slate-900 dark:text-white" : "text-red-600")}>
+                            <tr className="font-black text-black dark:text-white bg-slate-100/50 dark:bg-dark-800/50 border-t-2 border-slate-300 dark:border-dark-700">
+                              <td className="table-cell text-left text-xs uppercase tracking-widest text-slate-600 dark:text-slate-400 font-black">Totals for visible accounts</td>
+                              <td className={cn("table-cell text-right text-sm tabular-nums font-black", grandSum >= 0 ? "text-slate-900 dark:text-white" : "text-red-600")}>
                                 ₨ {formatCurrency(Math.abs(grandSum))}
-                                <span className="text-xs ml-2 uppercase">{grandSum >= 0 ? 'DR' : 'CR'}</span>
+                                <span className="text-[10px] ml-1 uppercase text-slate-400">{grandSum >= 0 ? 'DR' : 'CR'}</span>
                               </td>
-                              <td className="px-6 py-5 text-center text-xs text-slate-500 uppercase tracking-widest font-black">{grandCount} Total Entries</td>
-                              <td></td>
+                              <td className="table-cell text-center text-xs text-slate-500 font-black">{grandCount} Total</td>
+                              <td className="table-cell"></td>
                             </tr>
                           )}
                         </>

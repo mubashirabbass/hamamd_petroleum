@@ -276,39 +276,39 @@ export default function StockPage() {
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
-                      <tr className="bg-slate-50/50 dark:bg-dark-800/50 border-b border-slate-100 dark:border-dark-800">
-                        <th className="px-6 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Date</th>
-                        <th className="px-6 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Details</th>
-                        <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">In (L)</th>
-                        <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">Out (L)</th>
-                        <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-100/30 dark:bg-dark-800/30">Balance</th>
+                      <tr className="table-header text-[10px]">
+                        <th className="table-cell text-left">Date</th>
+                        <th className="table-cell text-left">Details</th>
+                        <th className="table-cell text-right">In (L)</th>
+                        <th className="table-cell text-right">Out (L)</th>
+                        <th className="table-cell text-right">Balance</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50 dark:divide-dark-800/50">
                       {pagedHistory.length === 0 ? (
                         <tr><td colSpan={6} className="py-20 text-center text-xs text-slate-400 italic">No records found for this period</td></tr>
                       ) : pagedHistory.map((h, i) => (
-                        <tr key={h.id + (h.date) + i} className="hover:bg-slate-50/50 dark:hover:bg-dark-800/30 transition-colors group">
-                          <td className="px-6 py-4 whitespace-nowrap text-[12px] font-bold text-slate-600 dark:text-dark-300">{formatDate(h.date)}</td>
-                          <td className="px-6 py-4 text-[12px] font-black text-slate-900 dark:text-white truncate max-w-[180px]">{h.details || 'Daily Sale'}</td>
-                          <td className="px-6 py-4 text-right text-emerald-600 font-mono text-xs font-bold">{h.qtyIn ? `+${h.qtyIn.toLocaleString()}` : '—'}</td>
-                          <td className="px-6 py-4 text-right text-red-600 font-mono text-xs font-bold">{h.qtyOut ? `-${h.qtyOut.toLocaleString()}` : '—'}</td>
-                          <td className="px-6 py-4 text-right font-black text-slate-900 dark:text-white tabular-nums bg-slate-50/30 dark:bg-dark-800/30">{h.balance.toLocaleString()} L</td>
+                        <tr key={h.id + (h.date) + i} className="table-row group hover:bg-slate-50 dark:hover:bg-dark-800/50 text-[11px]">
+                          <td className="table-cell whitespace-nowrap font-bold text-slate-600 dark:text-dark-300">{formatDate(h.date)}</td>
+                          <td className="table-cell font-black text-slate-900 dark:text-white truncate max-w-[180px]">{h.details || 'Daily Sale'}</td>
+                          <td className="table-cell text-right text-emerald-600 font-mono font-bold">{h.qtyIn ? `+${h.qtyIn.toLocaleString()}` : '—'}</td>
+                          <td className="table-cell text-right text-red-600 font-mono font-bold">{h.qtyOut ? `-${h.qtyOut.toLocaleString()}` : '—'}</td>
+                          <td className="table-cell text-right font-black text-slate-900 dark:text-white tabular-nums">{h.balance.toLocaleString()} L</td>
                         </tr>
                       ))}
                     </tbody>
-                    <tfoot className="border-t-2 border-slate-100 dark:border-dark-800 font-black text-black">
-                      <tr className="font-black text-black">
-                        <td colSpan={3} className="px-6 py-4 text-right uppercase tracking-widest text-[11px] italic font-black text-black">Page Total</td>
-                        <td className="px-6 py-4 text-right text-black font-black font-mono">+{pageTotals.qtyIn.toLocaleString()} L</td>
-                        <td className="px-6 py-4 text-right text-black font-black font-mono">-{pageTotals.qtyOut.toLocaleString()} L</td>
-                        <td></td>
+                    <tfoot>
+                      <tr className="font-black text-black dark:text-white bg-slate-100/50 dark:bg-dark-800/50 border-t-[3px] border-black dark:border-black">
+                        <td colSpan={2} className="table-cell text-right text-xs uppercase tracking-widest text-slate-600 dark:text-slate-400 font-black italic">Page Total</td>
+                        <td className="table-cell text-right font-black font-mono">+{pageTotals.qtyIn.toLocaleString()} L</td>
+                        <td className="table-cell text-right font-black font-mono">-{pageTotals.qtyOut.toLocaleString()} L</td>
+                        <td className="table-cell"></td>
                       </tr>
-                      <tr className="font-black text-black bg-slate-200/50 border-t border-slate-300">
-                        <td colSpan={3} className="px-6 py-5 text-right uppercase tracking-widest text-xs text-black font-black">Grand Total</td>
-                        <td className="px-6 py-5 text-right text-black font-black font-mono">+{detailTotals.in.toLocaleString()} L</td>
-                        <td className="px-6 py-5 text-right text-black font-black font-mono">-{detailTotals.out.toLocaleString()} L</td>
-                        <td></td>
+                      <tr className="font-black text-black dark:text-white bg-slate-200/50 dark:bg-dark-700/50 border-t border-slate-300 dark:border-dark-600">
+                        <td colSpan={2} className="table-cell text-right text-xs uppercase tracking-widest text-slate-600 dark:text-slate-300 font-black">Grand Total</td>
+                        <td className="table-cell text-right font-black font-mono">+{detailTotals.in.toLocaleString()} L</td>
+                        <td className="table-cell text-right font-black font-mono">-{detailTotals.out.toLocaleString()} L</td>
+                        <td className="table-cell"></td>
                       </tr>
                     </tfoot>
                   </table>

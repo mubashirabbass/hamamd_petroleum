@@ -282,7 +282,7 @@ export default function SalePage() {
                 ))}
               </tbody>
               {paged.length > 0 && (
-                <tfoot className="border-t-2 border-slate-200 dark:border-dark-700 bg-slate-50/50 dark:bg-dark-900/50">
+                <tfoot className="border-t-[3px] border-black dark:border-black bg-slate-50/50 dark:bg-dark-900/50">
                   <tr className="font-black text-black dark:text-white">
                     <td colSpan={3} className="px-4 py-3 text-right uppercase tracking-widest text-[11px] italic font-black text-black">Page Total</td>
                     <td className="px-4 py-3 text-right text-black font-black text-sm">{pageTotals.qty.toLocaleString()} L</td>
