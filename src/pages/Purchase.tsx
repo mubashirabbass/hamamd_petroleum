@@ -25,6 +25,7 @@ export default function PurchasePage() {
   const [editingEntity, setEditingEntity] = useState<any>(null);
   const [viewingEntity, setViewingEntity] = useState<any>(null);
   const [showReport, setShowReport] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Form state
   const [form, setForm] = useState({
@@ -65,7 +66,7 @@ export default function PurchasePage() {
     setForm(handleRateQty(updated));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.date || !form.rate || !form.quantity) {
       toast('Please fill required fields', 'error');
@@ -82,14 +83,22 @@ export default function PurchasePage() {
       totalAmount: parseFloat(form.totalAmount),
     };
 
-    if (editingEntity) {
-      useStore.getState().updatePurchase(editingEntity.id, payload);
-      toast('Purchase updated successfully', 'success');
-      closeForm(); // Close after edit
-    } else {
-      addPurchase(payload);
-      toast(`${fuelType} purchase added successfully`, 'success');
-      resetFormForNext(); // Stay open after add
+    setIsSaving(true);
+    try {
+      if (editingEntity) {
+        await useStore.getState().updatePurchase(editingEntity.id, payload);
+        toast('Purchase updated successfully', 'success');
+        closeForm(); // Close after edit
+      } else {
+        await addPurchase(payload);
+        toast(`${fuelType} purchase added successfully`, 'success');
+        resetFormForNext(); // Stay open after add
+      }
+    } catch (err: any) {
+      console.error('Save error:', err);
+      toast(`Failed to save: ${err.message || 'Unknown error'}`, 'error');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -194,8 +203,15 @@ export default function PurchasePage() {
                 <div className="col-span-2"><label className="label">Total Amount</label><input className="input bg-slate-50 dark:bg-dark-750 text-primary-600 dark:text-primary-400 font-semibold cursor-not-allowed" value={form.totalAmount} readOnly /></div>
               </div>
               <div className="flex justify-end gap-2 pt-2">
-                <button type="button" onClick={closeForm} className="btn-secondary">Cancel</button>
-                <button type="submit" className="btn-primary"><Plus className="w-4 h-4" /> {editingEntity ? 'Update Purchase' : 'Add Purchase'}</button>
+                <button type="button" onClick={closeForm} className="btn-secondary" disabled={isSaving}>Cancel</button>
+                <button type="submit" className="btn-primary flex items-center gap-2" disabled={isSaving}>
+                  {isSaving ? (
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <Plus className="w-4 h-4" />
+                  )}
+                  {editingEntity ? 'Update Purchase' : 'Add Purchase'}
+                </button>
               </div>
             </form>
           </Modal>

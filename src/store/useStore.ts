@@ -9,7 +9,8 @@
  *   Windows: %APPDATA%\com.ebs.business\ebs_business.db
  */
 import { create } from 'zustand';
-import { getDB, getAndBumpCounter, loadAllData, setSetting } from '../lib/db';
+import { getDB, getAndBumpCounter, loadAllData, setSetting, runInTransaction } from '../lib/db';
+import { invoke } from '@tauri-apps/api/core';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -115,8 +116,11 @@ export interface Settings {
   startDate:    string;
   softwareName: string;
   hiddenMenus:  string[];
-  users:        User[];
-  zoomLevel:    number;
+  users:               User[];
+  zoomLevel:           number;
+  licenseStartDate:    string;
+  licenseEndDate:      string;
+  authorizedMachineId: string;
 }
 
 // ─── Store Interface ──────────────────────────────────────────────────────────
@@ -125,6 +129,7 @@ interface AppState {
   // ─ DB init ────────────────────────────────────────────────────────────────
   dbReady:          boolean;
   dbError:          string | null;
+  currentMachineId: string | null;
   initializeFromDB: () => Promise<void>;
 
   // ─ Purchase ───────────────────────────────────────────────────────────────
@@ -222,10 +227,15 @@ export const useStore = create<AppState>()((set, get) => ({
   // ── DB Init ─────────────────────────────────────────────────────────────────
   dbReady: false,
   dbError: null,
+  currentMachineId: null,
 
   initializeFromDB: async () => {
     try {
-      const data = await loadAllData();
+      const [data, machineId] = await Promise.all([
+        loadAllData(),
+        invoke<string>('get_machine_id').catch(() => 'UNKNOWN')
+      ]);
+
       set({
         purchases:           data.purchases,
         sales:               data.sales,
@@ -246,12 +256,16 @@ export const useStore = create<AppState>()((set, get) => ({
         nextAssetNo:         data.counters['asset']      ?? 1,
         nextLiabilityNo:     data.counters['liability']  ?? 1,
         nextCustomerNo:      data.counters['customer']   ?? 1,
+        currentMachineId: machineId,
         settings: {
           startDate:    data.settings['startDate']    ?? '',
           softwareName: data.settings['softwareName'] === 'EBS Petroleum' ? 'HRM Filling Station' : (data.settings['softwareName'] || 'HRM Filling Station'),
           hiddenMenus:  JSON.parse(data.settings['hiddenMenus'] ?? '[]'),
           users:        data.users,
           zoomLevel:    parseFloat(data.settings['zoomLevel'] || '1.0'),
+          licenseStartDate:    data.settings['licenseStartDate'] || '',
+          licenseEndDate:      data.settings['licenseEndDate']   || '',
+          authorizedMachineId: data.settings['authorizedMachineId'] || '',
         },
         dbReady: true,
         dbError: null,
@@ -267,28 +281,44 @@ export const useStore = create<AppState>()((set, get) => ({
   nextPurchaseNo: 1,
 
   addPurchase: async (p) => {
-    const db = await getDB();
-    const no = await getAndBumpCounter('purchase');
-    const billNo = `PUR-${String(no).padStart(2, '0')}`;
-    const id = uid();
-    await db.execute(
-      `INSERT INTO purchases (id,bill_no,type,date,details,rate,quantity,carriage,amount,total_amount)
-       VALUES (?,?,?,?,?,?,?,?,?,?)`,
-      [id, billNo, p.type, p.date, p.details, p.rate, p.quantity, p.carriage, p.amount, p.totalAmount]
-    );
-    const entry: Purchase = { ...p, id, billNo };
-    set(s => ({ purchases: [entry, ...s.purchases], nextPurchaseNo: no + 1 }));
+    let entry: Purchase | null = null;
+    let no = 0;
+    try {
+      await runInTransaction(async () => {
+        no = await getAndBumpCounter('purchase');
+        const billNo = `PUR-${String(no).padStart(2, '0')}`;
+        const id = uid();
+        const db = await getDB();
+        await db.execute(
+          `INSERT INTO purchases (id,bill_no,type,date,details,rate,quantity,carriage,amount,total_amount)
+           VALUES (?,?,?,?,?,?,?,?,?,?)`,
+          [id, billNo, p.type, p.date, p.details, p.rate, p.quantity, p.carriage, p.amount, p.totalAmount]
+        );
+        entry = { ...p, id, billNo };
+      });
+      if (entry) {
+        set(s => ({ purchases: [entry!, ...s.purchases], nextPurchaseNo: no + 1 }));
+      }
+    } catch (err) {
+      console.error('[Store] addPurchase failed:', err);
+      throw err;
+    }
   },
 
   updatePurchase: async (id, data) => {
-    const db = await getDB();
-    const current = get().purchases.find(x => x.id === id)!;
-    const updated = { ...current, ...data };
-    await db.execute(
-      `UPDATE purchases SET type=?,date=?,details=?,rate=?,quantity=?,carriage=?,amount=?,total_amount=? WHERE id=?`,
-      [updated.type, updated.date, updated.details, updated.rate, updated.quantity, updated.carriage, updated.amount, updated.totalAmount, id]
-    );
-    set(s => ({ purchases: s.purchases.map(x => x.id === id ? updated : x) }));
+    try {
+      const db = await getDB();
+      const current = get().purchases.find(x => x.id === id)!;
+      const updated = { ...current, ...data };
+      await db.execute(
+        `UPDATE purchases SET type=?,date=?,details=?,rate=?,quantity=?,carriage=?,amount=?,total_amount=? WHERE id=?`,
+        [updated.type, updated.date, updated.details, updated.rate, updated.quantity, updated.carriage, updated.amount, updated.totalAmount, id]
+      );
+      set(s => ({ purchases: s.purchases.map(x => x.id === id ? updated : x) }));
+    } catch (err) {
+      console.error('[Store] updatePurchase failed:', err);
+      throw err;
+    }
   },
 
   deletePurchase: async (id) => {
@@ -302,27 +332,43 @@ export const useStore = create<AppState>()((set, get) => ({
   nextSaleNo: 1,
 
   addSale: async (s) => {
-    const db = await getDB();
-    const no = await getAndBumpCounter('sale');
-    const billNo = `SAL-${String(no).padStart(2, '0')}`;
-    const id = uid();
-    await db.execute(
-      `INSERT INTO sales (id,bill_no,type,date,quantity,rate,amount) VALUES (?,?,?,?,?,?,?)`,
-      [id, billNo, s.type, s.date, s.quantity, s.rate, s.amount]
-    );
-    const entry: Sale = { ...s, id, billNo };
-    set(st => ({ sales: [entry, ...st.sales], nextSaleNo: no + 1 }));
+    let entry: Sale | null = null;
+    let no = 0;
+    try {
+      await runInTransaction(async () => {
+        no = await getAndBumpCounter('sale');
+        const billNo = `SAL-${String(no).padStart(2, '0')}`;
+        const id = uid();
+        const db = await getDB();
+        await db.execute(
+          `INSERT INTO sales (id,bill_no,type,date,quantity,rate,amount) VALUES (?,?,?,?,?,?,?)`,
+          [id, billNo, s.type, s.date, s.quantity, s.rate, s.amount]
+        );
+        entry = { ...s, id, billNo };
+      });
+      if (entry) {
+        set(st => ({ sales: [entry!, ...st.sales], nextSaleNo: no + 1 }));
+      }
+    } catch (err) {
+      console.error('[Store] addSale failed:', err);
+      throw err;
+    }
   },
 
   updateSale: async (id, data) => {
-    const db = await getDB();
-    const current = get().sales.find(x => x.id === id)!;
-    const updated = { ...current, ...data };
-    await db.execute(
-      `UPDATE sales SET type=?,date=?,quantity=?,rate=?,amount=? WHERE id=?`,
-      [updated.type, updated.date, updated.quantity, updated.rate, updated.amount, id]
-    );
-    set(s => ({ sales: s.sales.map(x => x.id === id ? updated : x) }));
+    try {
+      const db = await getDB();
+      const current = get().sales.find(x => x.id === id)!;
+      const updated = { ...current, ...data };
+      await db.execute(
+        `UPDATE sales SET type=?,date=?,quantity=?,rate=?,amount=? WHERE id=?`,
+        [updated.type, updated.date, updated.quantity, updated.rate, updated.amount, id]
+      );
+      set(s => ({ sales: s.sales.map(x => x.id === id ? updated : x) }));
+    } catch (err) {
+      console.error('[Store] updateSale failed:', err);
+      throw err;
+    }
   },
 
   deleteSale: async (id) => {
@@ -348,25 +394,37 @@ export const useStore = create<AppState>()((set, get) => ({
     set(s => ({ ledgerCategories: s.ledgerCategories.map(c => c.id === id ? { ...c, name } : c) }));
   },
   deleteLedgerCategory: async (id) => {
-    const db = await getDB();
-    await db.execute('DELETE FROM ledger_categories WHERE id=?', [id]);
-    await db.execute('DELETE FROM ledger_entries WHERE category_id=?', [id]);
+    await runInTransaction(async (db) => {
+      await db.execute('DELETE FROM ledger_categories WHERE id=?', [id]);
+      await db.execute('DELETE FROM ledger_entries WHERE category_id=?', [id]);
+    });
     set(s => ({
       ledgerCategories: s.ledgerCategories.filter(c => c.id !== id),
       ledgerEntries: s.ledgerEntries.filter(e => e.categoryId !== id),
     }));
   },
   addLedgerEntry: async (e) => {
-    const db = await getDB();
-    const no = await getAndBumpCounter('ledger');
-    const billNo = `LDG-${String(no).padStart(2, '0')}`;
-    const id = uid();
-    await db.execute(
-      `INSERT INTO ledger_entries (id,category_id,bill_no,date,description,debit,credit,balance) VALUES (?,?,?,?,?,?,?,?)`,
-      [id, e.categoryId, billNo, e.date, e.description, e.debit, e.credit, e.balance]
-    );
-    const entry: LedgerEntry = { ...e, id, billNo };
-    set(s => ({ ledgerEntries: [entry, ...s.ledgerEntries], nextLedgerNo: no + 1 }));
+    let entry: LedgerEntry | null = null;
+    let no = 0;
+    try {
+      await runInTransaction(async () => {
+        no = await getAndBumpCounter('ledger');
+        const billNo = `LDG-${String(no).padStart(2, '0')}`;
+        const id = uid();
+        const db = await getDB();
+        await db.execute(
+          `INSERT INTO ledger_entries (id,category_id,bill_no,date,description,debit,credit,balance) VALUES (?,?,?,?,?,?,?,?)`,
+          [id, e.categoryId, billNo, e.date, e.description, e.debit, e.credit, e.balance]
+        );
+        entry = { ...e, id, billNo };
+      });
+      if (entry) {
+        set(s => ({ ledgerEntries: [entry!, ...s.ledgerEntries], nextLedgerNo: no + 1 }));
+      }
+    } catch (err) {
+      console.error('[Store] addLedgerEntry failed:', err);
+      throw err;
+    }
   },
   updateLedgerEntry: async (id, data) => {
     const db = await getDB();
@@ -401,25 +459,37 @@ export const useStore = create<AppState>()((set, get) => ({
     set(s => ({ expenseCategories: s.expenseCategories.map(c => c.id === id ? { ...c, name } : c) }));
   },
   deleteExpenseCategory: async (id) => {
-    const db = await getDB();
-    await db.execute('DELETE FROM expense_categories WHERE id=?', [id]);
-    await db.execute('DELETE FROM expense_entries WHERE category_id=?', [id]);
+    await runInTransaction(async (db) => {
+      await db.execute('DELETE FROM expense_categories WHERE id=?', [id]);
+      await db.execute('DELETE FROM expense_entries WHERE category_id=?', [id]);
+    });
     set(s => ({
       expenseCategories: s.expenseCategories.filter(c => c.id !== id),
       expenseEntries: s.expenseEntries.filter(e => e.categoryId !== id),
     }));
   },
   addExpenseEntry: async (e) => {
-    const db = await getDB();
-    const no = await getAndBumpCounter('expense');
-    const billNo = `EXP-${String(no).padStart(2, '0')}`;
-    const id = uid();
-    await db.execute(
-      `INSERT INTO expense_entries (id,category_id,bill_no,date,details,amount) VALUES (?,?,?,?,?,?)`,
-      [id, e.categoryId, billNo, e.date, e.details, e.amount]
-    );
-    const entry: ExpenseEntry = { ...e, id, billNo };
-    set(s => ({ expenseEntries: [entry, ...s.expenseEntries], nextExpenseNo: no + 1 }));
+    let entry: ExpenseEntry | null = null;
+    let no = 0;
+    try {
+      await runInTransaction(async () => {
+        no = await getAndBumpCounter('expense');
+        const billNo = `EXP-${String(no).padStart(2, '0')}`;
+        const id = uid();
+        const db = await getDB();
+        await db.execute(
+          `INSERT INTO expense_entries (id,category_id,bill_no,date,details,amount) VALUES (?,?,?,?,?,?)`,
+          [id, e.categoryId, billNo, e.date, e.details, e.amount]
+        );
+        entry = { ...e, id, billNo };
+      });
+      if (entry) {
+        set(s => ({ expenseEntries: [entry!, ...s.expenseEntries], nextExpenseNo: no + 1 }));
+      }
+    } catch (err) {
+      console.error('[Store] addExpenseEntry failed:', err);
+      throw err;
+    }
   },
   updateExpenseEntry: async (id, data) => {
     const db = await getDB();
@@ -454,25 +524,37 @@ export const useStore = create<AppState>()((set, get) => ({
     set(s => ({ assetCategories: s.assetCategories.map(c => c.id === id ? { ...c, name } : c) }));
   },
   deleteAssetCategory: async (id) => {
-    const db = await getDB();
-    await db.execute('DELETE FROM asset_categories WHERE id=?', [id]);
-    await db.execute('DELETE FROM asset_entries WHERE category_id=?', [id]);
+    await runInTransaction(async (db) => {
+      await db.execute('DELETE FROM asset_categories WHERE id=?', [id]);
+      await db.execute('DELETE FROM asset_entries WHERE category_id=?', [id]);
+    });
     set(s => ({
       assetCategories: s.assetCategories.filter(c => c.id !== id),
       assetEntries: s.assetEntries.filter(e => e.categoryId !== id),
     }));
   },
   addAssetEntry: async (e) => {
-    const db = await getDB();
-    const no = await getAndBumpCounter('asset');
-    const billNo = `AST-${String(no).padStart(2, '0')}`;
-    const id = uid();
-    await db.execute(
-      `INSERT INTO asset_entries (id,category_id,bill_no,date,description,debit,credit,balance) VALUES (?,?,?,?,?,?,?,?)`,
-      [id, e.categoryId, billNo, e.date, e.description, e.debit, e.credit, e.balance]
-    );
-    const entry: AssetEntry = { ...e, id, billNo };
-    set(s => ({ assetEntries: [entry, ...s.assetEntries], nextAssetNo: no + 1 }));
+    let entry: AssetEntry | null = null;
+    let no = 0;
+    try {
+      await runInTransaction(async () => {
+        no = await getAndBumpCounter('asset');
+        const billNo = `AST-${String(no).padStart(2, '0')}`;
+        const id = uid();
+        const db = await getDB();
+        await db.execute(
+          `INSERT INTO asset_entries (id,category_id,bill_no,date,description,debit,credit,balance) VALUES (?,?,?,?,?,?,?,?)`,
+          [id, e.categoryId, billNo, e.date, e.description, e.debit, e.credit, e.balance]
+        );
+        entry = { ...e, id, billNo };
+      });
+      if (entry) {
+        set(s => ({ assetEntries: [entry!, ...s.assetEntries], nextAssetNo: no + 1 }));
+      }
+    } catch (err) {
+      console.error('[Store] addAssetEntry failed:', err);
+      throw err;
+    }
   },
   updateAssetEntry: async (id, data) => {
     const db = await getDB();
@@ -507,25 +589,37 @@ export const useStore = create<AppState>()((set, get) => ({
     set(s => ({ liabilityCategories: s.liabilityCategories.map(c => c.id === id ? { ...c, name } : c) }));
   },
   deleteLiabilityCategory: async (id) => {
-    const db = await getDB();
-    await db.execute('DELETE FROM liability_categories WHERE id=?', [id]);
-    await db.execute('DELETE FROM liability_entries WHERE category_id=?', [id]);
+    await runInTransaction(async (db) => {
+      await db.execute('DELETE FROM liability_categories WHERE id=?', [id]);
+      await db.execute('DELETE FROM liability_entries WHERE category_id=?', [id]);
+    });
     set(s => ({
       liabilityCategories: s.liabilityCategories.filter(c => c.id !== id),
       liabilityEntries: s.liabilityEntries.filter(e => e.categoryId !== id),
     }));
   },
   addLiabilityEntry: async (e) => {
-    const db = await getDB();
-    const no = await getAndBumpCounter('liability');
-    const billNo = `LIA-${String(no).padStart(2, '0')}`;
-    const id = uid();
-    await db.execute(
-      `INSERT INTO liability_entries (id,category_id,bill_no,date,description,debit,credit,balance) VALUES (?,?,?,?,?,?,?,?)`,
-      [id, e.categoryId, billNo, e.date, e.description, e.debit, e.credit, e.balance]
-    );
-    const entry: LiabilityEntry = { ...e, id, billNo };
-    set(s => ({ liabilityEntries: [entry, ...s.liabilityEntries], nextLiabilityNo: no + 1 }));
+    let entry: LiabilityEntry | null = null;
+    let no = 0;
+    try {
+      await runInTransaction(async () => {
+        no = await getAndBumpCounter('liability');
+        const billNo = `LIA-${String(no).padStart(2, '0')}`;
+        const id = uid();
+        const db = await getDB();
+        await db.execute(
+          `INSERT INTO liability_entries (id,category_id,bill_no,date,description,debit,credit,balance) VALUES (?,?,?,?,?,?,?,?)`,
+          [id, e.categoryId, billNo, e.date, e.description, e.debit, e.credit, e.balance]
+        );
+        entry = { ...e, id, billNo };
+      });
+      if (entry) {
+        set(s => ({ liabilityEntries: [entry!, ...s.liabilityEntries], nextLiabilityNo: no + 1 }));
+      }
+    } catch (err) {
+      console.error('[Store] addLiabilityEntry failed:', err);
+      throw err;
+    }
   },
   updateLiabilityEntry: async (id, data) => {
     const db = await getDB();
@@ -562,25 +656,37 @@ export const useStore = create<AppState>()((set, get) => ({
     set(s => ({ customers: s.customers.map(c => c.id === id ? updated : c) }));
   },
   deleteCustomer: async (id) => {
-    const db = await getDB();
-    await db.execute('DELETE FROM customers WHERE id=?', [id]);
-    await db.execute('DELETE FROM customer_entries WHERE customer_id=?', [id]);
+    await runInTransaction(async (db) => {
+      await db.execute('DELETE FROM customers WHERE id=?', [id]);
+      await db.execute('DELETE FROM customer_entries WHERE customer_id=?', [id]);
+    });
     set(s => ({
       customers: s.customers.filter(c => c.id !== id),
       customerEntries: s.customerEntries.filter(e => e.customerId !== id),
     }));
   },
   addCustomerEntry: async (e) => {
-    const db = await getDB();
-    const no = await getAndBumpCounter('customer');
-    const billNo = `CST-${String(no).padStart(2, '0')}`;
-    const id = uid();
-    await db.execute(
-      `INSERT INTO customer_entries (id,customer_id,bill_no,date,description,debit,credit,balance) VALUES (?,?,?,?,?,?,?,?)`,
-      [id, e.customerId, billNo, e.date, e.description, e.debit, e.credit, e.balance]
-    );
-    const entry: CustomerEntry = { ...e, id, billNo };
-    set(s => ({ customerEntries: [entry, ...s.customerEntries], nextCustomerNo: no + 1 }));
+    let entry: CustomerEntry | null = null;
+    let no = 0;
+    try {
+      await runInTransaction(async () => {
+        no = await getAndBumpCounter('customer');
+        const billNo = `CST-${String(no).padStart(2, '0')}`;
+        const id = uid();
+        const db = await getDB();
+        await db.execute(
+          `INSERT INTO customer_entries (id,customer_id,bill_no,date,description,debit,credit,balance) VALUES (?,?,?,?,?,?,?,?)`,
+          [id, e.customerId, billNo, e.date, e.description, e.debit, e.credit, e.balance]
+        );
+        entry = { ...e, id, billNo };
+      });
+      if (entry) {
+        set(s => ({ customerEntries: [entry!, ...s.customerEntries], nextCustomerNo: no + 1 }));
+      }
+    } catch (err) {
+      console.error('[Store] addCustomerEntry failed:', err);
+      throw err;
+    }
   },
   updateCustomerEntry: async (id, data) => {
     const db = await getDB();
@@ -605,6 +711,9 @@ export const useStore = create<AppState>()((set, get) => ({
     hiddenMenus:  [],
     users:        [],
     zoomLevel:    1.0,
+    licenseStartDate:    '',
+    licenseEndDate:      '',
+    authorizedMachineId: '',
   },
 
   updateSettings: async (updates) => {
@@ -613,7 +722,11 @@ export const useStore = create<AppState>()((set, get) => ({
     if (updates.startDate    !== undefined) await setSetting('startDate',    updates.startDate);
     if (updates.softwareName !== undefined) await setSetting('softwareName', updates.softwareName);
     if (updates.hiddenMenus  !== undefined) await setSetting('hiddenMenus',  JSON.stringify(updates.hiddenMenus));
+    if (updates.licenseStartDate    !== undefined) await setSetting('licenseStartDate',    updates.licenseStartDate);
+    if (updates.licenseEndDate      !== undefined) await setSetting('licenseEndDate',      updates.licenseEndDate);
+    if (updates.authorizedMachineId !== undefined) await setSetting('authorizedMachineId', updates.authorizedMachineId);
     if (updates.zoomLevel    !== undefined) await setSetting('zoomLevel',    String(updates.zoomLevel));
+
     set({ settings: merged });
   },
 
@@ -661,20 +774,22 @@ export const useStore = create<AppState>()((set, get) => ({
 
   // ── Reset All Data ────────────────────────────────────────────────────────────
   resetAllData: async () => {
-    const db = await getDB();
-    const tables = [
-      'purchases', 'sales',
-      'ledger_entries', 'ledger_categories',
-      'expense_entries', 'expense_categories',
-      'asset_entries', 'asset_categories',
-      'liability_entries', 'liability_categories',
-      'customer_entries', 'customers',
-    ];
-    for (const t of tables) await db.execute(`DELETE FROM ${t}`);
-    // Reset counters
-    await db.execute(
-      `UPDATE counters SET value=1 WHERE name IN ('purchase','sale','ledger','expense','asset','liability','customer')`
-    );
+    await runInTransaction(async (db) => {
+      const tables = [
+        'purchases', 'sales',
+        'ledger_entries', 'ledger_categories',
+        'expense_entries', 'expense_categories',
+        'asset_entries', 'asset_categories',
+        'liability_entries', 'liability_categories',
+        'customer_entries', 'customers',
+      ];
+      for (const t of tables) await db.execute(`DELETE FROM ${t}`);
+      // Reset counters
+      await db.execute(
+        `UPDATE counters SET value=1 WHERE name IN ('purchase','sale','ledger','expense','asset','liability','customer')`
+      );
+    });
+
     set({
       purchases: [], sales: [],
       ledgerCategories: [], ledgerEntries: [],

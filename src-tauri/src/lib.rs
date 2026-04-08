@@ -125,6 +125,8 @@ async fn restore_from_zip(zip_path: String, app: tauri::AppHandle) -> Result<(),
             let tmp_path = target_path.with_extension(format!("restoring.{}", ext));
             
             std::fs::write(&tmp_path, &data).map_err(|e| e.to_string())?;
+            // Remove existing file before renaming to avoid "File exists" OS error on Windows
+            let _ = std::fs::remove_file(&target_path);
             std::fs::rename(&tmp_path, &target_path).map_err(|e| e.to_string())?;
 
             if name == "ebs_business.db" { found_db = true; }
@@ -577,6 +579,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_sql::Builder::new().build())
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             // Utilities
             get_app_data_path,
@@ -592,7 +595,30 @@ pub fn run() {
             upload_zip_to_drive,
             list_drive_backups,
             download_drive_backup,
+            get_machine_id,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[tauri::command]
+fn get_machine_id() -> Result<String, String> {
+    use std::process::Command;
+    
+    // On Windows, we use PowerShell to get the MachineGuid which is unique per OS installation
+    let output = Command::new("powershell")
+        .args(&["-Command", "(Get-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Cryptography').MachineGuid"])
+        .output()
+        .map_err(|e| e.to_string())?;
+
+    if !output.status.success() {
+        return Err("Failed to retrieve machine ID".to_string());
+    }
+
+    let guid = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    if guid.is_empty() {
+        return Err("Machine ID is empty".to_string());
+    }
+
+    Ok(guid)
 }

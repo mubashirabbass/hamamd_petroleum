@@ -167,14 +167,25 @@ function BackupPanel() {
     setProgress({ msg: 'Creating local backup ZIP…', active: true });
     try {
       const zipPath = await downloadLocalBackup();
-      // Open the folder so the user can find the file
+      
+      // If the path doesn't contain 'AppData', we successfully saved it to the user's location via dialog
+      if (!zipPath.includes('AppData')) {
+        toast(`Local backup saved to:\n${zipPath}`, 'success');
+        return;
+      }
+
+      // Fallback: Open the folder so the user can find the file
       try {
         const { revealItemInDir } = await import('@tauri-apps/plugin-opener');
         await revealItemInDir(zipPath);
       } catch (_) { /* folder open is best-effort */ }
       toast(`Local backup saved to:\n${zipPath}`, 'success');
     } catch (err: any) {
-      toast(`Local backup failed: ${err?.message ?? err}`, 'error');
+      if (err instanceof Error && err.message === 'Canceled') {
+        toast('Backup was canceled.', 'error');
+      } else {
+        toast(`Local backup failed: ${err?.message ?? err}`, 'error');
+      }
     } finally {
       setProgress({ msg: '', active: false });
     }
@@ -214,6 +225,8 @@ function BackupPanel() {
       setProgress({ msg: 'Restoring database…', active: true });
       const { closeDB } = await import('../lib/db');
       await closeDB();
+      // Release file handlers before replacing the DB
+      await new Promise(resolve => setTimeout(resolve, 500));
       await invoke('restore_from_zip', { zipPath: tempPath });
       toast('Restore complete! Reloading app…', 'success');
       setTimeout(() => window.location.reload(), 1200);
@@ -459,6 +472,31 @@ function BackupPanel() {
               className="flex items-center gap-2 px-4 py-3 rounded-xl bg-white/10 text-white hover:bg-white/20 transition-all text-xs font-black active:scale-90 disabled:opacity-40">
               <HardDrive className="w-4 h-4" /> Local ZIP
             </button>
+            <button
+               onClick={async () => {
+                 try {
+                   const appDir = await invoke<string>('get_app_data_path');
+                   const { revealItemInDir } = await import('@tauri-apps/plugin-opener');
+                   // Create folder if missing before opening
+                   const { mkdir } = await import('@tauri-apps/plugin-fs');
+                   try { await mkdir(`${appDir}\\backups`, { recursive: true }); } catch(_) {}
+                   await revealItemInDir(`${appDir}\\backups`);
+                 } catch (err: any) {
+                   toast('Could not open folder', 'error');
+                 }
+               }}
+               className="flex items-center gap-2 px-4 py-3 rounded-xl bg-slate-800 text-slate-400 hover:bg-slate-700 transition-all text-[10px] font-black uppercase tracking-widest border border-white/5"
+            >
+              Open Backup Folder ↗
+            </button>
+          </div>
+          
+          {/* Recovery Tips */}
+          <div className="mx-6 mb-6 p-4 rounded-xl bg-blue-500/5 border border-blue-500/20 text-[11px] text-blue-300/80 leading-relaxed">
+            <p className="font-black text-blue-400 uppercase tracking-widest mb-1.5 flex items-center gap-2">
+              <AlertCircle className="w-3.5 h-3.5" /> Manual Data Recovery
+            </p>
+            Your backups are standard <b>ZIP</b> files containing a <b>SQLite database</b>. Even without this software, you can open the <code>ebs_business.db</code> file using free tools like <i>"DB Browser for SQLite"</i> to view or export your data to Excel.
           </div>
         </div>
       )}

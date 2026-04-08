@@ -44,6 +44,7 @@ export default function CustomerPage() {
   const [viewingEntity, setViewingEntity] = useState<any>(null);
   const [editingEntity, setEditingEntity] = useState<any>(null);
   const [form, setForm] = useState({ date: today(), description: '', debit: '', credit: '' });
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (!selectedCust && customers.length > 0) {
@@ -140,7 +141,7 @@ export default function CustomerPage() {
     toast('Customer details updated', 'success');
   };
 
-  const handleSubmitEntry = (e: React.FormEvent) => {
+  const handleSubmitEntry = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedCust || !form.date) { toast('Fill required fields', 'error'); return; }
 
@@ -153,14 +154,22 @@ export default function CustomerPage() {
       balance: 0
     };
 
-    if (editingEntity) {
-      updateCustomerEntry(editingEntity.id, payload);
-      toast('Entry updated', 'success');
-      closeEntryForm();
-    } else {
-      addCustomerEntry(payload);
-      toast('Entry added', 'success');
-      resetEntryFormForNext();
+    setIsSaving(true);
+    try {
+      if (editingEntity) {
+        await updateCustomerEntry(editingEntity.id, payload);
+        toast('Entry updated', 'success');
+        closeEntryForm();
+      } else {
+        await addCustomerEntry(payload);
+        toast('Entry added', 'success');
+        resetEntryFormForNext();
+      }
+    } catch (err: any) {
+      console.error('Save error:', err);
+      toast(`Failed to save: ${err.message || 'Unknown error'}`, 'error');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -556,8 +565,15 @@ export default function CustomerPage() {
               <div><label className="label">Credit (₨)</label><input type="number" step="0.01" className="input" value={form.credit} onChange={(e) => setForm({ ...form, credit: e.target.value })} /></div>
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <button type="button" onClick={closeEntryForm} className="btn-secondary">Cancel</button>
-              <button type="submit" className="btn-primary-emerald font-black"><Plus className="w-4 h-4" /> {editingEntity ? 'Update Entry' : 'Add Entry'}</button>
+              <button type="button" onClick={closeEntryForm} className="btn-secondary" disabled={isSaving}>Cancel</button>
+              <button type="submit" className="btn-primary-emerald font-black flex items-center gap-2" disabled={isSaving}>
+                {isSaving ? (
+                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <Plus className="w-4 h-4" />
+                )}
+                {editingEntity ? 'Update Entry' : 'Add Entry'}
+              </button>
             </div>
           </form>
         </Modal>

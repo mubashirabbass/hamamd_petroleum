@@ -120,6 +120,96 @@ export default function DeveloperSettings() {
         </div>
       </section>
 
+      {/* License & Activation */}
+      <section className="bg-white dark:bg-dark-900 rounded-[32px] p-8 border border-slate-200 dark:border-dark-700/50 shadow-sm">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
+            <Shield className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+          </div>
+          <div>
+            <h3 className="text-lg font-black text-slate-900 dark:text-white">License & Activation</h3>
+            <p className="text-xs text-slate-500 font-bold">Control system access and hardware locking</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Hardware Lock */}
+          <div className="space-y-4 p-5 rounded-2xl bg-slate-50 dark:bg-dark-950 border border-slate-100 dark:border-dark-700/50">
+            <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+              Hardware Authorization
+            </h4>
+            <div className="space-y-2">
+              <p className="text-[10px] font-bold text-slate-400 uppercase">Current Machine ID</p>
+              <code className="block p-3 bg-white dark:bg-dark-900 rounded-xl border border-slate-200 dark:border-dark-700/50 text-[11px] font-mono text-blue-600 dark:text-blue-400 break-all">
+                {useStore.getState().currentMachineId || 'Unable to detect'}
+              </code>
+            </div>
+            <div className="space-y-2">
+              <p className="text-[10px] font-bold text-slate-400 uppercase">Authorized Machine ID</p>
+              <code className="block p-3 bg-white dark:bg-dark-900 rounded-xl border border-slate-200 dark:border-dark-700/50 text-[11px] font-mono text-emerald-600 dark:text-emerald-400 break-all">
+                {settings.authorizedMachineId || 'None (Unlocked)'}
+              </code>
+            </div>
+            <button
+              onClick={() => {
+                const currentId = useStore.getState().currentMachineId;
+                if (currentId) {
+                  updateSettings({ authorizedMachineId: currentId });
+                  toast('This PC is now authorized!', 'success');
+                }
+              }}
+              className="w-full py-3 bg-blue-600 text-white rounded-xl text-xs font-black hover:bg-blue-700 transition-all active:scale-95 flex items-center justify-center gap-2"
+            >
+              Authorize This PC
+            </button>
+          </div>
+
+          {/* Time Window */}
+          <div className="space-y-4 p-5 rounded-2xl bg-slate-50 dark:bg-dark-950 border border-slate-100 dark:border-dark-700/50">
+            <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              License Period
+            </h4>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase">Start Date</label>
+                <input
+                  type="date"
+                  className="w-full bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700/50 rounded-xl px-3 py-2 text-xs font-bold focus:ring-2 focus:ring-primary-500 outline-none"
+                  value={settings.licenseStartDate || ''}
+                  onChange={(e) => updateSettings({ licenseStartDate: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase">End Date</label>
+                <input
+                  type="date"
+                  className="w-full bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700/50 rounded-xl px-3 py-2 text-xs font-bold focus:ring-2 focus:ring-primary-500 outline-none"
+                  value={settings.licenseEndDate || ''}
+                  onChange={(e) => updateSettings({ licenseEndDate: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="p-4 rounded-xl bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700/50">
+              <p className="text-[10px] font-bold text-slate-400 uppercase mb-2">License Status</p>
+              {(() => {
+                const now = new Date().toISOString().split('T')[0];
+                const start = settings.licenseStartDate;
+                const end = settings.licenseEndDate;
+                if (!start || !end) return <span className="text-xs font-black text-amber-500">Not Configured</span>;
+                if (now < start) return <span className="text-xs font-black text-blue-500">Not Started Yet</span>;
+                if (now > end) return <span className="text-xs font-black text-red-500">Expired</span>;
+                return <span className="text-xs font-black text-emerald-500">Active</span>;
+              })()}
+            </div>
+            <p className="text-[9px] text-slate-400 leading-tight font-medium">
+              Admin & Staff users will be blocked if the current date is outside this range or if the hardware ID does not match.
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* System Credentials & Users */}
       <section className="bg-white dark:bg-dark-900 rounded-[32px] p-8 border border-slate-200 dark:border-dark-700/50 shadow-sm">
         <div className="flex items-center justify-between mb-6">

@@ -42,6 +42,7 @@ export default function LedgerPage() {
   const [viewingEntity, setViewingEntity] = useState<any>(null);
   const [perPage, setPerPage] = useState(40);
   const [form, setForm] = useState({ date: today(), description: '', debit: '', credit: '' });
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (!selectedCat && ledgerCategories.length > 0) {
@@ -86,7 +87,7 @@ export default function LedgerPage() {
     credit: paged.reduce((s, e) => s + (e.credit || 0), 0),
   }), [paged]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedCat || !form.date) { toast('Fill required fields', 'error'); return; }
 
@@ -94,14 +95,22 @@ export default function LedgerPage() {
     const credit = parseFloat(form.credit) || 0;
     const payload = { categoryId: selectedCat, date: form.date, description: form.description, debit, credit, balance: 0 };
 
-    if (editingEntity) {
-      updateLedgerEntry(editingEntity.id, payload);
-      toast('Entry updated', 'success');
-      closeForm(); // Close after edit
-    } else {
-      addLedgerEntry(payload);
-      toast('Entry added', 'success');
-      resetFormForNext(); // Stay open after add
+    setIsSaving(true);
+    try {
+      if (editingEntity) {
+        await updateLedgerEntry(editingEntity.id, payload);
+        toast('Entry updated', 'success');
+        closeForm(); // Close after edit
+      } else {
+        await addLedgerEntry(payload);
+        toast('Entry added', 'success');
+        resetFormForNext(); // Stay open after add
+      }
+    } catch (err: any) {
+      console.error('Save error:', err);
+      toast(`Failed to save: ${err.message || 'Unknown error'}`, 'error');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -240,7 +249,7 @@ export default function LedgerPage() {
                   filteredSidebar.map((c) => (
                     <div
                       key={c.id}
-                      onClick={() => { setSelectedCat(c.id); setSidebarSearch(''); setSearch(''); setPage(1); }}
+                      onClick={() => { setSelectedCat(c.id); setSearch(''); setPage(1); }}
                       className={cn(
                         'group flex items-center justify-between px-3 py-3 rounded-xl cursor-pointer text-xs font-black transition-all duration-200 border border-transparent',
                         selectedCat === c.id
@@ -534,8 +543,15 @@ export default function LedgerPage() {
               <div><label className="label">Credit (₨)</label><input type="number" step="0.01" className="input" value={form.credit} onChange={(e) => setForm({ ...form, credit: e.target.value })} /></div>
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <button type="button" onClick={closeForm} className="btn-secondary">Cancel</button>
-              <button type="submit" className="btn-primary"><Plus className="w-4 h-4" />{editingEntity ? 'Update' : 'Add'} Entry</button>
+              <button type="button" onClick={closeForm} className="btn-secondary" disabled={isSaving}>Cancel</button>
+              <button type="submit" className="btn-primary flex items-center gap-2" disabled={isSaving}>
+                {isSaving ? (
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <Plus className="w-4 h-4" />
+                )}
+                {editingEntity ? 'Update' : 'Add'} Entry
+              </button>
             </div>
           </form>
         </Modal>

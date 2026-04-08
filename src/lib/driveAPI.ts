@@ -5,6 +5,7 @@
  * Tokens are stored in the SQLite app_settings table.
  */
 import { invoke } from '@tauri-apps/api/core';
+import { save } from '@tauri-apps/plugin-dialog';
 import { getSetting, setSetting } from './db';
 
 // ─── OAuth2 Scopes ────────────────────────────────────────────────────────────
@@ -217,6 +218,7 @@ export async function restoreFromDrive(
   onProgress?.('Restoring database...');
   const { closeDB } = await import('./db');
   await closeDB();
+  await new Promise(resolve => setTimeout(resolve, 500));
   await invoke('restore_from_zip', { zipPath });
 
   onProgress?.('Restore complete — reloading...');
@@ -225,7 +227,31 @@ export async function restoreFromDrive(
 // ─── Local Backup (download ZIP without Drive) ────────────────────────────────
 
 export async function downloadLocalBackup(): Promise<string> {
-  return invoke<string>('create_backup_zip');
+  const zipPath = await invoke<string>('create_backup_zip');
+  
+  try {
+    const savePath = await save({
+      filters: [{ name: 'ZIP Archive', extensions: ['zip'] }],
+      defaultPath: `EBS_Backup_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}.zip`
+    });
+
+    if (savePath) {
+      // Use Tauri FS to read the temp zip and write to user's desired location
+      const { readFile, writeFile } = await import('@tauri-apps/plugin-fs');
+      const data = await readFile(zipPath);
+      await writeFile(savePath, data);
+      return savePath;
+    } else {
+      throw new Error('Canceled');
+    }
+  } catch (err) {
+    if (err instanceof Error && err.message === 'Canceled') {
+      throw err;
+    }
+    // If saving fails (e.g., plugin not found), fallback to just returning the temp zip path
+    console.warn("Save dialog failed, returning temp path:", err);
+    return zipPath;
+  }
 }
 
 // ─── Restore from local file ──────────────────────────────────────────────────

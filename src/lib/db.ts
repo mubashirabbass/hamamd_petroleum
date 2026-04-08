@@ -8,6 +8,47 @@
 import Database from '@tauri-apps/plugin-sql';
 
 let _db: Database | null = null;
+let _transactionDepth = 0; // Track recursive transactions if needed
+
+/**
+ * SQL SAFETY & TRANSACTION GUIDELINES:
+ * 1. ALWAYS use the `?` placeholder for any variable data in queries.
+ *    ❌ NEVER use `${variable}` directly in a query string (SQL Injection).
+ *    ✅ ALWAYS use `db.execute('... WHERE id = ?', [id])`.
+ * 
+ * 2. Multi-step operations (e.g. deleting a category and its entries) MUST be 
+ *    wrapped in `runInTransaction` to ensure atomicity.
+ *    If any step fails, the system automatically runs ROLLBACK.
+ */
+
+// ─── Transaction Helper ───────────────────────────────────────────────────────
+
+export async function runInTransaction<T>(callback: (db: Database) => Promise<T>): Promise<T> {
+  const db = await getDB();
+  
+  // If we are already in a transaction, just run the callback
+  if (_transactionDepth > 0) {
+    return callback(db);
+  }
+
+  try {
+    _transactionDepth++;
+    await db.execute('BEGIN TRANSACTION');
+    const result = await callback(db);
+    await db.execute('COMMIT');
+    return result;
+  } catch (error) {
+    console.error('[DB] Transaction failed, Rolling back...', error);
+    try {
+      await db.execute('ROLLBACK');
+    } catch (rollbackError) {
+      console.error('[DB] ROLLBACK FAILED:', rollbackError);
+    }
+    throw error;
+  } finally {
+    _transactionDepth--;
+  }
+}
 
 // ─── Database Initialization ──────────────────────────────────────────────────
 
@@ -71,18 +112,20 @@ async function initSchema(db: Database): Promise<void> {
   // ── Purchases ─────────────────────────────────────────────────────────────
   await db.execute(`
     CREATE TABLE IF NOT EXISTS purchases (
-      id          TEXT PRIMARY KEY,
-      bill_no     TEXT NOT NULL,
-      type        TEXT NOT NULL DEFAULT 'HSD',
-      date        TEXT NOT NULL,
-      details     TEXT DEFAULT '',
-      rate        REAL NOT NULL DEFAULT 0,
-      quantity    REAL NOT NULL DEFAULT 0,
-      carriage    REAL NOT NULL DEFAULT 0,
-      amount      REAL NOT NULL DEFAULT 0,
+      id           TEXT PRIMARY KEY,
+      bill_no      TEXT NOT NULL,
+      type         TEXT NOT NULL DEFAULT 'HSD',
+      date         TEXT NOT NULL,
+      details      TEXT DEFAULT '',
+      rate         REAL NOT NULL DEFAULT 0,
+      quantity     REAL NOT NULL DEFAULT 0,
+      carriage     REAL NOT NULL DEFAULT 0,
+      amount       REAL NOT NULL DEFAULT 0,
       total_amount REAL NOT NULL DEFAULT 0
     )
   `);
+  await db.execute(`CREATE INDEX IF NOT EXISTS idx_purchases_date ON purchases(date)`);
+  await db.execute(`CREATE INDEX IF NOT EXISTS idx_purchases_type ON purchases(type)`);
 
   // ── Sales ─────────────────────────────────────────────────────────────────
   await db.execute(`
@@ -96,6 +139,8 @@ async function initSchema(db: Database): Promise<void> {
       amount   REAL NOT NULL DEFAULT 0
     )
   `);
+  await db.execute(`CREATE INDEX IF NOT EXISTS idx_sales_date ON sales(date)`);
+  await db.execute(`CREATE INDEX IF NOT EXISTS idx_sales_type ON sales(type)`);
 
   // ── Ledger ────────────────────────────────────────────────────────────────
   await db.execute(`
@@ -116,6 +161,8 @@ async function initSchema(db: Database): Promise<void> {
       balance     REAL NOT NULL DEFAULT 0
     )
   `);
+  await db.execute(`CREATE INDEX IF NOT EXISTS idx_ledger_date ON ledger_entries(date)`);
+  await db.execute(`CREATE INDEX IF NOT EXISTS idx_ledger_cat ON ledger_entries(category_id)`);
 
   // ── Expense ───────────────────────────────────────────────────────────────
   await db.execute(`
@@ -134,6 +181,8 @@ async function initSchema(db: Database): Promise<void> {
       amount      REAL NOT NULL DEFAULT 0
     )
   `);
+  await db.execute(`CREATE INDEX IF NOT EXISTS idx_expense_date ON expense_entries(date)`);
+  await db.execute(`CREATE INDEX IF NOT EXISTS idx_expense_cat ON expense_entries(category_id)`);
 
   // ── Assets ────────────────────────────────────────────────────────────────
   await db.execute(`
@@ -154,6 +203,8 @@ async function initSchema(db: Database): Promise<void> {
       balance     REAL NOT NULL DEFAULT 0
     )
   `);
+  await db.execute(`CREATE INDEX IF NOT EXISTS idx_asset_date ON asset_entries(date)`);
+  await db.execute(`CREATE INDEX IF NOT EXISTS idx_asset_cat ON asset_entries(category_id)`);
 
   // ── Liabilities ───────────────────────────────────────────────────────────
   await db.execute(`
@@ -174,6 +225,8 @@ async function initSchema(db: Database): Promise<void> {
       balance     REAL NOT NULL DEFAULT 0
     )
   `);
+  await db.execute(`CREATE INDEX IF NOT EXISTS idx_liability_date ON liability_entries(date)`);
+  await db.execute(`CREATE INDEX IF NOT EXISTS idx_liability_cat ON liability_entries(category_id)`);
 
   // ── Customers ─────────────────────────────────────────────────────────────
   await db.execute(`
@@ -195,6 +248,8 @@ async function initSchema(db: Database): Promise<void> {
       balance     REAL NOT NULL DEFAULT 0
     )
   `);
+  await db.execute(`CREATE INDEX IF NOT EXISTS idx_customer_date ON customer_entries(date)`);
+  await db.execute(`CREATE INDEX IF NOT EXISTS idx_customer_id ON customer_entries(customer_id)`);
 
   // ── Seed counters (only on first run) ─────────────────────────────────────
   await db.execute(`
@@ -215,7 +270,10 @@ async function initSchema(db: Database): Promise<void> {
       ('googleRefreshToken', ''),
       ('googleTokenExpiry', '0'),
       ('googleUserEmail', ''),
-      ('googleUserName', '')
+      ('googleUserName', ''),
+      ('licenseStartDate', ''),
+      ('licenseEndDate', ''),
+      ('authorizedMachineId', '')
   `);
 
   // ── Seed default users (only if table is empty) ───────────────────────────

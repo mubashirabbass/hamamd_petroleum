@@ -13,9 +13,13 @@ export default function Login() {
 
   useEffect(() => {
     const savedEmail = localStorage.getItem('ebs_remembered_email');
+    const savedPass  = localStorage.getItem('ebs_remembered_password');
     if (savedEmail) {
       setEmail(savedEmail);
       setRememberMe(true);
+    }
+    if (savedPass) {
+      setPassword(savedPass);
     }
   }, []);
 
@@ -41,8 +45,10 @@ export default function Login() {
 
     if (rememberMe) {
       localStorage.setItem('ebs_remembered_email', email);
+      localStorage.setItem('ebs_remembered_password', password);
     } else {
       localStorage.removeItem('ebs_remembered_email');
+      localStorage.removeItem('ebs_remembered_password');
     }
 
     login(user);

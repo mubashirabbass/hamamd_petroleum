@@ -16,12 +16,10 @@ import Login      from './pages/Login';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { useStore } from './store/useStore';
 
-// ─── DB Loading Splash ────────────────────────────────────────────────────────
-
 function DBSplash({ error }: { error: string | null }) {
+  // ... (keeping existing DBSplash code)
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center gap-6">
-      {/* Logo / Brand */}
       <div className="flex flex-col items-center gap-3">
         <div className="flex items-center gap-4">
           <div className="w-20 h-20 bg-white/10 backdrop-blur-xl rounded-3xl flex items-center justify-center p-2 border border-white/20 shadow-2xl">
@@ -44,7 +42,6 @@ function DBSplash({ error }: { error: string | null }) {
         </div>
       ) : (
         <div className="flex flex-col items-center gap-3">
-          {/* Animated progress bar */}
           <div className="w-48 h-1 bg-slate-800 rounded-full overflow-hidden">
             <div className="h-full bg-gradient-to-r from-primary-500 to-primary-400 rounded-full animate-[loading_1.5s_ease-in-out_infinite]" />
           </div>
@@ -53,6 +50,129 @@ function DBSplash({ error }: { error: string | null }) {
           </p>
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── Security Lock Screen ─────────────────────────────────────────────────────
+
+function SystemLocked({ reason }: { reason: 'HARDWARE' | 'LICENSE' }) {
+  const { settings, login, currentMachineId, updateSettings } = useStore();
+  const [showLogin, setShowLogin] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+
+  const handleDeveloperLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const user = settings.users.find(u => u.email === email && u.password === password);
+    if (user && user.role === 'Developer') {
+      // If the hardware isn't authorized yet, authorize it automatically now
+      if (!settings.authorizedMachineId && currentMachineId) {
+        await updateSettings({ authorizedMachineId: currentMachineId });
+      }
+      login(user);
+    } else {
+      setError('Invalid developer credentials');
+    }
+  };
+
+  const isUnactivated = !settings.authorizedMachineId;
+
+  return (
+    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-center">
+      <div className="w-24 h-24 bg-primary-500/10 rounded-[40px] flex items-center justify-center mb-8 border border-primary-500/20 shadow-2xl shadow-primary-500/10">
+        <svg className="w-12 h-12 text-primary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+        </svg>
+      </div>
+      
+      <h1 className="text-3xl font-black text-white mb-2 tracking-tighter uppercase">{settings.softwareName}</h1>
+      <p className="text-primary-400 font-black text-xs uppercase tracking-widest mb-6">Security & Authorization</p>
+
+      {!showLogin ? (
+        <>
+          <div className="max-w-md bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 mb-8">
+            {isUnactivated ? (
+              <>
+                <h2 className="text-xl font-bold text-white mb-3">Software Activation Required</h2>
+                <p className="text-slate-400 text-sm leading-relaxed">
+                  This installation of <b>{settings.softwareName}</b> is currently unactivated. A developer must verify this system before it can be used for business transactions.
+                </p>
+              </>
+            ) : reason === 'HARDWARE' ? (
+              <>
+                <h2 className="text-xl font-bold text-white mb-3">Unauthorized Hardware Detected</h2>
+                <p className="text-slate-400 text-sm leading-relaxed">
+                  This system is locked to a specific machine. Hardware signature mismatch:
+                </p>
+                <code className="block mt-4 p-3 bg-black/40 rounded-xl text-[10px] font-mono text-red-400 break-all border border-red-500/10">
+                  {currentMachineId || 'NO_HARDWARE_ID'}
+                </code>
+              </>
+            ) : (
+              <>
+                <h2 className="text-xl font-bold text-white mb-3">Software License Expired</h2>
+                <p className="text-slate-400 text-sm leading-relaxed">
+                  Usage period ended on <b>{settings.licenseEndDate}</b>. Please contact the developer to renew.
+                </p>
+              </>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-3 w-full max-w-[280px]">
+            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-2">Developer Key Required</p>
+            <button 
+              onClick={() => setShowLogin(true)}
+              className="w-full py-4 bg-primary-600 text-white rounded-2xl font-black text-sm hover:scale-105 transition-transform active:scale-95 shadow-xl shadow-primary-500/20"
+            >
+              {isUnactivated ? 'Activate Product' : 'Developer Login'}
+            </button>
+          </div>
+        </>
+      ) : (
+        <form onSubmit={handleDeveloperLogin} className="w-full max-w-[320px] bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8">
+          <h2 className="text-lg font-bold text-white mb-6">{isUnactivated ? 'System Activation' : 'Developer Verification'}</h2>
+          <div className="space-y-4">
+            <input 
+              type="email" 
+              placeholder="Developer Email"
+              className="w-full px-5 py-3 bg-black/40 border border-white/10 rounded-xl text-sm text-white placeholder-slate-500 focus:ring-2 focus:ring-primary-500 outline-none"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              required
+            />
+            <input 
+              type="password" 
+              placeholder="Security Key"
+              className="w-full px-5 py-3 bg-black/40 border border-white/10 rounded-xl text-sm text-white placeholder-slate-500 focus:ring-2 focus:ring-primary-500 outline-none"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              required
+            />
+            {error && <p className="text-[10px] text-red-500 font-bold uppercase">{error}</p>}
+            <div className="flex gap-2 pt-2">
+              <button 
+                type="button"
+                onClick={() => setShowLogin(false)}
+                className="flex-1 py-3 bg-white/5 text-slate-400 rounded-xl font-bold text-sm hover:bg-white/10"
+              >
+                Back
+              </button>
+              <button 
+                type="submit"
+                className="flex-2 py-3 bg-primary-600 text-white rounded-xl font-black text-sm hover:bg-primary-700 shadow-xl"
+              >
+                {isUnactivated ? 'Activate' : 'Authorize'}
+              </button>
+            </div>
+          </div>
+        </form>
+      )}
+      
+      <p className="mt-12 text-slate-600 text-[10px] font-bold uppercase tracking-[0.2em] animate-pulse">
+        System Security — Powered by EBS
+      </p>
     </div>
   );
 }
@@ -116,7 +236,19 @@ export default function App() {
     initializeFromDB().finally(() => setBooting(false));
   }, []);
 
-  // Show splash while SQLite is initializing
+  // Security Checks
+  const isHardwareLocked = !settings.authorizedMachineId || settings.authorizedMachineId !== useStore.getState().currentMachineId;
+  const isLicenseExpired = (() => {
+    const now = new Date().toISOString().split('T')[0];
+    const start = settings.licenseStartDate;
+    const end = settings.licenseEndDate;
+    if (!start || !end) return false; // Default: No dates = Infinite access (Developer can set later)
+    return (now < start || now > end);
+  })();
+
+  const isSystemLocked = (isHardwareLocked || isLicenseExpired) && currentUser?.role !== 'Developer';
+
+  // 1. Show splash while SQLite is initializing
   if (booting || !dbReady) {
     return (
       <ThemeProvider>
@@ -125,6 +257,16 @@ export default function App() {
     );
   }
 
+  // 2. If locked and not developer, show lock screen
+  if (isSystemLocked) {
+    return (
+      <ThemeProvider>
+        <SystemLocked reason={isHardwareLocked ? 'HARDWARE' : 'LICENSE'} />
+      </ThemeProvider>
+    );
+  }
+
+  // 3. Normal Auth Flow
   if (!currentUser) {
     return (
       <ThemeProvider>

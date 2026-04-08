@@ -255,3 +255,44 @@ html.dark .smart-scroll::-webkit-scrollbar-thumb {
 html.dark .smart-scroll:hover::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.1);
 }
+
+/* ── Print Customizations ────────────────────────────────────────── */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+  
+  body {
+    overflow: visible !important;
+    background: white !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Hide scrollbars during print */
+  ::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  /* Force printable areas to be full height */
+  .page-print-container {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Ensure page breaks for reports */
+  .report-page {
+    page-break-after: always !important;
+    break-after: page !important;
+  }
+
+  /* Smooth out shadow and border artifacts */
+  .no-print-shadow {
+    box-shadow: none !important;
+    border: none !important;
+  }
+}
