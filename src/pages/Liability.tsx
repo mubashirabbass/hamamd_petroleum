@@ -13,7 +13,7 @@ import PrintReportModal from '../components/modals/PrintReportModal';
 
 export default function LiabilityPage() {
   const {
-    liabilityCategories, liabilityEntries, nextLiabilityNo,
+    liabilityCategories, liabilityEntries,
     addLiabilityCategory, updateLiabilityCategory, deleteLiabilityCategory,
     addLiabilityEntry, deleteLiabilityEntry, settings, currentUser, updateLiabilityEntry
   } = useStore();
@@ -493,20 +493,20 @@ export default function LiabilityPage() {
                         <thead>
                           <tr className="table-header">
                             <th className="px-4 py-3 text-left">Date</th>
-                            <th className="px-4 py-3 text-left">Description</th>
+                            <th className="px-4 py-3 text-left w-[30rem]">Description</th>
                             <th className="px-4 py-3 text-right">Debit (Paid)</th>
                             <th className="px-4 py-3 text-right">Credit (Owed)</th>
                             <th className="px-4 py-3 text-right">Balance</th>
-                            <th className="px-4 py-3 w-20"></th>
+                            <th className="px-4 py-3 w-20 text-center">Actions</th>
                           </tr>
                         </thead>
                         <tbody>
                           {paged.length === 0 ? (
-                            <tr><td colSpan={8} className="text-center text-slate-400 py-12 italic">No transactions found</td></tr>
-                          ) : paged.map((e, i) => (
+                            <tr><td colSpan={6} className="text-center text-slate-400 py-12 italic">No transactions found</td></tr>
+                          ) : paged.map((e) => (
                             <tr key={e.id} className="group">
                               <td className="whitespace-nowrap text-[11px] font-medium uppercase tracking-tighter text-slate-500 dark:text-dark-400">{formatDate(e.date)}</td>
-                              <td className="text-black dark:text-white font-medium text-[13px]">{e.description || '—'}</td>
+                              <td className="text-black dark:text-white font-medium text-[13px] whitespace-normal break-words max-w-[30rem] leading-5">{e.description || '—'}</td>
                               <td className="amount !text-emerald-600 dark:!text-emerald-400">{e.debit ? formatCurrency(e.debit) : '—'}</td>
                               <td className="amount !text-red-600 dark:!text-red-400">{e.credit ? formatCurrency(e.credit) : '—'}</td>
                               <td className="amount !text-black dark:!text-white !text-sm font-medium">₨ {formatCurrency(e.balance)}</td>
@@ -540,16 +540,18 @@ export default function LiabilityPage() {
                         </tbody>
                         <tfoot className="border-t-2 border-slate-200 dark:border-dark-700 bg-slate-50/50 dark:bg-dark-900/50 font-black text-black">
                           <tr className="font-black text-black dark:text-white">
-                            <td colSpan={4} className="px-4 py-3 text-right uppercase tracking-widest text-[11px] italic font-black text-black">Page Total</td>
-                            <td className="px-4 py-3 text-right text-black font-black text-sm">₨ {formatCurrency(pageTotals.debit)}</td>
-                            <td className="px-4 py-3 text-right text-black font-black text-sm">₨ {formatCurrency(pageTotals.credit)}</td>
-                            <td colSpan={2}></td>
+                            <td colSpan={2} className="px-4 py-3 text-right uppercase tracking-widest text-[11px] italic font-black text-black">Page Total</td>
+                            <td className="px-4 py-3 text-right text-black font-black text-sm whitespace-nowrap">₨ {formatCurrency(pageTotals.debit)}</td>
+                            <td className="px-4 py-3 text-right text-black font-black text-sm whitespace-nowrap">₨ {formatCurrency(pageTotals.credit)}</td>
+                            <td className="px-4 py-3 text-right text-black font-black text-sm whitespace-nowrap">₨ {formatCurrency(pageTotals.debit - pageTotals.credit)}</td>
+                            <td></td>
                           </tr>
                           <tr className="font-black text-black dark:text-white bg-slate-200/50 border-t border-slate-300">
-                            <td colSpan={4} className="px-4 py-4 text-right uppercase tracking-widest text-xs text-black font-black">Grand Total</td>
-                            <td className="px-4 py-4 text-right text-black font-black text-lg">₨ {formatCurrency(totals.debit)}</td>
-                            <td className="px-4 py-4 text-right text-black font-black text-lg">₨ {formatCurrency(totals.credit)}</td>
-                            <td colSpan={2}></td>
+                            <td colSpan={2} className="px-4 py-4 text-right uppercase tracking-widest text-xs text-black font-black">Grand Total</td>
+                            <td className="px-4 py-4 text-right text-black font-black text-lg whitespace-nowrap">₨ {formatCurrency(totals.debit)}</td>
+                            <td className="px-4 py-4 text-right text-black font-black text-lg whitespace-nowrap">₨ {formatCurrency(totals.credit)}</td>
+                            <td className="px-4 py-4 text-right text-black font-black text-lg whitespace-nowrap">₨ {formatCurrency(totals.debit - totals.credit)}</td>
+                            <td></td>
                           </tr>
                         </tfoot>
                       </table>
@@ -634,7 +636,7 @@ export default function LiabilityPage() {
                 <table className="w-full">
                   <thead className="sticky top-0 bg-slate-50/90 dark:bg-dark-800/90 backdrop-blur-sm z-10"><tr className="border-b border-slate-200 dark:border-dark-700/50">
                     <th className="px-6 py-4 text-left text-[10px] font-black uppercase text-slate-400 tracking-widest">Account Name</th>
-                    <th className="px-6 py-4 text-right text-[10px] font-black uppercase text-slate-400 tracking-widest">Actions</th>
+                    <th className="px-6 py-4 text-center text-[10px] font-black uppercase text-slate-400 tracking-widest">Actions</th>
                   </tr></thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-dark-800/50">
                     {filteredManage.length === 0 ? (

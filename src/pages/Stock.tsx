@@ -286,7 +286,7 @@ export default function StockPage() {
                     </thead>
                     <tbody className="divide-y divide-slate-50 dark:divide-dark-800/50">
                       {pagedHistory.length === 0 ? (
-                        <tr><td colSpan={6} className="py-20 text-center text-xs text-slate-400 italic">No records found for this period</td></tr>
+                        <tr><td colSpan={5} className="py-20 text-center text-xs text-slate-400 italic">No records found for this period</td></tr>
                       ) : pagedHistory.map((h, i) => (
                         <tr key={h.id + (h.date) + i} className="table-row group hover:bg-slate-50 dark:hover:bg-dark-800/50 text-[11px]">
                           <td className="table-cell whitespace-nowrap font-bold text-slate-600 dark:text-dark-300">{formatDate(h.date)}</td>
@@ -300,14 +300,14 @@ export default function StockPage() {
                     <tfoot>
                       <tr className="font-black text-black dark:text-white bg-slate-100/50 dark:bg-dark-800/50 border-t-[3px] border-black dark:border-black">
                         <td colSpan={2} className="table-cell text-right text-xs uppercase tracking-widest text-slate-600 dark:text-slate-400 font-black italic">Page Total</td>
-                        <td className="table-cell text-right font-black font-mono">+{pageTotals.qtyIn.toLocaleString()} L</td>
-                        <td className="table-cell text-right font-black font-mono">-{pageTotals.qtyOut.toLocaleString()} L</td>
+                        <td className="table-cell text-right font-black font-mono whitespace-nowrap">+{pageTotals.qtyIn.toLocaleString()} L</td>
+                        <td className="table-cell text-right font-black font-mono whitespace-nowrap">-{pageTotals.qtyOut.toLocaleString()} L</td>
                         <td className="table-cell"></td>
                       </tr>
                       <tr className="font-black text-black dark:text-white bg-slate-200/50 dark:bg-dark-700/50 border-t border-slate-300 dark:border-dark-600">
                         <td colSpan={2} className="table-cell text-right text-xs uppercase tracking-widest text-slate-600 dark:text-slate-300 font-black">Grand Total</td>
-                        <td className="table-cell text-right font-black font-mono">+{detailTotals.in.toLocaleString()} L</td>
-                        <td className="table-cell text-right font-black font-mono">-{detailTotals.out.toLocaleString()} L</td>
+                        <td className="table-cell text-right font-black font-mono whitespace-nowrap">+{detailTotals.in.toLocaleString()} L</td>
+                        <td className="table-cell text-right font-black font-mono whitespace-nowrap">-{detailTotals.out.toLocaleString()} L</td>
                         <td className="table-cell"></td>
                       </tr>
                     </tfoot>

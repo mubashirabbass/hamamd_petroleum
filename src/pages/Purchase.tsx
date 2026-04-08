@@ -300,15 +300,15 @@ export default function PurchasePage() {
               <thead><tr className="table-header text-[10px]">
                 <th className="table-cell text-left">Date</th>
                 <th className="table-cell text-left">Invoice No</th>
-                <th className="table-cell text-left">Description</th>
+                <th className="table-cell text-left w-64">Description</th>
                 <th className="table-cell text-left">Vehicle No</th>
                 <th className="table-cell text-left">Details</th>
-                <th className="table-cell text-right">Rate</th>
-                <th className="table-cell text-right">Qty (L)</th>
+                <th className="table-cell text-right w-24">Rate</th>
+                <th className="table-cell text-right w-24">Qty (L)</th>
                 <th className="table-cell text-right">Carriage</th>
                 <th className="table-cell text-right">Amount</th>
                 <th className="table-cell text-right font-black">Total</th>
-                <th className="table-cell w-20"></th>
+                <th className="table-cell w-20 text-center">Actions</th>
               </tr></thead>
               <tbody>
                 {paged.length === 0 ? (
@@ -317,11 +317,11 @@ export default function PurchasePage() {
                   <tr key={p.id} className="table-row group hover:bg-slate-50 dark:hover:bg-dark-800/50 text-[11px]">
                     <td className="table-cell whitespace-nowrap">{formatDate(p.date)}</td>
                     <td className="table-cell font-medium text-emerald-600">{p.invoiceNo || '—'}</td>
-                    <td className="table-cell">{p.description || '—'}</td>
+                    <td className="table-cell whitespace-normal break-words max-w-[22rem] leading-5">{p.description || '—'}</td>
                     <td className="table-cell text-slate-500 uppercase tracking-wider">{p.vehicleNo || '—'}</td>
                     <td className="table-cell text-slate-600 dark:text-dark-300">{p.details || '—'}</td>
-                    <td className="table-cell text-right">₨ {formatCurrency(p.rate)}</td>
-                    <td className="table-cell text-right">{p.quantity.toLocaleString()}</td>
+                    <td className="table-cell text-right whitespace-nowrap">₨ {formatCurrency(p.rate)}</td>
+                    <td className="table-cell text-right whitespace-nowrap">{p.quantity.toLocaleString()}</td>
                     <td className="table-cell text-right">₨ {formatCurrency(p.carriage)}</td>
                     <td className="table-cell text-right">₨ {formatCurrency(p.amount)}</td>
                     <td className="table-cell text-right font-semibold text-slate-900 dark:text-white">₨ {formatCurrency(p.totalAmount)}</td>
@@ -357,18 +357,18 @@ export default function PurchasePage() {
                 <tfoot className="bg-slate-50/50 dark:bg-dark-800/50 border-t-[3px] border-double border-slate-300 dark:border-dark-600">
                   <tr className="text-black dark:text-white font-black">
                     <td colSpan={6} className="px-4 py-3 text-right uppercase tracking-widest text-[11px] italic font-black">Page Total</td>
-                    <td className="px-4 py-3 text-right text-sm font-black">{pageTotals.qty.toLocaleString()} L</td>
-                    <td className="px-4 py-3 text-right text-sm font-black">₨ {formatCurrency(pageTotals.carriage)}</td>
-                    <td className="px-4 py-3 text-right text-black font-black text-sm">₨ {formatCurrency(pageTotals.amount)}</td>
-                    <td className="px-4 py-3 text-right text-black font-black text-sm">₨ {formatCurrency(pageTotals.total)}</td>
+                    <td className="px-4 py-3 text-right text-sm font-black whitespace-nowrap">{pageTotals.qty.toLocaleString()} L</td>
+                    <td className="px-4 py-3 text-right text-sm font-black whitespace-nowrap">₨ {formatCurrency(pageTotals.carriage)}</td>
+                    <td className="px-4 py-3 text-right text-black font-black text-sm whitespace-nowrap">₨ {formatCurrency(pageTotals.amount)}</td>
+                    <td className="px-4 py-3 text-right text-black font-black text-sm whitespace-nowrap">₨ {formatCurrency(pageTotals.total)}</td>
                     <td className="table-cell"></td>
                   </tr>
                   <tr className="font-black text-black dark:text-white bg-slate-200/50 border-t border-slate-300">
                     <td colSpan={6} className="px-4 py-4 text-right uppercase tracking-widest text-xs text-black font-black">Grand Total</td>
-                    <td className="px-4 py-4 text-right text-black font-black text-base">{grandTotals.qty.toLocaleString()} L</td>
-                    <td className="px-4 py-4 text-right text-black font-black text-base">₨ {formatCurrency(grandTotals.carriage)}</td>
-                    <td className="px-4 py-4 text-right text-black font-black text-base">₨ {formatCurrency(grandTotals.amount)}</td>
-                    <td className="px-4 py-4 text-right text-black font-black text-lg">₨ {formatCurrency(grandTotals.total)}</td>
+                    <td className="px-4 py-4 text-right text-black font-black text-base whitespace-nowrap">{grandTotals.qty.toLocaleString()} L</td>
+                    <td className="px-4 py-4 text-right text-black font-black text-base whitespace-nowrap">₨ {formatCurrency(grandTotals.carriage)}</td>
+                    <td className="px-4 py-4 text-right text-black font-black text-base whitespace-nowrap">₨ {formatCurrency(grandTotals.amount)}</td>
+                    <td className="px-4 py-4 text-right text-black font-black text-lg whitespace-nowrap">₨ {formatCurrency(grandTotals.total)}</td>
                     <td className="table-cell"></td>
                   </tr>
                 </tfoot>

@@ -246,10 +246,10 @@ export default function SalePage() {
               <thead><tr className="table-header text-[10px]">
                 <th className="table-cell text-left">Date</th>
                 <th className="table-cell text-left">Description</th>
-                <th className="table-cell text-right">Rate (₨)</th>
+                <th className="table-cell text-right w-20">Rate (₨)</th>
                 <th className="table-cell text-right">Qty (L)</th>
                 <th className="table-cell text-right font-black">Amount (₨)</th>
-                <th className="table-cell w-20"></th>
+                <th className="table-cell w-20 text-center">Actions</th>
               </tr></thead>
               <tbody>
                 {paged.length === 0 ? (
@@ -293,14 +293,14 @@ export default function SalePage() {
                 <tfoot className="border-t-[3px] border-black dark:border-black bg-slate-50/50 dark:bg-dark-900/50">
                   <tr className="font-black text-black dark:text-white">
                     <td colSpan={3} className="px-4 py-3 text-right uppercase tracking-widest text-[11px] italic font-black text-black">Page Total</td>
-                    <td className="px-4 py-3 text-right text-black font-black text-sm">{pageTotals.qty.toLocaleString()} L</td>
-                    <td className="px-4 py-3 text-right text-black font-black text-sm">₨ {formatCurrency(pageTotals.amount)}</td>
+                    <td className="px-4 py-3 text-right text-black font-black text-sm whitespace-nowrap">{pageTotals.qty.toLocaleString()} L</td>
+                    <td className="px-4 py-3 text-right text-black font-black text-sm whitespace-nowrap">₨ {formatCurrency(pageTotals.amount)}</td>
                     <td className="table-cell"></td>
                   </tr>
                   <tr className="font-black text-black dark:text-white bg-slate-200/50 border-t border-slate-300">
                     <td colSpan={3} className="px-4 py-4 text-right uppercase tracking-widest text-xs text-black font-black">Grand Total</td>
-                    <td className="px-4 py-4 text-right text-black font-black text-base">{grandTotals.qty.toLocaleString()} L</td>
-                    <td className="px-4 py-4 text-right text-black font-black text-lg">₨ {formatCurrency(grandTotals.amount)}</td>
+                    <td className="px-4 py-4 text-right text-black font-black text-base whitespace-nowrap">{grandTotals.qty.toLocaleString()} L</td>
+                    <td className="px-4 py-4 text-right text-black font-black text-lg whitespace-nowrap">₨ {formatCurrency(grandTotals.amount)}</td>
                     <td className="table-cell"></td>
                   </tr>
                 </tfoot>
