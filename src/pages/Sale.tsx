@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Plus, Trash2, Droplet, Eye, Edit2, Printer } from 'lucide-react';
 import { useStore } from '../store/useStore';
-import { formatCurrency, formatDate, today, paginate, filterByStartDate, startOfMonth, startOfYear } from '../lib/utils';
+import { formatCurrency, formatDate, today, paginate, filterByStartDate, startOfMonth, startOfYear, getErrorMessage } from '../lib/utils';
 import { useToast } from '../components/ui/Toast';
 import SearchBar from '../components/ui/SearchBar';
 import Pagination from '../components/ui/Pagination';
@@ -13,7 +13,7 @@ import type { FuelType } from '../store/useStore';
 const PER_PAGE = 10;
 
 export default function SalePage() {
-  const { sales, nextSaleNo, addSale, deleteSale, settings, currentUser } = useStore();
+  const { sales, addSale, deleteSale, settings, currentUser } = useStore();
   const { toast } = useToast();
 
   const [fuelType, setFuelType] = useState<FuelType>('HSD');
@@ -65,7 +65,14 @@ export default function SalePage() {
     e.preventDefault();
     if (!form.date || !form.quantity || !form.rate) { toast('Fill required fields', 'error'); return; }
 
-    const payload = { type: fuelType, date: form.date, quantity: parseFloat(form.quantity), rate: parseFloat(form.rate), amount: parseFloat(form.amount) };
+    const payload = {
+      type: fuelType,
+      date: form.date,
+      description: form.description,
+      quantity: parseFloat(form.quantity),
+      rate: parseFloat(form.rate),
+      amount: parseFloat(form.amount)
+    };
 
     setIsSaving(true);
     try {
@@ -78,9 +85,10 @@ export default function SalePage() {
         toast(`${fuelType} sale added`, 'success');
         resetFormForNext(); // Stay open after add
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errorMessage = getErrorMessage(err);
       console.error('Save error:', err);
-      toast(`Failed to save: ${err.message || 'Unknown error'}`, 'error');
+      toast(`Failed to save: ${errorMessage}`, 'error');
     } finally {
       setIsSaving(false);
     }
@@ -246,7 +254,7 @@ export default function SalePage() {
               <tbody>
                 {paged.length === 0 ? (
                   <tr><td colSpan={6} className="table-cell text-center text-slate-400 dark:text-dark-500 py-12 italic">No {fuelType} sales found</td></tr>
-                ) : paged.map((s, idx) => (
+                ) : paged.map((s) => (
                   <tr key={s.id} className="table-row group hover:bg-slate-50 dark:hover:bg-dark-800/50 text-[11px]">
                     <td className="table-cell">{formatDate(s.date)}</td>
                     <td className="table-cell">{s.description || '—'}</td>

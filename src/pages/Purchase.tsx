@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Plus, Trash2, ShoppingCart, Eye, Edit2, Printer } from 'lucide-react';
 import { useStore } from '../store/useStore';
-import { formatCurrency, formatDate, today, paginate, filterByStartDate, startOfMonth, startOfYear } from '../lib/utils';
+import { formatCurrency, formatDate, today, paginate, filterByStartDate, startOfMonth, startOfYear, getErrorMessage } from '../lib/utils';
 import { useToast } from '../components/ui/Toast';
 import SearchBar from '../components/ui/SearchBar';
 import Pagination from '../components/ui/Pagination';
@@ -13,7 +13,7 @@ import type { FuelType } from '../store/useStore';
 const PER_PAGE = 10;
 
 export default function PurchasePage() {
-  const { purchases, nextPurchaseNo, addPurchase, deletePurchase, settings, currentUser } = useStore();
+  const { purchases, addPurchase, deletePurchase, settings, currentUser } = useStore();
   const { toast } = useToast();
 
   const [fuelType, setFuelType] = useState<FuelType>('HSD');
@@ -75,6 +75,9 @@ export default function PurchasePage() {
     const payload = {
       type: fuelType,
       date: form.date,
+      description: form.description,
+      invoiceNo: form.invoiceNo,
+      vehicleNo: form.vehicleNo,
       details: form.details,
       rate: parseFloat(form.rate),
       quantity: parseFloat(form.quantity),
@@ -94,9 +97,10 @@ export default function PurchasePage() {
         toast(`${fuelType} purchase added successfully`, 'success');
         resetFormForNext(); // Stay open
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errorMessage = getErrorMessage(err);
       console.error('Save error:', err);
-      toast(`Failed to save: ${err.message || 'Unknown error'}`, 'error');
+      toast(`Failed to save: ${errorMessage}`, 'error');
     } finally {
       setIsSaving(false);
     }
@@ -309,7 +313,7 @@ export default function PurchasePage() {
               <tbody>
                 {paged.length === 0 ? (
                   <tr><td colSpan={11} className="table-cell text-center text-slate-400 dark:text-dark-500 py-12 italic">No {fuelType} purchases found</td></tr>
-                ) : paged.map((p, idx) => (
+                ) : paged.map((p) => (
                   <tr key={p.id} className="table-row group hover:bg-slate-50 dark:hover:bg-dark-800/50 text-[11px]">
                     <td className="table-cell whitespace-nowrap">{formatDate(p.date)}</td>
                     <td className="table-cell font-medium text-emerald-600">{p.invoiceNo || '—'}</td>

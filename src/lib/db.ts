@@ -9,6 +9,24 @@ import Database from '@tauri-apps/plugin-sql';
 
 let _db: Database | null = null;
 let _transactionDepth = 0; // Track recursive transactions if needed
+let _transactionQueue: Promise<void> = Promise.resolve();
+
+const LOCK_RETRY_ATTEMPTS = 5;
+const LOCK_RETRY_DELAY_MS = 120;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isDatabaseLockedError(error: unknown): boolean {
+  const msg =
+    error instanceof Error
+      ? error.message
+      : typeof error === 'string'
+        ? error
+        : JSON.stringify(error ?? '');
+  return msg.includes('database is locked') || msg.includes('(code: 5)');
+}
 
 /**
  * SQL SAFETY & TRANSACTION GUIDELINES:
@@ -25,28 +43,43 @@ let _transactionDepth = 0; // Track recursive transactions if needed
 
 export async function runInTransaction<T>(callback: (db: Database) => Promise<T>): Promise<T> {
   const db = await getDB();
-  
-  // If we are already in a transaction, just run the callback
+
+  // Nested call inside a serialized write section: reuse it directly.
   if (_transactionDepth > 0) {
     return callback(db);
   }
 
+  let releaseQueue!: () => void;
+  const waitForTurn = _transactionQueue;
+  _transactionQueue = new Promise<void>((resolve) => {
+    releaseQueue = resolve;
+  });
+
+  await waitForTurn;
+
   try {
-    _transactionDepth++;
-    await db.execute('BEGIN TRANSACTION');
-    const result = await callback(db);
-    await db.execute('COMMIT');
-    return result;
-  } catch (error) {
-    console.error('[DB] Transaction failed, Rolling back...', error);
-    try {
-      await db.execute('ROLLBACK');
-    } catch (rollbackError) {
-      console.error('[DB] ROLLBACK FAILED:', rollbackError);
+    let lastError: unknown;
+    for (let attempt = 1; attempt <= LOCK_RETRY_ATTEMPTS; attempt++) {
+      try {
+        _transactionDepth++;
+        return await callback(db);
+      } catch (error) {
+        lastError = error;
+        console.error('[DB] Serialized write failed:', error);
+
+        if (!isDatabaseLockedError(error) || attempt === LOCK_RETRY_ATTEMPTS) {
+          throw error;
+        }
+
+        await sleep(LOCK_RETRY_DELAY_MS * attempt);
+      } finally {
+        _transactionDepth--;
+      }
     }
-    throw error;
+
+    throw lastError;
   } finally {
-    _transactionDepth--;
+    releaseQueue();
   }
 }
 
@@ -80,6 +113,7 @@ async function initSchema(db: Database): Promise<void> {
   // Use a transaction for atomic schema creation
   await db.execute(`PRAGMA journal_mode=WAL`);
   await db.execute(`PRAGMA foreign_keys=ON`);
+  await db.execute(`PRAGMA busy_timeout=5000`);
 
   // ── Settings ──────────────────────────────────────────────────────────────
   await db.execute(`

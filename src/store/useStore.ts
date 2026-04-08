@@ -288,11 +288,10 @@ export const useStore = create<AppState>()((set, get) => ({
     let entry: Purchase | null = null;
     let no = 0;
     try {
-      await runInTransaction(async () => {
-        no = await getAndBumpCounter('purchase');
+      await runInTransaction(async (db) => {
+        no = await getAndBumpCounter('purchase', db);
         const billNo = `PUR-${String(no).padStart(2, '0')}`;
         const id = uid();
-        const db = await getDB();
         await db.execute(
           `INSERT INTO purchases (id,bill_no,type,date,description,invoice_no,vehicle_no,details,rate,quantity,carriage,amount,total_amount)
            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
@@ -339,11 +338,10 @@ export const useStore = create<AppState>()((set, get) => ({
     let entry: Sale | null = null;
     let no = 0;
     try {
-      await runInTransaction(async () => {
-        no = await getAndBumpCounter('sale');
+      await runInTransaction(async (db) => {
+        no = await getAndBumpCounter('sale', db);
         const billNo = `SAL-${String(no).padStart(2, '0')}`;
         const id = uid();
-        const db = await getDB();
         await db.execute(
           `INSERT INTO sales (id,bill_no,type,date,description,quantity,rate,amount) VALUES (?,?,?,?,?,?,?,?)`,
           [id, billNo, s.type, s.date, s.description || '', s.quantity, s.rate, s.amount]
@@ -410,16 +408,17 @@ export const useStore = create<AppState>()((set, get) => ({
   addLedgerEntry: async (e) => {
     let no = 0;
     try {
-      const db = await getDB();
-      no = await getAndBumpCounter('ledger');
-      const billNo = `LDG-${String(no).padStart(2, '0')}`;
-      const id = uid();
-      await db.execute(
-        `INSERT INTO ledger_entries (id,category_id,bill_no,date,description,debit,credit,balance) VALUES (?,?,?,?,?,?,?,?)`,
-        [id, e.categoryId, billNo, e.date, e.description, e.debit, e.credit, e.balance]
-      );
-      const entry: LedgerEntry = { ...e, id, billNo };
-      set(s => ({ ledgerEntries: [entry, ...s.ledgerEntries], nextLedgerNo: no + 1 }));
+      await runInTransaction(async (db) => {
+        no = await getAndBumpCounter('ledger', db);
+        const billNo = `LDG-${String(no).padStart(2, '0')}`;
+        const id = uid();
+        await db.execute(
+          `INSERT INTO ledger_entries (id,category_id,bill_no,date,description,debit,credit,balance) VALUES (?,?,?,?,?,?,?,?)`,
+          [id, e.categoryId, billNo, e.date, e.description, e.debit, e.credit, e.balance]
+        );
+        const entry: LedgerEntry = { ...e, id, billNo };
+        set(s => ({ ledgerEntries: [entry, ...s.ledgerEntries], nextLedgerNo: no + 1 }));
+      });
     } catch (err) {
       console.error('[Store] addLedgerEntry failed:', err);
       throw err;
@@ -470,16 +469,17 @@ export const useStore = create<AppState>()((set, get) => ({
   addExpenseEntry: async (e) => {
     let no = 0;
     try {
-      const db = await getDB();
-      no = await getAndBumpCounter('expense');
-      const billNo = `EXP-${String(no).padStart(2, '0')}`;
-      const id = uid();
-      await db.execute(
-        `INSERT INTO expense_entries (id,category_id,bill_no,date,details,amount) VALUES (?,?,?,?,?,?)`,
-        [id, e.categoryId, billNo, e.date, e.details, e.amount]
-      );
-      const entry: ExpenseEntry = { ...e, id, billNo };
-      set(s => ({ expenseEntries: [entry, ...s.expenseEntries], nextExpenseNo: no + 1 }));
+      await runInTransaction(async (db) => {
+        no = await getAndBumpCounter('expense', db);
+        const billNo = `EXP-${String(no).padStart(2, '0')}`;
+        const id = uid();
+        await db.execute(
+          `INSERT INTO expense_entries (id,category_id,bill_no,date,details,amount) VALUES (?,?,?,?,?,?)`,
+          [id, e.categoryId, billNo, e.date, e.details, e.amount]
+        );
+        const entry: ExpenseEntry = { ...e, id, billNo };
+        set(s => ({ expenseEntries: [entry, ...s.expenseEntries], nextExpenseNo: no + 1 }));
+      });
     } catch (err) {
       console.error('[Store] addExpenseEntry failed:', err);
       throw err;
@@ -530,16 +530,17 @@ export const useStore = create<AppState>()((set, get) => ({
   addAssetEntry: async (e) => {
     let no = 0;
     try {
-      const db = await getDB();
-      no = await getAndBumpCounter('asset');
-      const billNo = `AST-${String(no).padStart(2, '0')}`;
-      const id = uid();
-      await db.execute(
-        `INSERT INTO asset_entries (id,category_id,bill_no,date,description,debit,credit,balance) VALUES (?,?,?,?,?,?,?,?)`,
-        [id, e.categoryId, billNo, e.date, e.description, e.debit, e.credit, e.balance]
-      );
-      const entry: AssetEntry = { ...e, id, billNo };
-      set(s => ({ assetEntries: [entry, ...s.assetEntries], nextAssetNo: no + 1 }));
+      await runInTransaction(async (db) => {
+        no = await getAndBumpCounter('asset', db);
+        const billNo = `AST-${String(no).padStart(2, '0')}`;
+        const id = uid();
+        await db.execute(
+          `INSERT INTO asset_entries (id,category_id,bill_no,date,description,debit,credit,balance) VALUES (?,?,?,?,?,?,?,?)`,
+          [id, e.categoryId, billNo, e.date, e.description, e.debit, e.credit, e.balance]
+        );
+        const entry: AssetEntry = { ...e, id, billNo };
+        set(s => ({ assetEntries: [entry, ...s.assetEntries], nextAssetNo: no + 1 }));
+      });
     } catch (err) {
       console.error('[Store] addAssetEntry failed:', err);
       throw err;
@@ -590,16 +591,17 @@ export const useStore = create<AppState>()((set, get) => ({
   addLiabilityEntry: async (e) => {
     let no = 0;
     try {
-      const db = await getDB();
-      no = await getAndBumpCounter('liability');
-      const billNo = `LIA-${String(no).padStart(2, '0')}`;
-      const id = uid();
-      await db.execute(
-        `INSERT INTO liability_entries (id,category_id,bill_no,date,description,debit,credit,balance) VALUES (?,?,?,?,?,?,?,?)`,
-        [id, e.categoryId, billNo, e.date, e.description, e.debit, e.credit, e.balance]
-      );
-      const entry: LiabilityEntry = { ...e, id, billNo };
-      set(s => ({ liabilityEntries: [entry, ...s.liabilityEntries], nextLiabilityNo: no + 1 }));
+      await runInTransaction(async (db) => {
+        no = await getAndBumpCounter('liability', db);
+        const billNo = `LIA-${String(no).padStart(2, '0')}`;
+        const id = uid();
+        await db.execute(
+          `INSERT INTO liability_entries (id,category_id,bill_no,date,description,debit,credit,balance) VALUES (?,?,?,?,?,?,?,?)`,
+          [id, e.categoryId, billNo, e.date, e.description, e.debit, e.credit, e.balance]
+        );
+        const entry: LiabilityEntry = { ...e, id, billNo };
+        set(s => ({ liabilityEntries: [entry, ...s.liabilityEntries], nextLiabilityNo: no + 1 }));
+      });
     } catch (err) {
       console.error('[Store] addLiabilityEntry failed:', err);
       throw err;
@@ -652,16 +654,17 @@ export const useStore = create<AppState>()((set, get) => ({
   addCustomerEntry: async (e) => {
     let no = 0;
     try {
-      const db = await getDB();
-      no = await getAndBumpCounter('customer');
-      const billNo = `CST-${String(no).padStart(2, '0')}`;
-      const id = uid();
-      await db.execute(
-        `INSERT INTO customer_entries (id,customer_id,bill_no,date,description,debit,credit,balance) VALUES (?,?,?,?,?,?,?,?)`,
-        [id, e.customerId, billNo, e.date, e.description, e.debit, e.credit, e.balance]
-      );
-      const entry: CustomerEntry = { ...e, id, billNo };
-      set(s => ({ customerEntries: [entry, ...s.customerEntries], nextCustomerNo: no + 1 }));
+      await runInTransaction(async (db) => {
+        no = await getAndBumpCounter('customer', db);
+        const billNo = `CST-${String(no).padStart(2, '0')}`;
+        const id = uid();
+        await db.execute(
+          `INSERT INTO customer_entries (id,customer_id,bill_no,date,description,debit,credit,balance) VALUES (?,?,?,?,?,?,?,?)`,
+          [id, e.customerId, billNo, e.date, e.description, e.debit, e.credit, e.balance]
+        );
+        const entry: CustomerEntry = { ...e, id, billNo };
+        set(s => ({ customerEntries: [entry, ...s.customerEntries], nextCustomerNo: no + 1 }));
+      });
     } catch (err) {
       console.error('[Store] addCustomerEntry failed:', err);
       throw err;
