@@ -1,22 +1,28 @@
 import { useState, useMemo, useEffect } from 'react';
 import {
   BarChart3, TrendingUp, TrendingDown, ArrowLeft,
-  Package, LayoutList, Fuel, Zap, Clock,
+  Package, LayoutList, Fuel, Zap, Clock, Download,
   ChevronRight, Calendar
 } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useStore, FuelType } from '../store/useStore';
 import {
-  formatCurrency, filterByStartDate, formatDate,
+  formatCurrency, filterByStartDate, formatDate, getErrorMessage,
   paginate, cn, startOfMonth, startOfYear, today
 } from '../lib/utils';
 import SearchBar from '../components/ui/SearchBar';
 import Pagination from '../components/ui/Pagination';
+import { useToast } from '../components/ui/Toast';
 
 // const PER_PAGE = 40; // Replaced by state
 
 export default function StockPage() {
-  const { purchases: rawPurchases, sales: rawSales, settings } = useStore();
+  const { toast } = useToast();
+  const rawPurchases = useStore((s) => s.purchases);
+  const rawSales = useStore((s) => s.sales);
+  const settings = useStore((s) => s.settings);
+  const initializeFromDB = useStore((s) => s.initializeFromDB);
+  const dbReady = useStore((s) => s.dbReady);
   const { type } = useParams<{ type: string }>();
   const navigate = useNavigate();
 
@@ -33,6 +39,24 @@ export default function StockPage() {
       setView('overview');
     }
   }, [type]);
+
+  // Keep stock cards synced with latest Sale/Purchase writes.
+  // This guarantees fresh totals when user returns to the Stock module.
+  useEffect(() => {
+    if (!dbReady) return;
+
+    const refresh = () => {
+      void initializeFromDB();
+    };
+
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+
+    return () => {
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh);
+    };
+  }, [dbReady, initializeFromDB]);
 
   // ── Detail View State ──
   const [showHistory, setShowHistory] = useState(false);
@@ -135,6 +159,216 @@ export default function StockPage() {
         .reduce((s, x) => s + x.quantity, 0)
     };
   }, [rawPurchases, rawSales, selectedType, fromDate, toDate, view]);
+
+  const handleDownloadStats = async () => {
+    try {
+      const ExcelJS = await import('exceljs');
+      const { save } = await import('@tauri-apps/plugin-dialog');
+      const { writeFile } = await import('@tauri-apps/plugin-fs');
+
+      const workbook = new ExcelJS.Workbook();
+      workbook.creator = 'HR Petroleum';
+      workbook.lastModifiedBy = 'HR Petroleum';
+      workbook.created = new Date();
+      workbook.modified = new Date();
+
+      const allPurchases = filterByStartDate(rawPurchases, settings.startDate).filter(
+        (p) => (!fromDate || p.date >= fromDate) && (!toDate || p.date <= toDate)
+      );
+      const allSales = filterByStartDate(rawSales, settings.startDate).filter(
+        (s) => (!fromDate || s.date >= fromDate) && (!toDate || s.date <= toDate)
+      );
+
+      const summary = workbook.addWorksheet('Stock Summary');
+      summary.columns = [
+        { width: 16 }, { width: 24 }, { width: 24 }, { width: 20 }, { width: 20 }, { width: 22 },
+      ];
+      summary.mergeCells('A1:F1');
+      summary.mergeCells('A2:F2');
+      summary.mergeCells('A3:F3');
+      summary.mergeCells('A4:F4');
+      summary.getCell('A1').value = 'HR PETROLEUM';
+      summary.getCell('A2').value = 'Stock Statistics & Detailed Report';
+      summary.getCell('A3').value = 'Logo: HR';
+      summary.getCell('A4').value = `Period: ${fromDate || settings.startDate || 'Beginning'} to ${toDate || today()}`;
+      summary.getRow(1).height = 30;
+      summary.getRow(2).height = 24;
+      summary.getRow(3).height = 20;
+      summary.getRow(4).height = 20;
+
+      const headingFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F172A' } } as const;
+      const headingFont = { color: { argb: 'FFFFFFFF' }, bold: true, size: 16 } as const;
+      summary.getCell('A1').fill = headingFill;
+      summary.getCell('A1').font = headingFont;
+      summary.getCell('A2').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } };
+      summary.getCell('A2').font = { color: { argb: 'FFFFFFFF' }, bold: true, size: 12 };
+      summary.getCell('A3').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0EA5E9' } };
+      summary.getCell('A3').font = { color: { argb: 'FFFFFFFF' }, bold: true };
+      summary.getCell('A4').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2E8F0' } };
+      summary.getCell('A4').font = { color: { argb: 'FF0F172A' }, bold: true };
+      ['A1', 'A2', 'A3', 'A4'].forEach((addr) => {
+        summary.getCell(addr).alignment = { horizontal: 'center', vertical: 'middle' };
+      });
+
+      const headerRow = summary.addRow(['Fuel', 'Purchase Volume (L)', 'Sales Volume (L)', 'Remaining (L)', 'Purchase Value (PKR)', 'Sales Value (PKR)']);
+      headerRow.eachCell((c) => {
+        c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF334155' } };
+        c.alignment = { horizontal: 'center', vertical: 'middle' };
+        c.border = {
+          top: { style: 'thin', color: { argb: 'FF64748B' } },
+          left: { style: 'thin', color: { argb: 'FF64748B' } },
+          bottom: { style: 'thin', color: { argb: 'FF64748B' } },
+          right: { style: 'thin', color: { argb: 'FF64748B' } },
+        };
+      });
+
+      const summaryRows = [
+        ['HSD', stockData.HSD.totalPurchased, stockData.HSD.totalSold, stockData.HSD.current, stockData.HSD.purchaseValue, stockData.HSD.saleValue],
+        ['PMG', stockData.PMG.totalPurchased, stockData.PMG.totalSold, stockData.PMG.current, stockData.PMG.purchaseValue, stockData.PMG.saleValue],
+        ['TOTAL', stockData.HSD.totalPurchased + stockData.PMG.totalPurchased, stockData.HSD.totalSold + stockData.PMG.totalSold, stockData.HSD.current + stockData.PMG.current, stockData.HSD.purchaseValue + stockData.PMG.purchaseValue, stockData.HSD.saleValue + stockData.PMG.saleValue],
+      ];
+      summaryRows.forEach((r, idx) => {
+        const row = summary.addRow(r);
+        row.eachCell((c, colNo) => {
+          c.border = {
+            top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+            left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+            bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+            right: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          };
+          c.alignment = { horizontal: colNo === 1 ? 'left' : 'right', vertical: 'middle' };
+        });
+        if (idx === 2) {
+          row.eachCell((c) => {
+            c.font = { bold: true, color: { argb: 'FF0F172A' } };
+            c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } };
+          });
+        }
+      });
+
+      const makeFuelDetailSheet = (fuel: FuelType) => {
+        const ws = workbook.addWorksheet(`${fuel} Details`);
+        ws.columns = [
+          { header: 'Date', key: 'date', width: 14 },
+          { header: 'Type', key: 'type', width: 12 },
+          { header: 'Bill No', key: 'billNo', width: 16 },
+          { header: 'Description/Details', key: 'details', width: 34 },
+          { header: 'Qty In (L)', key: 'qtyIn', width: 14 },
+          { header: 'Qty Out (L)', key: 'qtyOut', width: 14 },
+          { header: 'Rate (PKR)', key: 'rate', width: 14 },
+          { header: 'Amount (PKR)', key: 'amount', width: 16 },
+          { header: 'Running Balance (L)', key: 'balance', width: 20 },
+        ];
+
+        const purchases = allPurchases
+          .filter((p) => p.type === fuel)
+          .map((p) => ({
+            date: p.date,
+            type: 'Purchase',
+            billNo: p.billNo,
+            details: p.details || p.description || '',
+            qtyIn: p.quantity,
+            qtyOut: 0,
+            rate: p.rate,
+            amount: p.totalAmount,
+          }));
+        const sales = allSales
+          .filter((s) => s.type === fuel)
+          .map((s) => ({
+            date: s.date,
+            type: 'Sale',
+            billNo: s.billNo,
+            details: s.description || 'Daily Sale',
+            qtyIn: 0,
+            qtyOut: s.quantity,
+            rate: s.rate,
+            amount: s.amount,
+          }));
+
+        const combined = [...purchases, ...sales].sort((a, b) => a.date.localeCompare(b.date));
+        let running = 0;
+        combined.forEach((x) => {
+          running += x.qtyIn - x.qtyOut;
+          ws.addRow({ ...x, balance: running });
+        });
+
+        ws.getRow(1).eachCell((c) => {
+          c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+          c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: fuel === 'HSD' ? 'FFB45309' : 'FF047857' } };
+          c.alignment = { horizontal: 'center', vertical: 'middle' };
+        });
+
+        ws.eachRow((row, i) => {
+          if (i === 1) return;
+          row.eachCell((c, colNo) => {
+            c.border = {
+              top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+              left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+              bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+              right: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+            };
+            c.alignment = { horizontal: colNo <= 4 ? 'left' : 'right', vertical: 'middle' };
+          });
+        });
+      };
+
+      makeFuelDetailSheet('HSD');
+      makeFuelDetailSheet('PMG');
+
+      const purchasesSheet = workbook.addWorksheet('All Purchases');
+      purchasesSheet.columns = [
+        { header: 'Date', key: 'date', width: 14 },
+        { header: 'Fuel', key: 'type', width: 10 },
+        { header: 'Bill No', key: 'billNo', width: 16 },
+        { header: 'Invoice No', key: 'invoiceNo', width: 16 },
+        { header: 'Vehicle No', key: 'vehicleNo', width: 16 },
+        { header: 'Supplier Details', key: 'details', width: 30 },
+        { header: 'Rate', key: 'rate', width: 12 },
+        { header: 'Qty (L)', key: 'quantity', width: 12 },
+        { header: 'Carriage', key: 'carriage', width: 12 },
+        { header: 'Amount', key: 'amount', width: 14 },
+        { header: 'Total Amount', key: 'totalAmount', width: 16 },
+      ];
+      allPurchases.forEach((p) => purchasesSheet.addRow(p));
+      purchasesSheet.getRow(1).eachCell((c) => {
+        c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } };
+      });
+
+      const salesSheet = workbook.addWorksheet('All Sales');
+      salesSheet.columns = [
+        { header: 'Date', key: 'date', width: 14 },
+        { header: 'Fuel', key: 'type', width: 10 },
+        { header: 'Bill No', key: 'billNo', width: 16 },
+        { header: 'Description', key: 'description', width: 30 },
+        { header: 'Rate', key: 'rate', width: 12 },
+        { header: 'Qty (L)', key: 'quantity', width: 12 },
+        { header: 'Amount', key: 'amount', width: 14 },
+      ];
+      allSales.forEach((s) => salesSheet.addRow(s));
+      salesSheet.getRow(1).eachCell((c) => {
+        c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F766E' } };
+      });
+
+      const defaultPath = `HR_Petroleum_Stock_Report_${today()}.xlsx`;
+      const filePath = await save({
+        defaultPath,
+        filters: [{ name: 'Excel Workbook', extensions: ['xlsx'] }],
+      });
+      if (!filePath) return;
+
+      const normalizedPath = filePath.startsWith('file://') ? filePath.replace('file://', '') : filePath;
+      const buffer = await workbook.xlsx.writeBuffer();
+      const data = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer as ArrayBuffer);
+      await writeFile(normalizedPath, data);
+      toast('Stock stats Excel downloaded successfully', 'success');
+    } catch (err: unknown) {
+      console.error('Failed to download stock report', err);
+      toast(`Failed to download stock stats: ${getErrorMessage(err)}`, 'error');
+    }
+  };
 
   // ── Render Helpers ──
 
@@ -347,8 +581,16 @@ export default function StockPage() {
           </div>
         </div>
 
-        {/* Global Date Filter for Overview */}
-        <div className="flex items-center gap-2 bg-white dark:bg-dark-900 p-2 rounded-2xl border border-slate-200 dark:border-dark-700 shadow-sm overflow-x-auto">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleDownloadStats}
+            className="px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 transition-all font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-emerald-600/20"
+          >
+            <Download className="w-4 h-4" />
+            Download Stock Stats
+          </button>
+          {/* Global Date Filter for Overview */}
+          <div className="flex items-center gap-2 bg-white dark:bg-dark-900 p-2 rounded-2xl border border-slate-200 dark:border-dark-700 shadow-sm overflow-x-auto">
           <div className="flex items-center bg-slate-50 dark:bg-dark-800 p-1 rounded-xl border border-slate-100 dark:border-dark-750 mr-2">
             <button onClick={() => { setFromDate(today()); setToDate(today()); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all">Today</button>
             <button onClick={() => { setFromDate(startOfMonth()); setToDate(today()); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all border-l border-slate-200 dark:border-dark-700/50">This Month</button>
@@ -371,6 +613,7 @@ export default function StockPage() {
               Clear
             </button>
           )}
+        </div>
         </div>
       </div>
 
@@ -462,20 +705,31 @@ export default function StockPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-dark-800">
-              {[
-                { label: 'HSD', purchased: stockData.HSD.totalPurchased, sold: stockData.HSD.totalSold, current: stockData.HSD.current, color: 'text-amber-600' },
-                { label: 'PMG', purchased: stockData.PMG.totalPurchased, sold: stockData.PMG.totalSold, current: stockData.PMG.current, color: 'text-emerald-600' },
-                { label: 'Total Volume', purchased: stockData.HSD.totalPurchased + stockData.PMG.totalPurchased, sold: stockData.HSD.totalSold + stockData.PMG.totalSold, current: stockData.HSD.current + stockData.PMG.current, bold: true },
-              ].map(row => (
-                <tr key={row.label} className="group hover:bg-slate-50/50 dark:hover:bg-dark-900/40">
-                  <td className="px-8 py-5 text-sm font-black text-slate-700 dark:text-dark-300 uppercase tracking-tighter">{row.label}</td>
-                  <td className="px-8 py-5 text-right font-black tabular-nums text-emerald-600">{row.purchased.toLocaleString()} L</td>
-                  <td className="px-8 py-5 text-right font-black tabular-nums text-red-600">{row.sold.toLocaleString()} L</td>
-                  <td className={cn("px-8 py-5 text-right font-black tabular-nums bg-primary-600/5", row.bold ? 'text-2xl text-black dark:text-white' : 'text-slate-900 dark:text-white')}>
-                    {row.current.toLocaleString()} L
-                  </td>
-                </tr>
-              ))}
+              <tr className="group hover:bg-slate-50/50 dark:hover:bg-dark-900/40">
+                <td className="px-8 py-5 text-sm font-black text-slate-700 dark:text-dark-300 uppercase tracking-tighter">HSD</td>
+                <td className="px-8 py-5 text-right font-black tabular-nums text-emerald-600">{stockData.HSD.totalPurchased.toLocaleString()} L</td>
+                <td className="px-8 py-5 text-right font-black tabular-nums text-red-600">{stockData.HSD.totalSold.toLocaleString()} L</td>
+                <td className="px-8 py-5 text-right font-black tabular-nums bg-primary-600/5 text-slate-900 dark:text-white">{stockData.HSD.current.toLocaleString()} L</td>
+              </tr>
+              <tr className="group hover:bg-slate-50/50 dark:hover:bg-dark-900/40">
+                <td className="px-8 py-5 text-sm font-black text-slate-700 dark:text-dark-300 uppercase tracking-tighter">PMG</td>
+                <td className="px-8 py-5 text-right font-black tabular-nums text-emerald-600">{stockData.PMG.totalPurchased.toLocaleString()} L</td>
+                <td className="px-8 py-5 text-right font-black tabular-nums text-red-600">{stockData.PMG.totalSold.toLocaleString()} L</td>
+                <td className="px-8 py-5 text-right font-black tabular-nums bg-primary-600/5 text-slate-900 dark:text-white">{stockData.PMG.current.toLocaleString()} L</td>
+              </tr>
+              <tr aria-hidden="true">
+                <td colSpan={4} className="px-0 py-0">
+                  <div className="h-[1px] w-full bg-slate-300 dark:bg-dark-600" />
+                </td>
+              </tr>
+              <tr className="group hover:bg-slate-50/50 dark:hover:bg-dark-900/40">
+                <td className="px-8 py-5 text-sm font-black text-slate-700 dark:text-dark-300 uppercase tracking-tighter">Total Volume</td>
+                <td className="px-8 py-5 text-right font-black tabular-nums text-emerald-600">{(stockData.HSD.totalPurchased + stockData.PMG.totalPurchased).toLocaleString()} L</td>
+                <td className="px-8 py-5 text-right font-black tabular-nums text-red-600">{(stockData.HSD.totalSold + stockData.PMG.totalSold).toLocaleString()} L</td>
+                <td className="px-8 py-5 text-right font-black tabular-nums bg-primary-600/5 text-2xl text-black dark:text-white">
+                  {(stockData.HSD.current + stockData.PMG.current).toLocaleString()} L
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>

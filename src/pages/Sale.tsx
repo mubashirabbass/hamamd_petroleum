@@ -118,12 +118,12 @@ export default function SalePage() {
   };
 
   return (
-    <div className="animate-fade-in flex flex-col md:flex-row gap-4 h-full">
+    <div className="animate-fade-in flex flex-col md:flex-row gap-4 h-[calc(100vh-120px)] overflow-hidden">
       {/* Sidebar selection */}
-      <div className="w-full md:w-60 flex-shrink-0 flex flex-col gap-3 md:h-[calc(100vh-140px)] h-auto">
+      <div className="w-full md:w-60 flex-shrink-0 flex flex-col gap-3 h-full">
         <div className="category-panel flex-1 overflow-y-auto custom-scrollbar text-left">
           <div className="px-3 py-2">
-            <h2 className="text-[10px] font-black text-slate-400 dark:text-dark-500 uppercase tracking-[0.2em]">Fuel Types</h2>
+            <h2 className="text-[10px] font-extrabold text-slate-600 dark:text-dark-200 uppercase tracking-[0.2em]">Fuel Types</h2>
           </div>
 
           {(['HSD', 'PMG'] as FuelType[]).map((t) => (

@@ -244,7 +244,7 @@ export default function LedgerPage() {
         )}
       </div>
 
-      <div className="flex gap-4 h-[calc(100vh-160px)] overflow-hidden">
+      <div className="flex gap-4 h-[calc(100vh-120px)] overflow-hidden">
         {activeTab === 'dashboard' ? (
           <div className="flex-1 flex flex-col h-full overflow-hidden">
             {/* Global Summary Cards */}
@@ -399,9 +399,9 @@ export default function LedgerPage() {
         ) : activeTab === 'database' ? (
           <>
             {/* Sidebar List */}
-            <div className="w-64 flex-shrink-0 flex flex-col h-full bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700/50 rounded-2xl overflow-hidden shadow-sm">
+            <div className="w-64 flex-shrink-0 flex flex-col h-[calc(100vh-120px)] bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700/50 rounded-2xl overflow-hidden shadow-sm">
               <div className="p-3 bg-slate-50/50 dark:bg-dark-800/30 border-b border-slate-100 dark:border-dark-700/30 flex items-center justify-between">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Ledgers</p>
+                <p className="text-[10px] font-extrabold text-slate-600 dark:text-dark-200 uppercase tracking-widest">Active Ledgers</p>
                 <span className="text-[10px] font-bold text-slate-300">{filteredSidebar.length}</span>
               </div>
               <div className="p-2 border-b border-slate-100 dark:border-dark-700/30">

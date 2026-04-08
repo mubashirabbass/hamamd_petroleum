@@ -282,13 +282,13 @@ export default function Dashboard() {
       {/* ── Top Header: Title | Clock + Theme | User Card ── */}
       <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
 
-        {/* Left: Logo + Title */}
+        {/* Left: Petrol Icon + Title */}
         <div className="flex items-center gap-5">
-          <div className="w-14 h-14 bg-white rounded-3xl flex items-center justify-center p-1.5 shadow-xl border border-slate-200 flex-shrink-0">
-            <img src="/assets/logo-hr.png" alt="HR" className="w-full h-full object-contain" />
+          <div className="w-14 h-14 rounded-3xl flex items-center justify-center shadow-xl border border-emerald-500/20 bg-emerald-600/10 flex-shrink-0">
+            <Fuel className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
           </div>
           <div>
-            <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">HR Filling Station</h1>
+            <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Hammad Rahim Filling Station</h1>
             <p className="text-slate-500 dark:text-dark-400 text-sm font-bold uppercase tracking-widest">Business Dashboard</p>
           </div>
         </div>

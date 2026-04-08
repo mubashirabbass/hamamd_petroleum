@@ -160,20 +160,12 @@ export default function PurchasePage() {
   }), [filtered]);
 
   return (
-    <div className="animate-fade-in flex gap-4 h-full">
+    <div className="animate-fade-in flex gap-4 h-[calc(100vh-120px)] overflow-hidden">
       {/* Sidebar selection */}
-      <div className="w-60 flex-shrink-0 flex flex-col gap-3 h-[calc(100vh-140px)]">
-        <button
-          onClick={() => { closeForm(); setShowForm(true); }}
-          className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-primary-600 text-white font-bold text-sm shadow-lg shadow-primary-600/20 hover:bg-primary-500 transition-all active:scale-95"
-        >
-          <Plus className="w-4 h-4" />
-          Add Purchase
-        </button>
-
+      <div className="w-60 flex-shrink-0 flex flex-col gap-3 h-full">
         <div className="category-panel flex-1 overflow-y-auto custom-scrollbar">
           <div className="px-3 py-2">
-            <h2 className="text-[10px] font-black text-slate-400 dark:text-dark-500 uppercase tracking-[0.2em]">Fuel Types</h2>
+            <h2 className="text-[10px] font-extrabold text-slate-600 dark:text-dark-200 uppercase tracking-[0.2em]">Fuel Types</h2>
           </div>
 
           {(['HSD', 'PMG'] as FuelType[]).map((t) => (
@@ -298,17 +290,17 @@ export default function PurchasePage() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead><tr className="table-header text-[10px]">
-                <th className="table-cell text-left">Date</th>
-                <th className="table-cell text-left">Invoice No</th>
+                <th className="table-cell text-left w-28">Date</th>
+                <th className="table-cell text-left w-36">Invoice No</th>
                 <th className="table-cell text-left w-64">Description</th>
-                <th className="table-cell text-left">Vehicle No</th>
-                <th className="table-cell text-left">Details</th>
+                <th className="table-cell text-left w-32">Vehicle No</th>
+                <th className="table-cell text-left min-w-[16rem]">Details</th>
                 <th className="table-cell text-right w-24">Rate</th>
                 <th className="table-cell text-right w-24">Qty (L)</th>
-                <th className="table-cell text-right">Carriage</th>
-                <th className="table-cell text-right">Amount</th>
-                <th className="table-cell text-right font-black">Total</th>
-                <th className="table-cell w-20 text-center">Actions</th>
+                <th className="table-cell text-right w-28">Carriage</th>
+                <th className="table-cell text-right w-28">Amount</th>
+                <th className="table-cell text-right font-black w-32">Total</th>
+                <th className="table-cell w-24 text-center">Actions</th>
               </tr></thead>
               <tbody>
                 {paged.length === 0 ? (
@@ -316,15 +308,15 @@ export default function PurchasePage() {
                 ) : paged.map((p) => (
                   <tr key={p.id} className="table-row group hover:bg-slate-50 dark:hover:bg-dark-800/50 text-[11px]">
                     <td className="table-cell whitespace-nowrap">{formatDate(p.date)}</td>
-                    <td className="table-cell font-medium text-emerald-600">{p.invoiceNo || '—'}</td>
+                    <td className="table-cell font-medium text-emerald-600 whitespace-nowrap">{p.invoiceNo || '—'}</td>
                     <td className="table-cell whitespace-normal break-words max-w-[22rem] leading-5">{p.description || '—'}</td>
-                    <td className="table-cell text-slate-500 uppercase tracking-wider">{p.vehicleNo || '—'}</td>
-                    <td className="table-cell text-slate-600 dark:text-dark-300">{p.details || '—'}</td>
+                    <td className="table-cell text-slate-500 uppercase tracking-wider whitespace-nowrap">{p.vehicleNo || '—'}</td>
+                    <td className="table-cell text-slate-600 dark:text-dark-300 whitespace-normal break-words max-w-[18rem]">{p.details || '—'}</td>
                     <td className="table-cell text-right whitespace-nowrap">₨ {formatCurrency(p.rate)}</td>
                     <td className="table-cell text-right whitespace-nowrap">{p.quantity.toLocaleString()}</td>
-                    <td className="table-cell text-right">₨ {formatCurrency(p.carriage)}</td>
-                    <td className="table-cell text-right">₨ {formatCurrency(p.amount)}</td>
-                    <td className="table-cell text-right font-semibold text-slate-900 dark:text-white">₨ {formatCurrency(p.totalAmount)}</td>
+                    <td className="table-cell text-right whitespace-nowrap">₨ {formatCurrency(p.carriage)}</td>
+                    <td className="table-cell text-right whitespace-nowrap">₨ {formatCurrency(p.amount)}</td>
+                    <td className="table-cell text-right font-semibold text-slate-900 dark:text-white whitespace-nowrap">₨ {formatCurrency(p.totalAmount)}</td>
                     <td className="table-cell text-right">
                       <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
