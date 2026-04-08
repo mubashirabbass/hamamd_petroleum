@@ -29,7 +29,7 @@ export default function PurchasePage() {
 
   // Form state
   const [form, setForm] = useState({
-    date: today(), details: '', rate: '', quantity: '', carriage: '', amount: '', totalAmount: '',
+    date: today(), description: '', invoiceNo: '', vehicleNo: '', details: '', rate: '', quantity: '', carriage: '', amount: '', totalAmount: '',
   });
 
   const handleFuelSelect = (type: FuelType) => {
@@ -88,11 +88,11 @@ export default function PurchasePage() {
       if (editingEntity) {
         await useStore.getState().updatePurchase(editingEntity.id, payload);
         toast('Purchase updated successfully', 'success');
-        closeForm(); // Close after edit
+        closeForm(); // Close edit form
       } else {
         await addPurchase(payload);
         toast(`${fuelType} purchase added successfully`, 'success');
-        resetFormForNext(); // Stay open after add
+        resetFormForNext(); // Stay open
       }
     } catch (err: any) {
       console.error('Save error:', err);
@@ -106,6 +106,9 @@ export default function PurchasePage() {
     setEditingEntity(null);
     setForm(prev => ({
       ...prev,
+      description: '',
+      invoiceNo: '',
+      vehicleNo: '',
       details: '',
       rate: '',
       quantity: '',
@@ -118,13 +121,16 @@ export default function PurchasePage() {
   const closeForm = () => {
     setShowForm(false);
     setEditingEntity(null);
-    setForm({ date: today(), details: '', rate: '', quantity: '', carriage: '', amount: '', totalAmount: '' });
+    setForm({ date: today(), description: '', invoiceNo: '', vehicleNo: '', details: '', rate: '', quantity: '', carriage: '', amount: '', totalAmount: '' });
   };
 
   const handleEdit = (p: any) => {
     setEditingEntity(p);
     setForm({
       date: p.date,
+      description: p.description || '',
+      invoiceNo: p.invoiceNo || '',
+      vehicleNo: p.vehicleNo || '',
       details: p.details || '',
       rate: p.rate.toString(),
       quantity: p.quantity.toString(),
@@ -187,15 +193,13 @@ export default function PurchasePage() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div className="col-span-2">
-                  <label className="label">Invoice ID (Auto)</label>
-                  <input 
-                    className="input bg-slate-50 dark:bg-dark-750 font-medium text-slate-900 dark:text-white cursor-not-allowed" 
-                    value={editingEntity ? editingEntity.billNo : `PUR-${String(nextPurchaseNo).padStart(2, '0')}`} 
-                    readOnly 
-                  />
+                  <label className="label">Date *</label>
+                  <input type="date" className="input" value={form.date} onChange={(e) => set('date', e.target.value)} required />
                 </div>
-                <div><label className="label">Date *</label><input type="date" className="input" value={form.date} onChange={(e) => set('date', e.target.value)} required /></div>
-                <div><label className="label">Details / Supplier Info</label><input className="input" value={form.details} onChange={(e) => set('details', e.target.value)} placeholder="e.g. PSO Main Depot" /></div>
+                <div className="col-span-2"><label className="label">Description</label><input className="input" value={form.description} onChange={(e) => set('description', e.target.value)} placeholder="e.g. Purchase order note" /></div>
+                <div><label className="label">Invoice No</label><input className="input" value={form.invoiceNo} onChange={(e) => set('invoiceNo', e.target.value)} placeholder="e.g. INV-202611" /></div>
+                <div><label className="label">Vehicle No</label><input className="input" value={form.vehicleNo} onChange={(e) => set('vehicleNo', e.target.value)} placeholder="e.g. LHR-4567" /></div>
+                <div className="col-span-2"><label className="label">Details / Supplier Info</label><input className="input" value={form.details} onChange={(e) => set('details', e.target.value)} placeholder="e.g. PSO Main Depot" /></div>
                 <div><label className="label">Rate (₨) *</label><input type="number" step="0.01" className="input" value={form.rate} onChange={(e) => set('rate', e.target.value)} required /></div>
                 <div><label className="label">Quantity (L) *</label><input type="number" step="0.01" className="input" value={form.quantity} onChange={(e) => set('quantity', e.target.value)} required /></div>
                 <div><label className="label">Carriage (₨)</label><input type="number" step="0.01" className="input" value={form.carriage} onChange={(e) => set('carriage', e.target.value)} /></div>
@@ -290,9 +294,10 @@ export default function PurchasePage() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead><tr className="table-header text-[10px]">
-                <th className="px-4 py-3 text-left w-12 border-r border-slate-300 dark:border-dark-700/50">S.No</th>
-                <th className="table-cell text-left">Bill No</th>
                 <th className="table-cell text-left">Date</th>
+                <th className="table-cell text-left">Invoice No</th>
+                <th className="table-cell text-left">Description</th>
+                <th className="table-cell text-left">Vehicle No</th>
                 <th className="table-cell text-left">Details</th>
                 <th className="table-cell text-right">Rate</th>
                 <th className="table-cell text-right">Qty (L)</th>
@@ -303,12 +308,13 @@ export default function PurchasePage() {
               </tr></thead>
               <tbody>
                 {paged.length === 0 ? (
-                  <tr><td colSpan={10} className="table-cell text-center text-slate-400 dark:text-dark-500 py-12 italic">No {fuelType} purchases found</td></tr>
+                  <tr><td colSpan={11} className="table-cell text-center text-slate-400 dark:text-dark-500 py-12 italic">No {fuelType} purchases found</td></tr>
                 ) : paged.map((p, idx) => (
                   <tr key={p.id} className="table-row group hover:bg-slate-50 dark:hover:bg-dark-800/50 text-[11px]">
-                    <td className="text-[11px] font-bold text-slate-400 border-r border-slate-300 dark:border-dark-700/50 text-center">{(page - 1) * PER_PAGE + idx + 1}</td>
-                    <td className="table-cell font-medium text-slate-900 dark:text-white uppercase tracking-tighter">{p.billNo || 'Legacy'}</td>
                     <td className="table-cell whitespace-nowrap">{formatDate(p.date)}</td>
+                    <td className="table-cell font-medium text-emerald-600">{p.invoiceNo || '—'}</td>
+                    <td className="table-cell">{p.description || '—'}</td>
+                    <td className="table-cell text-slate-500 uppercase tracking-wider">{p.vehicleNo || '—'}</td>
                     <td className="table-cell text-slate-600 dark:text-dark-300">{p.details || '—'}</td>
                     <td className="table-cell text-right">₨ {formatCurrency(p.rate)}</td>
                     <td className="table-cell text-right">{p.quantity.toLocaleString()}</td>
@@ -320,10 +326,10 @@ export default function PurchasePage() {
                         <button
                           onClick={() => setViewingEntity(p)}
                           className="flex items-center gap-1.5 px-2 py-0.5 text-[9px] font-black uppercase tracking-tighter text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/20 border border-blue-200/50 dark:border-emerald-800/30 rounded hover:bg-blue-100 dark:hover:bg-blue-800/40 transition-all"
-                          title={`Print ${p.billNo || 'Bill'}`}
+                          title={`Print Bill`}
                         >
                           <Printer className="w-3 h-3" />
-                          <span>{p.billNo || 'PRINT'}</span>
+                          <span>PRINT</span>
                         </button>
                         <button onClick={() => setViewingEntity(p)} className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg transition-colors" title="View Details">
                           <Eye className="w-4 h-4" />
@@ -346,7 +352,7 @@ export default function PurchasePage() {
               {paged.length > 0 && (
                 <tfoot className="bg-slate-50/50 dark:bg-dark-800/50 border-t-[3px] border-double border-slate-300 dark:border-dark-600">
                   <tr className="text-black dark:text-white font-black">
-                    <td colSpan={5} className="px-4 py-3 text-right uppercase tracking-widest text-[11px] italic font-black">Page Total</td>
+                    <td colSpan={6} className="px-4 py-3 text-right uppercase tracking-widest text-[11px] italic font-black">Page Total</td>
                     <td className="px-4 py-3 text-right text-sm font-black">{pageTotals.qty.toLocaleString()} L</td>
                     <td className="px-4 py-3 text-right text-sm font-black">₨ {formatCurrency(pageTotals.carriage)}</td>
                     <td className="px-4 py-3 text-right text-black font-black text-sm">₨ {formatCurrency(pageTotals.amount)}</td>
@@ -354,7 +360,7 @@ export default function PurchasePage() {
                     <td className="table-cell"></td>
                   </tr>
                   <tr className="font-black text-black dark:text-white bg-slate-200/50 border-t border-slate-300">
-                    <td colSpan={5} className="px-4 py-4 text-right uppercase tracking-widest text-xs text-black font-black">Grand Total</td>
+                    <td colSpan={6} className="px-4 py-4 text-right uppercase tracking-widest text-xs text-black font-black">Grand Total</td>
                     <td className="px-4 py-4 text-right text-black font-black text-base">{grandTotals.qty.toLocaleString()} L</td>
                     <td className="px-4 py-4 text-right text-black font-black text-base">₨ {formatCurrency(grandTotals.carriage)}</td>
                     <td className="px-4 py-4 text-right text-black font-black text-base">₨ {formatCurrency(grandTotals.amount)}</td>

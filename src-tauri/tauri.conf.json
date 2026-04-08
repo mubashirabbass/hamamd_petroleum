@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "HRM Filling Station",
+  "productName": "HR Filling Station",
   "version": "1.0.0",
   "identifier": "com.ebs.business",
   "build": {
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "HRM Filling Station — Business Management",
+        "title": "HR Filling Station — Business Management",
         "width": 1280,
         "height": 800,
         "minWidth": 900,

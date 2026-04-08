@@ -23,14 +23,14 @@ function DBSplash({ error }: { error: string | null }) {
       <div className="flex flex-col items-center gap-3">
         <div className="flex items-center gap-4">
           <div className="w-20 h-20 bg-white/10 backdrop-blur-xl rounded-3xl flex items-center justify-center p-2 border border-white/20 shadow-2xl">
-             <img src="/assets/logo-hr.png" alt="HRM" className="w-full h-full object-contain" />
+             <img src="/assets/logo-hr.png" alt="HR" className="w-full h-full object-contain" />
           </div>
           <div className="w-20 h-20 bg-white/10 backdrop-blur-xl rounded-3xl flex items-center justify-center p-2 border border-white/20 shadow-2xl">
              <img src="/assets/logo-go.png" alt="GO" className="w-full h-full object-contain" />
           </div>
         </div>
         <div className="text-center mt-2">
-          <h1 className="text-3xl font-black text-white tracking-tight">HRM Filling Station</h1>
+          <h1 className="text-3xl font-black text-white tracking-tight">HR Filling Station</h1>
           <p className="text-slate-400 text-sm font-medium mt-1 uppercase tracking-widest">Business Suite</p>
         </div>
       </div>

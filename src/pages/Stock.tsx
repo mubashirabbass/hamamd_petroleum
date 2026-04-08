@@ -277,8 +277,6 @@ export default function StockPage() {
                   <table className="w-full">
                     <thead>
                       <tr className="bg-slate-50/50 dark:bg-dark-800/50 border-b border-slate-100 dark:border-dark-800">
-                        <th className="px-6 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest w-12 border-r border-slate-200 dark:border-dark-700/50">S.No</th>
-                        <th className="px-6 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Inv / Ref</th>
                         <th className="px-6 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Date</th>
                         <th className="px-6 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Details</th>
                         <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">In (L)</th>
@@ -291,8 +289,6 @@ export default function StockPage() {
                         <tr><td colSpan={6} className="py-20 text-center text-xs text-slate-400 italic">No records found for this period</td></tr>
                       ) : pagedHistory.map((h, i) => (
                         <tr key={h.id + (h.date) + i} className="hover:bg-slate-50/50 dark:hover:bg-dark-800/30 transition-colors group">
-                          <td className="px-6 py-4 text-[11px] font-bold text-slate-400 border-r border-slate-200 dark:border-dark-700/50 text-center">{(page - 1) * perPage + i + 1}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-[12px] font-medium text-slate-900 dark:text-white">{(h as any).billNo || '—'}</td>
                           <td className="px-6 py-4 whitespace-nowrap text-[12px] font-bold text-slate-600 dark:text-dark-300">{formatDate(h.date)}</td>
                           <td className="px-6 py-4 text-[12px] font-black text-slate-900 dark:text-white truncate max-w-[180px]">{h.details || 'Daily Sale'}</td>
                           <td className="px-6 py-4 text-right text-emerald-600 font-mono text-xs font-bold">{h.qtyIn ? `+${h.qtyIn.toLocaleString()}` : '—'}</td>

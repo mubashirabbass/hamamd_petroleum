@@ -116,6 +116,9 @@ async function initSchema(db: Database): Promise<void> {
       bill_no      TEXT NOT NULL,
       type         TEXT NOT NULL DEFAULT 'HSD',
       date         TEXT NOT NULL,
+      description  TEXT DEFAULT '',
+      invoice_no   TEXT DEFAULT '',
+      vehicle_no   TEXT DEFAULT '',
       details      TEXT DEFAULT '',
       rate         REAL NOT NULL DEFAULT 0,
       quantity     REAL NOT NULL DEFAULT 0,
@@ -124,21 +127,41 @@ async function initSchema(db: Database): Promise<void> {
       total_amount REAL NOT NULL DEFAULT 0
     )
   `);
+  
+  // Backward compatibility: add columns if upgrading older database
+  try {
+    await db.execute(`ALTER TABLE purchases ADD COLUMN description TEXT DEFAULT ''`);
+  } catch (e) {}
+  try {
+    await db.execute(`ALTER TABLE purchases ADD COLUMN invoice_no TEXT DEFAULT ''`);
+  } catch (e) {}
+  try {
+    await db.execute(`ALTER TABLE purchases ADD COLUMN vehicle_no TEXT DEFAULT ''`);
+  } catch (e) {}
+
   await db.execute(`CREATE INDEX IF NOT EXISTS idx_purchases_date ON purchases(date)`);
   await db.execute(`CREATE INDEX IF NOT EXISTS idx_purchases_type ON purchases(type)`);
 
   // ── Sales ─────────────────────────────────────────────────────────────────
   await db.execute(`
     CREATE TABLE IF NOT EXISTS sales (
-      id       TEXT PRIMARY KEY,
-      bill_no  TEXT NOT NULL,
-      type     TEXT NOT NULL DEFAULT 'HSD',
-      date     TEXT NOT NULL,
-      quantity REAL NOT NULL DEFAULT 0,
-      rate     REAL NOT NULL DEFAULT 0,
-      amount   REAL NOT NULL DEFAULT 0
+      id          TEXT PRIMARY KEY,
+      bill_no     TEXT NOT NULL,
+      type        TEXT NOT NULL DEFAULT 'HSD',
+      date        TEXT NOT NULL,
+      description TEXT DEFAULT '',
+      quantity    REAL NOT NULL DEFAULT 0,
+      rate        REAL NOT NULL DEFAULT 0,
+      amount      REAL NOT NULL DEFAULT 0
     )
   `);
+  
+  // Backward compatibility: add description if upgrading older database
+  try {
+    await db.execute(`ALTER TABLE sales ADD COLUMN description TEXT DEFAULT ''`);
+  } catch (e) {
+    // Column likely exists
+  }
   await db.execute(`CREATE INDEX IF NOT EXISTS idx_sales_date ON sales(date)`);
   await db.execute(`CREATE INDEX IF NOT EXISTS idx_sales_type ON sales(type)`);
 
@@ -293,8 +316,8 @@ async function initSchema(db: Database): Promise<void> {
 
 // ─── Counter Helpers ──────────────────────────────────────────────────────────
 
-export async function getAndBumpCounter(name: string): Promise<number> {
-  const db = await getDB();
+export async function getAndBumpCounter(name: string, externalDb?: Database): Promise<number> {
+  const db = externalDb || await getDB();
   const rows = await db.select<{ value: number }[]>(
     'SELECT value FROM counters WHERE name = ?',
     [name]
@@ -367,8 +390,8 @@ export async function loadAllData(): Promise<RawDBData> {
     users,
     counterRows,
   ] = await Promise.all([
-    db.select<any[]>('SELECT id, bill_no as billNo, type, date, details, rate, quantity, carriage, amount, total_amount as totalAmount FROM purchases ORDER BY rowid DESC'),
-    db.select<any[]>('SELECT id, bill_no as billNo, type, date, quantity, rate, amount FROM sales ORDER BY rowid DESC'),
+    db.select<any[]>('SELECT id, bill_no as billNo, invoice_no as invoiceNo, vehicle_no as vehicleNo, description, type, date, details, rate, quantity, carriage, amount, total_amount as totalAmount FROM purchases ORDER BY rowid DESC'),
+    db.select<any[]>('SELECT id, bill_no as billNo, type, date, description, quantity, rate, amount FROM sales ORDER BY rowid DESC'),
     db.select<any[]>('SELECT id, name FROM ledger_categories'),
     db.select<any[]>('SELECT id, category_id as categoryId, bill_no as billNo, date, description, debit, credit, balance FROM ledger_entries ORDER BY rowid DESC'),
     db.select<any[]>('SELECT id, name FROM expense_categories'),

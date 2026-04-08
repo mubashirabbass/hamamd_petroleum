@@ -21,6 +21,9 @@ export interface Purchase {
   billNo:      string;
   type:        FuelType;
   date:        string;
+  description?: string;
+  invoiceNo?:  string;
+  vehicleNo?:  string;
   details:     string;
   rate:        number;
   quantity:    number;
@@ -30,13 +33,14 @@ export interface Purchase {
 }
 
 export interface Sale {
-  id:       string;
-  billNo:   string;
-  type:     FuelType;
-  date:     string;
-  quantity: number;
-  rate:     number;
-  amount:   number;
+  id:          string;
+  billNo:      string;
+  type:        FuelType;
+  date:        string;
+  description?: string;
+  quantity:    number;
+  rate:        number;
+  amount:      number;
 }
 
 export interface Category {
@@ -259,7 +263,7 @@ export const useStore = create<AppState>()((set, get) => ({
         currentMachineId: machineId,
         settings: {
           startDate:    data.settings['startDate']    ?? '',
-          softwareName: data.settings['softwareName'] === 'EBS Petroleum' ? 'HRM Filling Station' : (data.settings['softwareName'] || 'HRM Filling Station'),
+          softwareName: (data.settings['softwareName'] === 'EBS Petroleum' || data.settings['softwareName'] === 'HRM Filling Station') ? 'HR Filling Station' : (data.settings['softwareName'] || 'HR Filling Station'),
           hiddenMenus:  JSON.parse(data.settings['hiddenMenus'] ?? '[]'),
           users:        data.users,
           zoomLevel:    parseFloat(data.settings['zoomLevel'] || '1.0'),
@@ -290,9 +294,9 @@ export const useStore = create<AppState>()((set, get) => ({
         const id = uid();
         const db = await getDB();
         await db.execute(
-          `INSERT INTO purchases (id,bill_no,type,date,details,rate,quantity,carriage,amount,total_amount)
-           VALUES (?,?,?,?,?,?,?,?,?,?)`,
-          [id, billNo, p.type, p.date, p.details, p.rate, p.quantity, p.carriage, p.amount, p.totalAmount]
+          `INSERT INTO purchases (id,bill_no,type,date,description,invoice_no,vehicle_no,details,rate,quantity,carriage,amount,total_amount)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+          [id, billNo, p.type, p.date, p.description || '', p.invoiceNo || '', p.vehicleNo || '', p.details, p.rate, p.quantity, p.carriage, p.amount, p.totalAmount]
         );
         entry = { ...p, id, billNo };
       });
@@ -311,8 +315,8 @@ export const useStore = create<AppState>()((set, get) => ({
       const current = get().purchases.find(x => x.id === id)!;
       const updated = { ...current, ...data };
       await db.execute(
-        `UPDATE purchases SET type=?,date=?,details=?,rate=?,quantity=?,carriage=?,amount=?,total_amount=? WHERE id=?`,
-        [updated.type, updated.date, updated.details, updated.rate, updated.quantity, updated.carriage, updated.amount, updated.totalAmount, id]
+        `UPDATE purchases SET type=?,date=?,description=?,invoice_no=?,vehicle_no=?,details=?,rate=?,quantity=?,carriage=?,amount=?,total_amount=? WHERE id=?`,
+        [updated.type, updated.date, updated.description || '', updated.invoiceNo || '', updated.vehicleNo || '', updated.details, updated.rate, updated.quantity, updated.carriage, updated.amount, updated.totalAmount, id]
       );
       set(s => ({ purchases: s.purchases.map(x => x.id === id ? updated : x) }));
     } catch (err) {
@@ -341,8 +345,8 @@ export const useStore = create<AppState>()((set, get) => ({
         const id = uid();
         const db = await getDB();
         await db.execute(
-          `INSERT INTO sales (id,bill_no,type,date,quantity,rate,amount) VALUES (?,?,?,?,?,?,?)`,
-          [id, billNo, s.type, s.date, s.quantity, s.rate, s.amount]
+          `INSERT INTO sales (id,bill_no,type,date,description,quantity,rate,amount) VALUES (?,?,?,?,?,?,?,?)`,
+          [id, billNo, s.type, s.date, s.description || '', s.quantity, s.rate, s.amount]
         );
         entry = { ...s, id, billNo };
       });
@@ -361,8 +365,8 @@ export const useStore = create<AppState>()((set, get) => ({
       const current = get().sales.find(x => x.id === id)!;
       const updated = { ...current, ...data };
       await db.execute(
-        `UPDATE sales SET type=?,date=?,quantity=?,rate=?,amount=? WHERE id=?`,
-        [updated.type, updated.date, updated.quantity, updated.rate, updated.amount, id]
+        `UPDATE sales SET type=?,date=?,description=?,quantity=?,rate=?,amount=? WHERE id=?`,
+        [updated.type, updated.date, updated.description || '', updated.quantity, updated.rate, updated.amount, id]
       );
       set(s => ({ sales: s.sales.map(x => x.id === id ? updated : x) }));
     } catch (err) {
@@ -404,23 +408,18 @@ export const useStore = create<AppState>()((set, get) => ({
     }));
   },
   addLedgerEntry: async (e) => {
-    let entry: LedgerEntry | null = null;
     let no = 0;
     try {
-      await runInTransaction(async () => {
-        no = await getAndBumpCounter('ledger');
-        const billNo = `LDG-${String(no).padStart(2, '0')}`;
-        const id = uid();
-        const db = await getDB();
-        await db.execute(
-          `INSERT INTO ledger_entries (id,category_id,bill_no,date,description,debit,credit,balance) VALUES (?,?,?,?,?,?,?,?)`,
-          [id, e.categoryId, billNo, e.date, e.description, e.debit, e.credit, e.balance]
-        );
-        entry = { ...e, id, billNo };
-      });
-      if (entry) {
-        set(s => ({ ledgerEntries: [entry!, ...s.ledgerEntries], nextLedgerNo: no + 1 }));
-      }
+      const db = await getDB();
+      no = await getAndBumpCounter('ledger');
+      const billNo = `LDG-${String(no).padStart(2, '0')}`;
+      const id = uid();
+      await db.execute(
+        `INSERT INTO ledger_entries (id,category_id,bill_no,date,description,debit,credit,balance) VALUES (?,?,?,?,?,?,?,?)`,
+        [id, e.categoryId, billNo, e.date, e.description, e.debit, e.credit, e.balance]
+      );
+      const entry: LedgerEntry = { ...e, id, billNo };
+      set(s => ({ ledgerEntries: [entry, ...s.ledgerEntries], nextLedgerNo: no + 1 }));
     } catch (err) {
       console.error('[Store] addLedgerEntry failed:', err);
       throw err;
@@ -469,23 +468,18 @@ export const useStore = create<AppState>()((set, get) => ({
     }));
   },
   addExpenseEntry: async (e) => {
-    let entry: ExpenseEntry | null = null;
     let no = 0;
     try {
-      await runInTransaction(async () => {
-        no = await getAndBumpCounter('expense');
-        const billNo = `EXP-${String(no).padStart(2, '0')}`;
-        const id = uid();
-        const db = await getDB();
-        await db.execute(
-          `INSERT INTO expense_entries (id,category_id,bill_no,date,details,amount) VALUES (?,?,?,?,?,?)`,
-          [id, e.categoryId, billNo, e.date, e.details, e.amount]
-        );
-        entry = { ...e, id, billNo };
-      });
-      if (entry) {
-        set(s => ({ expenseEntries: [entry!, ...s.expenseEntries], nextExpenseNo: no + 1 }));
-      }
+      const db = await getDB();
+      no = await getAndBumpCounter('expense');
+      const billNo = `EXP-${String(no).padStart(2, '0')}`;
+      const id = uid();
+      await db.execute(
+        `INSERT INTO expense_entries (id,category_id,bill_no,date,details,amount) VALUES (?,?,?,?,?,?)`,
+        [id, e.categoryId, billNo, e.date, e.details, e.amount]
+      );
+      const entry: ExpenseEntry = { ...e, id, billNo };
+      set(s => ({ expenseEntries: [entry, ...s.expenseEntries], nextExpenseNo: no + 1 }));
     } catch (err) {
       console.error('[Store] addExpenseEntry failed:', err);
       throw err;
@@ -534,23 +528,18 @@ export const useStore = create<AppState>()((set, get) => ({
     }));
   },
   addAssetEntry: async (e) => {
-    let entry: AssetEntry | null = null;
     let no = 0;
     try {
-      await runInTransaction(async () => {
-        no = await getAndBumpCounter('asset');
-        const billNo = `AST-${String(no).padStart(2, '0')}`;
-        const id = uid();
-        const db = await getDB();
-        await db.execute(
-          `INSERT INTO asset_entries (id,category_id,bill_no,date,description,debit,credit,balance) VALUES (?,?,?,?,?,?,?,?)`,
-          [id, e.categoryId, billNo, e.date, e.description, e.debit, e.credit, e.balance]
-        );
-        entry = { ...e, id, billNo };
-      });
-      if (entry) {
-        set(s => ({ assetEntries: [entry!, ...s.assetEntries], nextAssetNo: no + 1 }));
-      }
+      const db = await getDB();
+      no = await getAndBumpCounter('asset');
+      const billNo = `AST-${String(no).padStart(2, '0')}`;
+      const id = uid();
+      await db.execute(
+        `INSERT INTO asset_entries (id,category_id,bill_no,date,description,debit,credit,balance) VALUES (?,?,?,?,?,?,?,?)`,
+        [id, e.categoryId, billNo, e.date, e.description, e.debit, e.credit, e.balance]
+      );
+      const entry: AssetEntry = { ...e, id, billNo };
+      set(s => ({ assetEntries: [entry, ...s.assetEntries], nextAssetNo: no + 1 }));
     } catch (err) {
       console.error('[Store] addAssetEntry failed:', err);
       throw err;
@@ -599,23 +588,18 @@ export const useStore = create<AppState>()((set, get) => ({
     }));
   },
   addLiabilityEntry: async (e) => {
-    let entry: LiabilityEntry | null = null;
     let no = 0;
     try {
-      await runInTransaction(async () => {
-        no = await getAndBumpCounter('liability');
-        const billNo = `LIA-${String(no).padStart(2, '0')}`;
-        const id = uid();
-        const db = await getDB();
-        await db.execute(
-          `INSERT INTO liability_entries (id,category_id,bill_no,date,description,debit,credit,balance) VALUES (?,?,?,?,?,?,?,?)`,
-          [id, e.categoryId, billNo, e.date, e.description, e.debit, e.credit, e.balance]
-        );
-        entry = { ...e, id, billNo };
-      });
-      if (entry) {
-        set(s => ({ liabilityEntries: [entry!, ...s.liabilityEntries], nextLiabilityNo: no + 1 }));
-      }
+      const db = await getDB();
+      no = await getAndBumpCounter('liability');
+      const billNo = `LIA-${String(no).padStart(2, '0')}`;
+      const id = uid();
+      await db.execute(
+        `INSERT INTO liability_entries (id,category_id,bill_no,date,description,debit,credit,balance) VALUES (?,?,?,?,?,?,?,?)`,
+        [id, e.categoryId, billNo, e.date, e.description, e.debit, e.credit, e.balance]
+      );
+      const entry: LiabilityEntry = { ...e, id, billNo };
+      set(s => ({ liabilityEntries: [entry, ...s.liabilityEntries], nextLiabilityNo: no + 1 }));
     } catch (err) {
       console.error('[Store] addLiabilityEntry failed:', err);
       throw err;
@@ -666,23 +650,18 @@ export const useStore = create<AppState>()((set, get) => ({
     }));
   },
   addCustomerEntry: async (e) => {
-    let entry: CustomerEntry | null = null;
     let no = 0;
     try {
-      await runInTransaction(async () => {
-        no = await getAndBumpCounter('customer');
-        const billNo = `CST-${String(no).padStart(2, '0')}`;
-        const id = uid();
-        const db = await getDB();
-        await db.execute(
-          `INSERT INTO customer_entries (id,customer_id,bill_no,date,description,debit,credit,balance) VALUES (?,?,?,?,?,?,?,?)`,
-          [id, e.customerId, billNo, e.date, e.description, e.debit, e.credit, e.balance]
-        );
-        entry = { ...e, id, billNo };
-      });
-      if (entry) {
-        set(s => ({ customerEntries: [entry!, ...s.customerEntries], nextCustomerNo: no + 1 }));
-      }
+      const db = await getDB();
+      no = await getAndBumpCounter('customer');
+      const billNo = `CST-${String(no).padStart(2, '0')}`;
+      const id = uid();
+      await db.execute(
+        `INSERT INTO customer_entries (id,customer_id,bill_no,date,description,debit,credit,balance) VALUES (?,?,?,?,?,?,?,?)`,
+        [id, e.customerId, billNo, e.date, e.description, e.debit, e.credit, e.balance]
+      );
+      const entry: CustomerEntry = { ...e, id, billNo };
+      set(s => ({ customerEntries: [entry, ...s.customerEntries], nextCustomerNo: no + 1 }));
     } catch (err) {
       console.error('[Store] addCustomerEntry failed:', err);
       throw err;
@@ -707,7 +686,7 @@ export const useStore = create<AppState>()((set, get) => ({
   // ── Settings & Users ─────────────────────────────────────────────────────────
   settings: {
     startDate:    '',
-    softwareName: 'HRM Filling Station',
+    softwareName: 'HR Filling Station',
     hiddenMenus:  [],
     users:        [],
     zoomLevel:    1.0,

@@ -25,7 +25,7 @@ export default function SalePage() {
   const [editingEntity, setEditingEntity] = useState<any>(null);
   const [viewingEntity, setViewingEntity] = useState<any>(null);
   const [showReport, setShowReport] = useState(false);
-  const [form, setForm] = useState({ date: today(), quantity: '', rate: '', amount: '' });
+  const [form, setForm] = useState({ date: today(), description: '', quantity: '', rate: '', amount: '' });
   const [isSaving, setIsSaving] = useState(false);
 
   const handleFuelSelect = (type: FuelType) => {
@@ -88,19 +88,20 @@ export default function SalePage() {
 
   const resetFormForNext = () => {
     setEditingEntity(null);
-    setForm(prev => ({ ...prev, quantity: '', rate: '', amount: '' }));
+    setForm(prev => ({ ...prev, description: '', quantity: '', rate: '', amount: '' }));
   };
 
   const closeForm = () => {
     setShowForm(false);
     setEditingEntity(null);
-    setForm({ date: today(), quantity: '', rate: '', amount: '' });
+    setForm({ date: today(), description: '', quantity: '', rate: '', amount: '' });
   };
 
   const handleEdit = (s: any) => {
     setEditingEntity(s);
     setForm({
       date: s.date,
+      description: s.description || '',
       quantity: s.quantity.toString(),
       rate: s.rate.toString(),
       amount: s.amount.toString(),
@@ -138,14 +139,13 @@ export default function SalePage() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="col-span-2">
-                  <label className="label">Invoice ID (Auto)</label>
-                  <input
-                    className="input bg-slate-50 dark:bg-dark-750 font-medium text-slate-900 dark:text-white cursor-not-allowed"
-                    value={editingEntity ? editingEntity.billNo : `SAL-${String(nextSaleNo).padStart(2, '0')}`}
-                    readOnly
-                  />
+                  <label className="label">Date *</label>
+                  <input type="date" className="input" value={form.date} onChange={(e) => set('date', e.target.value)} required />
                 </div>
-                <div><label className="label">Date *</label><input type="date" className="input" value={form.date} onChange={(e) => set('date', e.target.value)} required /></div>
+                <div className="col-span-2">
+                  <label className="label">Description</label>
+                  <input className="input" value={form.description || ''} onChange={(e) => set('description', e.target.value)} placeholder="Sale details" />
+                </div>
                 <div><label className="label">Quantity (L) *</label><input type="number" step="0.01" className="input" value={form.quantity} onChange={(e) => set('quantity', e.target.value)} required /></div>
                 <div><label className="label">Rate (₨) *</label><input type="number" step="0.01" className="input" value={form.rate} onChange={(e) => set('rate', e.target.value)} required /></div>
                 <div className="col-span-2"><label className="label">Calculation (Auto)</label><input className="input cursor-not-allowed text-primary-600 dark:text-primary-400 font-bold" value={`₨ ${form.amount}`} readOnly /></div>
@@ -236,10 +236,8 @@ export default function SalePage() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead><tr className="table-header text-[10px]">
-                <th className="px-4 py-3 text-left border-r border-slate-300 dark:border-dark-700/50">S.No</th>
-                <th className="table-cell text-left">Bill No</th>
                 <th className="table-cell text-left">Date</th>
-                <th className="table-cell text-left uppercase tracking-tighter">Product</th>
+                <th className="table-cell text-left">Description</th>
                 <th className="table-cell text-right">Rate (₨)</th>
                 <th className="table-cell text-right">Qty (L)</th>
                 <th className="table-cell text-right font-black">Amount (₨)</th>
@@ -247,13 +245,11 @@ export default function SalePage() {
               </tr></thead>
               <tbody>
                 {paged.length === 0 ? (
-                  <tr><td colSpan={8} className="table-cell text-center text-slate-400 dark:text-dark-500 py-12 italic">No {fuelType} sales found</td></tr>
+                  <tr><td colSpan={6} className="table-cell text-center text-slate-400 dark:text-dark-500 py-12 italic">No {fuelType} sales found</td></tr>
                 ) : paged.map((s, idx) => (
                   <tr key={s.id} className="table-row group hover:bg-slate-50 dark:hover:bg-dark-800/50 text-[11px]">
-                    <td className="text-[11px] font-bold text-slate-400 border-r border-slate-300 dark:border-dark-700/50 text-center">{(page - 1) * PER_PAGE + idx + 1}</td>
-                    <td className="table-cell font-medium text-slate-900 dark:text-white uppercase tracking-tighter">{s.billNo || 'Legacy'}</td>
                     <td className="table-cell">{formatDate(s.date)}</td>
-                    <td className="table-cell uppercase font-bold text-slate-500 dark:text-dark-400">{s.type || 'N/A'}</td>
+                    <td className="table-cell">{s.description || '—'}</td>
                     <td className="table-cell text-right">₨ {formatCurrency(s.rate)}</td>
                     <td className="table-cell text-right">{s.quantity.toLocaleString()} L</td>
                     <td className="table-cell text-right font-semibold text-slate-900 dark:text-white">₨ {formatCurrency(s.amount)}</td>
@@ -262,10 +258,10 @@ export default function SalePage() {
                         <button
                           onClick={() => setViewingEntity(s)}
                           className="flex items-center gap-1.5 px-2 py-0.5 text-[9px] font-black uppercase tracking-tighter text-emerald-600 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-900/20 border border-emerald-200/50 dark:border-emerald-800/30 rounded hover:bg-emerald-100 dark:hover:bg-emerald-800/40 transition-all"
-                          title={`Print ${s.billNo || 'Bill'}`}
+                          title={`Print Bill`}
                         >
                           <Printer className="w-3 h-3" />
-                          <span>{s.billNo || 'PRINT'}</span>
+                          <span>PRINT</span>
                         </button>
                         <button onClick={() => setViewingEntity(s)} className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg transition-colors" title="View Details">
                           <Eye className="w-4 h-4" />
@@ -288,13 +284,13 @@ export default function SalePage() {
               {paged.length > 0 && (
                 <tfoot className="border-t-2 border-slate-200 dark:border-dark-700 bg-slate-50/50 dark:bg-dark-900/50">
                   <tr className="font-black text-black dark:text-white">
-                    <td colSpan={5} className="px-4 py-3 text-right uppercase tracking-widest text-[11px] italic font-black text-black">Page Total</td>
+                    <td colSpan={3} className="px-4 py-3 text-right uppercase tracking-widest text-[11px] italic font-black text-black">Page Total</td>
                     <td className="px-4 py-3 text-right text-black font-black text-sm">{pageTotals.qty.toLocaleString()} L</td>
                     <td className="px-4 py-3 text-right text-black font-black text-sm">₨ {formatCurrency(pageTotals.amount)}</td>
                     <td className="table-cell"></td>
                   </tr>
                   <tr className="font-black text-black dark:text-white bg-slate-200/50 border-t border-slate-300">
-                    <td colSpan={5} className="px-4 py-4 text-right uppercase tracking-widest text-xs text-black font-black">Grand Total</td>
+                    <td colSpan={3} className="px-4 py-4 text-right uppercase tracking-widest text-xs text-black font-black">Grand Total</td>
                     <td className="px-4 py-4 text-right text-black font-black text-base">{grandTotals.qty.toLocaleString()} L</td>
                     <td className="px-4 py-4 text-right text-black font-black text-lg">₨ {formatCurrency(grandTotals.amount)}</td>
                     <td className="table-cell"></td>

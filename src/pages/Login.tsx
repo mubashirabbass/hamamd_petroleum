@@ -69,14 +69,14 @@ export default function Login() {
           <div className="flex flex-col items-center justify-center gap-3 mb-2">
             <div className="flex items-center gap-4">
               <div className="w-[72px] h-[72px] bg-white rounded-2xl flex items-center justify-center shadow-xl p-1 border border-slate-200">
-                 <img src="/assets/logo-hr.png" alt="HRM" className="w-full h-full object-contain" />
+                 <img src="/assets/logo-hr.png" alt="HR" className="w-full h-full object-contain" />
               </div>
               <div className="w-[72px] h-[72px] bg-white rounded-2xl flex items-center justify-center shadow-xl p-1 border border-slate-200">
                  <img src="/assets/logo-go.png" alt="GO" className="w-full h-full object-contain" />
               </div>
             </div>
-            <h1 className="text-3xl font-black text-slate-900 tracking-tighter text-center leading-none mt-2">
-              {settings.softwareName || 'HRM Filling Station'}
+            <h1 className="text-4xl whitespace-nowrap font-black text-slate-900 tracking-tighter text-center leading-none mt-2">
+              HAMMAD RAHIM FILLING STATION
             </h1>
           </div>
           <p className="text-slate-600 text-[10px] uppercase tracking-[0.4em] font-black">Authorized Personnel Only</p>

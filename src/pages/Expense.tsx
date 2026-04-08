@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Wallet, Plus, Trash2, Eye, Edit2, Search, Check, X, FileText, Settings, UserPlus, Printer } from 'lucide-react';
+import { Wallet, Plus, Trash2, Eye, Edit2, Search, Check, X, FileText, Settings, UserPlus, Printer, BarChart3, ArrowRight } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { formatCurrency, formatDate, today, paginate, filterByStartDate, cn, startOfMonth, startOfYear } from '../lib/utils';
 import { useToast } from '../components/ui/Toast';
@@ -19,7 +19,7 @@ export default function ExpensePage() {
   } = useStore();
   const { toast } = useToast();
 
-  const [activeTab, setActiveTab] = useState<'database' | 'register' | 'manage'>('database');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'database' | 'register' | 'manage'>('dashboard');
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
   const [showEntryForm, setShowEntryForm] = useState(false);
   const [showReport, setShowReport] = useState(false);
@@ -30,6 +30,7 @@ export default function ExpensePage() {
   // Management State
   const [manageSearch, setManageSearch] = useState('');
   const [sidebarSearch, setSidebarSearch] = useState('');
+  const [dashboardSearch, setDashboardSearch] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ name: '' });
 
@@ -98,7 +99,8 @@ export default function ExpensePage() {
       }
     } catch (err: any) {
       console.error('Save error:', err);
-      toast(`Failed to save: ${err.message || 'Unknown error'}`, 'error');
+      const msg = err?.message || err || 'Unknown database error';
+      toast(`Failed to save: ${msg}`, 'error');
     } finally {
       setIsSaving(false);
     }
@@ -140,7 +142,7 @@ export default function ExpensePage() {
     addExpenseCategory(newName.trim());
     setNewName('');
     toast('Account registered successfully', 'success');
-    setActiveTab('database');
+    setActiveTab('dashboard');
   };
 
   const handleStartEdit = (cat: any) => {
@@ -167,6 +169,17 @@ export default function ExpensePage() {
       {/* Parallel Horizontal Tabs */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex bg-slate-100 dark:bg-dark-800 p-1 rounded-2xl border border-slate-200 dark:border-dark-700/50 w-full md:w-auto">
+          <button 
+            onClick={() => setActiveTab('dashboard')}
+            className={cn(
+              "flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex-1 md:flex-none justify-center",
+              activeTab === 'dashboard' 
+                ? "bg-white dark:bg-dark-900 text-red-600 shadow-sm shadow-red-600/10" 
+                : "text-slate-500 hover:text-slate-800 dark:hover:text-white"
+            )}
+          >
+            <BarChart3 className="w-4 h-4" /> Dashboard
+          </button>
           <button 
             onClick={() => setActiveTab('database')}
             className={cn(
@@ -217,7 +230,147 @@ export default function ExpensePage() {
       </div>
 
       <div className="flex gap-4 h-[calc(100vh-160px)] overflow-hidden">
-        {activeTab === 'database' ? (
+        {activeTab === 'dashboard' ? (
+          <div className="flex-1 flex flex-col h-full overflow-hidden">
+            {/* Global Summary Cards */}
+            {(() => {
+              const allFilteredEntries = filterByStartDate(expenseEntries, settings.startDate)
+                .filter(e => {
+                  const matchesFrom = !fromDate || e.date >= fromDate;
+                  const matchesTo = !toDate || e.date <= toDate;
+                  return matchesFrom && matchesTo;
+                });
+              const globalTotal = allFilteredEntries.reduce((sum, e) => sum + e.amount, 0);
+              
+              return (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  <div className="glass p-6 rounded-3xl border-l-8 border-red-600 shadow-xl bg-gradient-to-br from-red-50 to-white dark:from-red-900/10 dark:to-dark-900">
+                    <p className="text-[10px] font-black text-red-600 uppercase tracking-widest mb-1">Grand Total Expense</p>
+                    <p className="text-3xl font-black text-slate-900 dark:text-white tabular-nums">₨ {formatCurrency(globalTotal)}</p>
+                  </div>
+                  <div className="glass p-6 rounded-3xl border-l-8 border-slate-400 shadow-xl bg-white/50 dark:bg-dark-800/50">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Categories</p>
+                    <p className="text-3xl font-black text-slate-900 dark:text-white">{expenseCategories.length}</p>
+                  </div>
+                  <div className="glass p-6 rounded-3xl border-l-8 border-emerald-500 shadow-xl bg-emerald-50/30 dark:bg-emerald-900/10">
+                    <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">Total Transactions</p>
+                    <p className="text-3xl font-black text-slate-900 dark:text-white">{allFilteredEntries.length}</p>
+                  </div>
+                </div>
+              );
+            })()}
+
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+              <div className="flex-1 max-w-md">
+                <SearchBar 
+                  value={dashboardSearch} 
+                  onChange={setDashboardSearch} 
+                  placeholder="Search categories..." 
+                  fullWidth={true}
+                />
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center bg-slate-100 dark:bg-dark-800 p-1 rounded-xl border border-slate-200 dark:border-dark-700/50">
+                  <button onClick={() => { setFromDate(today()); setToDate(today()); setPage(1); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-dark-400 hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all">Today</button>
+                  <button onClick={() => { setFromDate(startOfMonth()); setToDate(today()); setPage(1); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-dark-400 hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all border-l border-slate-200 dark:border-dark-700/50">This Month</button>
+                  <button onClick={() => { setFromDate(startOfYear()); setToDate(today()); setPage(1); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-dark-400 hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all border-l border-slate-200 dark:border-dark-700/50">This Year</button>
+                </div>
+                {(fromDate || toDate) && (
+                  <button onClick={() => { setFromDate(''); setToDate(''); setPage(1); }} className="px-3 py-1.5 text-[10px] font-black uppercase tracking-tighter text-red-600 bg-red-50 dark:bg-red-900/20 rounded-lg hover:bg-red-100 transition-all border border-red-200 dark:border-red-800/30">Reset</button>
+                )}
+              </div>
+            </div>
+
+            <div className="flex-1 glass rounded-2xl overflow-hidden border border-slate-200 dark:border-dark-700/50 shadow-sm flex flex-col">
+              <div className="overflow-y-auto smart-scroll flex-1">
+                <table className="w-full">
+                  <thead>
+                    <tr className="table-header text-[10px]">
+                      <th className="table-cell text-left">Expense Category</th>
+                      <th className="table-cell text-right">Total Spending</th>
+                      <th className="table-cell text-center">Entries</th>
+                      <th className="table-cell w-10"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-dark-800/50 bg-white/50 dark:bg-dark-900/50">
+                    {(() => {
+                      const filtered = expenseCategories.filter(c => 
+                        !dashboardSearch || c.name.toLowerCase().includes(dashboardSearch.toLowerCase())
+                      );
+                      
+                      let grandSum = 0;
+                      let grandCount = 0;
+
+                      return (
+                        <>
+                          {filtered.map(cat => {
+                            const entries = filterByStartDate(expenseEntries, settings.startDate)
+                              .filter(e => e.categoryId === cat.id)
+                              .filter(e => {
+                                const matchesFrom = !fromDate || e.date >= fromDate;
+                                const matchesTo = !toDate || e.date <= toDate;
+                                return matchesFrom && matchesTo;
+                              });
+                            const catTotal = entries.reduce((sum, e) => sum + e.amount, 0);
+                            grandSum += catTotal;
+                            grandCount += entries.length;
+
+                            return (
+                              <tr 
+                                key={cat.id}
+                                onClick={() => { setSelectedCat(cat.id); setActiveTab('database'); }}
+                                className="table-row hover:bg-slate-50 dark:hover:bg-dark-800/50 transition-all cursor-pointer group text-[11px]"
+                              >
+                                <td className="table-cell">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-6 h-6 rounded-md bg-red-600/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                      <Wallet className="w-3 h-3 text-red-600" />
+                                    </div>
+                                    <span className="font-bold text-slate-700 dark:text-slate-200">{cat.name}</span>
+                                  </div>
+                                </td>
+                                <td className="table-cell text-right">
+                                  <span className="text-sm font-black text-slate-900 dark:text-white tabular-nums">
+                                    ₨ {formatCurrency(catTotal)}
+                                  </span>
+                                </td>
+                                <td className="table-cell text-center">
+                                  <span className="font-bold text-slate-500 uppercase tracking-widest">{entries.length} Entries</span>
+                                </td>
+                                <td className="table-cell text-right">
+                                  <div className="w-6 h-6 rounded-md bg-slate-100 dark:bg-dark-800 flex items-center justify-center group-hover:bg-red-600 group-hover:text-white transition-all float-right">
+                                    <ArrowRight className="w-3 h-3" />
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                          
+                          {filtered.length > 0 && (
+                            <tr className="font-black text-black dark:text-white bg-slate-100/50 dark:bg-dark-800/50 border-t-2 border-slate-300 dark:border-dark-700">
+                              <td className="table-cell text-left text-xs uppercase tracking-widest text-slate-600 dark:text-slate-400 font-black">Totals for visible accounts</td>
+                              <td className="table-cell text-right text-sm text-red-600 tabular-nums font-black">₨ {formatCurrency(grandSum)}</td>
+                              <td className="table-cell text-center text-xs text-slate-500 font-black">{grandCount} Total</td>
+                              <td className="table-cell"></td>
+                            </tr>
+                          )}
+                        </>
+                      );
+                    })()}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {expenseCategories.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-20 bg-slate-50/50 dark:bg-dark-800/30 rounded-3xl border-2 border-dashed border-slate-200 dark:border-dark-700/50">
+                <Wallet className="w-16 h-16 text-slate-300 mb-4" />
+                <p className="text-slate-500 font-black uppercase tracking-widest text-sm">No Categories Registered</p>
+                <button onClick={() => setActiveTab('register')} className="mt-4 text-xs font-black text-red-600 uppercase tracking-widest hover:underline">Register your first category →</button>
+              </div>
+            )}
+          </div>
+        ) : activeTab === 'database' ? (
           <>
             <div className="w-64 flex-shrink-0 flex flex-col h-full bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700/50 rounded-2xl overflow-hidden shadow-sm">
                <div className="p-3 bg-slate-50/50 dark:bg-dark-800/30 border-b border-slate-100 dark:border-dark-700/30 flex items-center justify-between">
@@ -302,8 +455,6 @@ export default function ExpensePage() {
                       <table className="table-excel">
                         <thead>
                           <tr className="table-header">
-                            <th className="px-4 py-3 text-left w-12 border-r border-slate-300 dark:border-dark-700/50">S.No</th>
-                            <th className="px-4 py-3 text-left w-24">Inv No</th>
                             <th className="px-4 py-3 text-left">Date</th>
                             <th className="px-4 py-3 text-left">Details</th>
                             <th className="px-4 py-3 text-right">Amount</th>
@@ -315,8 +466,6 @@ export default function ExpensePage() {
                             <tr><td colSpan={6} className="text-center text-slate-400 py-12 italic">No transactions found</td></tr>
                           ) : paged.map((e, i) => (
                             <tr key={e.id} className="group">
-                              <td className="text-[11px] font-bold text-slate-400 border-r border-slate-300 dark:border-dark-700/50 text-center">{(page - 1) * perPage + i + 1}</td>
-                              <td className="whitespace-nowrap text-[11px] font-medium text-slate-900 dark:text-white uppercase tracking-tighter">{e.billNo}</td>
                               <td className="whitespace-nowrap text-[11px] font-medium uppercase tracking-tighter text-slate-500 dark:text-dark-400">{formatDate(e.date)}</td>
                               <td className="text-black dark:text-white font-medium text-[13px]">{e.details || '—'}</td>
                               <td className="amount !text-red-600 dark:!text-red-400">₨ {formatCurrency(e.amount)}</td>
@@ -440,17 +589,19 @@ export default function ExpensePage() {
             <div className="glass rounded-3xl overflow-hidden border border-slate-200 dark:border-dark-700/50 shadow-xl flex-1 flex flex-col">
                <div className="overflow-y-auto smart-scroll">
                   <table className="w-full">
-                    <thead className="sticky top-0 bg-slate-50/90 dark:bg-dark-800/90 backdrop-blur-sm z-10"><tr className="border-b border-slate-200 dark:border-dark-700/50">
-                      <th className="px-6 py-4 text-left text-[10px] font-black uppercase text-slate-400 tracking-widest">Category Name</th>
-                      <th className="px-6 py-4 text-right text-[10px] font-black uppercase text-slate-400 tracking-widest">Actions</th>
-                    </tr></thead>
+                    <thead className="sticky top-0 z-10">
+                      <tr className="table-header text-[10px]">
+                        <th className="table-cell text-left">Category Name</th>
+                        <th className="table-cell text-right">Actions</th>
+                      </tr>
+                    </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-dark-800/50">
                       {filteredManage.length === 0 ? (
                         <tr><td colSpan={2} className="px-6 py-20 text-center text-slate-400 italic font-medium">No results found</td></tr>
                       ) : filteredManage.map((c) => (
                         <tr 
                           key={c.id} 
-                          className="hover:bg-slate-50 dark:hover:bg-dark-800/20 transition-all group cursor-pointer"
+                          className="table-row text-[11px] hover:bg-slate-50 dark:hover:bg-dark-800/50 transition-all group cursor-pointer"
                           onClick={() => handleStartEdit(c)}
                         >
                            {editingId === c.id ? (
@@ -467,12 +618,12 @@ export default function ExpensePage() {
                              </>
                            ) : (
                              <>
-                               <td className="px-6 py-4">
+                               <td className="table-cell">
                                   <div className="flex items-center gap-3">
-                                     <span className="font-bold text-slate-800 dark:text-white text-lg">{c.name}</span>
+                                     <span className="font-bold text-slate-800 dark:text-white">{c.name}</span>
                                   </div>
                                </td>
-                               <td className="px-6 py-4 text-right">
+                               <td className="table-cell text-right">
                                   <div className="flex items-center gap-2 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
                                      <button onClick={() => handleStartEdit(c)} className="p-2 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-xl"><Edit2 className="w-4 h-4" /></button>
                                      {currentUser?.role === 'Admin' && (
@@ -500,12 +651,6 @@ export default function ExpensePage() {
       {showEntryForm && (
         <Modal title={editingEntity ? `Edit Entry — ${cat?.name}` : `Add Entry — ${cat?.name}`} onClose={closeForm}>
           <form onSubmit={handleSubmit} className="space-y-3">
-            <div className="bg-slate-50 dark:bg-dark-800/50 p-3 rounded-xl border border-slate-200 dark:border-dark-700/50 mb-4 text-center">
-               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Generated Invoice No</p>
-               <p className="text-lg font-black text-red-600 dark:text-red-400 leading-none">
-                 {editingEntity ? editingEntity.billNo : `EXP-${String(nextExpenseNo).padStart(2, '0')}`}
-               </p>
-            </div>
             <div><label className="label">Date *</label><input type="date" className="input" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required /></div>
             <div><label className="label">Details</label><input className="input" value={form.details} onChange={(e) => setForm({ ...form, details: e.target.value })} placeholder="Expense details" /></div>
             <div><label className="label">Amount (₨) *</label><input type="number" step="0.01" className="input" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} required /></div>
