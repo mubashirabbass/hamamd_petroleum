@@ -33,7 +33,7 @@ export default function Pagination({ page, total, perPage, onChange, onPerPageCh
               onChange={(e) => onPerPageChange(Number(e.target.value))}
               className="bg-transparent text-xs font-bold text-slate-600 dark:text-dark-300 outline-none cursor-pointer hover:text-primary-600 transition-colors"
             >
-              {[10, 20, 40, 100].map(v => (
+              {[10, 20, 30, 40, 50, 70, 100].map(v => (
                 <option key={v} value={v}>{v}</option>
               ))}
             </select>

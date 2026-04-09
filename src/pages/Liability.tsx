@@ -39,6 +39,7 @@ export default function LiabilityPage() {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [page, setPage] = useState(1);
+  const [dashPage, setDashPage] = useState(1);
   const [editingEntity, setEditingEntity] = useState<any>(null);
   const [viewingEntity, setViewingEntity] = useState<any>(null);
   const [perPage, setPerPage] = useState(40);
@@ -179,7 +180,7 @@ export default function LiabilityPage() {
   };
 
   return (
-    <div className="animate-fade-in space-y-6 flex flex-col h-full min-h-[calc(100vh-4rem)]">
+    <div className="animate-fade-in space-y-4 flex flex-col h-full overflow-hidden">
       {/* Parallel Horizontal Tabs */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex bg-slate-100 dark:bg-dark-800 p-1 rounded-2xl border border-slate-200 dark:border-dark-700/50 w-full md:w-auto">
@@ -243,7 +244,7 @@ export default function LiabilityPage() {
         )}
       </div>
 
-      <div className="flex gap-4 h-[calc(100vh-120px)] overflow-hidden">
+      <div className="flex gap-4 h-full overflow-hidden">
         {activeTab === 'dashboard' ? (
           <div className="flex-1 flex flex-col h-full overflow-hidden">
             {/* Global Summary Cards */}
@@ -325,7 +326,7 @@ export default function LiabilityPage() {
 
                       return (
                         <>
-                          {filtered.map(cat => {
+                          {paginate(filtered, dashPage, perPage).map(cat => {
                             const entries = filterByStartDate(liabilityEntries, settings.startDate)
                               .filter(e => e.categoryId === cat.id)
                               .filter(e => {
@@ -388,6 +389,10 @@ export default function LiabilityPage() {
                   </tbody>
                 </table>
               </div>
+              {(() => {
+                const f = liabilityCategories.filter(c => !dashboardSearch || c.name.toLowerCase().includes(dashboardSearch.toLowerCase()));
+                return f.length > 0 ? <Pagination page={dashPage} total={f.length} perPage={perPage} onChange={setDashPage} onPerPageChange={(v) => { setPerPage(v); setDashPage(1); setPage(1); }} /> : null;
+              })()}
             </div>
 
             {liabilityCategories.length === 0 && (
@@ -401,7 +406,7 @@ export default function LiabilityPage() {
         ) : activeTab === 'database' ? (
           <>
             {/* Sidebar List */}
-            <div className="w-64 flex-shrink-0 flex flex-col h-[calc(100vh-120px)] bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700/50 rounded-2xl overflow-hidden shadow-sm">
+            <div className="w-64 flex-shrink-0 flex flex-col h-full bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700/50 rounded-2xl overflow-hidden shadow-sm">
               <div className="p-3 bg-slate-50/50 dark:bg-dark-800/30 border-b border-slate-100 dark:border-dark-700/30 flex items-center justify-between">
                 <p className="text-[10px] font-extrabold text-slate-600 dark:text-dark-200 uppercase tracking-widest">Active Accounts</p>
                 <span className="text-[10px] font-bold text-slate-300">{filteredSidebar.length}</span>
@@ -491,12 +496,12 @@ export default function LiabilityPage() {
                     <div className="flex-1 overflow-auto smart-scroll">
                       <table className="table-excel">
                         <thead className="sticky top-0 z-10 bg-slate-200 dark:bg-dark-800">
-                          <tr className="table-header">
-                            <th className="px-4 py-3 text-left">Date</th>
-                            <th className="px-4 py-3 text-left w-[30rem]">Description</th>
-                            <th className="px-4 py-3 text-right">Debit (Paid)</th>
-                            <th className="px-4 py-3 text-right">Credit (Owed)</th>
-                            <th className="px-4 py-3 text-right">Balance</th>
+                          <tr className="table-header text-[9px]">
+                            <th className="px-4 py-3 text-left w-24">Date</th>
+                            <th className="px-4 py-3 text-left w-64">Description</th>
+                            <th className="px-4 py-3 text-right w-36">Debit (Paid)</th>
+                            <th className="px-4 py-3 text-right w-36">Credit (Owed)</th>
+                            <th className="px-4 py-3 text-right w-44">Balance</th>
                             <th className="px-4 py-3 w-20 text-center">Actions</th>
                           </tr>
                         </thead>
@@ -506,10 +511,10 @@ export default function LiabilityPage() {
                           ) : paged.map((e) => (
                             <tr key={e.id} className="group">
                               <td className="whitespace-nowrap text-[11px] font-medium uppercase tracking-tighter text-slate-500 dark:text-dark-400">{formatDate(e.date)}</td>
-                              <td className="text-black dark:text-white font-medium text-[13px] whitespace-normal break-words max-w-[30rem] leading-5">{e.description || '—'}</td>
-                              <td className="amount !text-emerald-600 dark:!text-emerald-400">{e.debit ? formatCurrency(e.debit) : '—'}</td>
-                              <td className="amount !text-red-600 dark:!text-red-400">{e.credit ? formatCurrency(e.credit) : '—'}</td>
-                              <td className="amount !text-black dark:!text-white !text-sm font-medium">₨ {formatCurrency(e.balance)}</td>
+                              <td className="text-black dark:text-white font-medium text-[13px] whitespace-normal break-words max-w-[15rem] leading-5 truncate">{e.description || '—'}</td>
+                              <td className="amount !text-emerald-600 dark:!text-emerald-400 whitespace-nowrap tabular-nums">{e.debit ? formatCurrency(e.debit) : '—'}</td>
+                              <td className="amount !text-red-600 dark:!text-red-400 whitespace-nowrap tabular-nums">{e.credit ? formatCurrency(e.credit) : '—'}</td>
+                              <td className="amount !text-black dark:!text-white !text-sm font-medium whitespace-nowrap tabular-nums">₨ {formatCurrency(e.balance)}</td>
                               <td className="text-right">
                                 <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                   <button
@@ -546,18 +551,18 @@ export default function LiabilityPage() {
                                 <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tighter mt-1">Grand Total</span>
                               </div>
                             </td>
-                            <td className="px-4 py-3 text-right whitespace-nowrap">
-                              <div className="flex flex-col items-end">
-                                <span className="text-sm font-black text-slate-500 leading-none">₨ {formatCurrency(pageTotals.debit)}</span>
-                                <span className="text-sm font-black text-emerald-600 mt-1">₨ {formatCurrency(totals.debit)}</span>
-                              </div>
-                            </td>
-                            <td className="px-4 py-3 text-right whitespace-nowrap">
-                              <div className="flex flex-col items-end">
-                                <span className="text-sm font-black text-slate-500 leading-none">₨ {formatCurrency(pageTotals.credit)}</span>
-                                <span className="text-sm font-black text-red-600 mt-1">₨ {formatCurrency(totals.credit)}</span>
-                              </div>
-                            </td>
+                             <td className="px-4 py-3 text-right whitespace-nowrap tabular-nums">
+                               <div className="flex flex-col items-end">
+                                 <span className="text-sm font-black text-slate-500 leading-none">₨ {formatCurrency(pageTotals.debit)}</span>
+                                 <span className="text-sm font-black text-emerald-600 mt-1">₨ {formatCurrency(totals.debit)}</span>
+                               </div>
+                             </td>
+                             <td className="px-4 py-3 text-right whitespace-nowrap tabular-nums">
+                               <div className="flex flex-col items-end">
+                                 <span className="text-sm font-black text-slate-500 leading-none">₨ {formatCurrency(pageTotals.credit)}</span>
+                                 <span className="text-sm font-black text-red-600 mt-1">₨ {formatCurrency(totals.credit)}</span>
+                               </div>
+                             </td>
                             <td className="px-4 py-3 text-right whitespace-nowrap">
                               <div className="flex flex-col items-end border-l border-slate-300 dark:border-dark-700 pl-4">
                                 <span className="text-lg font-black text-primary-600/70 leading-none">₨ {formatCurrency(pageTotals.debit - pageTotals.credit)}</span>

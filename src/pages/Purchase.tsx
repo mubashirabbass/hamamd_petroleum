@@ -10,11 +10,10 @@ import TransactionReceiptModal from '../components/modals/TransactionReceiptModa
 import PrintReportModal from '../components/modals/PrintReportModal';
 import type { FuelType } from '../store/useStore';
 
-const PER_PAGE = 10;
-
 export default function PurchasePage() {
   const { purchases, addPurchase, deletePurchase, settings, currentUser } = useStore();
   const { toast } = useToast();
+  const [perPage, setPerPage] = useState(20);
 
   const [fuelType, setFuelType] = useState<FuelType>('HSD');
   const [showForm, setShowForm] = useState(false);
@@ -49,7 +48,7 @@ export default function PurchasePage() {
       });
   }, [purchases, settings.startDate, fuelType, search, fromDate, toDate]);
 
-  const paged = paginate(filtered, page, PER_PAGE);
+  const paged = paginate(filtered, page, perPage);
 
   // Auto-calc amount and total
   const handleRateQty = (f: typeof form) => {
@@ -160,7 +159,7 @@ export default function PurchasePage() {
   }), [filtered]);
 
   return (
-    <div className="animate-fade-in flex gap-4 h-[calc(100vh-120px)] overflow-hidden">
+    <div className="animate-fade-in flex gap-4 h-full overflow-hidden">
       {/* Sidebar selection */}
       <div className="w-60 flex-shrink-0 flex flex-col gap-3 h-full">
         <div className="category-panel flex-1 overflow-y-auto custom-scrollbar">
@@ -296,11 +295,11 @@ export default function PurchasePage() {
                   <th className="table-cell text-left w-44">Description</th>
                   <th className="table-cell text-left w-28">Vehicle No</th>
                   <th className="table-cell text-left w-52">Details</th>
-                  <th className="table-cell text-right w-20">Rate</th>
-                  <th className="table-cell text-right w-20">Qty (L)</th>
-                  <th className="table-cell text-right w-24">Carriage</th>
-                  <th className="table-cell text-right w-24">Amount</th>
-                  <th className="table-cell text-right font-black w-28">Total</th>
+                  <th className="table-cell text-right w-24">Rate</th>
+                  <th className="table-cell text-right w-28">Qty (L)</th>
+                  <th className="table-cell text-right w-32">Carriage</th>
+                  <th className="table-cell text-right w-36">Amount</th>
+                  <th className="table-cell text-right font-black w-40">Total</th>
                   <th className="table-cell w-20 text-center">Actions</th>
                 </tr>
               </thead>
@@ -314,11 +313,11 @@ export default function PurchasePage() {
                     <td className="table-cell whitespace-normal break-words max-w-[11rem] leading-4 truncate">{p.description || '—'}</td>
                     <td className="table-cell text-slate-500 uppercase tracking-wider whitespace-nowrap truncate max-w-[7rem]">{p.vehicleNo || '—'}</td>
                     <td className="table-cell text-slate-600 dark:text-dark-300 whitespace-normal break-words max-w-[13rem] truncate">{p.details || '—'}</td>
-                    <td className="table-cell text-right whitespace-nowrap">₨{formatCurrency(p.rate)}</td>
-                    <td className="table-cell text-right whitespace-nowrap">{p.quantity.toLocaleString()}</td>
-                    <td className="table-cell text-right whitespace-nowrap">₨{formatCurrency(p.carriage)}</td>
-                    <td className="table-cell text-right whitespace-nowrap">₨{formatCurrency(p.amount)}</td>
-                    <td className="table-cell text-right font-semibold text-slate-900 dark:text-white whitespace-nowrap">₨{formatCurrency(p.totalAmount)}</td>
+                    <td className="table-cell text-right whitespace-nowrap tabular-nums">₨{formatCurrency(p.rate)}</td>
+                    <td className="table-cell text-right whitespace-nowrap tabular-nums">{p.quantity.toLocaleString()}</td>
+                    <td className="table-cell text-right whitespace-nowrap tabular-nums">₨{formatCurrency(p.carriage)}</td>
+                    <td className="table-cell text-right whitespace-nowrap tabular-nums">₨{formatCurrency(p.amount)}</td>
+                    <td className="table-cell text-right font-semibold text-slate-900 dark:text-white whitespace-nowrap tabular-nums">₨{formatCurrency(p.totalAmount)}</td>
                     <td className="table-cell text-right">
                       <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
@@ -386,7 +385,7 @@ export default function PurchasePage() {
               )}
             </table>
           </div>
-          <Pagination page={page} total={filtered.length} perPage={PER_PAGE} onChange={setPage} />
+          <Pagination page={page} total={filtered.length} perPage={perPage} onChange={setPage} onPerPageChange={(v) => { setPerPage(v); setPage(1); }} />
         </div>
       </div>
     </div>

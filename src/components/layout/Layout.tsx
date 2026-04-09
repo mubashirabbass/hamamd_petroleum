@@ -74,19 +74,19 @@ export default function Layout() {
   return (
     <div className="flex h-screen overflow-hidden bg-slate-100 dark:bg-dark-950 transition-colors duration-300">
       <Sidebar />
-      <main className="flex-1 overflow-y-auto smart-scroll relative">
-        <div className="p-6 min-h-full">
+      <main className="flex-1 overflow-hidden relative">
+        <div className="p-6 h-full">
           {/* Keep-Alive View Container */}
-          <div style={{ display: isPath('/') ? 'block' : 'none' }}><Dashboard /></div>
-          <div style={{ display: isPath('/purchase') ? 'block' : 'none' }}><Purchase /></div>
-          <div style={{ display: isPath('/sale') ? 'block' : 'none' }}><Sale /></div>
-          <div style={{ display: isPath('/ledger') ? 'block' : 'none' }}><Ledger /></div>
-          <div style={{ display: isPath('/expense') ? 'block' : 'none' }}><Expense /></div>
-          <div style={{ display: isPath('/asset') ? 'block' : 'none' }}><Asset /></div>
-          <div style={{ display: isPath('/liability') ? 'block' : 'none' }}><Liability /></div>
-          <div style={{ display: isStock ? 'block' : 'none' }}><Stock /></div>
-          <div style={{ display: isPath('/customer') ? 'block' : 'none' }}><Customer /></div>
-          <div style={{ display: isPath('/settings') ? 'block' : 'none' }}><Settings /></div>
+          <div style={{ display: isPath('/') ? 'block' : 'none' }} className="h-full"><Dashboard /></div>
+          <div style={{ display: isPath('/purchase') ? 'block' : 'none' }} className="h-full"><Purchase /></div>
+          <div style={{ display: isPath('/sale') ? 'block' : 'none' }} className="h-full"><Sale /></div>
+          <div style={{ display: isPath('/ledger') ? 'block' : 'none' }} className="h-full"><Ledger /></div>
+          <div style={{ display: isPath('/expense') ? 'block' : 'none' }} className="h-full"><Expense /></div>
+          <div style={{ display: isPath('/asset') ? 'block' : 'none' }} className="h-full"><Asset /></div>
+          <div style={{ display: isPath('/liability') ? 'block' : 'none' }} className="h-full"><Liability /></div>
+          <div style={{ display: isStock ? 'block' : 'none' }} className="h-full"><Stock /></div>
+          <div style={{ display: isPath('/customer') ? 'block' : 'none' }} className="h-full"><Customer /></div>
+          <div style={{ display: isPath('/settings') ? 'block' : 'none' }} className="h-full"><Settings /></div>
         </div>
       </main>
     </div>
