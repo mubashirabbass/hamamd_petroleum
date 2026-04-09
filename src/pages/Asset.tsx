@@ -264,7 +264,7 @@ export default function AssetPage() {
                   <div className="glass p-6 rounded-3xl border-l-8 border-emerald-600 shadow-xl bg-gradient-to-br from-emerald-50 to-white dark:from-emerald-900/10 dark:to-dark-900 overflow-hidden relative group">
                     <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-600/5 rounded-bl-full -mr-12 -mt-12 group-hover:bg-emerald-600/10 transition-colors" />
                     <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">Net Asset Valuation</p>
-                    <p className={cn("text-3xl font-black tabular-nums", globalNet >= 0 ? "text-slate-900 dark:text-white" : "text-red-600")}>
+                    <p className={cn("text-3xl font-black tabular-nums break-all leading-tight w-full", globalNet >= 0 ? "text-slate-900 dark:text-white" : "text-red-600")}>
                       ₨ {formatCurrency(Math.abs(globalNet))}
                       <span className="text-xs ml-2 font-bold text-slate-400 uppercase">{globalNet >= 0 ? 'DR' : 'CR'}</span>
                     </p>
@@ -460,15 +460,15 @@ export default function AssetPage() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 animate-in slide-in-from-bottom duration-350 delay-75">
                     <div className="glass p-5 rounded-2xl border-l-4 border-slate-400 shadow-sm">
                       <p className="text-[10px] font-black text-slate-400 dark:text-dark-500 uppercase tracking-widest mb-1">Total Debit (Addition)</p>
-                      <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 tabular-nums">₨ {formatCurrency(totals.debit)}</p>
+                      <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 tabular-nums break-words break-all whitespace-normal leading-tight w-full">₨ {formatCurrency(totals.debit)}</p>
                     </div>
                     <div className="glass p-5 rounded-2xl border-l-4 border-orange-500 shadow-sm">
                       <p className="text-[10px] font-black text-slate-400 dark:text-dark-500 uppercase tracking-widest mb-1">Total Credit (Disposal)</p>
-                      <p className="text-2xl font-black text-orange-600 dark:text-orange-400 tabular-nums">₨ {formatCurrency(totals.credit)}</p>
+                      <p className="text-2xl font-black text-orange-600 dark:text-orange-400 tabular-nums break-words break-all whitespace-normal leading-tight w-full">₨ {formatCurrency(totals.credit)}</p>
                     </div>
                     <div className="glass p-5 rounded-2xl border-l-4 border-emerald-600 shadow-sm">
                       <p className="text-[10px] font-black text-slate-400 dark:text-dark-500 uppercase tracking-widest mb-1">Current Valuation</p>
-                      <p className={cn("text-2xl font-black tabular-nums text-emerald-600")}>
+                      <p className={cn("text-2xl font-black tabular-nums text-emerald-600 break-words break-all whitespace-normal leading-tight w-full")}>
                         ₨ {formatCurrency(Math.abs(totals.debit - totals.credit))}
                       </p>
                     </div>

@@ -247,7 +247,7 @@ export default function ExpensePage() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                   <div className="glass p-6 rounded-3xl border-l-8 border-red-600 shadow-xl bg-gradient-to-br from-red-50 to-white dark:from-red-900/10 dark:to-dark-900">
                     <p className="text-[10px] font-black text-red-600 uppercase tracking-widest mb-1">Grand Total Expense</p>
-                    <p className="text-3xl font-black text-slate-900 dark:text-white tabular-nums">₨ {formatCurrency(globalTotal)}</p>
+                    <p className="text-3xl font-black text-slate-900 dark:text-white tabular-nums break-words break-all whitespace-normal leading-tight w-full">₨ {formatCurrency(globalTotal)}</p>
                   </div>
                   <div className="glass p-6 rounded-3xl border-l-8 border-slate-400 shadow-xl bg-white/50 dark:bg-dark-800/50">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Categories</p>
@@ -433,7 +433,7 @@ export default function ExpensePage() {
                     </div>
                     <div className="glass p-6 rounded-2xl border-l-4 border-red-600 shadow-sm">
                       <p className="text-[10px] font-black text-slate-400 dark:text-dark-500 uppercase tracking-widest mb-1">Total Spending (₨)</p>
-                      <p className="text-3xl font-black text-red-600 tabular-nums">₨ {formatCurrency(totals)}</p>
+                      <p className="text-3xl font-black text-red-600 tabular-nums break-words break-all whitespace-normal leading-tight w-full">₨ {formatCurrency(totals)}</p>
                     </div>
                   </div>
 

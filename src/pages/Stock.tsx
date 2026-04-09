@@ -546,21 +546,22 @@ export default function StockPage() {
                 <LayoutList className={cn("w-4 h-4", selectedType === 'HSD' ? 'text-amber-500' : 'text-emerald-500')} />
                 <h2 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 dark:text-dark-400">Inventory Status Summary</h2>
               </div>
-              <div className="grid grid-cols-3 divide-x divide-slate-100 dark:divide-dark-800">
-                <div className="p-6 text-center">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Period Purchase</p>
-                  <p className="text-2xl font-black text-emerald-600 tabular-nums">{detailTotals.in.toLocaleString()} <span className="text-xs font-bold opacity-60">L</span></p>
-                </div>
-                <div className="p-6 text-center">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Period Sale</p>
-                  <p className="text-2xl font-black text-red-600 tabular-nums">{detailTotals.out.toLocaleString()} <span className="text-xs font-bold opacity-60">L</span></p>
-                </div>
-                <div className={cn("p-6 text-center bg-slate-50/30 dark:bg-dark-800/20")}>
-                  <p className="text-[10px] font-black text-primary-600 uppercase tracking-widest mb-2">Total Remaining</p>
-                  <p className={cn("text-3xl font-black tabular-nums tracking-tighter", selectedType === 'HSD' ? 'text-amber-600' : 'text-emerald-600')}>
-                    {stockData[selectedType].current.toLocaleString()} <span className="text-xs font-bold opacity-60">L</span>
-                  </p>
-                </div>
+              <div className="flex flex-col gap-3 p-4">
+                {[
+                  { label: 'Purchase Stock',  qty: detailTotals.in,  highlight: false, color: 'emerald' },
+                  { label: 'Sale Stock',      qty: detailTotals.out, highlight: false, color: 'red' },
+                  { label: 'Remaining Stock', qty: stockData[selectedType].current, highlight: true, color: selectedType === 'HSD' ? 'amber' : 'emerald' }
+                ].map(col => (
+                  <div key={col.label} className={cn("flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-4 rounded-2xl border transition-colors", col.highlight ? `bg-${col.color}-500/5 border-${col.color}-500/20 shadow-inner` : "bg-slate-50/50 dark:bg-dark-800/30 border-slate-100 dark:border-dark-700/50")}>
+                    <div className="flex-1 min-w-0">
+                      <p className={cn("text-[10px] font-black uppercase tracking-widest", col.highlight ? `text-${col.color}-600 dark:text-${col.color}-400` : "text-slate-600 dark:text-slate-400")}>{col.label}</p>
+                    </div>
+                    <div className="flex items-baseline gap-1.5 sm:text-right flex-shrink-1">
+                      <span className={cn('font-black tabular-nums break-words', col.highlight ? `text-2xl text-${col.color}-600 dark:text-${col.color}-400` : 'text-xl text-black dark:text-white')} title={col.qty.toLocaleString()}>{col.qty.toLocaleString()}</span>
+                      <span className={cn("text-xs font-black uppercase", col.highlight ? `text-${col.color}-600 dark:text-${col.color}-400` : "text-slate-600 dark:text-slate-400")}>Ltrs</span>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -711,25 +712,25 @@ export default function StockPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-8 relative border-t border-slate-100 dark:border-dark-800/60 pt-10">
+            <div className="grid grid-cols-3 gap-4 lg:gap-8 relative border-t border-slate-100 dark:border-dark-800/60 pt-10">
               {[
                 { label: 'Purchase', qty: data.totalPurchased, value: data.purchaseValue, icon: TrendingUp, color: 'text-emerald-600' },
                 { label: 'Sale', qty: data.totalSold, value: data.saleValue, icon: TrendingDown, color: 'text-red-600' },
                 { label: 'Remaining', qty: data.current, value: null, icon: Package, color: color === 'amber' ? 'text-amber-600' : 'text-emerald-600', highlight: true },
               ].map(block => (
-                <div key={block.label} className="space-y-2">
+                <div key={block.label} className="space-y-2 min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <block.icon className="w-3.5 h-3.5 text-slate-400" />
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{block.label}</p>
+                    <block.icon className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest truncate">{block.label}</p>
                   </div>
                   <div className="flex items-baseline gap-1">
-                    <span className={cn("font-black tabular-nums tracking-tighter", block.highlight ? 'text-4xl' : 'text-2xl text-slate-900 dark:text-white', block.color)}>
+                    <span className={cn("font-black tabular-nums tracking-tighter break-all whitespace-normal leading-tight w-full", block.highlight ? 'text-2xl lg:text-3xl' : 'text-xl lg:text-2xl text-slate-900 dark:text-white', block.color)}>
                       {block.qty.toLocaleString()}
                     </span>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase">L</span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase break-keep ml-1 relative -top-1">L</span>
                   </div>
                   {block.value !== null && (
-                    <p className="text-[11px] font-bold text-slate-500 tabular-nums">₨ {formatCurrency(block.value)}</p>
+                    <p className="text-[11px] font-bold text-slate-500 tabular-nums break-words break-all whitespace-normal leading-tight w-full">₨ {formatCurrency(block.value)}</p>
                   )}
                 </div>
               ))}

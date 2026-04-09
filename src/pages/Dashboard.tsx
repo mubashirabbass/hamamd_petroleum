@@ -415,7 +415,7 @@ export default function Dashboard() {
               <s.icon className={`w-6 h-6 ${s.color}`} />
             </div>
             <p className="text-[10px] font-black text-slate-400 dark:text-dark-500 uppercase tracking-[0.2em] mb-1 truncate w-full">{s.label}</p>
-            <p className={cn('text-2xl font-black tracking-tighter tabular-nums break-all leading-tight w-full', s.color)} title={s.value}>{s.value}</p>
+            <p className={cn('text-2xl font-black tracking-tighter tabular-nums break-words break-all whitespace-normal leading-tight w-full', s.color)} title={s.value}>{s.value}</p>
           </div>
         ))}
       </div>
@@ -437,21 +437,21 @@ export default function Dashboard() {
                 <p className="text-sm text-slate-500 dark:text-dark-400 font-bold uppercase tracking-widest truncate w-full">{f.label}</p>
               </div>
             </div>
-            <div className="flex flex-col gap-3 relative border-t border-slate-100 dark:border-dark-800/60 pt-6">
+            <div className="grid grid-cols-3 gap-4 lg:gap-6 relative border-t border-slate-100 dark:border-dark-800/60 pt-8">
               {[
                 { label: 'Purchase',  qty: f.pQty,    amt: f.pAmt,    highlight: false },
                 { label: 'Sale',      qty: f.soldQty, amt: f.soldAmt, highlight: false },
                 { label: 'Remaining', qty: f.stock,   amt: f.stockAmt,highlight: true  },
               ].map(col => (
-                <div key={col.label} className={cn("flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-4 rounded-2xl border transition-colors", col.highlight ? `bg-${f.color}-500/5 border-${f.color}-500/20 shadow-inner` : "bg-slate-50/50 dark:bg-dark-800/30 border-slate-100 dark:border-dark-700/50")}>
-                  <div className="flex-1 min-w-0">
-                    <p className={cn("text-[10px] font-black uppercase tracking-widest", col.highlight ? `text-${f.color}-600 dark:text-${f.color}-400` : "text-slate-600 dark:text-slate-400")}>{col.label} STOCK</p>
-                    <p className={cn("text-sm font-black tabular-nums break-words mt-0.5", col.highlight ? `text-${f.color}-700 dark:text-${f.color}-300` : "text-slate-600 dark:text-slate-300")}>₨ {formatCurrency(col.amt)}</p>
+                <div key={col.label} className="space-y-1.5 min-w-0">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest truncate">{col.label}</p>
+                  <div className="flex items-baseline gap-1">
+                    <span className={cn("font-black tabular-nums tracking-tighter break-all whitespace-normal leading-tight w-full", col.highlight ? `text-xl lg:text-2xl text-${f.color}-600` : 'text-lg lg:text-xl text-slate-900 dark:text-white')} title={col.qty.toLocaleString()}>
+                      {col.qty.toLocaleString()}
+                    </span>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase break-keep ml-0.5 relative -top-1 block">L</span>
                   </div>
-                  <div className="flex items-baseline gap-1.5 sm:text-right flex-shrink-1">
-                    <span className={cn('font-black tabular-nums break-words', col.highlight ? `text-2xl text-${f.color}-600 dark:text-${f.color}-400` : 'text-xl text-black dark:text-white')} title={col.qty.toLocaleString()}>{col.qty.toLocaleString()}</span>
-                    <span className={cn("text-xs font-black uppercase", col.highlight ? `text-${f.color}-600 dark:text-${f.color}-400` : "text-slate-600 dark:text-slate-400")}>Ltrs</span>
-                  </div>
+                  <p className="text-[11px] font-bold text-slate-400 tabular-nums break-words break-all whitespace-normal leading-tight w-full">₨ {formatCurrency(col.amt)}</p>
                 </div>
               ))}
             </div>

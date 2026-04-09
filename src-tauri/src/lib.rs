@@ -605,20 +605,30 @@ pub fn run() {
 fn get_machine_id() -> Result<String, String> {
     use std::process::Command;
     
-    // On Windows, we use PowerShell to get the MachineGuid which is unique per OS installation
-    let output = Command::new("powershell")
-        .args(&["-Command", "(Get-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Cryptography').MachineGuid"])
-        .output()
-        .map_err(|e| e.to_string())?;
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        let output = Command::new("powershell")
+            .args(&["-Command", "(Get-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Cryptography').MachineGuid"])
+            .creation_flags(CREATE_NO_WINDOW)
+            .output()
+            .map_err(|e| e.to_string())?;
 
-    if !output.status.success() {
-        return Err("Failed to retrieve machine ID".to_string());
+        if !output.status.success() {
+            return Err("Failed to retrieve machine ID".to_string());
+        }
+
+        let guid = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        if guid.is_empty() {
+            return Err("Machine ID is empty".to_string());
+        }
+
+        return Ok(guid);
     }
-
-    let guid = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    if guid.is_empty() {
-        return Err("Machine ID is empty".to_string());
+    
+    #[cfg(not(target_os = "windows"))]
+    {
+        return Ok("default-machine-id".to_string());
     }
-
-    Ok(guid)
 }
