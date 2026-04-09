@@ -433,7 +433,7 @@ export default function LedgerPage() {
             </div>
 
             {/* Main Content (Database View) */}
-            <div className="flex-1 min-w-0 smart-scroll h-full pr-1">
+            <div className="flex-1 min-w-0 flex flex-col h-full pr-1">
               {cat ? (
                 <>
                   <div className="flex items-center justify-between mb-5 animate-in slide-in-from-bottom duration-350">
@@ -467,7 +467,7 @@ export default function LedgerPage() {
                     </div>
                   </div>
 
-                  <div className="glass rounded-2xl overflow-hidden border border-slate-200 dark:border-dark-700/50 animate-in slide-in-from-bottom duration-350 delay-150">
+                  <div className="glass rounded-2xl overflow-hidden border border-slate-200 dark:border-dark-700/50 animate-in slide-in-from-bottom duration-350 delay-150 flex-1 flex flex-col">
                     <div className="flex flex-col md:flex-row md:items-center justify-between p-4 gap-4 border-b border-slate-200 dark:border-dark-700/50 bg-white/30 dark:bg-dark-800/30">
                       <div className="flex-1 min-w-0"><SearchBar value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search transactions..." /></div>
                       <div className="flex items-center flex-wrap gap-2">
@@ -486,7 +486,7 @@ export default function LedgerPage() {
                         )}
                       </div>
                     </div>
-                    <div className="overflow-x-auto smart-scroll">
+                    <div className="flex-1 overflow-auto smart-scroll">
                       <table className="table-excel">
                         <thead className="sticky top-0 z-10 bg-slate-200 dark:bg-dark-800">
                           <tr className="table-header">
@@ -537,18 +537,31 @@ export default function LedgerPage() {
                           ))}
                         </tbody>
                         <tfoot className="border-t-2 border-slate-200 dark:border-dark-700 bg-slate-50/50 dark:bg-dark-900/50 font-black text-black">
-                          <tr className="font-black text-black dark:text-white">
-                            <td colSpan={2} className="px-4 py-3 text-right uppercase tracking-widest text-[11px] italic font-black text-black">Page Total</td>
-                            <td className="px-4 py-3 text-right text-black font-black text-sm whitespace-nowrap">₨ {formatCurrency(pageTotals.debit)}</td>
-                            <td className="px-4 py-3 text-right text-black font-black text-sm whitespace-nowrap">₨ {formatCurrency(pageTotals.credit)}</td>
-                            <td className="px-4 py-3 text-right text-black font-black text-sm whitespace-nowrap">₨ {formatCurrency(pageTotals.debit - pageTotals.credit)}</td>
-                            <td></td>
-                          </tr>
-                          <tr className="font-black text-black dark:text-white bg-slate-200/50 border-t border-slate-300">
-                            <td colSpan={2} className="px-4 py-4 text-right uppercase tracking-widest text-xs text-black font-black">Grand Total</td>
-                            <td className="px-4 py-4 text-right text-black font-black text-lg whitespace-nowrap">₨ {formatCurrency(totals.debit)}</td>
-                            <td className="px-4 py-4 text-right text-black font-black text-lg whitespace-nowrap">₨ {formatCurrency(totals.credit)}</td>
-                            <td className="px-4 py-4 text-right text-black font-black text-lg whitespace-nowrap">₨ {formatCurrency(totals.debit - totals.credit)}</td>
+                          <tr className="bg-slate-200 dark:bg-dark-800 border-t-2 border-slate-400">
+                            <td colSpan={2} className="px-4 py-3 text-right">
+                              <div className="flex flex-col items-end">
+                                <span className="text-xs font-black text-slate-500 uppercase tracking-tighter leading-none">Page Total</span>
+                                <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tighter mt-1">Grand Total</span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-right whitespace-nowrap">
+                              <div className="flex flex-col items-end">
+                                <span className="text-sm font-black text-slate-500 leading-none">₨ {formatCurrency(pageTotals.debit)}</span>
+                                <span className="text-sm font-black text-red-600 mt-1">₨ {formatCurrency(totals.debit)}</span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-right whitespace-nowrap">
+                              <div className="flex flex-col items-end">
+                                <span className="text-sm font-black text-slate-500 leading-none">₨ {formatCurrency(pageTotals.credit)}</span>
+                                <span className="text-sm font-black text-emerald-600 mt-1">₨ {formatCurrency(totals.credit)}</span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-right whitespace-nowrap">
+                              <div className="flex flex-col items-end border-l border-slate-300 dark:border-dark-700 pl-4">
+                                <span className="text-lg font-black text-primary-600/70 leading-none">₨ {formatCurrency(pageTotals.debit - pageTotals.credit)}</span>
+                                <span className="text-lg font-black text-primary-600 dark:text-primary-400 mt-1">₨ {formatCurrency(totals.debit - totals.credit)}</span>
+                              </div>
+                            </td>
                             <td></td>
                           </tr>
                         </tfoot>

@@ -141,7 +141,7 @@ export default function SalePage() {
         </div>
       </div>
 
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 flex flex-col h-full">
         {showForm && (
           <Modal title={editingEntity ? `Edit ${fuelType} Sale` : `Add ${fuelType} Sale`} onClose={closeForm}>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -218,7 +218,7 @@ export default function SalePage() {
           </div>
         </div>
 
-        <div className="glass rounded-xl overflow-hidden">
+        <div className="glass rounded-xl overflow-hidden flex-1 flex flex-col mb-4">
           <div className="flex flex-col md:flex-row md:items-center justify-between p-4 gap-4 border-b border-slate-200 dark:border-dark-700/50">
             <div className="flex-1 min-w-0"><SearchBar value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search transactions..." /></div>
             <div className="flex items-center flex-wrap gap-2">
@@ -241,7 +241,7 @@ export default function SalePage() {
             </div>
           </div>
 
-          <div className="overflow-auto smart-scroll max-h-[calc(100vh-350px)]">
+          <div className="flex-1 overflow-auto smart-scroll">
             <table className="w-full">
               <thead className="sticky top-0 z-10 bg-slate-200 dark:bg-dark-800">
                 <tr className="table-header text-[10px]">
@@ -292,16 +292,27 @@ export default function SalePage() {
               </tbody>
               {paged.length > 0 && (
                 <tfoot className="border-t-[3px] border-black dark:border-black bg-slate-50/50 dark:bg-dark-900/50">
-                  <tr className="font-black text-black dark:text-white">
-                    <td colSpan={3} className="px-4 py-3 text-right uppercase tracking-widest text-[11px] italic font-black text-black">Page Total</td>
-                    <td className="px-4 py-3 text-right text-black font-black text-sm whitespace-nowrap">{pageTotals.qty.toLocaleString()} L</td>
-                    <td className="px-4 py-3 text-right text-black font-black text-sm whitespace-nowrap">₨ {formatCurrency(pageTotals.amount)}</td>
-                    <td className="table-cell"></td>
-                  </tr>
-                  <tr className="font-black text-black dark:text-white bg-slate-200/50 border-t border-slate-300">
-                    <td colSpan={3} className="px-4 py-4 text-right uppercase tracking-widest text-xs text-black font-black">Grand Total</td>
-                    <td className="px-4 py-4 text-right text-black font-black text-base whitespace-nowrap">{grandTotals.qty.toLocaleString()} L</td>
-                    <td className="px-4 py-4 text-right text-black font-black text-lg whitespace-nowrap">₨ {formatCurrency(grandTotals.amount)}</td>
+                  <tr className="bg-slate-200 dark:bg-dark-800 border-t-2 border-slate-400">
+                    <td colSpan={3} className="px-4 py-3 text-right">
+                      <div className="flex items-center justify-end gap-6">
+                        <div className="flex flex-col items-end">
+                          <span className="text-xs font-black text-slate-500 uppercase tracking-tighter leading-none">Page Total</span>
+                          <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tighter mt-1">Grand Total</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-right whitespace-nowrap">
+                      <div className="flex flex-col items-end">
+                        <span className="text-sm font-black text-slate-500 leading-none">{pageTotals.qty.toLocaleString()} L</span>
+                        <span className="text-sm font-black text-slate-900 dark:text-white mt-1">{grandTotals.qty.toLocaleString()} L</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-right whitespace-nowrap">
+                      <div className="flex flex-col items-end border-l border-slate-300 dark:border-dark-700 pl-4">
+                        <span className="text-lg font-black text-emerald-600/70 leading-none">₨ {formatCurrency(pageTotals.amount)}</span>
+                        <span className="text-lg font-black text-emerald-600 dark:text-emerald-500 mt-1">₨ {formatCurrency(grandTotals.amount)}</span>
+                      </div>
+                    </td>
                     <td className="table-cell"></td>
                   </tr>
                 </tfoot>

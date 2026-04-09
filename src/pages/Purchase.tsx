@@ -183,7 +183,7 @@ export default function PurchasePage() {
         </div>
       </div>
 
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 flex flex-col h-full">
         {showForm && (
           <Modal title={editingEntity ? `Edit ${fuelType} Purchase` : `Add ${fuelType} Purchase`} onClose={closeForm} wide>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -262,7 +262,7 @@ export default function PurchasePage() {
           </div>
         </div>
 
-        <div className="glass rounded-xl overflow-hidden">
+        <div className="glass rounded-xl overflow-hidden flex-1 flex flex-col mb-4">
           {/* Toolbar */}
           <div className="flex flex-col md:flex-row md:items-center justify-between p-4 gap-4 border-b border-slate-200 dark:border-dark-700/50">
             <div className="flex-1 min-w-0"><SearchBar value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search transactions..." /></div>
@@ -287,37 +287,38 @@ export default function PurchasePage() {
           </div>
 
           {/* Table */}
-          <div className="overflow-auto smart-scroll max-h-[calc(100vh-350px)]">
+          <div className="flex-1 overflow-auto smart-scroll">
             <table className="w-full">
               <thead className="sticky top-0 z-10 bg-slate-200 dark:bg-dark-800">
-                <tr className="table-header text-[10px]">
-                <th className="table-cell text-left w-28">Date</th>
-                <th className="table-cell text-left w-36">Invoice No</th>
-                <th className="table-cell text-left w-64">Description</th>
-                <th className="table-cell text-left w-32">Vehicle No</th>
-                <th className="table-cell text-left min-w-[16rem]">Details</th>
-                <th className="table-cell text-right w-24">Rate</th>
-                <th className="table-cell text-right w-24">Qty (L)</th>
-                <th className="table-cell text-right w-28">Carriage</th>
-                <th className="table-cell text-right w-28">Amount</th>
-                <th className="table-cell text-right font-black w-32">Total</th>
-                <th className="table-cell w-24 text-center">Actions</th>
-              </tr></thead>
+                <tr className="table-header text-[9px]">
+                  <th className="table-cell text-left w-24">Date</th>
+                  <th className="table-cell text-left w-28">Invoice No</th>
+                  <th className="table-cell text-left w-44">Description</th>
+                  <th className="table-cell text-left w-28">Vehicle No</th>
+                  <th className="table-cell text-left w-52">Details</th>
+                  <th className="table-cell text-right w-20">Rate</th>
+                  <th className="table-cell text-right w-20">Qty (L)</th>
+                  <th className="table-cell text-right w-24">Carriage</th>
+                  <th className="table-cell text-right w-24">Amount</th>
+                  <th className="table-cell text-right font-black w-28">Total</th>
+                  <th className="table-cell w-20 text-center">Actions</th>
+                </tr>
+              </thead>
               <tbody>
                 {paged.length === 0 ? (
                   <tr><td colSpan={11} className="table-cell text-center text-slate-400 dark:text-dark-500 py-12 italic">No {fuelType} purchases found</td></tr>
                 ) : paged.map((p) => (
-                  <tr key={p.id} className="table-row group hover:bg-slate-50 dark:hover:bg-dark-800/50 text-[11px]">
+                  <tr key={p.id} className="table-row group hover:bg-slate-50 dark:hover:bg-dark-800/50 text-[9px]">
                     <td className="table-cell whitespace-nowrap">{formatDate(p.date)}</td>
-                    <td className="table-cell font-medium text-emerald-600 whitespace-nowrap">{p.invoiceNo || '—'}</td>
-                    <td className="table-cell whitespace-normal break-words max-w-[22rem] leading-5">{p.description || '—'}</td>
-                    <td className="table-cell text-slate-500 uppercase tracking-wider whitespace-nowrap">{p.vehicleNo || '—'}</td>
-                    <td className="table-cell text-slate-600 dark:text-dark-300 whitespace-normal break-words max-w-[18rem]">{p.details || '—'}</td>
-                    <td className="table-cell text-right whitespace-nowrap">₨ {formatCurrency(p.rate)}</td>
+                    <td className="table-cell font-medium text-emerald-600 whitespace-nowrap truncate max-w-[7rem]">{p.invoiceNo || '—'}</td>
+                    <td className="table-cell whitespace-normal break-words max-w-[11rem] leading-4 truncate">{p.description || '—'}</td>
+                    <td className="table-cell text-slate-500 uppercase tracking-wider whitespace-nowrap truncate max-w-[7rem]">{p.vehicleNo || '—'}</td>
+                    <td className="table-cell text-slate-600 dark:text-dark-300 whitespace-normal break-words max-w-[13rem] truncate">{p.details || '—'}</td>
+                    <td className="table-cell text-right whitespace-nowrap">₨{formatCurrency(p.rate)}</td>
                     <td className="table-cell text-right whitespace-nowrap">{p.quantity.toLocaleString()}</td>
-                    <td className="table-cell text-right whitespace-nowrap">₨ {formatCurrency(p.carriage)}</td>
-                    <td className="table-cell text-right whitespace-nowrap">₨ {formatCurrency(p.amount)}</td>
-                    <td className="table-cell text-right font-semibold text-slate-900 dark:text-white whitespace-nowrap">₨ {formatCurrency(p.totalAmount)}</td>
+                    <td className="table-cell text-right whitespace-nowrap">₨{formatCurrency(p.carriage)}</td>
+                    <td className="table-cell text-right whitespace-nowrap">₨{formatCurrency(p.amount)}</td>
+                    <td className="table-cell text-right font-semibold text-slate-900 dark:text-white whitespace-nowrap">₨{formatCurrency(p.totalAmount)}</td>
                     <td className="table-cell text-right">
                       <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
@@ -348,20 +349,37 @@ export default function PurchasePage() {
               </tbody>
               {paged.length > 0 && (
                 <tfoot className="bg-slate-50/50 dark:bg-dark-800/50 border-t-[3px] border-double border-slate-300 dark:border-dark-600">
-                  <tr className="text-black dark:text-white font-black">
-                    <td colSpan={6} className="px-4 py-3 text-right uppercase tracking-widest text-[11px] italic font-black">Page Total</td>
-                    <td className="px-4 py-3 text-right text-sm font-black whitespace-nowrap">{pageTotals.qty.toLocaleString()} L</td>
-                    <td className="px-4 py-3 text-right text-sm font-black whitespace-nowrap">₨ {formatCurrency(pageTotals.carriage)}</td>
-                    <td className="px-4 py-3 text-right text-black font-black text-sm whitespace-nowrap">₨ {formatCurrency(pageTotals.amount)}</td>
-                    <td className="px-4 py-3 text-right text-black font-black text-sm whitespace-nowrap">₨ {formatCurrency(pageTotals.total)}</td>
-                    <td className="table-cell"></td>
-                  </tr>
-                  <tr className="font-black text-black dark:text-white bg-slate-200/50 border-t border-slate-300">
-                    <td colSpan={6} className="px-4 py-4 text-right uppercase tracking-widest text-xs text-black font-black">Grand Total</td>
-                    <td className="px-4 py-4 text-right text-black font-black text-base whitespace-nowrap">{grandTotals.qty.toLocaleString()} L</td>
-                    <td className="px-4 py-4 text-right text-black font-black text-base whitespace-nowrap">₨ {formatCurrency(grandTotals.carriage)}</td>
-                    <td className="px-4 py-4 text-right text-black font-black text-base whitespace-nowrap">₨ {formatCurrency(grandTotals.amount)}</td>
-                    <td className="px-4 py-4 text-right text-black font-black text-lg whitespace-nowrap">₨ {formatCurrency(grandTotals.total)}</td>
+                  <tr className="bg-slate-200 dark:bg-dark-800 border-t-2 border-slate-400">
+                    <td colSpan={6} className="px-2 py-3 text-right">
+                      <div className="flex flex-col items-end">
+                        <span className="text-xs font-black text-slate-500 uppercase tracking-tighter leading-none">Page Total</span>
+                        <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tighter mt-1">Grand Total</span>
+                      </div>
+                    </td>
+                    <td className="px-2 py-3 text-right whitespace-nowrap">
+                      <div className="flex flex-col items-end">
+                        <span className="text-sm font-black text-slate-500 leading-none">{pageTotals.qty.toLocaleString()} L</span>
+                        <span className="text-sm font-black text-slate-900 dark:text-white mt-1">{grandTotals.qty.toLocaleString()} L</span>
+                      </div>
+                    </td>
+                    <td className="px-2 py-3 text-right whitespace-nowrap">
+                      <div className="flex flex-col items-end">
+                        <span className="text-sm font-black text-slate-500 leading-none">₨{formatCurrency(pageTotals.carriage)}</span>
+                        <span className="text-sm font-black text-slate-900 dark:text-white mt-1">₨{formatCurrency(grandTotals.carriage)}</span>
+                      </div>
+                    </td>
+                    <td className="px-2 py-3 text-right whitespace-nowrap">
+                      <div className="flex flex-col items-end">
+                        <span className="text-sm font-black text-slate-500 leading-none">₨{formatCurrency(pageTotals.amount)}</span>
+                        <span className="text-sm font-black text-slate-900 dark:text-white mt-1">₨{formatCurrency(grandTotals.amount)}</span>
+                      </div>
+                    </td>
+                    <td className="px-2 py-3 text-right whitespace-nowrap">
+                      <div className="flex flex-col items-end border-l border-slate-300 dark:border-dark-700 pl-4">
+                        <span className="text-lg font-black text-primary-600/70 leading-none">₨{formatCurrency(pageTotals.total)}</span>
+                        <span className="text-lg font-black text-primary-600 dark:text-primary-400 mt-1">₨{formatCurrency(grandTotals.total)}</span>
+                      </div>
+                    </td>
                     <td className="table-cell"></td>
                   </tr>
                 </tfoot>
