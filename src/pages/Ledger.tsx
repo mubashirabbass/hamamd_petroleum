@@ -304,7 +304,7 @@ export default function LedgerPage() {
             <div className="flex-1 glass rounded-2xl overflow-hidden border border-slate-200 dark:border-dark-700/50 shadow-sm flex flex-col">
               <div className="overflow-y-auto smart-scroll flex-1">
                 <table className="w-full">
-                  <thead>
+                  <thead className="sticky top-0 z-10 bg-slate-200 dark:bg-dark-800">
                     <tr className="table-header text-[10px]">
                       <th className="table-cell text-left">Ledger Account</th>
                       <th className="table-cell text-right">Current Balance</th>
@@ -488,7 +488,7 @@ export default function LedgerPage() {
                     </div>
                     <div className="overflow-x-auto smart-scroll">
                       <table className="table-excel">
-                        <thead>
+                        <thead className="sticky top-0 z-10 bg-slate-200 dark:bg-dark-800">
                           <tr className="table-header">
                             <th className="px-4 py-3 text-left">Date</th>
                             <th className="px-4 py-3 text-left w-[30rem]">Description</th>

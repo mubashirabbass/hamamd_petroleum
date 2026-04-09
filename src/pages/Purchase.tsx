@@ -287,9 +287,10 @@ export default function PurchasePage() {
           </div>
 
           {/* Table */}
-          <div className="overflow-x-auto">
+          <div className="overflow-auto smart-scroll max-h-[calc(100vh-350px)]">
             <table className="w-full">
-              <thead><tr className="table-header text-[10px]">
+              <thead className="sticky top-0 z-10 bg-slate-200 dark:bg-dark-800">
+                <tr className="table-header text-[10px]">
                 <th className="table-cell text-left w-28">Date</th>
                 <th className="table-cell text-left w-36">Invoice No</th>
                 <th className="table-cell text-left w-64">Description</th>

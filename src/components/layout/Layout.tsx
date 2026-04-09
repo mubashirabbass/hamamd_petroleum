@@ -74,7 +74,7 @@ export default function Layout() {
   return (
     <div className="flex h-screen overflow-hidden bg-slate-100 dark:bg-dark-950 transition-colors duration-300">
       <Sidebar />
-      <main className="flex-1 overflow-y-auto relative">
+      <main className="flex-1 overflow-y-auto smart-scroll relative">
         <div className="p-6 min-h-full">
           {/* Keep-Alive View Container */}
           <div style={{ display: isPath('/') ? 'block' : 'none' }}><Dashboard /></div>

@@ -306,7 +306,7 @@ export default function LiabilityPage() {
             <div className="flex-1 glass rounded-2xl overflow-hidden border border-slate-200 dark:border-dark-700/50 shadow-sm flex flex-col animate-in slide-in-from-bottom duration-500 delay-200">
               <div className="overflow-y-auto smart-scroll flex-1">
                 <table className="w-full">
-                  <thead>
+                  <thead className="sticky top-0 z-10 bg-slate-200 dark:bg-dark-800">
                     <tr className="table-header text-[10px]">
                       <th className="table-cell text-left">Liability Account</th>
                       <th className="table-cell text-right">Current Liability</th>
@@ -488,9 +488,9 @@ export default function LiabilityPage() {
                         )}
                       </div>
                     </div>
-                    <div className="overflow-x-auto smart-scroll">
+                    <div className="overflow-auto smart-scroll max-h-[calc(100vh-350px)]">
                       <table className="table-excel">
-                        <thead>
+                        <thead className="sticky top-0 z-10 bg-slate-200 dark:bg-dark-800">
                           <tr className="table-header">
                             <th className="px-4 py-3 text-left">Date</th>
                             <th className="px-4 py-3 text-left w-[30rem]">Description</th>
@@ -634,10 +634,12 @@ export default function LiabilityPage() {
             <div className="glass rounded-3xl overflow-hidden border border-slate-200 dark:border-dark-700/50 shadow-xl flex-1 flex flex-col">
               <div className="overflow-y-auto smart-scroll">
                 <table className="w-full">
-                  <thead className="sticky top-0 bg-slate-50/90 dark:bg-dark-800/90 backdrop-blur-sm z-10"><tr className="border-b border-slate-200 dark:border-dark-700/50">
-                    <th className="px-6 py-4 text-left text-[10px] font-black uppercase text-slate-400 tracking-widest">Account Name</th>
-                    <th className="px-6 py-4 text-center text-[10px] font-black uppercase text-slate-400 tracking-widest">Actions</th>
-                  </tr></thead>
+                  <thead className="sticky top-0 z-10 bg-slate-200 dark:bg-dark-800">
+                    <tr className="table-header text-[10px]">
+                      <th className="table-cell text-left">Account Name</th>
+                      <th className="table-cell text-center">Actions</th>
+                    </tr>
+                  </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-dark-800/50">
                     {filteredManage.length === 0 ? (
                       <tr><td colSpan={2} className="px-6 py-20 text-center text-slate-400 italic font-medium">No results found</td></tr>

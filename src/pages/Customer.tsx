@@ -325,7 +325,7 @@ export default function CustomerPage() {
             <div className="flex-1 glass rounded-2xl overflow-hidden border border-slate-200 dark:border-dark-700/50 shadow-sm flex flex-col animate-in slide-in-from-bottom duration-500 delay-200">
               <div className="overflow-y-auto smart-scroll flex-1">
                 <table className="w-full border-collapse">
-                  <thead>
+                  <thead className="sticky top-0 z-10 bg-slate-200 dark:bg-dark-800">
                     <tr className="table-header text-[10px]">
                       <th className="table-cell text-left">Client Name / Contact</th>
                       <th className="table-cell text-right">Pending Balance</th>
@@ -511,9 +511,9 @@ export default function CustomerPage() {
                         )}
                       </div>
                     </div>
-                    <div className="overflow-x-auto smart-scroll">
+                    <div className="overflow-auto smart-scroll max-h-[calc(100vh-350px)]">
                       <table className="table-excel">
-                        <thead>
+                        <thead className="sticky top-0 z-10 bg-slate-200 dark:bg-dark-800">
                           <tr className="table-header">
                             <th className="px-4 py-3 text-left">Date</th>
                             <th className="px-4 py-3 text-left w-[30rem]">Description</th>
@@ -664,9 +664,10 @@ export default function CustomerPage() {
             </div>
 
             <div className="glass rounded-3xl overflow-hidden border border-slate-200 dark:border-dark-700/50 shadow-xl flex-1 flex flex-col">
-              <div className="overflow-x-auto smart-scroll">
+              <div className="overflow-auto smart-scroll">
                 <table className="w-full">
-                  <thead><tr className="table-header text-[10px]">
+                  <thead className="sticky top-0 z-10 bg-slate-200 dark:bg-dark-800">
+                    <tr className="table-header text-[10px]">
                     <th className="table-cell text-left">Client Name</th>
                     <th className="table-cell text-left">Contact</th>
                     <th className="table-cell text-center">Actions</th>

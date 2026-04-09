@@ -586,9 +586,9 @@ export default function StockPage() {
                     <SearchBar value={search} onChange={v => { setSearch(v); setPage(1); }} placeholder="Search History..." />
                   </div>
                 </div>
-                <div className="overflow-x-auto">
+                <div className="overflow-auto smart-scroll max-h-[60vh]">
                   <table className="w-full">
-                    <thead>
+                    <thead className="sticky top-0 z-10 bg-slate-200 dark:bg-dark-800">
                       <tr className="table-header text-[10px]">
                         <th className="table-cell text-left">Date</th>
                         <th className="table-cell text-left">Details</th>
@@ -773,9 +773,9 @@ export default function StockPage() {
           <Calendar className="w-5 h-5 text-primary-600" />
           <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Stock Analysis Overview</h2>
         </div>
-        <div className="overflow-x-auto">
+        <div className="overflow-auto smart-scroll max-h-[50vh]">
           <table className="w-full">
-            <thead>
+            <thead className="sticky top-0 z-10">
               <tr className="bg-slate-50/50 dark:bg-dark-900/50">
                 <th className="px-8 py-5 text-left text-[11px] font-black text-slate-400 uppercase tracking-widest">Fuel Category</th>
                 <th className="px-8 py-5 text-right text-[11px] font-black text-slate-400 uppercase tracking-widest">Purchase Volume (L)</th>

@@ -241,9 +241,10 @@ export default function SalePage() {
             </div>
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="overflow-auto smart-scroll max-h-[calc(100vh-350px)]">
             <table className="w-full">
-              <thead><tr className="table-header text-[10px]">
+              <thead className="sticky top-0 z-10 bg-slate-200 dark:bg-dark-800">
+                <tr className="table-header text-[10px]">
                 <th className="table-cell text-left">Date</th>
                 <th className="table-cell text-left">Description</th>
                 <th className="table-cell text-right w-20">Rate (₨)</th>
