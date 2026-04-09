@@ -52,6 +52,30 @@
     @apply glass rounded-2xl p-5;
   }
 
+  .premium-glass-card {
+    background: rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(64px) saturate(180%);
+    -webkit-backdrop-filter: blur(64px) saturate(180%);
+    @apply border border-white/30 shadow-[0_32px_64px_rgba(0,0,0,0.5)] ring-1 ring-white/20;
+  }
+
+  .blur-buffer {
+    @apply absolute inset-0 -z-10 bg-cover bg-center bg-fixed;
+    filter: blur(40px);
+    transform: scale(1.1);
+  }
+
+  .glass-container {
+    @apply relative overflow-hidden;
+  }
+
+  .soft-glass {
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(24px) saturate(150%);
+    -webkit-backdrop-filter: blur(24px) saturate(150%);
+    @apply border border-white/20 shadow-lg;
+  }
+
   /* ── Buttons ────────────────────────────────────────── */
   .btn-primary {
     @apply bg-primary-600 hover:bg-primary-500 text-white font-black px-5 py-2.5 rounded-xl

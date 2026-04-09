@@ -195,3 +195,18 @@ button {
     opacity: 1;
   }
 }
+
+@keyframes loginProgressFill {
+  0% {
+    transform: scaleX(0);
+    transform-origin: left;
+  }
+  100% {
+    transform: scaleX(1);
+    transform-origin: left;
+  }
+}
+
+.login-progress-fill {
+  animation: loginProgressFill 1s linear forwards;
+}

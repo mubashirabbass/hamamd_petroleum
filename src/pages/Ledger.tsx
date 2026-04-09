@@ -13,7 +13,7 @@ import PrintReportModal from '../components/modals/PrintReportModal';
 
 export default function LedgerPage() {
   const {
-    ledgerCategories, ledgerEntries, nextLedgerNo,
+    ledgerCategories, ledgerEntries,
     addLedgerCategory, updateLedgerCategory, deleteLedgerCategory,
     addLedgerEntry, deleteLedgerEntry, settings, currentUser, updateLedgerEntry
   } = useStore();

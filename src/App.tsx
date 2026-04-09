@@ -15,41 +15,67 @@ import Settings   from './pages/Settings';
 import Login      from './pages/Login';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { useStore } from './store/useStore';
+import loginBg from '../WhatsApp Image 2026-04-08 at 5.20.06 PM.jpeg';
 
 function DBSplash({ error }: { error: string | null }) {
   // ... (keeping existing DBSplash code)
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center gap-6">
-      <div className="flex flex-col items-center gap-3">
-        <div className="flex items-center gap-4">
-          <div className="w-20 h-20 bg-white/10 backdrop-blur-xl rounded-3xl flex items-center justify-center p-2 border border-white/20 shadow-2xl">
-             <img src="/assets/logo-hr.png" alt="HR" className="w-full h-full object-contain" />
-          </div>
-          <div className="w-20 h-20 bg-white/10 backdrop-blur-xl rounded-3xl flex items-center justify-center p-2 border border-white/20 shadow-2xl">
-             <img src="/assets/logo-go.png" alt="GO" className="w-full h-full object-contain" />
-          </div>
-        </div>
-        <div className="text-center mt-2">
-          <h1 className="text-3xl font-black text-white tracking-tight">HR Filling Station</h1>
-          <p className="text-slate-400 text-sm font-medium mt-1 uppercase tracking-widest">Business Suite</p>
-        </div>
+    <div className="min-h-screen w-full relative flex flex-col items-center justify-center p-6 font-sans overflow-hidden">
+      {/* ── Fixed Background Layer (Sharp) ──────────────────────────────────── */}
+      <div 
+        className="fixed inset-0 bg-cover bg-center bg-no-repeat bg-fixed z-0"
+        style={{
+          backgroundImage: `url(${loginBg})`,
+        }}
+      >
+        <div className="absolute inset-0 bg-black/40" />
       </div>
 
-      {error ? (
-        <div className="bg-red-900/30 border border-red-500/30 rounded-2xl px-8 py-5 max-w-sm text-center">
-          <p className="text-red-400 font-bold text-sm mb-1">Database Error</p>
-          <p className="text-red-300/80 text-xs leading-relaxed">{error}</p>
-        </div>
-      ) : (
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-48 h-1 bg-slate-800 rounded-full overflow-hidden">
-            <div className="h-full bg-gradient-to-r from-primary-500 to-primary-400 rounded-full animate-[loading_1.5s_ease-in-out_infinite]" />
+      <div className="relative z-10 flex flex-col items-center gap-8 animate-fade-in-up">
+        {/* Branding & Logo Area */}
+        <div className="flex flex-col items-center gap-4">
+          <div className="flex items-center gap-5">
+            <div className="w-24 h-24 glass-container soft-glass rounded-[32px] flex items-center justify-center p-3 !bg-white/[0.12]">
+              <div 
+                className="blur-buffer !bg-fixed" 
+                style={{ backgroundImage: `url(${loginBg})`, filter: 'blur(20px)' }} 
+              />
+               <img src="/assets/logo-hr.png" alt="HR" className="w-full h-full object-contain login-logo-spin-cw relative z-10" />
+            </div>
+            <div className="w-24 h-24 glass-container soft-glass rounded-[32px] flex items-center justify-center p-3 !bg-white/[0.12]">
+              <div 
+                className="blur-buffer !bg-fixed" 
+                style={{ backgroundImage: `url(${loginBg})`, filter: 'blur(20px)' }} 
+              />
+               <img src="/assets/logo-go.png" alt="GO" className="w-full h-full object-contain relative z-10" />
+            </div>
           </div>
-          <p className="text-slate-500 text-xs font-medium tracking-widest uppercase animate-pulse">
-            Initializing Database…
-          </p>
+          <div className="text-center">
+            <h1 className="text-4xl font-black text-white tracking-tighter uppercase mb-1">HR Filling Station</h1>
+            <p className="text-white/60 text-[10px] font-black uppercase tracking-[0.4em]">Integrated Management Suite</p>
+          </div>
         </div>
-      )}
+
+        {error ? (
+          <div className="glass-container premium-glass-card rounded-3xl px-10 py-6 max-w-sm text-center !bg-red-500/10">
+            <div 
+              className="blur-buffer !bg-fixed" 
+              style={{ backgroundImage: `url(${loginBg})` }} 
+            />
+            <p className="text-red-400 font-black text-xs uppercase tracking-widest mb-2 relative z-10">Database Connection Failed</p>
+            <p className="text-white/70 text-[11px] leading-relaxed font-bold relative z-10">{error}</p>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-64 h-1.5 bg-white/10 rounded-full overflow-hidden border border-white/5 relative">
+              <div className="h-full bg-gradient-to-r from-cyan-400 via-white to-cyan-400 rounded-full animate-[loading_1.5s_ease-in-out_infinite]" />
+            </div>
+            <p className="text-white/80 text-[10px] font-black tracking-[0.3em] uppercase animate-pulse">
+              Syncing Core Database…
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

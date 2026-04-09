@@ -167,177 +167,256 @@ export default function StockPage() {
       const { writeFile } = await import('@tauri-apps/plugin-fs');
 
       const workbook = new ExcelJS.Workbook();
-      workbook.creator = 'HR Petroleum';
-      workbook.lastModifiedBy = 'HR Petroleum';
+      workbook.creator = settings.softwareName;
+      workbook.lastModifiedBy = settings.softwareName;
       workbook.created = new Date();
       workbook.modified = new Date();
 
+      const filteredPeriod = `${fromDate || settings.startDate || 'Beginning'} to ${toDate || today()}`;
+      const branding = {
+        name: settings.softwareName.toUpperCase(),
+        address: 'Muzafar Garh Road, Ada Ghyl Pur, District Jhang',
+        contact: '03041654629',
+        reportTitle: 'COMPREHENSIVE STOCK & INVENTORY ANALYSIS'
+      };
+
+      const start = fromDate || settings.startDate || '2000-01-01';
+      const end = toDate || today();
       const allPurchases = filterByStartDate(rawPurchases, settings.startDate).filter(
-        (p) => (!fromDate || p.date >= fromDate) && (!toDate || p.date <= toDate)
+        (p) => p.date >= start && p.date <= end
       );
       const allSales = filterByStartDate(rawSales, settings.startDate).filter(
-        (s) => (!fromDate || s.date >= fromDate) && (!toDate || s.date <= toDate)
+        (s) => s.date >= start && s.date <= end
       );
 
-      const summary = workbook.addWorksheet('Stock Summary');
-      summary.columns = [
-        { width: 16 }, { width: 24 }, { width: 24 }, { width: 20 }, { width: 20 }, { width: 22 },
-      ];
+      // ── Helper: Latest Rate for Valuation ──
+      const getLatestRate = (fuel: FuelType) => {
+        const last = rawPurchases.filter(p => p.type === fuel).sort((a,b) => b.date.localeCompare(a.date))[0];
+        return last?.rate || 0;
+      };
+
+      const hsdLatestRate = getLatestRate('HSD');
+      const pmgLatestRate = getLatestRate('PMG');
+
+      // ── Helper: Performance Stats ──
+      const getPerfStats = (fuel: FuelType) => {
+        const fuelSales = allSales.filter(s => s.type === fuel);
+        const fuelPurchases = allPurchases.filter(p => p.type === fuel);
+        
+        // Find unique days in period to calculate real average
+        const d1 = new Date(start);
+        const d2 = new Date(end);
+        const days = Math.max(1, Math.ceil((d2.getTime() - d1.getTime()) / (1000 * 3600 * 24)) + 1);
+
+        const totalSold = fuelSales.reduce((s, x) => s + x.quantity, 0);
+        const totalPurchased = fuelPurchases.reduce((s, p) => s + p.quantity, 0);
+
+        // Find Peaks
+        const salesByDate: Record<string, number> = {};
+        fuelSales.forEach(s => salesByDate[s.date] = (salesByDate[s.date] || 0) + s.quantity);
+        const peakSaleDate = Object.keys(salesByDate).sort((a,b) => salesByDate[b] - salesByDate[a])[0] || 'N/A';
+        const peakSaleQty = salesByDate[peakSaleDate] || 0;
+
+        return {
+          avgSale: totalSold / days,
+          avgPurchase: totalPurchased / days,
+          peakSaleDate,
+          peakSaleQty,
+          days
+        };
+      };
+
+      const hsdPerf = getPerfStats('HSD');
+      const pmgPerf = getPerfStats('PMG');
+
+      // ── SHEET 1: EXECUTIVE SUMMARY ──
+      const summary = workbook.addWorksheet('Executive Summary');
+      summary.columns = [{ width: 25 }, { width: 20 }, { width: 20 }, { width: 20 }, { width: 25 }, { width: 25 }];
+      
+      // Branding Header
       summary.mergeCells('A1:F1');
       summary.mergeCells('A2:F2');
       summary.mergeCells('A3:F3');
       summary.mergeCells('A4:F4');
-      summary.getCell('A1').value = 'HR PETROLEUM';
-      summary.getCell('A2').value = 'Stock Statistics & Detailed Report';
-      summary.getCell('A3').value = 'Logo: HR';
-      summary.getCell('A4').value = `Period: ${fromDate || settings.startDate || 'Beginning'} to ${toDate || today()}`;
-      summary.getRow(1).height = 30;
-      summary.getRow(2).height = 24;
-      summary.getRow(3).height = 20;
-      summary.getRow(4).height = 20;
+      const c1 = summary.getCell('A1');
+      c1.value = branding.name;
+      c1.font = { size: 22, bold: true, color: { argb: 'FFFFFFFF' } };
+      c1.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F172A' } };
+      c1.alignment = { horizontal: 'center', vertical: 'middle' };
 
-      const headingFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F172A' } } as const;
-      const headingFont = { color: { argb: 'FFFFFFFF' }, bold: true, size: 16 } as const;
-      summary.getCell('A1').fill = headingFill;
-      summary.getCell('A1').font = headingFont;
-      summary.getCell('A2').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } };
-      summary.getCell('A2').font = { color: { argb: 'FFFFFFFF' }, bold: true, size: 12 };
-      summary.getCell('A3').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0EA5E9' } };
-      summary.getCell('A3').font = { color: { argb: 'FFFFFFFF' }, bold: true };
-      summary.getCell('A4').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2E8F0' } };
-      summary.getCell('A4').font = { color: { argb: 'FF0F172A' }, bold: true };
-      ['A1', 'A2', 'A3', 'A4'].forEach((addr) => {
-        summary.getCell(addr).alignment = { horizontal: 'center', vertical: 'middle' };
-      });
+      const c2 = summary.getCell('A2');
+      c2.value = branding.address;
+      c2.font = { size: 11, color: { argb: 'FFFFFFFF' } };
+      c2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF334155' } };
+      c2.alignment = { horizontal: 'center', vertical: 'middle' };
 
-      const headerRow = summary.addRow(['Fuel', 'Purchase Volume (L)', 'Sales Volume (L)', 'Remaining (L)', 'Purchase Value (PKR)', 'Sales Value (PKR)']);
-      headerRow.eachCell((c) => {
+      const c3 = summary.getCell('A3');
+      c3.value = branding.reportTitle;
+      c3.font = { size: 14, bold: true, color: { argb: 'FF0EA5E9' } };
+      c3.alignment = { horizontal: 'center', vertical: 'middle' };
+
+      const c4 = summary.getCell('A4');
+      c4.value = `Analysis Period: ${filteredPeriod}`;
+      c4.font = { size: 10, italic: true, color: { argb: 'FF64748B' } };
+      c4.alignment = { horizontal: 'center', vertical: 'middle' };
+      summary.getRow(1).height = 40;
+      summary.getRow(2).height = 20;
+
+      // Section: Current Inventory Status
+      summary.addRow([]);
+      summary.addRow(['INVENTORY STATUS OVERVIEW']).font = { bold: true, size: 12 };
+      const headerRow = summary.addRow(['Fuel Type', 'Pur. Vol (L)', 'Sale Vol (L)', 'Stock (L)', 'Stock Value (Est)', 'Latest Rate']);
+      headerRow.eachCell(c => {
         c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-        c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF334155' } };
-        c.alignment = { horizontal: 'center', vertical: 'middle' };
-        c.border = {
-          top: { style: 'thin', color: { argb: 'FF64748B' } },
-          left: { style: 'thin', color: { argb: 'FF64748B' } },
-          bottom: { style: 'thin', color: { argb: 'FF64748B' } },
-          right: { style: 'thin', color: { argb: 'FF64748B' } },
-        };
+        c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E293B' } };
       });
 
-      const summaryRows = [
-        ['HSD', stockData.HSD.totalPurchased, stockData.HSD.totalSold, stockData.HSD.current, stockData.HSD.purchaseValue, stockData.HSD.saleValue],
-        ['PMG', stockData.PMG.totalPurchased, stockData.PMG.totalSold, stockData.PMG.current, stockData.PMG.purchaseValue, stockData.PMG.saleValue],
-        ['TOTAL', stockData.HSD.totalPurchased + stockData.PMG.totalPurchased, stockData.HSD.totalSold + stockData.PMG.totalSold, stockData.HSD.current + stockData.PMG.current, stockData.HSD.purchaseValue + stockData.PMG.purchaseValue, stockData.HSD.saleValue + stockData.PMG.saleValue],
+      const hsdStockVal = stockData.HSD.current * hsdLatestRate;
+      const pmgStockVal = stockData.PMG.current * pmgLatestRate;
+
+      summary.addRow(['HSD (Diesel)', stockData.HSD.totalPurchased, stockData.HSD.totalSold, stockData.HSD.current, hsdStockVal, hsdLatestRate]);
+      summary.addRow(['PMG (Petrol)', stockData.PMG.totalPurchased, stockData.PMG.totalSold, stockData.PMG.current, pmgStockVal, pmgLatestRate]);
+      const totalRow = summary.addRow(['GRAND TOTAL', 
+        stockData.HSD.totalPurchased + stockData.PMG.totalPurchased,
+        stockData.HSD.totalSold + stockData.PMG.totalSold,
+        stockData.HSD.current + stockData.PMG.current,
+        hsdStockVal + pmgStockVal,
+        ''
+      ]);
+      totalRow.font = { bold: true };
+      totalRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } };
+
+      // Section: Performance Insights
+      summary.addRow([]);
+      summary.addRow([]);
+      summary.addRow(['BUSINESS PERFORMANCE INSIGHTS']).font = { bold: true, size: 12 };
+      const perfHeader = summary.addRow(['Fuel Type', 'Days in Period', 'Daily Avg Sale', 'Daily Avg Pur.', 'Peak Sale Date', 'Peak Quantity']);
+      perfHeader.eachCell(c => {
+        c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0369A1' } };
+      });
+      summary.addRow(['HSD', hsdPerf.days, hsdPerf.avgSale.toFixed(2), hsdPerf.avgPurchase.toFixed(2), formatDate(hsdPerf.peakSaleDate), hsdPerf.peakSaleQty]);
+      summary.addRow(['PMG', pmgPerf.days, pmgPerf.avgSale.toFixed(2), pmgPerf.avgPurchase.toFixed(2), formatDate(pmgPerf.peakSaleDate), pmgPerf.peakSaleQty]);
+
+      // ── SHEET 2: DAILY PERFORMANCE SHEET ──
+      const dailySheet = workbook.addWorksheet('Daily Activity');
+      dailySheet.columns = [
+        { header: 'Date', key: 'date', width: 15 },
+        { header: 'HSD Sale (L)', key: 'hsdSale', width: 15 },
+        { header: 'PMG Sale (L)', key: 'pmgSale', width: 15 },
+        { header: 'Total Sale (L)', key: 'totalSale', width: 15 },
+        { header: 'HSD Pur. (L)', key: 'hsdPur', width: 15 },
+        { header: 'PMG Pur. (L)', key: 'pmgPur', width: 15 }
       ];
-      summaryRows.forEach((r, idx) => {
-        const row = summary.addRow(r);
-        row.eachCell((c, colNo) => {
-          c.border = {
-            top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
-            left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
-            bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
-            right: { style: 'thin', color: { argb: 'FFE2E8F0' } },
-          };
-          c.alignment = { horizontal: colNo === 1 ? 'left' : 'right', vertical: 'middle' };
-        });
-        if (idx === 2) {
-          row.eachCell((c) => {
-            c.font = { bold: true, color: { argb: 'FF0F172A' } };
-            c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } };
-          });
-        }
+
+      const dailyData: Record<string, any> = {};
+      allSales.forEach(s => {
+        if (!dailyData[s.date]) dailyData[s.date] = { date: s.date, hsdSale: 0, pmgSale: 0, hsdPur: 0, pmgPur: 0 };
+        if (s.type === 'HSD') dailyData[s.date].hsdSale += s.quantity;
+        else dailyData[s.date].pmgSale += s.quantity;
+      });
+      allPurchases.forEach(p => {
+        if (!dailyData[p.date]) dailyData[p.date] = { date: p.date, hsdSale: 0, pmgSale: 0, hsdPur: 0, pmgPur: 0 };
+        if (p.type === 'HSD') dailyData[p.date].hsdPur += p.quantity;
+        else dailyData[p.date].pmgPur += p.quantity;
       });
 
+      Object.values(dailyData).sort((a: any, b: any) => b.date.localeCompare(a.date)).forEach((day: any) => {
+        dailySheet.addRow({
+          ...day,
+          totalSale: day.hsdSale + day.pmgSale
+        });
+      });
+      dailySheet.getRow(1).font = { bold: true };
+      dailySheet.views = [{ state: 'frozen', ySplit: 1 }];
+
+      // ── SHEET 3 & 4: FUEL DETAILS ──
       const makeFuelDetailSheet = (fuel: FuelType) => {
-        const ws = workbook.addWorksheet(`${fuel} Details`);
+        const ws = workbook.addWorksheet(`${fuel} Ledger`);
         ws.columns = [
-          { header: 'Date', key: 'date', width: 14 },
-          { header: 'Type', key: 'type', width: 12 },
-          { header: 'Bill No', key: 'billNo', width: 16 },
-          { header: 'Description/Details', key: 'details', width: 34 },
-          { header: 'Qty In (L)', key: 'qtyIn', width: 14 },
-          { header: 'Qty Out (L)', key: 'qtyOut', width: 14 },
-          { header: 'Rate (PKR)', key: 'rate', width: 14 },
-          { header: 'Amount (PKR)', key: 'amount', width: 16 },
-          { header: 'Running Balance (L)', key: 'balance', width: 20 },
+          { header: 'Date', key: 'date', width: 15 },
+          { header: 'Transaction', key: 'type', width: 12 },
+          { header: 'Bill/Inv #', key: 'billNo', width: 18 },
+          { header: 'Description', key: 'description', width: 25 },
+          { header: 'Supplier/Details', key: 'details', width: 30 },
+          { header: 'Qty In (L)', key: 'qtyIn', width: 12 },
+          { header: 'Qty Out (L)', key: 'qtyOut', width: 12 },
+          { header: 'Rate (PKR)', key: 'rate', width: 12 },
+          { header: 'Amount', key: 'amount', width: 15 },
+          { header: 'Balance (L)', key: 'balance', width: 15 },
         ];
 
-        const purchases = allPurchases
-          .filter((p) => p.type === fuel)
-          .map((p) => ({
-            date: p.date,
-            type: 'Purchase',
-            billNo: p.billNo,
-            details: p.details || p.description || '',
-            qtyIn: p.quantity,
-            qtyOut: 0,
-            rate: p.rate,
-            amount: p.totalAmount,
-          }));
-        const sales = allSales
-          .filter((s) => s.type === fuel)
-          .map((s) => ({
-            date: s.date,
-            type: 'Sale',
-            billNo: s.billNo,
-            details: s.description || 'Daily Sale',
-            qtyIn: 0,
-            qtyOut: s.quantity,
-            rate: s.rate,
-            amount: s.amount,
-          }));
+        const purchases = allPurchases.filter(p => p.type === fuel).map(p => ({
+          date: p.date, type: 'Purchase', billNo: p.invoiceNo || p.billNo, description: p.description || '', details: p.details,
+          qtyIn: p.quantity, qtyOut: 0, rate: p.rate, amount: p.totalAmount
+        }));
+        const sales = allSales.filter(s => s.type === fuel).map(s => ({
+          date: s.date, type: 'Sale', billNo: s.billNo, description: s.description || 'Daily Sale', details: 'Direct Cash/Credit Sale',
+          qtyIn: 0, qtyOut: s.quantity, rate: s.rate, amount: s.amount
+        }));
 
-        const combined = [...purchases, ...sales].sort((a, b) => a.date.localeCompare(b.date));
         let running = 0;
-        combined.forEach((x) => {
-          running += x.qtyIn - x.qtyOut;
-          ws.addRow({ ...x, balance: running });
+        [...purchases, ...sales].sort((a,b) => a.date.localeCompare(b.date)).forEach(row => {
+          running += row.qtyIn - row.qtyOut;
+          ws.addRow({ ...row, balance: running });
         });
 
-        ws.getRow(1).eachCell((c) => {
-          c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-          c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: fuel === 'HSD' ? 'FFB45309' : 'FF047857' } };
-          c.alignment = { horizontal: 'center', vertical: 'middle' };
-        });
-
-        ws.eachRow((row, i) => {
-          if (i === 1) return;
-          row.eachCell((c, colNo) => {
-            c.border = {
-              top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
-              left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
-              bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
-              right: { style: 'thin', color: { argb: 'FFE2E8F0' } },
-            };
-            c.alignment = { horizontal: colNo <= 4 ? 'left' : 'right', vertical: 'middle' };
-          });
-        });
+        ws.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        ws.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: fuel === 'HSD' ? 'FFB45309' : 'FF047857' } };
+        ws.views = [{ state: 'frozen', ySplit: 1 }];
+        ws.autoFilter = 'A1:J1';
       };
 
       makeFuelDetailSheet('HSD');
       makeFuelDetailSheet('PMG');
 
-      const purchasesSheet = workbook.addWorksheet('All Purchases');
-      purchasesSheet.columns = [
+      // ── SHEET 5: SUPPLIER ANALYSIS ──
+      const supplierWS = workbook.addWorksheet('Supplier Summary');
+      supplierWS.columns = [
+        { header: 'Supplier / Origin', key: 'supplier', width: 35 },
+        { header: 'Total HSD (L)', key: 'hsd', width: 15 },
+        { header: 'Total PMG (L)', key: 'pmg', width: 15 },
+        { header: 'Total Value (PKR)', key: 'value', width: 20 },
+        { header: 'Last Shipment', key: 'last', width: 15 }
+      ];
+
+      const supplierMap: Record<string, any> = {};
+      allPurchases.forEach(p => {
+        const s = p.details || 'Unknown Supplier';
+        if (!supplierMap[s]) supplierMap[s] = { supplier: s, hsd: 0, pmg: 0, value: 0, last: p.date };
+        if (p.type === 'HSD') supplierMap[s].hsd += p.quantity;
+        else supplierMap[s].pmg += p.quantity;
+        supplierMap[s].value += p.totalAmount;
+        if (p.date > supplierMap[s].last) supplierMap[s].last = p.date;
+      });
+
+      Object.values(supplierMap).forEach(s => supplierWS.addRow(s));
+      supplierWS.getRow(1).font = { bold: true };
+      supplierWS.autoFilter = 'A1:E1';
+
+      // ── SHEET 6 & 7: RAW DATA EXPORTS ──
+      const purWS = workbook.addWorksheet('All Purchases Raw');
+      purWS.columns = [
         { header: 'Date', key: 'date', width: 14 },
         { header: 'Fuel', key: 'type', width: 10 },
         { header: 'Bill No', key: 'billNo', width: 16 },
         { header: 'Invoice No', key: 'invoiceNo', width: 16 },
         { header: 'Vehicle No', key: 'vehicleNo', width: 16 },
+        { header: 'Description', key: 'description' , width: 25 },
         { header: 'Supplier Details', key: 'details', width: 30 },
         { header: 'Rate', key: 'rate', width: 12 },
         { header: 'Qty (L)', key: 'quantity', width: 12 },
         { header: 'Carriage', key: 'carriage', width: 12 },
-        { header: 'Amount', key: 'amount', width: 14 },
+        { header: 'Net Amount', key: 'amount', width: 14 },
         { header: 'Total Amount', key: 'totalAmount', width: 16 },
       ];
-      allPurchases.forEach((p) => purchasesSheet.addRow(p));
-      purchasesSheet.getRow(1).eachCell((c) => {
-        c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-        c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } };
-      });
+      allPurchases.forEach(p => purWS.addRow(p));
+      purWS.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      purWS.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E40AF' } };
+      purWS.autoFilter = 'A1:L1';
 
-      const salesSheet = workbook.addWorksheet('All Sales');
-      salesSheet.columns = [
+      const saleWS = workbook.addWorksheet('All Sales Raw');
+      saleWS.columns = [
         { header: 'Date', key: 'date', width: 14 },
         { header: 'Fuel', key: 'type', width: 10 },
         { header: 'Bill No', key: 'billNo', width: 16 },
@@ -346,13 +425,13 @@ export default function StockPage() {
         { header: 'Qty (L)', key: 'quantity', width: 12 },
         { header: 'Amount', key: 'amount', width: 14 },
       ];
-      allSales.forEach((s) => salesSheet.addRow(s));
-      salesSheet.getRow(1).eachCell((c) => {
-        c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-        c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F766E' } };
-      });
+      allSales.forEach(s => saleWS.addRow(s));
+      saleWS.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      saleWS.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF065F46' } };
+      saleWS.autoFilter = 'A1:G1';
 
-      const defaultPath = `HR_Petroleum_Stock_Report_${today()}.xlsx`;
+      // Finalize Save
+      const defaultPath = `Detailed_Stock_Report_${today()}.xlsx`;
       const filePath = await save({
         defaultPath,
         filters: [{ name: 'Excel Workbook', extensions: ['xlsx'] }],
@@ -363,7 +442,7 @@ export default function StockPage() {
       const buffer = await workbook.xlsx.writeBuffer();
       const data = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer as ArrayBuffer);
       await writeFile(normalizedPath, data);
-      toast('Stock stats Excel downloaded successfully', 'success');
+      toast('Comprehensive stock report downloaded', 'success');
     } catch (err: unknown) {
       console.error('Failed to download stock report', err);
       toast(`Failed to download stock stats: ${getErrorMessage(err)}`, 'error');

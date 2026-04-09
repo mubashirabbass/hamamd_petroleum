@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ShieldCheck, Mail, ArrowRight, Lock, Flame } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { useToast } from '../components/ui/Toast';
-import loginBg from '../../Gemini_Generated_Image_haz9u6haz9u6haz9.png';
+import loginBg from '../../WhatsApp Image 2026-04-08 at 5.20.06 PM.jpeg';
 import hrLogo from '../../logo_not_png-removebg-preview.png';
 
 export default function Login() {
@@ -13,6 +13,7 @@ export default function Login() {
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [showLoginSplash, setShowLoginSplash] = useState(false);
+  const [splashProgress, setSplashProgress] = useState(0);
 
   useEffect(() => {
     const savedEmail = localStorage.getItem('ebs_remembered_email');
@@ -25,6 +26,22 @@ export default function Login() {
       setPassword(savedPass);
     }
   }, []);
+
+  useEffect(() => {
+    if (!showLoginSplash) {
+      setSplashProgress(0);
+      return;
+    }
+
+    const steps = [10, 30, 50, 70, 100];
+    const timers = steps.map((value, index) =>
+      window.setTimeout(() => setSplashProgress(value), (index + 1) * 200)
+    );
+
+    return () => {
+      timers.forEach((id) => window.clearTimeout(id));
+    };
+  }, [showLoginSplash]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,6 +74,7 @@ export default function Login() {
 
     setIsLoggingIn(true);
     setShowLoginSplash(true);
+    setSplashProgress(0);
     // Run login animation first, then complete sign-in.
     window.setTimeout(() => {
       login(user);
@@ -65,32 +83,62 @@ export default function Login() {
       toast(`Welcome back, ${user.name}!`, 'success');
       setIsLoggingIn(false);
       setShowLoginSplash(false);
-    }, 1000);
+    }, 1150);
   };
 
   return (
-    <div 
-      className="min-h-screen w-full flex items-center justify-center p-6 bg-cover bg-center bg-no-repeat relative font-sans"
-      style={{
-        backgroundImage: `linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.2)), url(${loginBg})`
-      }}
-    >
+    <div className="min-h-screen w-full relative flex items-center justify-center p-4 md:p-6 font-sans overflow-hidden">
+      {/* ── Fixed Background Layer (Sharp) ──────────────────────────────────── */}
+      <div 
+        className="fixed inset-0 bg-cover bg-center bg-no-repeat bg-fixed z-0"
+        style={{
+          backgroundImage: `url(${loginBg})`,
+        }}
+      >
+        <div className="absolute inset-0 bg-black/40" />
+      </div>
+
       {showLoginSplash && (
-        <div className="fixed inset-0 z-[999] bg-slate-900/95 backdrop-blur-sm flex flex-col items-center justify-center">
-          <div className="w-32 h-32 rounded-3xl bg-white/10 border border-white/20 shadow-2xl p-3 mb-6">
-            <img src={hrLogo} alt="HR Logo" className="w-full h-full object-contain login-logo-spin-cw" />
-          </div>
-          <p className="text-white text-sm font-black uppercase tracking-[0.25em] mb-5">Signing In</p>
-          <div className="windows-loader-dots" aria-hidden="true">
-            <span />
-            <span />
-            <span />
-            <span />
-            <span />
+        <div
+          className="fixed inset-0 z-[999] flex flex-col items-center justify-center"
+          style={{
+            backgroundImage: `linear-gradient(rgba(2,6,23,0.72), rgba(2,6,23,0.72)), url(${loginBg})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+          }}
+        >
+          <div className="absolute inset-0 backdrop-blur-[3px]" />
+
+          <div className="relative z-10 flex flex-col items-center">
+            <div className="relative mb-7">
+              <div className="absolute inset-0 rounded-full border border-white/20 animate-ping" />
+              <div className="absolute -inset-3 rounded-full border border-white/10" />
+              <div className="w-32 h-32 rounded-full bg-white/12 border border-white/25 shadow-2xl p-4 flex items-center justify-center">
+                <img src={hrLogo} alt="HR Logo" className="w-full h-full object-contain login-logo-spin-cw" />
+              </div>
+            </div>
+            <p className="text-white text-sm font-black uppercase tracking-[0.25em] mb-5">Signing In</p>
+            <p className="text-white/70 text-[10px] uppercase tracking-[0.22em] mb-4">Loading Secure Workspace</p>
+            <div className="w-56 h-1.5 rounded-full bg-white/15 overflow-hidden mb-4">
+              <div
+                className="h-full bg-gradient-to-r from-cyan-300 via-white to-cyan-300"
+                style={{ width: `${splashProgress}%`, transition: 'width 180ms ease-out' }}
+              />
+            </div>
+            <p className="text-white/80 text-[10px] font-black tracking-widest mb-2">{splashProgress}%</p>
+            <div className="windows-loader-dots" aria-hidden="true">
+              <span />
+              <span />
+              <span />
+              <span />
+              <span />
+            </div>
           </div>
         </div>
       )}
 
+      {/* ── Main Login Content ────────────────────────────────────────────────── */}
       <div className="relative z-10 w-full max-w-sm animate-fade-in-up">
         {/* Branding */}
         <div className="text-center mb-10">
@@ -104,9 +152,12 @@ export default function Login() {
               </div>
             </div>
             <div className="mt-2 flex flex-col items-center gap-2">
-              <h1 className="login-brand-heading text-4xl whitespace-nowrap font-black text-white tracking-tighter text-center leading-none px-4 py-2 rounded-2xl border border-white/40 bg-white/20 backdrop-blur-md">
+              <h1 className="login-brand-heading text-xl sm:text-2xl md:text-3xl whitespace-nowrap font-black text-white tracking-tighter text-center leading-tight px-6 py-3 rounded-2xl soft-glass !bg-white/[0.12]">
                 HAMMAD RAHIM FILLING STATION
               </h1>
+              <p className="text-white/90 text-[8px] sm:text-[9px] font-bold uppercase tracking-[0.2em] px-4 py-1.5 soft-glass rounded-full !bg-white/[0.08]">
+                Muzafar Garh Road, Ada Ghyl Pur, District Jhang
+              </p>
               <div className="login-brand-fire flex items-center gap-2 text-amber-300">
                 <Flame className="w-5 h-5 text-orange-400 drop-shadow-[0_0_6px_rgba(251,146,60,0.8)]" />
                 <Flame className="w-6 h-6 text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.9)]" />
@@ -114,22 +165,34 @@ export default function Login() {
               </div>
             </div>
           </div>
-          <p className="text-white/95 text-[10px] uppercase tracking-[0.4em] font-black bg-black/30 backdrop-blur-sm px-3 py-1 rounded-full border border-white/25 shadow-lg">
-            Authorized Personnel Only
-          </p>
         </div>
 
-        {/* High-Contrast Professional Card */}
-        <div className="bg-black/35 backdrop-blur-2xl border border-white/20 rounded-[48px] p-10 shadow-[0_32px_64px_rgba(0,0,0,0.35)] ring-1 ring-white/10">
-          <form onSubmit={handleLogin} className="space-y-6">
-            <div className="space-y-2">
-              <label className="text-[10px] uppercase tracking-[0.2em] font-black text-white/90 block px-1">Login Email</label>
+        {/* ── High-Contrast Professional Card with Blur Buffer ────────────────── */}
+        <div className="glass-container premium-glass-card rounded-[40px] p-8 shadow-[0_32px_64px_rgba(0,0,0,0.6)] !bg-white/[0.08]">
+          {/* The "Direct" Blur Layer (Works on all systems) */}
+          <div 
+            className="blur-buffer opacity-100" 
+            style={{ backgroundImage: `url(${loginBg})` }} 
+          />
+          
+          {/* subtle shine effect overlay */}
+          <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-transparent pointer-events-none" />
+          
+          <form onSubmit={handleLogin} className="space-y-5 relative z-10">
+            <div className="space-y-3">
+              <div className="flex flex-col items-center mb-1">
+                <p className="text-white/95 text-[9px] uppercase tracking-[0.25em] font-black bg-white/10 backdrop-blur-sm px-4 py-1 rounded-full border border-white/20 shadow-sm">
+                  Authorized Personnel Only
+                </p>
+              </div>
+              <label className="text-[10px] uppercase tracking-[0.2em] font-black text-white block px-1">Login Email</label>
               <div className="relative group">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/60 group-focus-within:text-white transition-colors" />
                 <input 
                   type="email"
                   placeholder="name@example.com"
-                  className="w-full bg-white/15 border border-white/30 rounded-2xl py-4 pl-12 pr-4 text-white font-bold focus:outline-none focus:ring-4 focus:ring-white/20 transition-all text-sm placeholder:text-white/55"
+                  className="w-full bg-white/[0.08] backdrop-blur-xl border border-white/20 rounded-2xl py-3.5 pl-12 pr-4 text-white font-bold focus:outline-none focus:ring-4 focus:ring-white/10 transition-all text-sm placeholder:text-white/30"
+                  style={{ backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -138,13 +201,14 @@ export default function Login() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-[10px] uppercase tracking-[0.2em] font-black text-white/90 block px-1">Access Password</label>
+              <label className="text-[10px] uppercase tracking-[0.2em] font-black text-white block px-1">Access Password</label>
               <div className="relative group">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/60 group-focus-within:text-white transition-colors" />
                 <input 
                   type="password"
                   placeholder="••••••••"
-                  className="w-full bg-white/15 border border-white/30 rounded-2xl py-4 pl-12 pr-4 text-white font-bold focus:outline-none focus:ring-4 focus:ring-white/20 transition-all text-sm shadow-sm placeholder:text-white/55"
+                  className="w-full bg-white/[0.08] backdrop-blur-xl border border-white/20 rounded-2xl py-3.5 pl-12 pr-4 text-white font-bold focus:outline-none focus:ring-4 focus:ring-white/10 transition-all text-sm shadow-sm placeholder:text-white/30"
+                  style={{ backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -178,12 +242,13 @@ export default function Login() {
               {isLoggingIn ? 'Signing In...' : 'Sign In'} <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </button>
 
-            <div className="flex flex-col items-center justify-center gap-2 text-[9px] font-black text-white/85 uppercase tracking-widest pt-6 border-t border-white/20">
-               <div className="mt-2 text-center leading-loose bg-white/10 border border-white/20 rounded-2xl px-4 py-3 backdrop-blur-sm shadow-sm">
-                 <p>All Rights Reserved @2026</p>
-                 <p>
-                   Software Solution by <span className="font-black text-white">Mb Soft</span> - <span className="text-white font-black">03041654629</span>
+            <div className="flex flex-col items-center justify-center gap-2 text-[10px] font-bold text-white uppercase tracking-widest pt-5 border-t border-white/20">
+               <div className="mt-4 text-center leading-relaxed bg-black/60 border border-white/20 rounded-2xl px-6 py-4 shadow-2xl">
+                 <p className="text-white text-[9px] font-bold uppercase tracking-wider mb-1 opacity-80">All Rights Reserved @2026</p>
+                 <p className="text-white text-[11px] font-black uppercase tracking-widest">
+                   Software Solution by Mb Soft
                  </p>
+                 <p className="text-white text-[12px] font-black mt-2 tracking-[0.2em]">03041654629</p>
                </div>
             </div>
           </form>

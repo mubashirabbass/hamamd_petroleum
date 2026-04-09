@@ -13,7 +13,7 @@ import PrintReportModal from '../components/modals/PrintReportModal';
 
 export default function ExpensePage() {
   const { 
-    expenseCategories, expenseEntries, nextExpenseNo, 
+    expenseCategories, expenseEntries, 
     addExpenseCategory, updateExpenseCategory, deleteExpenseCategory, 
     addExpenseEntry, deleteExpenseEntry, settings, currentUser, updateExpenseEntry 
   } = useStore();
@@ -464,7 +464,7 @@ export default function ExpensePage() {
                         <tbody>
                           {paged.length === 0 ? (
                             <tr><td colSpan={4} className="text-center text-slate-400 py-12 italic">No transactions found</td></tr>
-                          ) : paged.map((e, i) => (
+                          ) : paged.map((e) => (
                             <tr key={e.id} className="group">
                               <td className="whitespace-nowrap text-[11px] font-medium uppercase tracking-tighter text-slate-500 dark:text-dark-400">{formatDate(e.date)}</td>
                               <td className="text-black dark:text-white font-medium text-[13px]">{e.details || '—'}</td>
