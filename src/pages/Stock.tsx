@@ -133,7 +133,7 @@ export default function StockPage() {
   }, [rawPurchases, rawSales, selectedType, view, settings.startDate]);
 
   const filteredHistory = historyData.filter((h) => {
-    const matchesSearch = !search || h.details.toLowerCase().includes(search.toLowerCase()) || h.date.includes(search);
+    const matchesSearch = !search || (h.details || '').toLowerCase().includes(search.toLowerCase()) || h.date.includes(search);
     const matchesFrom = !fromDate || h.date >= fromDate;
     const matchesTo = !toDate || h.date <= toDate;
     return matchesSearch && matchesFrom && matchesTo;

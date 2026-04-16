@@ -24,7 +24,7 @@ export interface Purchase {
   description?: string;
   invoiceNo?:  string;
   vehicleNo?:  string;
-  details:     string;
+  details?:    string;
   rate:        number;
   quantity:    number;
   carriage:    number;
