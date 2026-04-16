@@ -280,24 +280,38 @@ export default function CustomerPage() {
               const globalNet = globalDebit - globalCredit;
               
               return (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 animate-in slide-in-from-top duration-500">
-                  <div className="glass p-6 rounded-3xl border-l-8 border-pink-500 shadow-xl bg-gradient-to-br from-pink-50 to-white dark:from-pink-900/10 dark:to-dark-900 overflow-hidden relative group">
-                    <div className="absolute top-0 right-0 w-24 h-24 bg-pink-600/5 rounded-bl-full -mr-12 -mt-12 group-hover:bg-pink-600/10 transition-colors" />
-                    <p className="text-[10px] font-black text-pink-600 uppercase tracking-widest mb-1">Total Receivables</p>
-                    <p className={cn("text-3xl font-black tabular-nums break-all leading-tight w-full", globalNet >= 0 ? "text-slate-900 dark:text-white" : "text-red-600")}>
-                      ₨ {formatCurrency(Math.abs(globalNet))}
-                      <span className="text-xs ml-2 font-bold text-slate-400 uppercase">{globalNet >= 0 ? 'DR' : 'CR'}</span>
+                <div className="grid grid-cols-2 gap-3 mb-6 animate-in slide-in-from-top duration-500">
+                  <div className="glass p-4 rounded-2xl border-l-4 border-pink-500 shadow-md bg-white dark:bg-dark-900 overflow-hidden relative">
+                    <p className="text-[8px] font-black text-pink-600 uppercase tracking-widest mb-1">Receivable</p>
+                    <p className="text-sm font-black text-slate-800 dark:text-white tabular-nums truncate">
+                      ₨ {formatCurrency(globalDebit)}
                     </p>
                   </div>
-                  <div className="glass p-6 rounded-3xl border-l-8 border-slate-400 shadow-xl bg-white/50 dark:bg-dark-800/50 overflow-hidden relative group">
-                    <div className="absolute top-0 right-0 w-24 h-24 bg-slate-600/5 rounded-bl-full -mr-12 -mt-12 group-hover:bg-slate-600/10 transition-colors" />
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Active Customers</p>
-                    <p className="text-3xl font-black text-slate-900 dark:text-white">{customers.length}</p>
+
+                  <div className="glass p-4 rounded-2xl border-l-4 border-emerald-500 shadow-md bg-white dark:bg-dark-900 overflow-hidden relative">
+                    <p className="text-[8px] font-black text-emerald-600 uppercase tracking-widest mb-1">Payable</p>
+                    <p className="text-sm font-black text-slate-800 dark:text-white tabular-nums truncate">
+                      ₨ {formatCurrency(globalCredit)}
+                    </p>
                   </div>
-                  <div className="glass p-6 rounded-3xl border-l-8 border-primary-500 shadow-xl bg-primary-50/30 dark:bg-primary-900/10 overflow-hidden relative group">
-                    <div className="absolute top-0 right-0 w-24 h-24 bg-primary-600/5 rounded-bl-full -mr-12 -mt-12 group-hover:bg-primary-600/10 transition-colors" />
-                    <p className="text-[10px] font-black text-primary-600 uppercase tracking-widest mb-1">Total Transactions</p>
-                    <p className="text-3xl font-black text-slate-900 dark:text-white">{allFilteredEntries.length}</p>
+
+                  <div className="glass p-4 rounded-2xl border-l-4 border-primary-500 shadow-md bg-white dark:bg-dark-900 overflow-hidden relative">
+                    <p className="text-[8px] font-black text-primary-600 uppercase tracking-widest mb-1">Net Cash</p>
+                    <div className="flex items-center gap-1">
+                       <p className={cn("text-sm font-black tabular-nums font-mono tracking-tighter truncate", globalNet >= 0 ? "text-pink-600" : "text-emerald-600")}>
+                        ₨ {formatCurrency(Math.abs(globalNet))}
+                      </p>
+                      <span className={cn("text-[8px] font-black px-1 rounded border scale-75 origin-left", globalNet >= 0 ? "bg-pink-50 text-pink-600 border-pink-200" : "bg-emerald-50 text-emerald-600 border-emerald-200")}>
+                        {globalNet >= 0 ? 'DR' : 'CR'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="glass p-4 rounded-2xl border-l-4 border-slate-400 shadow-md bg-white dark:bg-dark-900 overflow-hidden relative">
+                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Active Accounts</p>
+                    <p className="text-sm font-black text-slate-800 dark:text-white tabular-nums">
+                      {customers.length} <span className="text-[10px] text-slate-400">Cust.</span>
+                    </p>
                   </div>
                 </div>
               );
@@ -443,7 +457,7 @@ export default function CustomerPage() {
                           })}
                           
                           {sorted.length > 0 && (
-                            <tr className="font-black text-black dark:text-white bg-slate-100/50 dark:bg-dark-800/50 border-t-2 border-slate-300 dark:border-dark-700">
+                            <tr className="font-black text-black dark:text-white bg-slate-100 dark:bg-dark-800 border-t-[3px] border-slate-300 dark:border-dark-700 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
                               <td className="table-cell text-left text-xs uppercase tracking-widest text-slate-600 dark:text-slate-400 font-black">Totals for visible accounts</td>
                               <td className={cn("table-cell text-right text-sm tabular-nums font-black", grandSum >= 0 ? "text-slate-900 dark:text-white" : "text-red-600")}>
                                 ₨ {formatCurrency(Math.abs(grandSum))}
@@ -632,8 +646,8 @@ export default function CustomerPage() {
                             </tr>
                           ))}
                         </tbody>
-                        <tfoot className="border-t-2 border-slate-200 dark:border-dark-700 bg-slate-50/50 dark:bg-dark-900/50 font-black text-black">
-                          <tr className="bg-slate-200 dark:bg-dark-800 border-t-2 border-slate-400">
+                        <tfoot className="border-t-[3px] border-slate-300 dark:border-dark-700 bg-slate-50/50 dark:bg-dark-900/50 font-black text-black">
+                          <tr className="bg-slate-200 dark:bg-dark-800">
                             <td colSpan={2} className="px-4 py-3 text-right">
                               <div className="flex flex-col items-end">
                                 <span className="text-xs font-black text-slate-500 uppercase tracking-tighter leading-none">Page Total</span>

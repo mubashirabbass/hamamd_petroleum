@@ -397,8 +397,8 @@ export default function PurchasePage() {
                   ))}
                 </tbody>
                 {paged.length > 0 && (
-                  <tfoot className="border-t-[3px] border-black dark:border-black bg-slate-50/50 dark:bg-dark-900/50">
-                    <tr className="bg-slate-200 dark:bg-dark-800 border-t-2 border-slate-400">
+                  <tfoot className="border-t-[3px] border-slate-300 dark:border-dark-700 bg-slate-50/50 dark:bg-dark-900/50">
+                    <tr className="bg-slate-200 dark:bg-dark-800">
                       <td className="table-cell table-sticky-col text-right">
                         <span className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-tighter">Grand Total Analysis</span>
                       </td>
