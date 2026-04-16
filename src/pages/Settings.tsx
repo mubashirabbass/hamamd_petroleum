@@ -856,7 +856,7 @@ export default function SettingsPage() {
                   <div>
                     <h4 className="text-base font-black text-slate-900 dark:text-white mb-1">Reset All Business Data</h4>
                     <p className="text-sm text-slate-600 dark:text-dark-400">
-                      Permanently delete all purchases, sales, ledger, expense, asset, liability, and customer records.
+                      Permanently delete all purchases, sales, expense, asset, liability, and customer records.
                       User accounts and settings are preserved. <strong>This cannot be undone.</strong>
                     </p>
                   </div>
@@ -885,7 +885,7 @@ export default function SettingsPage() {
             <h3 className="text-lg font-black text-center text-slate-900 dark:text-white">⚠️ CRITICAL WARNING</h3>
             <p className="text-sm text-slate-600 dark:text-dark-400 text-center mt-2 leading-relaxed">
               This will <strong className="text-red-600">permanently delete ALL</strong> purchases, sales,
-              ledger entries, expenses, assets, liabilities and customer records.
+              expenses, assets, liabilities and customer records.
               This action <strong>cannot be undone</strong>.
             </p>
             <div className="flex gap-3 mt-6">

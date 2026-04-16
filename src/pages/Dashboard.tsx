@@ -196,7 +196,7 @@ function FKey({ k, label }: { k: string; label: string }) {
 export default function Dashboard() {
   const {
     purchases: rawPurchases, sales: rawSales, customers,
-    expenseEntries: rawExpenses, ledgerCategories, expenseCategories,
+    expenseEntries: rawExpenses, expenseCategories,
     assetCategories, liabilityCategories, settings,
   } = useStore();
 
@@ -266,7 +266,7 @@ export default function Dashboard() {
   const modules = [
     { label: 'Purchase',  path: '/purchase',  icon: ShoppingCart, color: 'text-primary-600 dark:text-primary-400', bg: 'bg-primary-600/10 border-primary-600/20', desc: `${purchases.length} records`,              fkey: 'F2' },
     { label: 'Sale',      path: '/sale',       icon: TrendingUp,   color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-600/10 border-emerald-600/20', desc: `${sales.length} records`,                fkey: 'F3' },
-    { label: 'Ledger',    path: '/ledger',     icon: BookOpen,     color: 'text-violet-600 dark:text-violet-400',   bg: 'bg-violet-600/10 border-violet-600/20',   desc: `${ledgerCategories.length} categories`,  fkey: 'F4' },
+
     { label: 'Expense',   path: '/expense',    icon: DollarSign,   color: 'text-red-600 dark:text-red-400',         bg: 'bg-red-600/10 border-red-600/20',         desc: `${expenseCategories.length} categories`, fkey: 'F5' },
     { label: 'Asset',     path: '/asset',      icon: Package,      color: 'text-blue-600 dark:text-blue-400',       bg: 'bg-blue-600/10 border-blue-600/20',       desc: `${assetCategories.length} categories`,   fkey: 'F6' },
     { label: 'Liability', path: '/liability',  icon: AlertTriangle,color: 'text-orange-600 dark:text-orange-400',   bg: 'bg-orange-600/10 border-orange-600/20',   desc: `${liabilityCategories.length} categories`,fkey: 'F7' },
@@ -391,7 +391,7 @@ export default function Dashboard() {
             <FKey k="F1" label="Dashboard" />
             <FKey k="F2" label="Purchase" />
             <FKey k="F3" label="Sale" />
-            <FKey k="F4" label="Ledger" />
+
             <FKey k="F5" label="Expense" />
             <FKey k="F6" label="Asset" />
             <FKey k="F7" label="Liability" />

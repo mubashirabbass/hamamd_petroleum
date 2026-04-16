@@ -1,13 +1,14 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import { useStore } from '../../store/useStore';
+import { Menu } from 'lucide-react';
 
 // Page Imports for Persistence
 import Dashboard from '../../pages/Dashboard';
 import Purchase from '../../pages/Purchase';
 import Sale from '../../pages/Sale';
-import Ledger from '../../pages/Ledger';
+
 import Expense from '../../pages/Expense';
 import Asset from '../../pages/Asset';
 import Liability from '../../pages/Liability';
@@ -19,7 +20,7 @@ const SHORTCUT_MAP: Record<string, string> = {
   'F1': '/',
   'F2': '/sale',
   'F3': '/purchase',
-  'F4': '/ledger',
+
   'F5': '/expense',
   'F6': '/asset',
   'F7': '/liability',
@@ -32,7 +33,7 @@ const LABEL_MAP: Record<string, string> = {
   '/': 'Dashboard',
   '/purchase': 'Purchase',
   '/sale': 'Sale',
-  '/ledger': 'Ledger',
+
   '/expense': 'Expense',
   '/asset': 'Asset',
   '/liability': 'Liability',
@@ -45,6 +46,7 @@ export default function Layout() {
   const { settings, currentUser } = useStore();
   const navigate = useNavigate();
   const location = useLocation();
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -73,14 +75,39 @@ export default function Layout() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-100 dark:bg-dark-950 transition-colors duration-300">
-      <Sidebar />
-      <main className="flex-1 overflow-hidden relative">
-        <div className="p-6 h-full">
+      <div className="hidden md:block">
+        <Sidebar />
+      </div>
+
+      {mobileSidebarOpen && (
+        <>
+          <div className="md:hidden fixed inset-0 bg-black/40 z-40" onClick={() => setMobileSidebarOpen(false)} />
+          <div className="md:hidden fixed left-0 top-0 z-50">
+            <Sidebar
+              className="shadow-2xl"
+              onNavigate={() => setMobileSidebarOpen(false)}
+              onCloseMobile={() => setMobileSidebarOpen(false)}
+            />
+          </div>
+        </>
+      )}
+
+      <main className="flex-1 overflow-y-auto overflow-x-hidden relative">
+        <div className="md:hidden sticky top-0 z-30 bg-slate-100/95 dark:bg-dark-950/95 backdrop-blur border-b border-slate-200 dark:border-dark-700 p-3">
+          <button
+            onClick={() => setMobileSidebarOpen(true)}
+            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-300 dark:border-dark-700 bg-white dark:bg-dark-900 text-slate-700 dark:text-dark-200 text-sm font-semibold"
+          >
+            <Menu className="w-4 h-4" />
+            Menu
+          </button>
+        </div>
+        <div className="p-3 md:p-6 h-full">
           {/* Keep-Alive View Container */}
           <div style={{ display: isPath('/') ? 'block' : 'none' }} className="h-full"><Dashboard /></div>
           <div style={{ display: isPath('/purchase') ? 'block' : 'none' }} className="h-full"><Purchase /></div>
           <div style={{ display: isPath('/sale') ? 'block' : 'none' }} className="h-full"><Sale /></div>
-          <div style={{ display: isPath('/ledger') ? 'block' : 'none' }} className="h-full"><Ledger /></div>
+
           <div style={{ display: isPath('/expense') ? 'block' : 'none' }} className="h-full"><Expense /></div>
           <div style={{ display: isPath('/asset') ? 'block' : 'none' }} className="h-full"><Asset /></div>
           <div style={{ display: isPath('/liability') ? 'block' : 'none' }} className="h-full"><Liability /></div>

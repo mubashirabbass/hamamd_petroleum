@@ -332,7 +332,7 @@ export default function StockPage() {
 
       // ── SHEET 3 & 4: FUEL DETAILS ──
       const makeFuelDetailSheet = (fuel: FuelType) => {
-        const ws = workbook.addWorksheet(`${fuel} Ledger`);
+        const ws = workbook.addWorksheet(`${fuel} Stock Record`);
         ws.columns = [
           { header: 'Date', key: 'date', width: 15 },
           { header: 'Transaction', key: 'type', width: 12 },

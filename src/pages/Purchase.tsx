@@ -159,9 +159,9 @@ export default function PurchasePage() {
   }), [filtered]);
 
   return (
-    <div className="animate-fade-in flex gap-4 h-full overflow-hidden">
+    <div className="animate-fade-in flex flex-col md:flex-row gap-4 h-full overflow-hidden">
       {/* Sidebar selection */}
-      <div className="w-60 flex-shrink-0 flex flex-col gap-3 h-full">
+      <div className="w-full md:w-60 flex-shrink-0 flex flex-col gap-3 h-full">
         <div className="category-panel flex-1 overflow-y-auto custom-scrollbar">
           <div className="px-3 py-2">
             <h2 className="text-[10px] font-extrabold text-slate-600 dark:text-dark-200 uppercase tracking-[0.2em]">Fuel Types</h2>
@@ -186,7 +186,7 @@ export default function PurchasePage() {
         {showForm && (
           <Modal title={editingEntity ? `Edit ${fuelType} Purchase` : `Add ${fuelType} Purchase`} onClose={closeForm} wide>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="col-span-2">
                   <label className="label">Date *</label>
                   <input type="date" className="input" value={form.date} onChange={(e) => set('date', e.target.value)} required />
@@ -233,8 +233,8 @@ export default function PurchasePage() {
         )}
 
         {/* Header */}
-        <div className="flex items-center justify-between mb-5">
-          <div className="flex items-center gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
+          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
             <div className="w-14 h-14 rounded-2xl bg-blue-600/10 dark:bg-blue-600/20 flex items-center justify-center">
               <ShoppingCart className="w-8 h-8 text-blue-600 dark:text-blue-400" />
             </div>
@@ -245,7 +245,7 @@ export default function PurchasePage() {
               </h1>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => setShowReport(true)}
               className="px-4 py-2 bg-slate-100 dark:bg-dark-700 text-slate-700 dark:text-dark-200 rounded-lg hover:bg-slate-200 dark:hover:bg-dark-600 transition-colors font-bold text-sm flex items-center gap-2"

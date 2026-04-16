@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { BookOpen, Plus, Trash2, Eye, Edit2, Search, Check, X, FileText, Settings, UserPlus, Printer, BarChart3, ArrowRight } from 'lucide-react';
+import { Landmark, Plus, Trash2, Eye, Edit2, Search, Check, X, FileText, Settings, UserPlus, Printer, BarChart3, ArrowRight } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { formatCurrency, formatDate, today, paginate, filterByStartDate, cn, startOfMonth, startOfYear } from '../lib/utils';
 import { useToast } from '../components/ui/Toast';
@@ -11,11 +11,11 @@ import PrintReportModal from '../components/modals/PrintReportModal';
 
 // const PER_PAGE = 40; // Replaced by state
 
-export default function LedgerPage() {
+export default function LiabilityPage() {
   const {
-    ledgerCategories, ledgerEntries,
-    addLedgerCategory, updateLedgerCategory, deleteLedgerCategory,
-    addLedgerEntry, deleteLedgerEntry, settings, currentUser, updateLedgerEntry
+    liabilityCategories, liabilityEntries,
+    addLiabilityCategory, updateLiabilityCategory, deleteLiabilityCategory,
+    addLiabilityEntry, deleteLiabilityEntry, settings, currentUser, updateLiabilityEntry
   } = useStore();
   const { toast } = useToast();
 
@@ -47,26 +47,26 @@ export default function LedgerPage() {
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    if (!selectedCat && ledgerCategories.length > 0) {
-      setSelectedCat(ledgerCategories[0].id);
+    if (!selectedCat && liabilityCategories.length > 0) {
+      setSelectedCat(liabilityCategories[0].id);
     }
-  }, [ledgerCategories, selectedCat]);
+  }, [liabilityCategories, selectedCat]);
 
-  const cat = ledgerCategories.find((c) => c.id === selectedCat);
+  const cat = liabilityCategories.find((c) => c.id === selectedCat);
 
   const filteredSidebar = useMemo(() =>
-    ledgerCategories.filter((c) => !sidebarSearch || c.name.toLowerCase().includes(sidebarSearch.toLowerCase())),
-    [ledgerCategories, sidebarSearch]
+    liabilityCategories.filter((c) => !sidebarSearch || c.name.toLowerCase().includes(sidebarSearch.toLowerCase())),
+    [liabilityCategories, sidebarSearch]
   );
 
   const filteredManage = useMemo(() =>
-    ledgerCategories.filter((c) => !manageSearch || c.name.toLowerCase().includes(manageSearch.toLowerCase())),
-    [ledgerCategories, manageSearch]
+    liabilityCategories.filter((c) => !manageSearch || c.name.toLowerCase().includes(manageSearch.toLowerCase())),
+    [liabilityCategories, manageSearch]
   );
 
   const catEntries = useMemo(() => {
     if (!selectedCat) return [];
-    return filterByStartDate(ledgerEntries, settings.startDate)
+    return filterByStartDate(liabilityEntries, settings.startDate)
       .filter((e) => e.categoryId === selectedCat)
       .filter((e) => {
         const matchesSearch = !search || e.description.toLowerCase().includes(search.toLowerCase()) || e.date.includes(search);
@@ -74,7 +74,7 @@ export default function LedgerPage() {
         const matchesTo = !toDate || e.date <= toDate;
         return matchesSearch && matchesFrom && matchesTo;
       });
-  }, [ledgerEntries, settings.startDate, selectedCat, search, fromDate, toDate]);
+  }, [liabilityEntries, settings.startDate, selectedCat, search, fromDate, toDate]);
 
   const withBalance = useMemo(() => {
     const sorted = [...catEntries].reverse();
@@ -100,17 +100,16 @@ export default function LedgerPage() {
     setIsSaving(true);
     try {
       if (editingEntity) {
-        await updateLedgerEntry(editingEntity.id, payload);
+        await updateLiabilityEntry(editingEntity.id, payload);
         toast('Entry updated', 'success');
         closeForm(); // Close after edit
       } else {
-        await addLedgerEntry(payload);
+        await addLiabilityEntry(payload);
         toast('Entry added', 'success');
         resetFormForNext(); // Stay open after add
       }
     } catch (err: any) {
       console.error('Save error:', err);
-      // Enhanced error message reporting
       const msg = err?.message || err || 'Unknown database error';
       toast(`Failed to save: ${msg}`, 'error');
     } finally {
@@ -150,12 +149,12 @@ export default function LedgerPage() {
     if (!newName.trim()) return;
 
     const normalized = newName.trim().toLowerCase();
-    if (ledgerCategories.some(c => c.name.toLowerCase() === normalized)) {
-      toast('An account with this name already exists!', 'error');
+    if (liabilityCategories.some(c => c.name.toLowerCase() === normalized)) {
+      toast('A liability account with this name already exists!', 'error');
       return;
     }
 
-    addLedgerCategory(newName.trim());
+    addLiabilityCategory(newName.trim());
     setNewName('');
     toast('Account registered successfully', 'success');
     setActiveTab('dashboard');
@@ -170,12 +169,12 @@ export default function LedgerPage() {
     if (!editForm.name.trim()) return;
 
     const normalized = editForm.name.trim().toLowerCase();
-    if (ledgerCategories.some(c => c.id !== id && c.name.toLowerCase() === normalized)) {
-      toast('Another account already has this name!', 'error');
+    if (liabilityCategories.some(c => c.id !== id && c.name.toLowerCase() === normalized)) {
+      toast('Another liability account already has this name!', 'error');
       return;
     }
 
-    updateLedgerCategory(id, editForm.name.trim());
+    updateLiabilityCategory(id, editForm.name.trim());
     setEditingId(null);
     toast('Account details updated', 'success');
   };
@@ -205,7 +204,7 @@ export default function LedgerPage() {
                 : "text-slate-500 hover:text-slate-800 dark:hover:text-white"
             )}
           >
-            <BookOpen className="w-4 h-4" /> General Ledger
+            <Landmark className="w-4 h-4" /> Liability Register
           </button>
           <button
             onClick={() => setActiveTab('register')}
@@ -216,7 +215,7 @@ export default function LedgerPage() {
                 : "text-slate-500 hover:text-slate-800 dark:hover:text-white"
             )}
           >
-            <UserPlus className="w-4 h-4" /> Register Ledger
+            <UserPlus className="w-4 h-4" /> Register Account
           </button>
           <button
             onClick={() => setActiveTab('manage')}
@@ -227,7 +226,7 @@ export default function LedgerPage() {
                 : "text-slate-500 hover:text-slate-800 dark:hover:text-white"
             )}
           >
-            <Settings className="w-4 h-4" /> Manage Ledgers
+            <Settings className="w-4 h-4" /> Manage Liabilities
           </button>
         </div>
         {activeTab === 'database' && cat && (
@@ -250,7 +249,7 @@ export default function LedgerPage() {
           <div className="flex-1 flex flex-col h-full overflow-hidden">
             {/* Global Summary Cards */}
             {(() => {
-              const allFilteredEntries = filterByStartDate(ledgerEntries, settings.startDate)
+              const allFilteredEntries = filterByStartDate(liabilityEntries, settings.startDate)
                 .filter(e => {
                   const matchesFrom = !fromDate || e.date >= fromDate;
                   const matchesTo = !toDate || e.date <= toDate;
@@ -261,32 +260,35 @@ export default function LedgerPage() {
               const globalNet = globalDebit - globalCredit;
               
               return (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                  <div className="glass p-6 rounded-3xl border-l-8 border-primary-600 shadow-xl bg-gradient-to-br from-primary-50 to-white dark:from-primary-900/10 dark:to-dark-900">
-                    <p className="text-[10px] font-black text-primary-600 uppercase tracking-widest mb-1">Net Ledger Balance</p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 animate-in slide-in-from-top duration-500">
+                  <div className="glass p-6 rounded-3xl border-l-8 border-orange-500 shadow-xl bg-gradient-to-br from-orange-50 to-white dark:from-orange-900/10 dark:to-dark-900 overflow-hidden relative group">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-orange-600/5 rounded-bl-full -mr-12 -mt-12 group-hover:bg-orange-600/10 transition-colors" />
+                    <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest mb-1">Total Net Liability</p>
                     <p className={cn("text-3xl font-black tabular-nums break-all leading-tight w-full", globalNet >= 0 ? "text-slate-900 dark:text-white" : "text-red-600")}>
                       ₨ {formatCurrency(Math.abs(globalNet))}
                       <span className="text-xs ml-2 font-bold text-slate-400 uppercase">{globalNet >= 0 ? 'DR' : 'CR'}</span>
                     </p>
                   </div>
-                  <div className="glass p-6 rounded-3xl border-l-8 border-slate-400 shadow-xl bg-white/50 dark:bg-dark-800/50">
+                  <div className="glass p-6 rounded-3xl border-l-8 border-slate-400 shadow-xl bg-white/50 dark:bg-dark-800/50 overflow-hidden relative group">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-slate-600/5 rounded-bl-full -mr-12 -mt-12 group-hover:bg-slate-600/10 transition-colors" />
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Active Accounts</p>
-                    <p className="text-3xl font-black text-slate-900 dark:text-white">{ledgerCategories.length}</p>
+                    <p className="text-3xl font-black text-slate-900 dark:text-white">{liabilityCategories.length}</p>
                   </div>
-                  <div className="glass p-6 rounded-3xl border-l-8 border-emerald-500 shadow-xl bg-emerald-50/30 dark:bg-emerald-900/10">
-                    <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">Total Records</p>
+                  <div className="glass p-6 rounded-3xl border-l-8 border-primary-500 shadow-xl bg-primary-50/30 dark:bg-primary-900/10 overflow-hidden relative group">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-primary-600/5 rounded-bl-full -mr-12 -mt-12 group-hover:bg-primary-600/10 transition-colors" />
+                    <p className="text-[10px] font-black text-primary-600 uppercase tracking-widest mb-1">Total Transactions</p>
                     <p className="text-3xl font-black text-slate-900 dark:text-white">{allFilteredEntries.length}</p>
                   </div>
                 </div>
               );
             })()}
 
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4 animate-in slide-in-from-top duration-500 delay-100">
               <div className="flex-1 max-w-md">
                 <SearchBar 
                   value={dashboardSearch} 
                   onChange={setDashboardSearch} 
-                  placeholder="Search accounts..." 
+                  placeholder="Search liabilities..." 
                   fullWidth={true}
                 />
               </div>
@@ -302,20 +304,20 @@ export default function LedgerPage() {
               </div>
             </div>
 
-            <div className="flex-1 glass rounded-2xl overflow-hidden border border-slate-200 dark:border-dark-700/50 shadow-sm flex flex-col">
+            <div className="flex-1 glass rounded-2xl overflow-hidden border border-slate-200 dark:border-dark-700/50 shadow-sm flex flex-col animate-in slide-in-from-bottom duration-500 delay-200">
               <div className="overflow-y-auto smart-scroll flex-1">
                 <table className="w-full">
                   <thead className="sticky top-0 z-10 bg-slate-200 dark:bg-dark-800">
                     <tr className="table-header text-[10px]">
-                      <th className="table-cell text-left">Ledger Account</th>
-                      <th className="table-cell text-right">Current Balance</th>
+                      <th className="table-cell text-left">Liability Account</th>
+                      <th className="table-cell text-right">Current Liability</th>
                       <th className="table-cell text-center">Entries</th>
                       <th className="table-cell w-10"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-dark-800/50 bg-white/50 dark:bg-dark-900/50">
                     {(() => {
-                      const filtered = ledgerCategories.filter(c => 
+                      const filtered = liabilityCategories.filter(c => 
                         !dashboardSearch || c.name.toLowerCase().includes(dashboardSearch.toLowerCase())
                       );
                       
@@ -325,7 +327,7 @@ export default function LedgerPage() {
                       return (
                         <>
                           {paginate(filtered, dashPage, perPage).map(cat => {
-                            const entries = filterByStartDate(ledgerEntries, settings.startDate)
+                            const entries = filterByStartDate(liabilityEntries, settings.startDate)
                               .filter(e => e.categoryId === cat.id)
                               .filter(e => {
                                 const matchesFrom = !fromDate || e.date >= fromDate;
@@ -346,8 +348,8 @@ export default function LedgerPage() {
                               >
                                 <td className="table-cell">
                                   <div className="flex items-center gap-3">
-                                    <div className="w-6 h-6 rounded-md bg-primary-600/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                      <BookOpen className="w-3 h-3 text-primary-600" />
+                                    <div className="w-6 h-6 rounded-md bg-orange-600/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                      <Landmark className="w-3 h-3 text-orange-600" />
                                     </div>
                                     <span className="font-bold text-slate-700 dark:text-slate-200">{cat.name}</span>
                                   </div>
@@ -362,7 +364,7 @@ export default function LedgerPage() {
                                   <span className="font-bold text-slate-500 uppercase tracking-widest">{entries.length} Entries</span>
                                 </td>
                                 <td className="table-cell text-right">
-                                  <div className="w-6 h-6 rounded-md bg-slate-100 dark:bg-dark-800 flex items-center justify-center group-hover:bg-primary-600 group-hover:text-white transition-all float-right">
+                                  <div className="w-6 h-6 rounded-md bg-slate-100 dark:bg-dark-800 flex items-center justify-center group-hover:bg-orange-600 group-hover:text-white transition-all float-right">
                                     <ArrowRight className="w-3 h-3" />
                                   </div>
                                 </td>
@@ -388,52 +390,73 @@ export default function LedgerPage() {
                 </table>
               </div>
               {(() => {
-                const f = ledgerCategories.filter(c => !dashboardSearch || c.name.toLowerCase().includes(dashboardSearch.toLowerCase()));
+                const f = liabilityCategories.filter(c => !dashboardSearch || c.name.toLowerCase().includes(dashboardSearch.toLowerCase()));
                 return f.length > 0 ? <Pagination page={dashPage} total={f.length} perPage={perPage} onChange={setDashPage} onPerPageChange={(v) => { setPerPage(v); setDashPage(1); setPage(1); }} /> : null;
               })()}
             </div>
 
-            {ledgerCategories.length === 0 && (
+            {liabilityCategories.length === 0 && (
               <div className="flex flex-col items-center justify-center py-20 bg-slate-50/50 dark:bg-dark-800/30 rounded-3xl border-2 border-dashed border-slate-200 dark:border-dark-700/50">
-                <BookOpen className="w-16 h-16 text-slate-300 mb-4" />
-                <p className="text-slate-500 font-black uppercase tracking-widest text-sm">No Ledgers Registered</p>
-                <button onClick={() => setActiveTab('register')} className="mt-4 text-xs font-black text-primary-600 uppercase tracking-widest hover:underline">Register your first ledger →</button>
+                <Landmark className="w-16 h-16 text-slate-300 mb-4" />
+                <p className="text-slate-500 font-black uppercase tracking-widest text-sm">No Liabilities Registered</p>
+                <button onClick={() => setActiveTab('register')} className="mt-4 text-xs font-black text-primary-600 uppercase tracking-widest hover:underline">Register your first liability →</button>
               </div>
             )}
           </div>
         ) : activeTab === 'database' ? (
           <>
-            {/* Sidebar List */}
-            <div className="w-64 flex-shrink-0 flex flex-col h-full bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700/50 rounded-2xl overflow-hidden shadow-sm">
-              <div className="p-3 bg-slate-50/50 dark:bg-dark-800/30 border-b border-slate-100 dark:border-dark-700/30 flex items-center justify-between">
-                <p className="text-[10px] font-extrabold text-slate-600 dark:text-dark-200 uppercase tracking-widest">Active Ledgers</p>
-                <span className="text-[10px] font-bold text-slate-300">{filteredSidebar.length}</span>
+            {/* Sidebar selection - Desktop: Sidebar, Mobile: Horizontal Tabs */}
+            <div className="w-full lg:w-64 flex-shrink-0 flex flex-col gap-3">
+              {/* Mobile View: Horizontal Tabs */}
+              <div className="mobile-tab-list lg:hidden">
+                {filteredSidebar.map((c) => (
+                  <button
+                    key={c.id}
+                    onClick={() => { setSelectedCat(c.id); setSearch(''); setPage(1); }}
+                    className={cn(
+                      "px-5 py-2.5 rounded-xl whitespace-nowrap text-xs font-black uppercase tracking-widest transition-all border",
+                      selectedCat === c.id 
+                        ? "bg-primary-600 text-white border-primary-600 shadow-md" 
+                        : "bg-white dark:bg-dark-800 text-slate-500 border-slate-200 dark:border-dark-700 hover:bg-slate-50"
+                    )}
+                  >
+                    {c.name}
+                  </button>
+                ))}
               </div>
-              <div className="p-2 border-b border-slate-100 dark:border-dark-700/30">
-                <SearchBar value={sidebarSearch} onChange={setSidebarSearch} placeholder="Search Ledger..." fullWidth={true} className="!py-1.5 !text-[11px]" />
-              </div>
-              <div className="smart-scroll flex-1 p-2 space-y-1">
-                {filteredSidebar.length === 0 ? (
-                  <div className="p-8 text-center text-xs text-slate-400 italic">No Ledgers found</div>
-                ) : (
-                  filteredSidebar.map((c) => (
-                    <div
-                      key={c.id}
-                      onClick={() => { setSelectedCat(c.id); setSearch(''); setPage(1); }}
-                      className={cn(
-                        'group flex items-center justify-between px-3 py-3 rounded-xl cursor-pointer text-xs font-black transition-all duration-200 border border-transparent',
-                        selectedCat === c.id
-                          ? 'bg-primary-600/10 text-primary-600 border-primary-600/10 shadow-sm relative overflow-hidden'
-                          : 'text-slate-600 dark:text-dark-400 hover:bg-slate-50 dark:hover:bg-dark-800 hover:text-slate-900 dark:hover:text-white hover:border-slate-200 dark:hover:border-dark-700/50'
-                      )}
-                    >
-                      {selectedCat === c.id && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-primary-600 rounded-r-full"></span>}
-                      <div className="flex flex-col min-w-0">
-                        <p className="truncate text-slate-900 dark:text-white">{c.name}</p>
+
+              {/* Desktop View: Sidebar List */}
+              <div className="hidden lg:flex flex-col h-full bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700/50 rounded-2xl overflow-hidden shadow-sm">
+                <div className="p-3 bg-slate-50/50 dark:bg-dark-800/30 border-b border-slate-100 dark:border-dark-700/30 flex items-center justify-between">
+                  <p className="text-[10px] font-extrabold text-slate-600 dark:text-dark-200 uppercase tracking-widest">Active Accounts</p>
+                  <span className="text-[10px] font-bold text-slate-300">{filteredSidebar.length}</span>
+                </div>
+                <div className="p-2 border-b border-slate-100 dark:border-dark-700/30">
+                  <SearchBar value={sidebarSearch} onChange={setSidebarSearch} placeholder="Search Account..." fullWidth={true} className="!py-1.5 !text-[11px]" />
+                </div>
+                <div className="smart-scroll flex-1 p-2 space-y-1">
+                  {filteredSidebar.length === 0 ? (
+                    <div className="p-8 text-center text-xs text-slate-400 italic">No Accounts found</div>
+                  ) : (
+                    filteredSidebar.map((c) => (
+                      <div
+                        key={c.id}
+                        onClick={() => { setSelectedCat(c.id); setSearch(''); setPage(1); }}
+                        className={cn(
+                          'group flex items-center justify-between px-3 py-3 rounded-xl cursor-pointer text-xs font-black transition-all duration-200 border border-transparent',
+                          selectedCat === c.id
+                            ? 'bg-primary-600/10 text-primary-600 border-primary-600/10 shadow-sm relative overflow-hidden'
+                            : 'text-slate-600 dark:text-dark-400 hover:bg-slate-50 dark:hover:bg-dark-800 hover:text-slate-900 dark:hover:text-white hover:border-slate-200 dark:hover:border-dark-700/50'
+                        )}
+                      >
+                        {selectedCat === c.id && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-primary-600 rounded-r-full"></span>}
+                        <div className="flex flex-col min-w-0">
+                          <p className="truncate text-slate-900 dark:text-white">{c.name}</p>
+                        </div>
                       </div>
-                    </div>
-                  ))
-                )}
+                    ))
+                  )}
+                </div>
               </div>
             </div>
 
@@ -444,11 +467,11 @@ export default function LedgerPage() {
                   <div className="flex items-center justify-between mb-5 animate-in slide-in-from-bottom duration-350">
                     <div className="flex items-center gap-4">
                       <div className="w-14 h-14 rounded-2xl bg-primary-600/10 dark:bg-primary-600/20 flex items-center justify-center">
-                        <BookOpen className="w-8 h-8 text-primary-600 dark:text-primary-600" />
+                        <Landmark className="w-8 h-8 text-primary-600 dark:text-primary-600" />
                       </div>
                       <div>
                         <h1 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
-                          {cat.name} Ledger
+                          {cat.name} Liability
                         </h1>
                       </div>
                     </div>
@@ -457,15 +480,15 @@ export default function LedgerPage() {
                   {/* Summary Cards */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 animate-in slide-in-from-bottom duration-350 delay-75">
                     <div className="glass p-5 rounded-2xl border-l-4 border-slate-400 shadow-sm">
-                      <p className="text-[10px] font-black text-slate-400 dark:text-dark-500 uppercase tracking-widest mb-1">Total Debit</p>
-                      <p className="text-2xl font-black text-red-600 dark:text-red-400 tabular-nums break-words break-all whitespace-normal leading-tight w-full">₨ {formatCurrency(totals.debit)}</p>
+                      <p className="text-[10px] font-black text-slate-400 dark:text-dark-500 uppercase tracking-widest mb-1">Total Debit (Payment)</p>
+                      <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 tabular-nums break-words break-all whitespace-normal leading-tight w-full">₨ {formatCurrency(totals.debit)}</p>
                     </div>
-                    <div className="glass p-5 rounded-2xl border-l-4 border-emerald-500 shadow-sm">
-                      <p className="text-[10px] font-black text-slate-400 dark:text-dark-500 uppercase tracking-widest mb-1">Total Credit</p>
-                      <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 tabular-nums break-words break-all whitespace-normal leading-tight w-full">₨ {formatCurrency(totals.credit)}</p>
+                    <div className="glass p-5 rounded-2xl border-l-4 border-red-500 shadow-sm">
+                      <p className="text-[10px] font-black text-slate-400 dark:text-dark-500 uppercase tracking-widest mb-1">Total Credit (Owed)</p>
+                      <p className="text-2xl font-black text-red-600 dark:text-red-400 tabular-nums break-words break-all whitespace-normal leading-tight w-full">₨ {formatCurrency(totals.credit)}</p>
                     </div>
                     <div className="glass p-5 rounded-2xl border-l-4 border-primary-600 shadow-sm">
-                      <p className="text-[10px] font-black text-slate-400 dark:text-dark-500 uppercase tracking-widest mb-1">Pending Balance</p>
+                      <p className="text-[10px] font-black text-slate-400 dark:text-dark-500 uppercase tracking-widest mb-1">Current Liability</p>
                       <p className={cn("text-2xl font-black tabular-nums text-primary-600 break-words break-all whitespace-normal leading-tight w-full")}>
                         ₨ {formatCurrency(Math.abs(totals.debit - totals.credit))}
                       </p>
@@ -495,10 +518,10 @@ export default function LedgerPage() {
                       <table className="table-excel">
                         <thead className="sticky top-0 z-10 bg-slate-200 dark:bg-dark-800">
                           <tr className="table-header text-[9px]">
-                            <th className="px-4 py-3 text-left w-24">Date</th>
+                            <th className="px-4 py-3 table-sticky-col text-left w-24">Date</th>
                             <th className="px-4 py-3 text-left w-64">Description</th>
-                            <th className="px-4 py-3 text-right w-36">Debit</th>
-                            <th className="px-4 py-3 text-right w-36">Credit</th>
+                            <th className="px-4 py-3 text-right w-36">Debit (Paid)</th>
+                            <th className="px-4 py-3 text-right w-36">Credit (Owed)</th>
                             <th className="px-4 py-3 text-right w-44">Balance</th>
                             <th className="px-4 py-3 w-20 text-center">Actions</th>
                           </tr>
@@ -508,11 +531,11 @@ export default function LedgerPage() {
                             <tr><td colSpan={6} className="text-center text-slate-400 py-12 italic">No transactions found</td></tr>
                           ) : paged.map((e) => (
                             <tr key={e.id} className="group">
-                              <td className="whitespace-nowrap text-[11px] font-medium uppercase tracking-tighter text-slate-500 dark:text-dark-400">{formatDate(e.date)}</td>
+                              <td className="table-sticky-col whitespace-nowrap text-[11px] font-medium uppercase tracking-tighter text-slate-500 dark:text-dark-400">{formatDate(e.date)}</td>
                               <td className="text-black dark:text-white font-medium text-[13px] whitespace-normal break-words max-w-[15rem] leading-5 truncate">{e.description || '—'}</td>
-                              <td className="amount !text-red-600 dark:!text-red-400 whitespace-nowrap tabular-nums">{e.debit ? formatCurrency(e.debit) : '—'}</td>
-                              <td className="amount !text-emerald-600 dark:!text-emerald-500 whitespace-nowrap tabular-nums">{e.credit ? formatCurrency(e.credit) : '—'}</td>
-                              <td className="amount !text-black dark:!text-white !text-sm font-medium whitespace-nowrap tabular-nums">₨{formatCurrency(e.balance)}</td>
+                              <td className="amount !text-emerald-600 dark:!text-emerald-400 whitespace-nowrap tabular-nums">{e.debit ? formatCurrency(e.debit) : '—'}</td>
+                              <td className="amount !text-red-600 dark:!text-red-400 whitespace-nowrap tabular-nums">{e.credit ? formatCurrency(e.credit) : '—'}</td>
+                              <td className="amount !text-black dark:!text-white !text-sm font-medium whitespace-nowrap tabular-nums">₨ {formatCurrency(e.balance)}</td>
                               <td className="text-right">
                                 <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                   <button
@@ -531,7 +554,7 @@ export default function LedgerPage() {
                                       <button onClick={() => handleEdit(e)} className="p-1 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded transition-colors">
                                         <Edit2 className="w-3.5 h-3.5" />
                                       </button>
-                                      <button onClick={() => { if (confirm('Delete entry?')) { deleteLedgerEntry(e.id); toast('Entry deleted', 'warning'); } }} className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors">
+                                      <button onClick={() => { if (confirm('Delete entry?')) { deleteLiabilityEntry(e.id); toast('Entry deleted', 'warning'); } }} className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors">
                                         <Trash2 className="w-3.5 h-3.5" />
                                       </button>
                                     </>
@@ -549,18 +572,18 @@ export default function LedgerPage() {
                                 <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tighter mt-1">Grand Total</span>
                               </div>
                             </td>
-                            <td className="px-4 py-3 text-right whitespace-nowrap">
-                              <div className="flex flex-col items-end">
-                                <span className="text-sm font-black text-slate-500 leading-none">₨ {formatCurrency(pageTotals.debit)}</span>
-                                <span className="text-sm font-black text-red-600 mt-1">₨ {formatCurrency(totals.debit)}</span>
-                              </div>
-                            </td>
-                            <td className="px-4 py-3 text-right whitespace-nowrap">
-                              <div className="flex flex-col items-end">
-                                <span className="text-sm font-black text-slate-500 leading-none">₨ {formatCurrency(pageTotals.credit)}</span>
-                                <span className="text-sm font-black text-emerald-600 mt-1">₨ {formatCurrency(totals.credit)}</span>
-                              </div>
-                            </td>
+                             <td className="px-4 py-3 text-right whitespace-nowrap tabular-nums">
+                               <div className="flex flex-col items-end">
+                                 <span className="text-sm font-black text-slate-500 leading-none">₨ {formatCurrency(pageTotals.debit)}</span>
+                                 <span className="text-sm font-black text-emerald-600 mt-1">₨ {formatCurrency(totals.debit)}</span>
+                               </div>
+                             </td>
+                             <td className="px-4 py-3 text-right whitespace-nowrap tabular-nums">
+                               <div className="flex flex-col items-end">
+                                 <span className="text-sm font-black text-slate-500 leading-none">₨ {formatCurrency(pageTotals.credit)}</span>
+                                 <span className="text-sm font-black text-red-600 mt-1">₨ {formatCurrency(totals.credit)}</span>
+                               </div>
+                             </td>
                             <td className="px-4 py-3 text-right whitespace-nowrap">
                               <div className="flex flex-col items-end border-l border-slate-300 dark:border-dark-700 pl-4">
                                 <span className="text-lg font-black text-primary-600/70 leading-none">₨ {formatCurrency(pageTotals.debit - pageTotals.credit)}</span>
@@ -583,14 +606,13 @@ export default function LedgerPage() {
                 </>
               ) : (
                 <div className="flex flex-col items-center justify-center h-[50vh] text-slate-400 opacity-40">
-                  <BookOpen className="w-16 h-16 mb-4" />
+                  <Landmark className="w-16 h-16 mb-4" />
                   <p className="font-medium font-bold">Select an account to view statement</p>
                 </div>
               )}
             </div>
           </>
         ) : activeTab === 'register' ? (
-          /* Register Tab Content... */
           <div className="flex-1 animate-in zoom-in-95 duration-300">
             <div className="max-w-2xl mx-auto glass p-8 rounded-3xl border border-slate-200 dark:border-dark-700/50 shadow-2xl mt-8">
               <div className="flex items-center gap-4 mb-8">
@@ -598,20 +620,20 @@ export default function LedgerPage() {
                   <Plus className="w-7 h-7 text-primary-600" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">New Ledger Registration</h2>
-                  <p className="text-sm text-slate-500 font-medium">Create a new ledger account in your business database</p>
+                  <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">New Liability Registration</h2>
+                  <p className="text-sm text-slate-500 font-medium">Create a new entry in your Liability database</p>
                 </div>
               </div>
 
               <form onSubmit={handleAddCategory} className="space-y-6">
                 <div className="grid grid-cols-1 gap-6">
                   <div>
-                    <label className="label text-[10px] font-black uppercase tracking-widest text-primary-600 mb-2 block">Ledger Name *</label>
+                    <label className="label text-[10px] font-black uppercase tracking-widest text-primary-600 mb-2 block">Account Name *</label>
                     <div className="relative">
                       <FileText className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                       <input
                         className="input !pl-12 !py-4 !text-lg !font-bold"
-                        placeholder="e.g. Bank Account, Supplier Name, etc."
+                        placeholder="e.g. Bank Loan, Private Lender, etc."
                         value={newName}
                         onChange={e => setNewName(e.target.value)}
                         required
@@ -644,16 +666,16 @@ export default function LedgerPage() {
                 />
               </div>
               <div className="px-6 py-3 bg-slate-100 dark:bg-dark-800 rounded-2xl text-xs font-black text-slate-500 uppercase tracking-widest border border-slate-200 dark:border-dark-700/50">
-                {ledgerCategories.length} Accounts Found
+                {liabilityCategories.length} Accounts Found
               </div>
             </div>
 
             <div className="glass rounded-3xl overflow-hidden border border-slate-200 dark:border-dark-700/50 shadow-xl flex-1 flex flex-col">
               <div className="overflow-y-auto smart-scroll">
                 <table className="w-full">
-                  <thead className="sticky top-0 z-10">
+                  <thead className="sticky top-0 z-10 bg-slate-200 dark:bg-dark-800">
                     <tr className="table-header text-[10px]">
-                      <th className="table-cell text-left">Ledger Name</th>
+                      <th className="table-cell text-left">Account Name</th>
                       <th className="table-cell text-center">Actions</th>
                     </tr>
                   </thead>
@@ -663,7 +685,7 @@ export default function LedgerPage() {
                     ) : filteredManage.map((c) => (
                       <tr
                         key={c.id}
-                        className="table-row text-[11px] hover:bg-slate-50 dark:hover:bg-dark-800/50 transition-all group cursor-pointer"
+                        className="hover:bg-slate-50 dark:hover:bg-dark-800/20 transition-all group cursor-pointer"
                         onClick={() => handleStartEdit(c)}
                       >
                         {editingId === c.id ? (
@@ -680,17 +702,17 @@ export default function LedgerPage() {
                           </>
                         ) : (
                           <>
-                            <td className="table-cell">
+                            <td className="px-6 py-4">
                               <div className="flex items-center gap-3">
-                                <span className="font-bold text-slate-800 dark:text-white">{c.name}</span>
+                                <span className="font-bold text-slate-800 dark:text-white text-lg">{c.name}</span>
                               </div>
                             </td>
-                            <td className="table-cell text-right">
+                            <td className="px-6 py-4 text-right">
                               <div className="flex items-center gap-2 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
                                 <button onClick={() => handleStartEdit(c)} className="p-2 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-xl"><Edit2 className="w-4 h-4" /></button>
                                 {currentUser?.role === 'Admin' && (
                                   <button
-                                    onClick={(e) => { e.stopPropagation(); if (confirm('Delete ledger and all history?')) deleteLedgerCategory(c.id); }}
+                                    onClick={(e) => { e.stopPropagation(); if (confirm('Delete account and all history?')) deleteLiabilityCategory(c.id); }}
                                     className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl"
                                   >
                                     <Trash2 className="w-4 h-4" />
@@ -715,13 +737,13 @@ export default function LedgerPage() {
           <form onSubmit={handleSubmit} className="space-y-3">
             <div><label className="label">Date *</label><input type="date" className="input" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required /></div>
             <div><label className="label">Description</label><input className="input" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Transaction details" /></div>
-            <div className="grid grid-cols-2 gap-3">
-              <div><label className="label">Debit (₨)</label><input type="number" step="0.01" className="input" value={form.debit} onChange={(e) => setForm({ ...form, debit: e.target.value })} /></div>
-              <div><label className="label">Credit (₨)</label><input type="number" step="0.01" className="input" value={form.credit} onChange={(e) => setForm({ ...form, credit: e.target.value })} /></div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div><label className="label">Debit (Paid) (₨)</label><input type="number" step="0.01" inputMode="decimal" className="input" value={form.debit} onChange={(e) => setForm({ ...form, debit: e.target.value })} /></div>
+              <div><label className="label">Credit (Owed) (₨)</label><input type="number" step="0.01" inputMode="decimal" className="input" value={form.credit} onChange={(e) => setForm({ ...form, credit: e.target.value })} /></div>
             </div>
             <div className="flex justify-end gap-2 pt-2">
               <button type="button" onClick={closeForm} className="btn-secondary" disabled={isSaving}>Cancel</button>
-              <button type="submit" className="btn-primary flex items-center gap-2" disabled={isSaving}>
+              <button type="submit" className="btn-primary !bg-primary-600 flex items-center gap-2" disabled={isSaving}>
                 {isSaving ? (
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 ) : (
@@ -737,7 +759,7 @@ export default function LedgerPage() {
       {viewingEntity && (
         <TransactionReceiptModal
           entity={viewingEntity}
-          type="ledger"
+          type="liability"
           onClose={() => setViewingEntity(null)}
         />
       )}
@@ -745,8 +767,8 @@ export default function LedgerPage() {
       {showReport && (
         <PrintReportModal
           data={catEntries}
-          type="ledger"
-          title={`${cat?.name} Ledger Report`}
+          type="liability"
+          title={`${cat?.name} Liability Report`}
           onClose={() => setShowReport(false)}
         />
       )}

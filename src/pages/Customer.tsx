@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Plus, Trash2, Users, UserPlus, Printer, Search, Phone, Edit2, Check, X, UserCog, User, BarChart3, ArrowRight } from 'lucide-react';
+import { Plus, Trash2, Users, UserPlus, Printer, Search, Phone, Edit2, Check, X, UserCog, User, BarChart3, ArrowRight, ArrowUpDown } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { formatCurrency, formatDate, today, paginate, filterByStartDate, cn, startOfMonth, startOfYear } from '../lib/utils';
 import { useToast } from '../components/ui/Toast';
@@ -26,6 +26,7 @@ export default function CustomerPage() {
   const [showReport, setShowReport] = useState(false);
   const [custSearch, setCustSearch] = useState('');
   const [dashboardSearch, setDashboardSearch] = useState('');
+  const [dashSort, setDashSort] = useState('name_asc');
 
   // Registration Form State
   const [newName, setNewName] = useState('');
@@ -311,7 +312,27 @@ export default function CustomerPage() {
                   fullWidth={true}
                 />
               </div>
-              <div className="flex items-center gap-3">
+              <div className="relative group">
+                <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-hover:text-pink-600 transition-colors pointer-events-none" />
+                <select
+                  value={dashSort}
+                  onChange={(e) => setDashSort(e.target.value)}
+                  className="appearance-none pl-10 pr-10 py-2.5 bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700/50 rounded-2xl text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-dark-200 focus:ring-2 focus:ring-pink-600/20 focus:border-pink-600 transition-all cursor-pointer outline-none shadow-sm"
+                >
+                  <option value="name_asc">A to Z</option>
+                  <option value="name_desc">Z to A</option>
+                  <option value="balance_desc">Highest Balance</option>
+                  <option value="balance_asc">Lowest Balance</option>
+                  <option value="debit_desc">Highest Debit</option>
+                  <option value="debit_asc">Lowest Debit</option>
+                  <option value="credit_desc">Highest Credit</option>
+                  <option value="credit_asc">Lowest Credit</option>
+                </select>
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                  <div className="w-1.5 h-1.5 border-r-2 border-b-2 border-current rotate-45" />
+                </div>
+              </div>
+              <div className="flex items-center gap-3 ml-auto">
                 <div className="flex items-center bg-slate-100 dark:bg-dark-800 p-1 rounded-xl border border-slate-200 dark:border-dark-700/50">
                   <button onClick={() => { setFromDate(today()); setToDate(today()); setPage(1); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-dark-400 hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all">Today</button>
                   <button onClick={() => { setFromDate(startOfMonth()); setToDate(today()); setPage(1); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-dark-400 hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all border-l border-slate-200 dark:border-dark-700/50">This Month</button>
@@ -336,28 +357,57 @@ export default function CustomerPage() {
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-dark-800/50 bg-white/50 dark:bg-dark-900/50">
                     {(() => {
-                      const filtered = customers.filter(c => 
-                        !dashboardSearch || c.name.toLowerCase().includes(dashboardSearch.toLowerCase()) || (c.phone && c.phone.includes(dashboardSearch))
+                      // 1. Calculate totals for ALL customers first to allow sorting
+                      const dashboardItems = customers.map(c => {
+                        const entries = filterByStartDate(customerEntries, settings.startDate)
+                          .filter(e => e.customerId === c.id)
+                          .filter(e => {
+                            const matchesFrom = !fromDate || e.date >= fromDate;
+                            const matchesTo = !toDate || e.date <= toDate;
+                            return matchesFrom && matchesTo;
+                          });
+                        const dr = entries.reduce((sum, e) => sum + e.debit, 0);
+                        const cr = entries.reduce((sum, e) => sum + e.credit, 0);
+                        const bal = dr - cr;
+                        return { 
+                          ...c, 
+                          totalDebit: dr, 
+                          totalCredit: cr, 
+                          balance: bal, 
+                          entriesCount: entries.length 
+                        };
+                      });
+
+                      // 2. Filter by search
+                      const filtered = dashboardItems.filter(c => 
+                        !dashboardSearch || 
+                        c.name.toLowerCase().includes(dashboardSearch.toLowerCase()) || 
+                        (c.phone && c.phone.includes(dashboardSearch))
                       );
+
+                      // 3. Apply Live Sorting
+                      const sorted = [...filtered].sort((a, b) => {
+                        switch (dashSort) {
+                          case 'name_asc':    return a.name.localeCompare(b.name);
+                          case 'name_desc':   return b.name.localeCompare(a.name);
+                          case 'debit_desc':  return b.totalDebit - a.totalDebit;
+                          case 'debit_asc':   return a.totalDebit - b.totalDebit;
+                          case 'credit_desc': return b.totalCredit - a.totalCredit;
+                          case 'credit_asc':  return a.totalCredit - b.totalCredit;
+                          case 'balance_desc':return b.balance - a.balance;
+                          case 'balance_asc': return a.balance - b.balance;
+                          default:            return 0;
+                        }
+                      });
                       
                       let grandSum = 0;
                       let grandCount = 0;
 
                       return (
                         <>
-                          {paginate(filtered, dashPage, perPage).map(c => {
-                            const entries = filterByStartDate(customerEntries, settings.startDate)
-                              .filter(e => e.customerId === c.id)
-                              .filter(e => {
-                                const matchesFrom = !fromDate || e.date >= fromDate;
-                                const matchesTo = !toDate || e.date <= toDate;
-                                return matchesFrom && matchesTo;
-                              });
-                            const dr = entries.reduce((sum, e) => sum + e.debit, 0);
-                            const cr = entries.reduce((sum, e) => sum + e.credit, 0);
-                            const bal = dr - cr;
-                            grandSum += bal;
-                            grandCount += entries.length;
+                          {paginate(sorted, dashPage, perPage).map(c => {
+                            grandSum += c.balance;
+                            grandCount += c.entriesCount;
 
                             return (
                               <tr 
@@ -377,13 +427,13 @@ export default function CustomerPage() {
                                   </div>
                                 </td>
                                 <td className="table-cell text-right">
-                                  <span className={cn("text-sm font-black tabular-nums", bal >= 0 ? "text-pink-600" : "text-emerald-600")}>
-                                    ₨ {formatCurrency(Math.abs(bal))}
-                                    <span className="text-[9px] ml-1 font-bold uppercase tracking-tighter">{bal >= 0 ? 'DR' : 'CR'}</span>
+                                  <span className={cn("text-sm font-black tabular-nums", c.balance >= 0 ? "text-pink-600" : "text-emerald-600")}>
+                                    ₨ {formatCurrency(Math.abs(c.balance))}
+                                    <span className="text-[9px] ml-1 font-bold uppercase tracking-tighter">{c.balance >= 0 ? 'DR' : 'CR'}</span>
                                   </span>
                                 </td>
                                 <td className="table-cell text-center">
-                                  <span className="font-bold text-slate-500 uppercase tracking-widest">{entries.length} Entries</span>
+                                  <span className="font-bold text-slate-500 uppercase tracking-widest">{c.entriesCount} Entries</span>
                                 </td>
                                 <td className="table-cell text-right">
                                   <div className="w-6 h-6 rounded-md bg-slate-100 dark:bg-dark-800 flex items-center justify-center group-hover:bg-pink-600 group-hover:text-white transition-all float-right">
@@ -394,7 +444,7 @@ export default function CustomerPage() {
                             );
                           })}
                           
-                          {filtered.length > 0 && (
+                          {sorted.length > 0 && (
                             <tr className="font-black text-black dark:text-white bg-slate-100/50 dark:bg-dark-800/50 border-t-2 border-slate-300 dark:border-dark-700">
                               <td className="table-cell text-left text-xs uppercase tracking-widest text-slate-600 dark:text-slate-400 font-black">Totals for visible accounts</td>
                               <td className={cn("table-cell text-right text-sm tabular-nums font-black", grandSum >= 0 ? "text-slate-900 dark:text-white" : "text-red-600")}>
@@ -776,7 +826,7 @@ export default function CustomerPage() {
       {viewingEntity && (
         <TransactionReceiptModal
           entity={{ ...viewingEntity, amount: (viewingEntity.debit || viewingEntity.credit) }}
-          type="ledger"
+          type="customer"
           title={`Customer Receipt — ${cust?.name}`}
           onClose={() => setViewingEntity(null)}
         />

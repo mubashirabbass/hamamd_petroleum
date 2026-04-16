@@ -1,0 +1,375 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * { box-sizing: border-box; }
+  html { 
+    font-family: 'Outfit', 'Segoe UI', system-ui, sans-serif; 
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: geometricPrecision;
+  }
+
+  /* ── Light theme (default) ───────────────────────────── */
+  body {
+    @apply bg-slate-100 text-slate-900 antialiased font-normal;
+    min-height: 100vh;
+  }
+
+  /* ── Dark theme ──────────────────────────────────────── */
+  html.dark body {
+    @apply bg-dark-950 text-slate-100;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-black tracking-tight text-slate-900;
+  }
+  html.dark h1, html.dark h2, html.dark h3, html.dark h4, html.dark h5, html.dark h6 {
+    @apply text-white;
+  }
+
+  /* Scrollbar — light */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { @apply bg-slate-200/50; }
+  ::-webkit-scrollbar-thumb { 
+    @apply bg-slate-400/50 rounded-full border-2 border-transparent bg-clip-padding; 
+  }
+  ::-webkit-scrollbar-thumb:hover { @apply bg-slate-500/80; }
+
+  html.dark ::-webkit-scrollbar-track { @apply bg-dark-800/50; }
+  html.dark ::-webkit-scrollbar-thumb { 
+    @apply bg-dark-600/50 rounded-full border-2 border-transparent bg-clip-padding;
+  }
+  html.dark ::-webkit-scrollbar-thumb:hover { @apply bg-dark-500/80; }
+}
+
+@layer components {
+
+  /* ── Glass card ─────────────────────────────────────── */
+  .glass {
+    @apply bg-white/90 backdrop-blur-md border border-slate-200/60 shadow-sm;
+  }
+  html.dark .glass {
+    @apply bg-dark-800/80 border-dark-700/50 shadow-none;
+  }
+  .glass-card {
+    @apply glass rounded-2xl p-5;
+  }
+
+  .premium-glass-card {
+    background: rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(64px) saturate(180%);
+    -webkit-backdrop-filter: blur(64px) saturate(180%);
+    @apply border border-white/30 shadow-[0_32px_64px_rgba(0,0,0,0.5)] ring-1 ring-white/20;
+  }
+
+  .blur-buffer {
+    @apply absolute inset-0 -z-10 bg-cover bg-center bg-fixed;
+    filter: blur(40px);
+    transform: scale(1.1);
+  }
+
+  .glass-container {
+    @apply relative overflow-hidden;
+  }
+
+  .soft-glass {
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(24px) saturate(150%);
+    -webkit-backdrop-filter: blur(24px) saturate(150%);
+    @apply border border-white/20 shadow-lg;
+  }
+
+  /* ── Buttons ────────────────────────────────────────── */
+  .btn-primary {
+    @apply bg-primary-600 hover:bg-primary-500 text-white font-black px-5 py-2.5 rounded-xl
+           transition-all duration-200 flex items-center gap-2 text-sm active:scale-95 shadow-md shadow-primary-600/10;
+  }
+  .btn-secondary {
+    @apply bg-slate-200 hover:bg-slate-300 text-slate-900 font-bold px-5 py-2.5 rounded-xl
+           transition-all duration-200 flex items-center gap-2 text-sm active:scale-95;
+  }
+  html.dark .btn-secondary {
+    @apply bg-dark-700 hover:bg-dark-600 text-white;
+  }
+  .btn-danger {
+    @apply bg-red-50 hover:bg-red-100 text-red-700 border border-red-200
+           font-black px-5 py-2.5 rounded-xl transition-all duration-200 flex items-center gap-2 text-sm;
+  }
+
+  @keyframes fade-in-up {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .animate-fade-in-up {
+    animation: fade-in-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  html.dark .btn-danger {
+    @apply bg-red-600/20 hover:bg-red-600/40 text-red-400 border-red-600/30;
+  }
+
+  .btn-primary-emerald {
+    @apply bg-emerald-600 hover:bg-emerald-500 text-white font-black px-5 py-2.5 rounded-xl
+           transition-all duration-200 flex items-center gap-2 text-sm active:scale-95 shadow-md shadow-emerald-600/10;
+  }
+  html.dark .btn-primary-emerald { @apply bg-emerald-600/80 hover:bg-emerald-500/80; }
+
+  .btn-icon {
+    @apply p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-all active:scale-90 border border-slate-200;
+  }
+  html.dark .btn-icon { @apply bg-dark-800 hover:bg-dark-700 text-dark-300 border-dark-700; }
+
+  /* ── Inputs ─────────────────────────────────────────── */
+  .input {
+    @apply bg-white border border-slate-300 text-slate-900 rounded-xl px-4 py-2.5 text-sm w-full font-bold
+           focus:outline-none focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500
+           transition-all placeholder-slate-400;
+  }
+  html.dark .input {
+    @apply bg-dark-850 border-dark-600 text-white placeholder-dark-500;
+  }
+  .label {
+    @apply block text-[10px] font-black text-slate-900/60 mb-2 uppercase tracking-widest;
+  }
+  html.dark .label {
+    @apply text-dark-400;
+  }
+
+  /* ── Table ──────────────────────────────────────────── */
+  .table-header {
+    @apply bg-slate-200 dark:bg-dark-800 text-black dark:text-white text-[11px] font-semibold uppercase tracking-widest border-b border-slate-400 dark:border-dark-600;
+  }
+  .table-row {
+    @apply border-b border-slate-300 dark:border-dark-700/50 hover:bg-slate-200/30 transition-colors font-normal;
+  }
+  .table-row:nth-child(even) {
+    @apply bg-slate-100/50 dark:bg-dark-800/40;
+  }
+  .table-cell {
+    @apply px-4 py-2.5 text-[13px] text-black dark:text-white border-r border-slate-300 dark:border-dark-700/50 last:border-r-0 tracking-tight;
+  }
+
+  .table-excel {
+    @apply border-collapse border border-slate-400 dark:border-dark-600 w-full shadow-sm bg-white dark:bg-dark-900;
+  }
+  .table-excel th {
+    @apply bg-slate-200 dark:bg-dark-800 px-4 py-2 text-[11px] font-semibold text-black dark:text-white uppercase tracking-wider border border-slate-400 dark:border-dark-600;
+  }
+  .table-excel td {
+    @apply border border-slate-300 dark:border-dark-700/50 px-4 py-2 text-[13px] text-black dark:text-white font-normal leading-tight;
+  }
+  .table-excel tr:nth-child(even) {
+    @apply bg-slate-50 dark:bg-dark-800/60;
+  }
+  .table-excel .amount {
+    @apply text-right font-medium text-[14px];
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* Force bold on all footer cells for reporting */
+  tfoot td, .font-black td {
+    font-weight: 900 !important;
+    color: #000 !important;
+  }
+
+  html.dark tfoot td, html.dark .font-black td {
+    color: #fff !important;
+  }
+
+  /* ── Badges ─────────────────────────────────────────── */
+  .badge { @apply inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider; }
+  .badge-hsd { @apply badge bg-amber-100 text-amber-800 border border-amber-200; }
+  .badge-pmg { @apply badge bg-emerald-100 text-emerald-800 border border-emerald-200; }
+  html.dark .badge-hsd { @apply bg-amber-500/20 text-amber-400 border-amber-500/30; }
+  html.dark .badge-pmg { @apply bg-emerald-500/20 text-emerald-400 border-emerald-500/30; }
+
+  /* stat-card */
+  .stat-card {
+    @apply glass rounded-2xl p-6 flex flex-col gap-2;
+  }
+
+  /* ── Page header ────────────────────────────────────── */
+  .page-header {
+    @apply text-2xl font-black text-slate-900 flex items-center gap-4 mb-8 uppercase tracking-tighter;
+  }
+  html.dark .page-header { @apply text-white; }
+
+  /* ── Modal ──────────────────────────────────────────── */
+  .modal-overlay {
+    @apply fixed inset-0 bg-slate-900/40 backdrop-blur-md z-50 flex items-center justify-center animate-fade-in;
+  }
+  html.dark .modal-overlay { @apply bg-black/70; }
+  .modal-box {
+    @apply bg-white rounded-3xl p-8 w-full max-w-md animate-slide-up shadow-2xl border border-slate-200;
+  }
+  html.dark .modal-box {
+    @apply bg-dark-900 border-dark-700;
+  }
+
+  /* ── Sidebar item ───────────────────────────────────── */
+  .sidebar-item { @apply flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-black transition-all duration-200 cursor-pointer border border-transparent; }
+  .sidebar-item-active { @apply sidebar-item bg-primary-600 text-white border-primary-600 shadow-lg shadow-primary-600/30; }
+  .sidebar-item-inactive { @apply sidebar-item text-slate-500 hover:text-slate-900 hover:bg-slate-50 dark:text-dark-400 dark:hover:text-white dark:hover:bg-dark-800/60; }
+  html.dark .sidebar-item-active { @apply bg-primary-600 text-white border-primary-500 shadow-lg shadow-primary-900/50; }
+
+  /* ── Category Panel (Dashboard/Module Sidebars) ─────── */
+  .category-panel {
+    @apply glass border-r-0 rounded-2xl flex flex-col p-2 space-y-1;
+  }
+  
+  /* Mobile Horizontal Tab List */
+  .mobile-tab-list {
+    @apply flex overflow-x-auto smart-scroll gap-2 pb-2 mb-4 lg:hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .category-item {
+    @apply flex items-center justify-between px-4 py-3 rounded-xl cursor-pointer text-sm font-bold transition-all duration-200 border border-transparent;
+  }
+  .category-item-active {
+    @apply category-item bg-primary-600/10 text-primary-600 border-primary-600/10 shadow-sm relative overflow-hidden font-black;
+  }
+  .category-item-active::before {
+    content: '';
+    @apply absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-primary-600 rounded-r-full hidden lg:block;
+  }
+  .category-item-inactive {
+    @apply category-item text-slate-500 hover:bg-slate-50 hover:text-slate-900 hover:border-slate-200;
+  }
+  html.dark .category-item-active {
+    @apply bg-primary-600/20 text-primary-400 border-primary-500/20 shadow-none;
+  }
+  html.dark .category-item-inactive {
+    @apply text-dark-400 hover:bg-dark-700/50 hover:text-dark-100 hover:border-dark-600/50;
+  }
+}
+
+/* ── Sticky Table Columns ────────────────────────────── */
+.table-sticky-col {
+  @apply sticky left-0 z-[5] bg-inherit shadow-[4px_0_8px_-4px_rgba(0,0,0,0.1)];
+}
+html.dark .table-sticky-col {
+  @apply shadow-[4px_0_8px_-4px_rgba(0,0,0,0.3)];
+}
+
+/* ── Mobile Full Screen Modal ───────────────────────── */
+@media (max-width: 640px) {
+  .modal-overlay {
+    @apply p-0 items-start;
+  }
+  .modal-box {
+    @apply rounded-none min-h-screen max-w-none m-0 pt-16 pb-20 px-4;
+  }
+  .modal-box h2 {
+    @apply text-lg;
+  }
+}
+
+/* ── Animations ──────────────────────────────────────── */
+@keyframes fadeIn  { from { opacity: 0 }         to { opacity: 1 } }
+@keyframes slideUp { from { transform: translateY(10px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
+@keyframes slideIn { from { transform: translateX(-10px); opacity: 0 } to { transform: translateX(0); opacity: 1 } }
+@keyframes loading {
+  0%   { transform: translateX(-100%); width: 40%; }
+  50%  { transform: translateX(150%);  width: 60%; }
+  100% { transform: translateX(300%);  width: 40%; }
+}
+
+.animate-fade-in { animation: fadeIn  0.2s ease-out; }
+.animate-slide-up{ animation: slideUp 0.25s ease-out; }
+.animate-slide-in{ animation: slideIn 0.25s ease-out; }
+
+/* ── Smart Scrollbar ────────────────────────────────── */
+.smart-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+  overflow: auto; /* Handle both x and y */
+}
+.smart-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.smart-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.smart-scroll::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.smart-scroll:hover::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.3);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+html.dark .smart-scroll {
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+}
+html.dark .smart-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+}
+html.dark .smart-scroll:hover::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.sticky-header {
+  @apply sticky top-0 z-10 bg-inherit;
+}
+
+/* ── Numeric Keyboard Helper ─────────────────────────── */
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* ── Print Customizations ────────────────────────────────────────── */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+  
+  body {
+    overflow: visible !important;
+    background: white !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Hide scrollbars during print */
+  ::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  /* Force printable areas to be full height */
+  .page-print-container {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Ensure page breaks for reports */
+  .report-page {
+    page-break-after: always !important;
+    break-after: page !important;
+  }
+
+  /* Smooth out shadow and border artifacts */
+  .no-print-shadow {
+    box-shadow: none !important;
+    border: none !important;
+  }
+}
