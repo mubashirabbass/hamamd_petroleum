@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Wallet, Plus, Trash2, Eye, Edit2, Search, Check, X, FileText, Settings, UserPlus, Printer, BarChart3, ArrowRight } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { formatCurrency, formatDate, today, paginate, filterByStartDate, cn, startOfMonth, startOfYear } from '../lib/utils';
@@ -18,6 +19,7 @@ export default function ExpensePage() {
     addExpenseEntry, deleteExpenseEntry, settings, currentUser, updateExpenseEntry 
   } = useStore();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
 
   const [activeTab, setActiveTab] = useState<'dashboard' | 'database' | 'register' | 'manage'>('dashboard');
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
@@ -46,6 +48,13 @@ export default function ExpensePage() {
   const [form, setForm] = useState({ date: today(), details: '', amount: '' });
   const [isSaving, setIsSaving] = useState(false);
   
+  useEffect(() => {
+    if (searchParams.get('action') === 'add') {
+      setActiveTab('database');
+      setShowEntryForm(true);
+    }
+  }, [searchParams]);
+
   useEffect(() => {
     if (!selectedCat && expenseCategories.length > 0) {
       setSelectedCat(expenseCategories[0].id);
@@ -377,58 +386,36 @@ export default function ExpensePage() {
           </div>
         ) : activeTab === 'database' ? (
           <>
-            {/* Sidebar selection - Desktop: Sidebar, Mobile: Horizontal Tabs */}
-            <div className="w-full lg:w-64 flex-shrink-0 flex flex-col gap-3">
-              {/* Mobile View: Horizontal Tabs */}
-              <div className="mobile-tab-list lg:hidden">
-                {filteredSidebar.map((c) => (
-                  <button
-                    key={c.id}
-                    onClick={() => { setSelectedCat(c.id); setSearch(''); setPage(1); }}
-                    className={cn(
-                      "px-5 py-2.5 rounded-xl whitespace-nowrap text-xs font-black uppercase tracking-widest transition-all border",
-                      selectedCat === c.id 
-                        ? "bg-red-600 text-white border-red-600 shadow-md" 
-                        : "bg-white dark:bg-dark-800 text-slate-500 border-slate-200 dark:border-dark-700 hover:bg-slate-50"
-                    )}
-                  >
-                    {c.name}
-                  </button>
-                ))}
+            <div className="w-64 flex-shrink-0 flex flex-col h-full bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700/50 rounded-2xl overflow-hidden shadow-sm">
+               <div className="p-3 bg-slate-50/50 dark:bg-dark-800/30 border-b border-slate-100 dark:border-dark-700/30 flex items-center justify-between">
+                <p className="text-[10px] font-extrabold text-slate-600 dark:text-dark-200 uppercase tracking-widest">Active Categories</p>
+                <span className="text-[10px] font-bold text-slate-300">{filteredSidebar.length}</span>
               </div>
-
-              {/* Desktop View: Sidebar List */}
-              <div className="hidden lg:flex flex-col h-full bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700/50 rounded-2xl overflow-hidden shadow-sm">
-                <div className="p-3 bg-slate-50/50 dark:bg-dark-800/30 border-b border-slate-100 dark:border-dark-700/30 flex items-center justify-between">
-                  <p className="text-[10px] font-extrabold text-slate-600 dark:text-dark-200 uppercase tracking-widest">Active Categories</p>
-                  <span className="text-[10px] font-bold text-slate-300">{filteredSidebar.length}</span>
-                </div>
-                <div className="p-2 border-b border-slate-100 dark:border-dark-700/30">
-                  <SearchBar value={sidebarSearch} onChange={setSidebarSearch} placeholder="Search Expense..." fullWidth={true} className="!py-1.5 !text-[11px]" />
-                </div>
-                <div className="smart-scroll flex-1 p-2 space-y-1">
-                  {filteredSidebar.length === 0 ? (
-                    <div className="p-8 text-center text-xs text-slate-400 italic">No Categories found</div>
-                  ) : (
-                    filteredSidebar.map((c) => (
-                      <div
-                        key={c.id}
-                        onClick={() => { setSelectedCat(c.id); setSearch(''); setPage(1); }}
-                        className={cn(
-                          'group flex items-center justify-between px-3 py-3 rounded-xl cursor-pointer text-xs font-black transition-all duration-200 border border-transparent',
-                          selectedCat === c.id 
-                            ? 'bg-red-600/10 text-red-600 border-red-600/10 shadow-sm relative overflow-hidden' 
-                            : 'text-slate-600 dark:text-dark-400 hover:bg-slate-50 dark:hover:bg-dark-800 hover:text-slate-900 dark:hover:text-white hover:border-slate-200 dark:hover:border-dark-700/50'
-                        )}
-                      >
-                        {selectedCat === c.id && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-red-600 rounded-r-full"></span>}
-                        <div className="flex flex-col min-w-0">
-                          <p className="truncate text-slate-900 dark:text-white">{c.name}</p>
-                        </div>
+              <div className="p-2 border-b border-slate-100 dark:border-dark-700/30">
+                <SearchBar value={sidebarSearch} onChange={setSidebarSearch} placeholder="Search Expense..." fullWidth={true} className="!py-1.5 !text-[11px]" />
+              </div>
+              <div className="smart-scroll flex-1 p-2 space-y-1">
+                {filteredSidebar.length === 0 ? (
+                  <div className="p-8 text-center text-xs text-slate-400 italic">No Categories found</div>
+                ) : (
+                  filteredSidebar.map((c) => (
+                    <div
+                      key={c.id}
+                      onClick={() => { setSelectedCat(c.id); setSearch(''); setPage(1); }}
+                      className={cn(
+                        'group flex items-center justify-between px-3 py-3 rounded-xl cursor-pointer text-xs font-black transition-all duration-200 border border-transparent',
+                        selectedCat === c.id 
+                          ? 'bg-red-600/10 text-red-600 border-red-600/10 shadow-sm relative overflow-hidden' 
+                          : 'text-slate-600 dark:text-dark-400 hover:bg-slate-50 dark:hover:bg-dark-800 hover:text-slate-900 dark:hover:text-white hover:border-slate-200 dark:hover:border-dark-700/50'
+                      )}
+                    >
+                      {selectedCat === c.id && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-red-600 rounded-r-full"></span>}
+                      <div className="flex flex-col min-w-0">
+                        <p className="truncate text-slate-900 dark:text-white">{c.name}</p>
                       </div>
-                    ))
-                  )}
-                </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
 
@@ -482,7 +469,7 @@ export default function ExpensePage() {
                       <table className="table-excel">
                         <thead className="sticky top-0 z-10 bg-slate-200 dark:bg-dark-800">
                           <tr className="table-header">
-                            <th className="px-4 py-3 table-sticky-col text-left w-24">Date</th>
+                            <th className="px-4 py-3 text-left w-24">Date</th>
                             <th className="px-4 py-3 text-left w-auto">Description</th>
                             <th className="px-4 py-3 text-right w-44">Amount</th>
                             <th className="px-4 py-3 w-20 text-center">Actions</th>
@@ -493,7 +480,7 @@ export default function ExpensePage() {
                             <tr><td colSpan={4} className="text-center text-slate-400 py-12 italic">No transactions found</td></tr>
                           ) : paged.map((e) => (
                             <tr key={e.id} className="group">
-                              <td className="table-sticky-col whitespace-nowrap text-[11px] font-medium uppercase tracking-tighter text-slate-500 dark:text-dark-400 tabular-nums">{formatDate(e.date)}</td>
+                              <td className="whitespace-nowrap text-[11px] font-medium uppercase tracking-tighter text-slate-500 dark:text-dark-400 tabular-nums">{formatDate(e.date)}</td>
                               <td className="text-black dark:text-white font-medium text-[13px]">{e.details || '—'}</td>
                               <td className="amount !text-red-600 dark:!text-red-400 whitespace-nowrap tabular-nums">₨ {formatCurrency(e.amount)}</td>
                               <td className="text-right">
@@ -685,7 +672,7 @@ export default function ExpensePage() {
           <form onSubmit={handleSubmit} className="space-y-3">
             <div><label className="label">Date *</label><input type="date" className="input" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required /></div>
             <div><label className="label">Details</label><input className="input" value={form.details} onChange={(e) => setForm({ ...form, details: e.target.value })} placeholder="Expense details" /></div>
-            <div><label className="label">Amount (₨) *</label><input type="number" step="0.01" inputMode="decimal" className="input" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} required /></div>
+            <div><label className="label">Amount (₨) *</label><input type="number" step="0.01" className="input" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} required /></div>
             <div className="flex justify-end gap-2 pt-2">
               <button type="button" onClick={closeForm} className="btn-secondary" disabled={isSaving}>Cancel</button>
               <button type="submit" className="btn-primary !bg-red-600 flex items-center gap-2" disabled={isSaving}>

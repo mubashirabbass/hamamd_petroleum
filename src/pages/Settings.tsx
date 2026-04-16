@@ -9,7 +9,8 @@ import ManageUsersModal from '../components/modals/ManageUsersModal';
 import { useToast } from '../components/ui/Toast';
 import { cn } from '../lib/utils';
 import DeveloperSettings from '../components/settings/DeveloperSettings';
-import { Terminal } from 'lucide-react';
+import KeyboardShortcutsPanel from '../components/settings/KeyboardShortcutsPanel';
+import { Terminal, Keyboard as KeyboardIcon } from 'lucide-react';
 import { getSetting, setSetting } from '../lib/db';
 import {
   checkConnection,
@@ -253,28 +254,27 @@ function BackupPanel() {
   return (
     <div className="space-y-6 h-full overflow-auto pb-6">
 
-      {/* ── Premium Processing Overlay ────────────────────────────────────────── */}
+      {/* ── Global Progress Banner ──────────────────────────────────────────── */}
       {progress.active && (
-        <div className="fixed inset-0 z-[10000] flex flex-col items-center justify-center p-6 bg-slate-950/90 backdrop-blur-2xl animate-in fade-in duration-500">
-           <div className="relative mb-8">
-              <div className="absolute inset-0 bg-primary-500/30 blur-3xl rounded-full animate-pulse" />
-              <div className="relative w-24 h-24 border-t-4 border-r-4 border-primary-500 rounded-full animate-spin shadow-2xl shadow-primary-500/30" />
-              <Cloud className="absolute inset-0 m-auto w-10 h-10 text-white animate-bounce" />
+        <div className="bg-slate-900 rounded-2xl border border-white/10 p-4 flex items-center gap-4">
+          <RefreshCcw className="w-5 h-5 text-primary-400 animate-spin shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-white mb-2">{progress.msg}</p>
+            <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-primary-500 to-primary-400 rounded-full animate-[loading_1.5s_ease-in-out_infinite]" />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Initial Loading Overlay ────────────────────────────────────────── */}
+      {checkingStatus && !connected && (
+        <div className="bg-white/50 dark:bg-dark-950/50 backdrop-blur-md rounded-2xl border border-slate-200 dark:border-dark-700 p-12 flex flex-col items-center justify-center text-center animate-pulse">
+           <div className="w-20 h-20 bg-primary-500/10 rounded-3xl flex items-center justify-center mb-6 border border-primary-500/20">
+             <RefreshCcw className="w-10 h-10 text-primary-500 animate-spin" />
            </div>
-           
-           <div className="text-center max-w-sm">
-             <h2 className="text-2xl font-black text-white mb-2 uppercase tracking-tighter">Syncing Securely</h2>
-             <p className="text-primary-400 font-bold text-sm mb-6 animate-pulse uppercase tracking-[0.3em]">{progress.msg}</p>
-             
-             <div className="bg-white/5 border border-white/10 rounded-2xl p-5 space-y-4">
-                <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest leading-relaxed">
-                  Please keep the app open. We are securing your business records.
-                </p>
-                <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
-                   <div className="h-full bg-primary-500 w-1/3 animate-[loading_2s_infinite]" />
-                </div>
-             </div>
-           </div>
+           <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Syncing Account Status</h3>
+           <p className="text-sm text-slate-500 dark:text-dark-400 mt-2 font-black uppercase tracking-[0.2em]">Please Wait...</p>
         </div>
       )}
 
@@ -292,20 +292,24 @@ function BackupPanel() {
           </div>
           <div>
             <h3 className={cn('font-black text-lg', connected ? 'text-emerald-400' : 'text-white')}>
-              {connected ? 'Google Drive Connected' : 'Cloud Backup — Setup Required'}
+              {connected ? 'Cloud Backup Connected' : 'Cloud Backup — Setup Required'}
             </h3>
             {connected ? (
               <div className="flex flex-col gap-1 mt-0.5">
                 <div className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-base text-emerald-400 font-black tracking-tight">{driveEmail}</span>
+                  <span className="text-base text-emerald-600 dark:text-emerald-400 font-black tracking-tight">{driveEmail}</span>
                 </div>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest pl-4">Account Verified</p>
+                {driveName && (
+                  <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] pl-4 flex items-center gap-2 opacity-70">
+                    <UserCog className="w-3 h-3" /> {driveName}
+                  </p>
+                )}
               </div>
             ) : checkingStatus ? (
-              <p className="text-sm text-slate-500 mt-0.5 animate-pulse">Checking connection…</p>
+              <p className="text-sm text-slate-500 mt-0.5 animate-pulse">Verifying credentials…</p>
             ) : (
-              <p className="text-sm text-slate-500 mt-0.5">Connect in 3 steps to enable automatic cloud backups.</p>
+              <p className="text-sm text-slate-500 mt-0.5">Automated backups to your personal Google Drive.</p>
             )}
           </div>
         </div>
@@ -622,6 +626,31 @@ function BackupPanel() {
         </div>
       </div>
 
+      {/* ── Premium Processing Overlay ────────────────────────────────────────── */}
+      {progress.active && (
+        <div className="fixed inset-0 z-[10000] flex flex-col items-center justify-center p-6 bg-slate-950/80 backdrop-blur-xl animate-in fade-in duration-500">
+           <div className="relative mb-8">
+              <div className="absolute inset-0 bg-primary-500/20 blur-3xl rounded-full animate-pulse" />
+              <div className="relative w-24 h-24 border-t-4 border-r-4 border-primary-500 rounded-full animate-spin shadow-2xl shadow-primary-500/20" />
+              <Cloud className="absolute inset-0 m-auto w-10 h-10 text-white animate-bounce" />
+           </div>
+           
+           <div className="text-center max-w-sm">
+             <h2 className="text-2xl font-black text-white mb-2 uppercase tracking-tighter">System Processing</h2>
+             <p className="text-primary-400 font-bold text-sm mb-6 animate-pulse uppercase tracking-[0.3em]">{progress.msg}</p>
+             
+             <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-3">
+                <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest leading-relaxed">
+                  Please do not close the software. We are securing your business data across the cloud.
+                </p>
+                <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
+                   <div className="h-full bg-primary-500 w-1/3 animate-[loading_2s_infinite]" />
+                </div>
+             </div>
+           </div>
+        </div>
+      )}
+
       {/* ── Cloud Restore Confirmation Modal ─────────────────────────────────── */}
       {confirmRestore && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
@@ -692,7 +721,7 @@ function BackupPanel() {
 export default function SettingsPage() {
   const { settings, updateSettings, currentUser, resetAllData } = useStore();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<'general' | 'users' | 'backup' | 'developer' | 'danger'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'users' | 'backup' | 'developer' | 'danger' | 'shortcuts'>('general');
   const [showManageUsers, setShowManageUsers] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
@@ -714,6 +743,7 @@ export default function SettingsPage() {
   const tabs = [
     ...(isStaff ? [] : [
       { id: 'general', label: 'General Setup',    icon: Settings,    color: 'bg-primary-600',  text: 'text-primary-600' },
+      { id: 'shortcuts', label: 'Quick Shortcuts', icon: KeyboardIcon, color: 'bg-amber-500',   text: 'text-amber-500'   },
     ]),
     { id: 'backup',  label: 'Backup & Restore',  icon: Cloud,       color: 'bg-blue-600',     text: 'text-blue-600'    },
     ...(isStaff ? [] : [
@@ -746,47 +776,25 @@ export default function SettingsPage() {
       </div>
 
       <div className="flex flex-col md:flex-row gap-6 items-start h-[calc(100vh-220px)]">
-        {/* Tabs - Desktop: Sidebar, Mobile: Horizontal Tabs */}
-        <div className="w-full lg:w-64 flex-shrink-0 flex flex-col gap-3">
-          {/* Mobile View: Horizontal Tabs */}
-          <div className="mobile-tab-list lg:hidden">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={cn(
-                  "px-5 py-2.5 rounded-xl whitespace-nowrap text-xs font-black uppercase tracking-widest transition-all border flex items-center gap-2",
-                  activeTab === tab.id 
-                    ? "bg-primary-600 text-white border-primary-600 shadow-md" 
-                    : "bg-white dark:bg-dark-800 text-slate-500 border-slate-200 dark:border-dark-700 hover:bg-slate-50"
-                )}
-              >
+        {/* Sidebar */}
+        <div className="w-full md:w-64 flex-shrink-0 space-y-1.5 font-bold">
+          {tabs.map((tab) => (
+            <button key={tab.id} onClick={() => setActiveTab(tab.id as any)}
+              className={cn(
+                'w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-all duration-200 border',
+                activeTab === tab.id
+                  ? 'bg-white dark:bg-dark-900 shadow-sm text-slate-900 dark:text-white border-slate-200 dark:border-dark-700/50'
+                  : 'text-slate-500 dark:text-dark-500 hover:text-slate-700 dark:hover:text-dark-300 hover:bg-slate-50 dark:hover:bg-dark-800/30 border-transparent'
+              )}>
+              <div className={cn(
+                'w-8 h-8 rounded-lg flex items-center justify-center',
+                activeTab === tab.id ? `${tab.color} text-white shadow-lg` : 'bg-slate-100 dark:bg-dark-810'
+              )}>
                 <tab.icon className="w-4 h-4" />
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Desktop View: Sidebar List */}
-          <div className="hidden lg:flex flex-col space-y-1.5 font-bold">
-            {tabs.map((tab) => (
-              <button key={tab.id} onClick={() => setActiveTab(tab.id as any)}
-                className={cn(
-                  'w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-all duration-200 border',
-                  activeTab === tab.id
-                    ? 'bg-white dark:bg-dark-900 shadow-sm text-slate-900 dark:text-white border-slate-200 dark:border-dark-700/50'
-                    : 'text-slate-500 dark:text-dark-500 hover:text-slate-700 dark:hover:text-dark-300 hover:bg-slate-50 dark:hover:bg-dark-800/30 border-transparent'
-                )}>
-                <div className={cn(
-                  'w-8 h-8 rounded-lg flex items-center justify-center',
-                  activeTab === tab.id ? `${tab.color} text-white shadow-lg` : 'bg-slate-100 dark:bg-dark-810'
-                )}>
-                  <tab.icon className="w-4 h-4" />
-                </div>
-                {tab.label}
-              </button>
-            ))}
-          </div>
+              </div>
+              {tab.label}
+            </button>
+          ))}
         </div>
 
         {/* Content */}
@@ -830,6 +838,9 @@ export default function SettingsPage() {
 
           {/* Backup & Restore */}
           {activeTab === 'backup' && <BackupPanel />}
+
+          {/* Shortcuts Management */}
+          {activeTab === 'shortcuts' && <KeyboardShortcutsPanel />}
 
           {/* User Management */}
           {activeTab === 'users' && (

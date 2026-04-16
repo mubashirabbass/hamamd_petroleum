@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Plus, Trash2, Users, UserPlus, Printer, Search, Phone, Edit2, Check, X, UserCog, User, BarChart3, ArrowRight, ArrowUpDown } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { formatCurrency, formatDate, today, paginate, filterByStartDate, cn, startOfMonth, startOfYear } from '../lib/utils';
@@ -17,6 +18,7 @@ export default function CustomerPage() {
     addCustomerEntry, updateCustomerEntry, deleteCustomerEntry, addCustomer, updateCustomer, deleteCustomer, settings, currentUser
   } = useStore();
 
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
 
   // Layout State
@@ -52,6 +54,14 @@ export default function CustomerPage() {
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab === 'register') setActiveTab('register');
+    else if (tab === 'dashboard') setActiveTab('dashboard');
+    else if (tab === 'database') setActiveTab('database');
+    else if (tab === 'manage') setActiveTab('manage');
+  }, [searchParams]);
+
+  useEffect(() => {
     if (!selectedCust && customers.length > 0) {
       setSelectedCust(customers[0].id);
     }
@@ -65,7 +75,7 @@ export default function CustomerPage() {
     // Calculate aggregate balance per customer for sorting
     const withBalances = list.map(c => {
       const entries = filterByStartDate(customerEntries, settings.startDate).filter(e => e.customerId === c.id);
-      const bal = entries.reduce((s, e) => s + (e.debit || 0) - (e.credit || 0), 0);
+      const bal = entries.reduce((s, e) => s + e.debit - e.credit, 0);
       return { ...c, balance: bal };
     });
 
@@ -288,23 +298,22 @@ export default function CustomerPage() {
             <UserCog className="w-4 h-4" /> Manage Accounts
           </button>
         </div>
-        <div className="flex items-center gap-2">
-          {activeTab === 'dashboard' ? (
-            <button onClick={() => setShowReport(true)} className="w-10 h-10 rounded-full bg-slate-100 dark:bg-dark-800 text-slate-600 dark:text-dark-300 flex items-center justify-center border border-slate-200 dark:border-dark-700 shadow-sm shrink-0"><Printer className="w-5 h-5" /></button>
-          ) : activeTab === 'database' && cust ? (
-            <div className="flex gap-2">
-              <button onClick={() => setShowReport(true)} className="btn-secondary !p-2 flex items-center gap-2 hover:bg-slate-200 transition-colors shrink-0">
-                <Printer className="w-4 h-4" /> Reports
-              </button>
-              <button onClick={() => setShowEntryForm(true)} className="btn-primary !p-2 !bg-pink-600 hover:!bg-pink-500 flex items-center gap-2 shrink-0">
-                <Plus className="w-4 h-4" /> New Entry
-              </button>
-            </div>
-          ) : null}
-          {activeTab !== 'database' && (
-            <button onClick={() => setShowEnrollForm(true)} className="w-10 h-10 rounded-full bg-pink-600 text-white flex items-center justify-center shadow-lg shrink-0"><Plus className="w-5 h-5" /></button>
-          )}
-        </div>
+        {activeTab === 'database' && cust && (
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowReport(true)}
+              className="btn-secondary flex items-center gap-2 hover:bg-slate-200 transition-colors"
+            >
+              <Printer className="w-4 h-4" /> Statement
+            </button>
+            <button onClick={() => setShowReport(true)} className="btn-secondary flex items-center gap-2">
+              <Printer className="w-4 h-4" /> Reports
+            </button>
+            <button onClick={() => setShowEntryForm(true)} className="btn-primary !bg-pink-600 hover:!bg-pink-500 flex items-center gap-2">
+              <Plus className="w-4 h-4" /> New Entry
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="flex gap-4 h-full overflow-hidden">
@@ -323,37 +332,41 @@ export default function CustomerPage() {
               const globalNet = globalDebit - globalCredit;
               
               return (
-                <div className="grid grid-cols-2 gap-3 mb-6 animate-in slide-in-from-top duration-500">
-                  <div className="glass p-4 rounded-2xl border-l-4 border-pink-500 shadow-md bg-white dark:bg-dark-900 overflow-hidden relative">
-                    <p className="text-[8px] font-black text-pink-600 uppercase tracking-widest mb-1">Receivable</p>
-                    <p className="text-sm font-black text-slate-800 dark:text-white tabular-nums truncate">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 animate-in slide-in-from-top duration-500">
+                  <div className="glass p-5 rounded-3xl border-l-8 border-pink-500 shadow-lg bg-white dark:bg-dark-900 overflow-hidden relative group">
+                    <div className="absolute top-0 right-0 w-20 h-20 bg-pink-600/5 rounded-bl-full -mr-10 -mt-10 group-hover:bg-pink-600/10 transition-colors" />
+                    <p className="text-[9px] font-black text-pink-600 uppercase tracking-widest mb-1">Total Receivable (Debits)</p>
+                    <p className="text-2xl font-black text-slate-800 dark:text-white tabular-nums">
                       ₨ {formatCurrency(globalDebit)}
                     </p>
                   </div>
 
-                  <div className="glass p-4 rounded-2xl border-l-4 border-emerald-500 shadow-md bg-white dark:bg-dark-900 overflow-hidden relative">
-                    <p className="text-[8px] font-black text-emerald-600 uppercase tracking-widest mb-1">Payable</p>
-                    <p className="text-sm font-black text-slate-800 dark:text-white tabular-nums truncate">
+                  <div className="glass p-5 rounded-3xl border-l-8 border-emerald-500 shadow-lg bg-white dark:bg-dark-900 overflow-hidden relative group">
+                    <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-600/5 rounded-bl-full -mr-10 -mt-10 group-hover:bg-emerald-600/10 transition-colors" />
+                    <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest mb-1">Total Payable (Credits)</p>
+                    <p className="text-2xl font-black text-slate-800 dark:text-white tabular-nums">
                       ₨ {formatCurrency(globalCredit)}
                     </p>
                   </div>
 
-                  <div className="glass p-4 rounded-2xl border-l-4 border-primary-500 shadow-md bg-white dark:bg-dark-900 overflow-hidden relative">
-                    <p className="text-[8px] font-black text-primary-600 uppercase tracking-widest mb-1">Net Cash</p>
-                    <div className="flex items-center gap-1">
-                       <p className={cn("text-sm font-black tabular-nums font-mono tracking-tighter truncate", globalNet >= 0 ? "text-pink-600" : "text-emerald-600")}>
+                  <div className="glass p-5 rounded-3xl border-l-8 border-primary-500 shadow-lg bg-white dark:bg-dark-900 overflow-hidden relative group">
+                    <div className="absolute top-0 right-0 w-20 h-20 bg-primary-600/5 rounded-bl-full -mr-10 -mt-10 group-hover:bg-primary-600/10 transition-colors" />
+                    <p className="text-[9px] font-black text-primary-600 uppercase tracking-widest mb-1">Net Cash Balance</p>
+                    <div className="flex items-center gap-2">
+                       <p className={cn("text-2xl font-black tabular-nums font-mono tracking-tighter", globalNet >= 0 ? "text-pink-600" : "text-emerald-600")}>
                         ₨ {formatCurrency(Math.abs(globalNet))}
                       </p>
-                      <span className={cn("text-[8px] font-black px-1 rounded border scale-75 origin-left", globalNet >= 0 ? "bg-pink-50 text-pink-600 border-pink-200" : "bg-emerald-50 text-emerald-600 border-emerald-200")}>
+                      <span className={cn("text-[10px] font-black px-1.5 py-0.5 rounded border", globalNet >= 0 ? "bg-pink-50 text-pink-600 border-pink-200" : "bg-emerald-50 text-emerald-600 border-emerald-200")}>
                         {globalNet >= 0 ? 'DR' : 'CR'}
                       </span>
                     </div>
                   </div>
 
-                  <div className="glass p-4 rounded-2xl border-l-4 border-slate-400 shadow-md bg-white dark:bg-dark-900 overflow-hidden relative">
-                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Active Accounts</p>
-                    <p className="text-sm font-black text-slate-800 dark:text-white tabular-nums">
-                      {customers.length} <span className="text-[10px] text-slate-400">Cust.</span>
+                  <div className="glass p-5 rounded-3xl border-l-8 border-slate-400 shadow-lg bg-white dark:bg-dark-900 overflow-hidden relative group">
+                    <div className="absolute top-0 right-0 w-20 h-20 bg-slate-600/5 rounded-bl-full -mr-10 -mt-10 group-hover:bg-slate-600/10 transition-colors" />
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Clients & Transactions</p>
+                    <p className="text-2xl font-black text-slate-800 dark:text-white tabular-nums">
+                      {customers.length} <span className="text-xs text-slate-400">Cust.</span> / {allFilteredEntries.length} <span className="text-xs text-slate-400">Trx.</span>
                     </p>
                   </div>
                 </div>
@@ -399,7 +412,9 @@ export default function CustomerPage() {
                   <button onClick={() => { setFromDate(''); setToDate(''); setPage(1); }} className="px-3 py-1.5 text-[10px] font-black uppercase tracking-tighter text-red-600 bg-red-50 dark:bg-red-900/20 rounded-lg hover:bg-red-100 transition-all border border-red-200 dark:border-red-800/30">Reset</button>
                 )}
               </div>
-            </div>            <div className="flex-1 glass rounded-2xl overflow-hidden border border-slate-200 dark:border-dark-700/50 shadow-sm flex flex-col animate-in slide-in-from-bottom duration-500 delay-200">
+            </div>
+
+            <div className="flex-1 glass rounded-2xl overflow-hidden border border-slate-200 dark:border-dark-700/50 shadow-sm flex flex-col animate-in slide-in-from-bottom duration-500 delay-200">
               <div className="overflow-y-auto smart-scroll flex-1">
                 <table className="w-full border-collapse">
                   <thead className="sticky top-0 z-10 bg-slate-200 dark:bg-dark-800">
@@ -514,7 +529,7 @@ export default function CustomerPage() {
                       );
                     })()}
                   </tbody>
-                </table>table>
+                </table>
               </div>
               {(() => {
                 const f = customers.filter(c => !dashboardSearch || c.name.toLowerCase().includes(dashboardSearch.toLowerCase()) || (c.phone && c.phone.includes(dashboardSearch)));
@@ -532,75 +547,54 @@ export default function CustomerPage() {
           </div>
         ) : activeTab === 'database' ? (
           <>
-            {/* Sidebar selection - Desktop: Sidebar, Mobile: Horizontal Tabs */}
-            <div className="w-full lg:w-64 flex-shrink-0 flex flex-col gap-3">
-              {/* Mobile View: Horizontal Tabs */}
-              <div className="mobile-tab-list lg:hidden">
-                {filteredSidebar.map((c) => (
-                  <button
-                    key={c.id}
-                    onClick={() => { setSelectedCust(c.id); setSearch(''); setPage(1); }}
-                    className={cn(
-                      "px-5 py-2.5 rounded-xl whitespace-nowrap text-xs font-black uppercase tracking-widest transition-all border",
-                      selectedCust === c.id 
-                        ? "bg-pink-600 text-white border-pink-600 shadow-md" 
-                        : "bg-white dark:bg-dark-800 text-slate-500 border-slate-200 dark:border-dark-700 hover:bg-slate-50"
-                    )}
-                  >
-                    {c.name}
-                  </button>
-                ))}
+            {/* Sidebar List */}
+            <div className="w-64 flex-shrink-0 flex flex-col h-full bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700/50 rounded-2xl overflow-hidden shadow-sm">
+              <div className="p-3 bg-slate-50/50 dark:bg-dark-800/30 border-b border-slate-100 dark:border-dark-700/30 flex items-center justify-between">
+                <p className="text-[10px] font-extrabold text-slate-600 dark:text-dark-200 uppercase tracking-widest">Active Database</p>
+                <span className="text-[10px] font-bold text-slate-300">{filteredSidebar.length}</span>
               </div>
-
-              {/* Desktop View: Sidebar List */}
-              <div className="hidden lg:flex flex-col h-full bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700/50 rounded-2xl overflow-hidden shadow-sm">
-                <div className="p-3 bg-slate-50/50 dark:bg-dark-800/30 border-b border-slate-100 dark:border-dark-700/30 flex items-center justify-between">
-                  <p className="text-[10px] font-extrabold text-slate-600 dark:text-dark-200 uppercase tracking-widest">Active Database</p>
-                  <span className="text-[10px] font-bold text-slate-300">{filteredSidebar.length}</span>
-                </div>
-                <div className="p-2 space-y-2 border-b border-slate-100 dark:border-dark-700/30 bg-slate-50/30">
-                  <SearchBar value={custSearch} onChange={setCustSearch} placeholder="Search names..." fullWidth={true} className="!py-1.5 !text-[11px]" />
-                  <div className="relative group">
-                    <ArrowUpDown className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 group-hover:text-pink-600 transition-colors pointer-events-none" />
-                    <select
-                      value={sidebarSort}
-                      onChange={(e) => setSidebarSort(e.target.value)}
-                      className="w-full appearance-none pl-7 pr-8 py-1.5 bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700/50 rounded-xl text-[9px] font-black uppercase tracking-wider text-slate-600 dark:text-dark-200 focus:ring-2 focus:ring-pink-600/20 focus:border-pink-600 transition-all cursor-pointer outline-none"
-                    >
-                      <option value="name_asc">A to Z</option>
-                      <option value="name_desc">Z to A</option>
-                      <option value="balance_desc">High Balance</option>
-                      <option value="balance_asc">Low Balance</option>
-                    </select>
-                    <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                      <div className="w-1 h-1 border-r border-b border-current rotate-45" />
-                    </div>
+              <div className="p-2 space-y-2 border-b border-slate-100 dark:border-dark-700/30 bg-slate-50/30">
+                <SearchBar value={custSearch} onChange={setCustSearch} placeholder="Search names..." fullWidth={true} className="!py-1.5 !text-[11px]" />
+                <div className="relative group">
+                  <ArrowUpDown className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 group-hover:text-pink-600 transition-colors pointer-events-none" />
+                  <select
+                    value={sidebarSort}
+                    onChange={(e) => setSidebarSort(e.target.value)}
+                    className="w-full appearance-none pl-7 pr-8 py-1.5 bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700/50 rounded-xl text-[9px] font-black uppercase tracking-wider text-slate-600 dark:text-dark-200 focus:ring-2 focus:ring-pink-600/20 focus:border-pink-600 transition-all cursor-pointer outline-none"
+                  >
+                    <option value="name_asc">A to Z</option>
+                    <option value="name_desc">Z to A</option>
+                    <option value="balance_desc">High Balance</option>
+                    <option value="balance_asc">Low Balance</option>
+                  </select>
+                  <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                    <div className="w-1 h-1 border-r border-b border-current rotate-45" />
                   </div>
                 </div>
-                <div className="smart-scroll flex-1 p-2 space-y-1">
-                  {filteredSidebar.length === 0 ? (
-                    <div className="p-8 text-center text-xs text-slate-400 italic">No customers found</div>
-                  ) : (
-                    filteredSidebar.map((c) => (
-                      <div
-                        key={c.id}
-                        onClick={() => { setSelectedCust(c.id); setSearch(''); setPage(1); }}
-                        className={cn(
-                          'group flex items-center justify-between px-3 py-3 rounded-xl cursor-pointer text-xs font-black transition-all duration-200 border border-transparent',
-                          selectedCust === c.id
-                            ? 'bg-pink-600/10 text-pink-600 border-pink-600/10 shadow-sm relative overflow-hidden'
-                            : 'text-slate-600 dark:text-dark-400 hover:bg-slate-50 dark:hover:bg-dark-800 hover:text-slate-900 dark:hover:text-white hover:border-slate-200 dark:hover:border-dark-700/50'
-                        )}
-                      >
-                        {selectedCust === c.id && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-pink-600 rounded-r-full"></span>}
-                        <div className="flex flex-col min-w-0">
-                          <p className="truncate text-slate-900 dark:text-white">{c.name}</p>
-                          {c.phone && <p className="text-[9px] text-slate-500 dark:text-dark-400 font-bold truncate mt-0.5">{c.phone}</p>}
-                        </div>
+              </div>
+              <div className="smart-scroll flex-1 p-2 space-y-1">
+                {filteredSidebar.length === 0 ? (
+                  <div className="p-8 text-center text-xs text-slate-400 italic">No customers found</div>
+                ) : (
+                  filteredSidebar.map((c) => (
+                    <div
+                      key={c.id}
+                      onClick={() => { setSelectedCust(c.id); setSearch(''); setPage(1); }}
+                      className={cn(
+                        'group flex items-center justify-between px-3 py-3 rounded-xl cursor-pointer text-xs font-black transition-all duration-200 border border-transparent',
+                        selectedCust === c.id
+                          ? 'bg-pink-600/10 text-pink-600 border-pink-600/10 shadow-sm relative overflow-hidden'
+                          : 'text-slate-600 dark:text-dark-400 hover:bg-slate-50 dark:hover:bg-dark-800 hover:text-slate-900 dark:hover:text-white hover:border-slate-200 dark:hover:border-dark-700/50'
+                      )}
+                    >
+                      {selectedCust === c.id && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-pink-600 rounded-r-full"></span>}
+                      <div className="flex flex-col min-w-0">
+                        <p className="truncate text-slate-900 dark:text-white">{c.name}</p>
+                        {c.phone && <p className="text-[9px] text-slate-500 dark:text-dark-400 font-bold truncate mt-0.5">{c.phone}</p>}
                       </div>
-                    ))
-                  )}
-                </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
 
@@ -641,14 +635,8 @@ export default function CustomerPage() {
 
                   <div className="glass rounded-2xl overflow-hidden border border-slate-200 dark:border-dark-700/50 flex-1 flex flex-col">
                     <div className="flex flex-col md:flex-row md:items-center justify-between p-4 gap-4 border-b border-slate-200 dark:border-dark-700/50 bg-white/30 dark:bg-dark-800/30">
-                      <div className="flex-1 min-w-0 flex items-center gap-2">
+                      <div className="flex-1 min-w-0 flex items-center gap-3">
                         <SearchBar value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search transactions..." />
-                        <button 
-                          onClick={() => setShowReport(true)}
-                          className="w-10 h-10 rounded-full bg-slate-100 dark:bg-dark-800 text-slate-600 dark:text-dark-300 flex items-center justify-center border border-slate-200 dark:border-dark-700 shadow-sm shrink-0"
-                        >
-                          <Printer className="w-5 h-5" />
-                        </button>
                         
                         <div className="relative group shrink-0">
                           <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 group-hover:text-pink-600 transition-colors pointer-events-none" />
@@ -669,7 +657,7 @@ export default function CustomerPage() {
                             <option value="balance_asc">Lowest Balance</option>
                           </select>
                           <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                             <div className="w-1 h-1 border-r border-b border-current rotate-45" />
+                            <div className="w-1 h-1 border-r border-b border-current rotate-45" />
                           </div>
                         </div>
                       </div>
@@ -685,7 +673,12 @@ export default function CustomerPage() {
                           <input type="date" className="input !py-1 !px-2 !w-32 !text-xs" value={toDate} onChange={(e) => { setToDate(e.target.value); setPage(1); }} />
                         </div>
                         {(fromDate || toDate) && (
-                          <button onClick={() => { setFromDate(''); setToDate(''); setPage(1); }} className="px-3 py-1.5 text-[10px] font-black uppercase tracking-tighter text-red-600 bg-red-50 dark:bg-red-900/20 rounded-lg hover:bg-red-100 transition-all border border-red-200 dark:border-red-800/30">Clear</button>
+                          <>
+                            <button onClick={() => setShowReport(true)} className="px-3 py-1.5 text-[10px] font-black uppercase tracking-tighter text-slate-600 bg-slate-50 dark:bg-dark-900/20 rounded-lg hover:bg-slate-100 transition-all border border-slate-200 dark:border-dark-700/50 flex items-center gap-2">
+                              <Printer className="w-3 h-3" /> Reports
+                            </button>
+                            <button onClick={() => { setFromDate(''); setToDate(''); setPage(1); }} className="px-3 py-1.5 text-[10px] font-black uppercase tracking-tighter text-red-600 bg-red-50 dark:bg-red-900/20 rounded-lg hover:bg-red-100 transition-all border border-red-200 dark:border-red-800/30">Clear</button>
+                          </>
                         )}
                       </div>
                     </div>
@@ -693,7 +686,7 @@ export default function CustomerPage() {
                       <table className="table-excel">
                         <thead className="sticky top-0 z-10 bg-slate-200 dark:bg-dark-800">
                           <tr className="table-header">
-                            <th className="px-4 py-3 table-sticky-col text-left w-24">Date</th>
+                            <th className="px-4 py-3 text-left w-24">Date</th>
                             <th className="px-4 py-3 text-left w-[30rem]">Description</th>
                             <th className="px-4 py-3 text-right w-36">Debit</th>
                             <th className="px-4 py-3 text-right w-36">Credit</th>
@@ -706,7 +699,7 @@ export default function CustomerPage() {
                             <tr><td colSpan={6} className="text-center text-slate-400 py-12 italic">No transactions found</td></tr>
                           ) : paged.map((e) => (
                             <tr key={e.id} className="group">
-                              <td className="table-sticky-col whitespace-nowrap text-[11px] font-medium uppercase tracking-tighter text-slate-500 dark:text-dark-400">{formatDate(e.date)}</td>
+                              <td className="whitespace-nowrap text-[11px] font-medium uppercase tracking-tighter text-slate-500 dark:text-dark-400">{formatDate(e.date)}</td>
                               <td className="text-black dark:text-white font-medium text-[13px] whitespace-normal break-words max-w-[15rem] leading-5 truncate">{e.description || '—'}</td>
                               <td className="amount !text-red-600 dark:!text-red-400 whitespace-nowrap tabular-nums">₨{e.debit ? formatCurrency(e.debit) : '—'}</td>
                               <td className="amount !text-emerald-600 dark:!text-emerald-500 whitespace-nowrap tabular-nums">₨{e.credit ? formatCurrency(e.credit) : '—'}</td>
@@ -927,9 +920,9 @@ export default function CustomerPage() {
           <form onSubmit={handleSubmitEntry} className="space-y-3">
             <div><label className="label">Date *</label><input type="date" className="input" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required /></div>
             <div><label className="label">Description</label><input className="input" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Transaction details" /></div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div><label className="label">Debit (₨)</label><input type="number" step="0.01" inputMode="decimal" className="input" value={form.debit} onChange={(e) => setForm({ ...form, debit: e.target.value })} /></div>
-              <div><label className="label">Credit (₨)</label><input type="number" step="0.01" inputMode="decimal" className="input" value={form.credit} onChange={(e) => setForm({ ...form, credit: e.target.value })} /></div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><label className="label">Debit (₨)</label><input type="number" step="0.01" className="input" value={form.debit} onChange={(e) => setForm({ ...form, debit: e.target.value })} /></div>
+              <div><label className="label">Credit (₨)</label><input type="number" step="0.01" className="input" value={form.credit} onChange={(e) => setForm({ ...form, credit: e.target.value })} /></div>
             </div>
             <div className="flex justify-end gap-2 pt-2">
               <button type="button" onClick={closeEntryForm} className="btn-secondary" disabled={isSaving}>Cancel</button>
