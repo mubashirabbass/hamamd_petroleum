@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useReactToPrint } from 'react-to-print';
-import { X, Printer } from 'lucide-react';
+import { X, Printer, FileText } from 'lucide-react';
 import { formatCurrency, formatDate } from '../../lib/utils';
 
 // ── Amount in words ──────────────────────────────────────────────────────────
@@ -31,221 +31,217 @@ interface TransactionReceiptModalProps {
 }
 
 export default function TransactionReceiptModal({ entity, type, onClose }: TransactionReceiptModalProps) {
-  const modalRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const handlePrint = useReactToPrint({ contentRef });
 
   useEffect(() => {
     if (!entity) return;
-    const focusableElements = modalRef.current?.querySelectorAll(
-      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-    );
-    const firstElement = focusableElements?.[0] as HTMLElement;
-    const lastElement  = focusableElements?.[focusableElements.length - 1] as HTMLElement;
-    const printBtn = modalRef.current?.querySelector('button[title="Print Invoice"]') as HTMLElement;
-    (printBtn || firstElement)?.focus();
-
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { onClose(); return; }
-      if (e.key !== 'Tab') return;
-      if (e.shiftKey) {
-        if (document.activeElement === firstElement) { e.preventDefault(); lastElement?.focus(); }
-      } else {
-        if (document.activeElement === lastElement) { e.preventDefault(); firstElement?.focus(); }
-      }
+      if (e.key === 'Escape') onClose();
     };
-
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [entity, onClose]);
 
   if (!entity) return null;
 
-
   const total = entity.amount || (entity.debit || entity.credit) || 0;
 
   const getHeaders = () => {
     if (type === 'sale' || type === 'purchase') {
       return [
-        { label: 'Description (Bill Details)', width: '50%', align: 'left' },
-        { label: 'Unit', width: '15%', align: 'center' },
-        { label: 'Rate (₨)', width: '15%', align: 'right' },
-        { label: 'Qty (L)', width: '15%', align: 'right' },
-        { label: 'Amount (₨)', width: '25%', align: 'right' }
+        { label: 'Description (Bill Details)', width: 'auto', align: 'left' },
+        { label: 'Qty (L)', width: '90px', align: 'right' },
+        { label: 'Rate (₨)', width: '90px', align: 'right' },
+        { label: 'Amount (₨)', width: '120px', align: 'right' }
       ];
     }
     if (type === 'asset' || type === 'liability' || type === 'customer') {
       return [
-        { label: 'Description (Particulars)', width: '55%', align: 'left' },
-        { label: 'Debit (₨)', width: '20%', align: 'right' },
-        { label: 'Credit (₨)', width: '20%', align: 'right' },
-        { label: 'Balance (₨)', width: '25%', align: 'right' }
+        { label: 'Description (Particulars)', width: 'auto', align: 'left' },
+        { label: 'Debit (₨)', width: '120px', align: 'right' },
+        { label: 'Credit (₨)', width: '120px', align: 'right' },
+        { label: 'Balance (₨)', width: '150px', align: 'right' }
       ];
     }
     if (type === 'expense') {
       return [
-        { label: 'Description (Expense Details)', width: '70%', align: 'left' },
-        { label: 'Amount (₨)', width: '30%', align: 'right' }
+        { label: 'Description (Expense Details)', width: 'auto', align: 'left' },
+        { label: 'Amount (₨)', width: '150px', align: 'right' }
       ];
     }
     return [];
   };
-
-  const getRowData = () => {
-    if (type === 'sale' || type === 'purchase') {
-      return [
-        { value: entity.details || entity.description || 'Petroleum Product Sale', align: 'left', className: 'item-details' },
-        { value: 'Liters', align: 'center' },
-        { value: `₨ ${formatCurrency(entity.rate || 0)}`, align: 'right' },
-        { value: (entity.quantity || 0).toLocaleString(), align: 'right' },
-        { value: `₨ ${formatCurrency(entity.amount || 0)}`, align: 'right', className: 'font-black text-[18px]' }
-      ];
-    }
-    if (type === 'asset' || type === 'liability' || type === 'customer') {
-      return [
-        { value: entity.description || 'N/A', align: 'left', className: 'item-details' },
-        { value: entity.debit ? `₨ ${formatCurrency(entity.debit)}` : '—', align: 'right' },
-        { value: entity.credit ? `₨ ${formatCurrency(entity.credit)}` : '—', align: 'right' },
-        { value: `₨ ${formatCurrency(entity.balance || 0)}`, align: 'right', className: 'font-black text-[18px]' }
-      ];
-    }
-    if (type === 'expense') {
-      return [
-        { value: entity.details || 'N/A', align: 'left', className: 'item-details' },
-        { value: `₨ ${formatCurrency(entity.amount || 0)}`, align: 'right', className: 'font-black text-[18px]' }
-      ];
-    }
-    return [];
-  };
-
-  const handlePrint = useReactToPrint({ contentRef: modalRef });
 
   const headers = getHeaders();
-  const rows = getRowData();
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm print:hidden">
-      <div 
-        className="w-full max-w-[850px] max-h-[95vh] bg-white shadow-2xl relative mx-auto rounded-xl overflow-hidden flex flex-col"
-      >
-        {/* Header Actions - Fixed at Top */}
-        <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50">
-          <div className="flex items-center gap-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
-            <h2 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Official Bill Preview</h2>
-          </div>
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={handlePrint} 
-              className="flex items-center gap-2 px-4 py-1.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-all font-black text-[11px] uppercase tracking-wider shadow-lg shadow-slate-900/20" 
-              title="Print Invoice"
-            >
-              <Printer className="w-4 h-4" /> 
-              Print A4 Bill
-            </button>
-            <button 
-              onClick={onClose} 
-              className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 9999,
+      background: 'rgba(2,6,23,0.9)', backdropFilter: 'blur(12px)',
+      display: 'flex', flexDirection: 'column', alignItems: 'center',
+      fontFamily: "'Times New Roman', serif",
+      overflowY: 'auto', paddingBottom: 60,
+    }}>
+      {/* Top bar */}
+      <div style={{
+        position: 'sticky', top: 0, zIndex: 10, width: '100%', maxWidth: '950px',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '15px 25px', background: 'rgba(15,23,42,0.98)',
+        borderBottom: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(20px)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <FileText style={{ width: 22, height: 22, color: '#3b82f6' }} />
+          <span style={{ color: '#fff', fontWeight: 1000, fontSize: 16, textTransform: 'uppercase', letterSpacing: '0.15em' }}>Invoice Preview</span>
         </div>
+        <div style={{ display: 'flex', gap: 12 }}>
+          <button onClick={handlePrint} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 28px', borderRadius: 12, background: 'linear-gradient(135deg,#3b82f6,#1d4ed8)', color: '#fff', fontWeight: 1000, fontSize: 14, border: 'none', cursor: 'pointer', boxShadow: '0 4px 15px rgba(59,130,246,0.3)', textTransform: 'uppercase' }}>
+            <Printer style={{ width: 18, height: 18 }} /> Print Bill
+          </button>
+          <button onClick={onClose} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 44, height: 44, borderRadius: 12, background: '#1e293b', border: '1px solid #334155', color: '#94a3b8', cursor: 'pointer' }}>
+            <X style={{ width: 22, height: 22 }} />
+          </button>
+        </div>
+      </div>
 
-        {/* Live Bill Preview - PERFECTED A4 LAYOUT */}
-        <div className="p-8 bg-slate-100/50 flex-1 overflow-y-auto custom-scrollbar">
-           <div 
-             ref={modalRef}
-             className="bg-white mx-auto w-[210mm] min-h-[297mm] p-[10mm_15mm] flex flex-col shadow-none page-print-container no-print-shadow"
-             style={{ fontFamily: "'Times New Roman', Times, serif" }}
-           >
-              {/* Header Restoration */}
-              <div className="border-[3px] border-double border-[#111] p-[2px] mb-2">
-                <div className="border border-[#111] p-[6px_10px] flex justify-between items-center gap-[10px]">
-                  <div className="w-[70px] h-[70px] flex items-center justify-center">
-                    <img src="/assets/logo-hr.png" alt="HR" className="max-w-full max-h-full object-contain" />
+      <style>{`
+        @page { size: A4 portrait; margin: 0; }
+        @media print {
+          html, body { margin: 0 !important; padding: 0 !important; background: #fff !important; }
+          .no-print { display: none !important; }
+          .page-print-container { margin: 0 !important; padding: 0 !important; width: 210mm !important; }
+          .report-page { 
+            page-break-after: always; 
+            margin: 0 !important; 
+            width: 210mm !important;
+            height: 297mm !important;
+            transform: scale(1);
+            transform-origin: top left;
+          }
+        }
+      `}</style>
+
+      <div ref={contentRef} className="page-print-container" style={{ width: '210mm', margin: '30px auto' }}>
+        <div className="report-page" style={{ position: 'relative', width: '210mm', height: '297mm', background: '#fff', color: '#000', padding: '12mm 15mm', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
+          
+          {/* Formal Letterhead */}
+          <div style={{ border: '4px double #111', padding: '2px', marginBottom: '15px' }}>
+            <div style={{ border: '1.2px solid #111', padding: '12px 15px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '20px' }}>
+                <div style={{ width: 85, height: 85 }}>
+                  <img src="/assets/logo-hr.png" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                </div>
+                <div style={{ textAlign: 'center', flex: 1 }}>
+                  <div style={{ fontSize: '24px', fontWeight: 1000, textTransform: 'uppercase' }}>Hammad Rahim Filling Station</div>
+                  <div style={{ fontSize: '10px', fontWeight: 700, fontStyle: 'italic', textTransform: 'uppercase', color: '#444', marginTop: 4 }}>Muzafar Garh Road, Ada Ghyl Pur, District Jhang</div>
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', textTransform: 'uppercase', fontSize: '9px', fontWeight: 1000, marginTop: 6 }}>
+                    <span>WhatsApp: +92-301-7221831</span>
+                    <span style={{ color: '#111' }}>•</span>
+                    <span>Phone: +92-300-0989192</span>
                   </div>
-                  <div className="text-center flex-1">
-                    <h1 className="text-[24px] font-black uppercase leading-[1.1] mb-1">HAMMAD RAHIM FILLING STATION</h1>
-                    <p className="text-[10.5px] font-bold italic uppercase mb-0.5">Muzafar Garh Road, Ada Ghyl Pur, District Jhang</p>
-                    <div className="flex justify-center gap-[15px] text-[10px] font-black">
-                      <span>📱 WhatsApp: +92-301-7221831</span>
-                      <span>📞 Phone: +92-300-0989192</span>
-                    </div>
-                  </div>
-                  <div className="w-[70px] h-[70px] flex items-center justify-center">
-                    <img src="/assets/logo-go.png" alt="GO" className="max-w-full max-h-full object-contain" />
-                  </div>
+                </div>
+                <div style={{ width: 85, height: 85 }}>
+                  <img src="/assets/logo-go.png" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
                 </div>
               </div>
+            </div>
+          </div>
 
-              {/* Meta Restoration */}
-              <div className="flex items-center border-[1.5px] border-[#111] p-[5px_12px] mb-2 text-[10.5px] font-black uppercase bg-[#f5f5f5]">
-                <div className="flex-1 text-left">Invoice No: {entity.billNo || entity.invoiceNo || entity.id?.slice(0, 8).toUpperCase() || '———'}</div>
-                  {type === 'sale' || type === 'purchase' ? `Product: ${entity.type || 'N/A'}` : `Bill Title : ${type.toUpperCase()}`}
-                <div className="flex-1 text-right">Dated: {formatDate(entity.date)}</div>
+          {/* Invoice Meta Bar */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', border: '2.5px solid #111', padding: '8px 15px', marginBottom: '15px', fontSize: '11px', fontWeight: 1000, textTransform: 'uppercase', background: '#f5f5f5' }}>
+            <span>Invoice No: {entity.billNo || entity.invoiceNo || entity.id?.slice(0, 8).toUpperCase() || '———'}</span>
+            <span>Bill Title: {type.toUpperCase()}</span>
+            <span>Dated: {formatDate(entity.date)}</span>
+          </div>
+
+          {/* Main Content Table */}
+          <table style={{ width: '100%', borderCollapse: 'collapse', border: '2px solid #111' }}>
+            <thead>
+              <tr style={{ background: '#f0f0f0', borderBottom: '2px solid #111' }}>
+                {headers.map((h, i) => (
+                  <th key={i} style={{ padding: '8px', borderRight: i < headers.length - 1 ? '1.5px solid #111' : 'none', textAlign: h.align as any, fontSize: '11px', fontWeight: 1000, width: h.width }}>
+                    {h.label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style={{ padding: '15px 12px', borderRight: (type !== 'expense') ? '1.5px solid #111' : 'none', verticalAlign: 'top' }}>
+                  <div style={{ fontSize: '13px', fontWeight: 1000, color: '#111', marginBottom: 4 }}>{entity.details || entity.description || `${type.toUpperCase()} Entry`}</div>
+                  {entity.vehicleNo && <div style={{ fontSize: '10px', fontWeight: 700, color: '#444' }}>Vehicle No: {entity.vehicleNo}</div>}
+                  {entity.invoiceNo && type !== 'purchase' && <div style={{ fontSize: '10px', fontWeight: 700, color: '#444' }}>Ref No: {entity.invoiceNo}</div>}
+                </td>
+                {type === 'sale' || type === 'purchase' ? (
+                  <>
+                    <td style={{ padding: '15px 8px', borderRight: '1.5px solid #111', textAlign: 'right', verticalAlign: 'top', fontSize: '11px' }}>{entity.quantity?.toLocaleString()} L</td>
+                    <td style={{ padding: '15px 8px', borderRight: '1.5px solid #111', textAlign: 'right', verticalAlign: 'top', fontSize: '11px' }}>₨ {formatCurrency(entity.rate)}</td>
+                    <td style={{ padding: '15px 8px', textAlign: 'right', verticalAlign: 'top', fontSize: '14px', fontWeight: 1000 }}>₨ {formatCurrency(entity.amount)}</td>
+                  </>
+                ) : (type === 'asset' || type === 'liability' || type === 'customer') ? (
+                  <>
+                    <td style={{ padding: '15px 8px', borderRight: '1.5px solid #111', textAlign: 'right', verticalAlign: 'top', color: '#dc2626', fontSize: '11px' }}>{entity.debit ? `₨ ${formatCurrency(entity.debit)}` : '—'}</td>
+                    <td style={{ padding: '15px 8px', borderRight: '1.5px solid #111', textAlign: 'right', verticalAlign: 'top', color: '#059669', fontSize: '11px' }}>{entity.credit ? `₨ ${formatCurrency(entity.credit)}` : '—'}</td>
+                    <td style={{ padding: '15px 8px', textAlign: 'right', verticalAlign: 'top', fontSize: '14px', fontWeight: 1000 }}>₨ {formatCurrency(entity.balance)}</td>
+                  </>
+                ) : (
+                  <td style={{ padding: '15px 8px', textAlign: 'right', verticalAlign: 'top', fontSize: '14px', fontWeight: 1000 }}>₨ {formatCurrency(entity.amount)}</td>
+                )}
+              </tr>
+              {/* Fill vertical space */}
+              <tr style={{ height: '150px' }}>
+                {headers.map((_, i) => (
+                  <td key={i} style={{ borderRight: i < headers.length - 1 ? '1.5px solid #111' : 'none' }}></td>
+                ))}
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr style={{ background: '#f9f9f9', borderTop: '2.5px solid #111' }}>
+                <td colSpan={headers.length - 1} style={{ padding: '12px 15px', textAlign: 'right', fontSize: '12px', fontWeight: 1000, textTransform: 'uppercase' }}>Total Bill Amount</td>
+                <td style={{ padding: '12px 15px', textAlign: 'right', fontSize: '18px', fontWeight: 1000, whiteSpace: 'nowrap' }}>₨ {formatCurrency(total)}</td>
+              </tr>
+            </tfoot>
+          </table>
+
+          <div style={{ flex: 1 }}></div>
+
+          {/* Footer Totals */}
+          <div style={{ paddingTop: 20, marginBottom: '10mm' }}>
+            <div style={{ border: '2.5px solid #111', display: 'grid', gridTemplateColumns: '1fr 1fr', background: '#fdfdfd' }}>
+              <div style={{ padding: '10px 15px', borderRight: '2.5px solid #111' }}>
+                <div style={{ fontSize: '9px', fontWeight: 900, textTransform: 'uppercase' }}>Reference/Invoice ID</div>
+                <div style={{ fontSize: '16px', fontWeight: 1000, fontStyle: 'italic' }}>{entity.billNo || entity.invoiceNo || entity.id?.slice(0, 8).toUpperCase() || '———'}</div>
               </div>
-
-              {/* Table Restoration */}
-              <div className="mt-4">
-                <table className="w-full border-collapse border-x-[1.5px] border-b-[1.5px] border-[#111]">
-                   <thead>
-                      <tr className="border-y-[1.5px] border-[#111] bg-[#ececec]">
-                        {headers.map((h, idx) => (
-                           <th key={idx} className={`p-[4px_6px] text-${h.align} text-[10.5px] font-black uppercase border-r border-[#bbb] last:border-r-0`} style={{ width: h.width }}>{h.label}</th>
-                        ))}
-                      </tr>
-                   </thead>
-                   <tbody>
-                      <tr>
-                        {rows.map((r, idx) => (
-                           <td key={idx} className={`p-[15px_8px] text-${r.align} align-top border-b-[1.5px] border-[#111] ${r.className || ''}`}>{r.value}</td>
-                        ))}
-                      </tr>
-                   </tbody>
-                   <tfoot>
-                     <tr className="bg-[#fcfcfc] border-y-[2px] border-[#111]">
-                       <td colSpan={headers.length - 1} className="p-[12px_12px] text-right text-[12px] font-black uppercase border-r border-[#bbb]">Total Bill Amount</td>
-                       <td className="p-[12px_12px] text-right font-black text-[18px] text-nowrap">₨ {formatCurrency(total)}</td>
-                     </tr>
-                   </tfoot>
-                </table>
-              </div>
-
-              {/* Spacing */}
-              <div className="flex-1"></div>
-
-              {/* Totals Restoration */}
-              <div className="pt-8 mb-[10mm]">
-                <div className="border-[1.5px] border-[#111] grid grid-cols-2 bg-white">
-                   <div className="p-[8px_12px] border-r-[1.5px] border-[#111]">
-                      <div className="text-[10px] font-black uppercase mb-0.5">Reference No.</div>
-                      <div className="text-[18px] font-black italic">{entity.billNo || entity.invoiceNo || entity.id?.slice(0, 8).toUpperCase() || '———'}</div>
-                   </div>
-                   <div className="p-[8px_12px] bg-[#f0f0f0]">
-                      <div className="text-[10px] font-black uppercase mb-0.5">Gross Bill Amount</div>
-                      <div className="text-[22px] font-black inline-block leading-none pb-1 whitespace-nowrap">₨ {formatCurrency(total)}</div>
-                   </div>
-                </div>
-                <div className="border-[1.5px] border-[#111] border-t-0 p-[8px_12px] italic text-[11px] font-black bg-[#fdfdfd]">
-                  Amount In Words: <span className="uppercase ml-2">{toWords(total)}</span>
-                </div>
-
-                <div className="flex justify-between items-end pt-10">
-                   <div className="text-[10.5px] font-bold italic border-l-3 border-[#111] pl-3 leading-tight uppercase text-left">
-                      * Verified Computerized Entry <br />
-                      * Errors and Omissions Accepted
-                   </div>
-                   <div className="text-center w-[280px]">
-                      <div className="h-[60px] flex items-end justify-center mb-1">
-                         <img src="/assets/imtiaz-sign.png" alt="" className="max-h-full max-w-[170px] object-contain" />
-                      </div>
-                      <div className="border-t-[2.5px] border-[#111] pt-1.5">
-                         <div className="text-[16px] font-black uppercase text-black whitespace-nowrap">Muhammad Imtiaz ul Hassan</div>
-                         <div className="text-[10.5px] font-bold uppercase text-[#111] mt-1 whitespace-nowrap">CEO Hammad Rahim Filling station</div>
-                      </div>
-                   </div>
+              <div style={{ padding: '10px 15px', background: '#fff' }}>
+                <div style={{ fontSize: '9px', fontWeight: 1000, textTransform: 'uppercase' }}>Gross Amount (PKR)</div>
+                <div style={{ fontSize: '22px', fontWeight: 1000, borderBottom: '3px solid #000', display: 'inline-block', lineHeight: 1 }}>
+                  ₨ {formatCurrency(total)}
                 </div>
               </div>
-           </div>
+            </div>
+            
+            <div style={{ padding: '8px 12px', fontStyle: 'italic', fontSize: '10px', fontWeight: 1000, border: '2.5px solid #111', borderTop: 'none', background: '#fafafa' }}>
+              Amount in words: <span style={{ textTransform: 'uppercase' }}>{toWords(total)}</span>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', paddingTop: 30 }}>
+              <div style={{ textAlign: 'left' }}>
+                <div style={{ fontSize: '10px', fontWeight: 700, fontStyle: 'italic', color: '#555' }}>
+                  This is a computer generated entry.<br />Errors and omissions are accepted.
+                </div>
+                <div style={{ marginTop: 12, fontSize: '9px', color: '#999', fontStyle: 'italic' }}>
+                  Software Solution by <strong>Mb Soft and Tech</strong> — 0304-1646290
+                </div>
+              </div>
+              <div style={{ textAlign: 'center', width: '280px' }}>
+                <div style={{ width: '100%', height: '60px', borderBottom: '2.5px solid #111', marginBottom: 5, position: 'relative' }}>
+                  <img src="/assets/imtiaz-sign.png" style={{ position: 'absolute', bottom: -5, left: '50%', transform: 'translateX(-50%)', height: '75px', objectFit: 'contain' }} />
+                </div>
+                <div style={{ fontSize: '14px', fontWeight: 1000, textTransform: 'uppercase' }}>Muhammad Imtiaz ul Hassan</div>
+                <div style={{ fontSize: '9px', fontWeight: 800, color: '#444' }}>(Chief Executive Officer)</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

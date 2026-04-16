@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  ShoppingCart, TrendingUp, BookOpen, DollarSign,
+  ShoppingCart, TrendingUp, DollarSign,
   Package, AlertTriangle, BarChart3, Users, ArrowRight,
   Fuel, Zap, Calendar, XCircle, Keyboard, Sun, Moon,
   User, Mail, Shield, Clock, X, LogOut
@@ -26,43 +26,44 @@ function DigitalClock() {
   const ampm = hh >= 12 ? 'PM' : 'AM';
 
   const dateStr = now.toLocaleDateString('en-PK', {
-    weekday: 'short', day: 'numeric', month: 'short'
+    weekday: 'long', day: 'numeric', month: 'long'
   });
 
   return (
-    <div className="flex items-center gap-3 sm:gap-4">
+    <div className="flex items-center gap-4">
       {/* Clock Content Group */}
       <div className="flex flex-col items-start select-none">
         {/* Time Row */}
         <div className="flex items-baseline leading-none">
-          <span className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">
+          <span className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">
             {displayHH}
           </span>
-          <span className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mx-0.5">:</span>
-          <span className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">
+          <span className="text-2xl font-black text-slate-900 dark:text-white mx-0.5">:</span>
+          <span className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">
             {mm}
           </span>
-          <span className="text-[8px] sm:text-[9px] font-black text-primary-600 dark:text-primary-400 uppercase tracking-widest ml-1 mb-0.5">
+          <span className="text-[9px] font-black text-primary-600 dark:text-primary-400 uppercase tracking-widest ml-1 mb-0.5">
             {ampm}
           </span>
         </div>
         
         {/* Date Row - Exactly Under Time */}
         <div className="mt-0.5">
-          <p className="text-[8px] sm:text-[9px] font-bold text-slate-500 dark:text-dark-400 uppercase tracking-[0.05em]">
+          <p className="text-[9px] font-bold text-slate-500 dark:text-dark-400 uppercase tracking-[0.05em]">
             {dateStr}
           </p>
         </div>
       </div>
 
-      {/* Theme Toggle Button */}
+      {/* Theme Toggle Button - Smaller */}
       <button
         onClick={toggleTheme}
-        className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center transition-all duration-300 border border-slate-200 dark:border-dark-700 bg-white/50 dark:bg-dark-800/50 hover:bg-white dark:hover:bg-dark-800 shadow-sm flex-shrink-0"
+        title={theme === 'dark' ? 'Switch to Day Mode' : 'Switch to Night Mode'}
+        className="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 border border-slate-200 dark:border-dark-700 bg-white/50 dark:bg-dark-800/50 hover:bg-white dark:hover:bg-dark-800 shadow-sm group active:scale-95 flex-shrink-0"
       >
         {theme === 'dark' 
-          ? <Sun className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400" /> 
-          : <Moon className="w-4 h-4 sm:w-5 sm:h-5 text-primary-600" />
+          ? <Sun className="w-5 h-5 text-amber-400 group-hover:rotate-45 transition-transform" /> 
+          : <Moon className="w-5 h-5 text-primary-600 group-hover:-rotate-12 transition-transform" />
         }
       </button>
     </div>
@@ -234,33 +235,53 @@ export default function Dashboard() {
   const { purchases, sales, expenseEntries } = filteredData;
 
   const stats = useMemo(() => {
-    const hsdPurchasedAmount = purchases.filter(p => p.type === 'HSD').reduce((s, p) => s + p.totalAmount, 0);
-    const pmgPurchasedAmount = purchases.filter(p => p.type === 'PMG').reduce((s, p) => s + p.totalAmount, 0);
     const hsdSoldAmount      = sales.filter(s => s.type === 'HSD').reduce((s, x) => s + x.amount, 0);
     const pmgSoldAmount      = sales.filter(s => s.type === 'PMG').reduce((s, x) => s + x.amount, 0);
-    const hsdPurchasedQty    = purchases.filter(p => p.type === 'HSD').reduce((s, p) => s + p.quantity, 0);
-    const pmgPurchasedQty    = purchases.filter(p => p.type === 'PMG').reduce((s, p) => s + p.quantity, 0);
     const hsdSoldQty         = sales.filter(s => s.type === 'HSD').reduce((s, x) => s + x.quantity, 0);
     const pmgSoldQty         = sales.filter(s => s.type === 'PMG').reduce((s, x) => s + x.quantity, 0);
-    const totalExpense        = expenseEntries.reduce((s, e) => s + e.amount, 0);
-    const profit              = (hsdSoldAmount + pmgSoldAmount) - (hsdPurchasedAmount + pmgPurchasedAmount);
+    const totalExpense       = expenseEntries.reduce((s, e) => s + e.amount, 0);
 
-    const hsdOP = settings.startDate ? rawPurchases.filter(p => p.date >= settings.startDate && p.type === 'HSD') : rawPurchases.filter(p => p.type === 'HSD');
-    const pmgOP = settings.startDate ? rawPurchases.filter(p => p.date >= settings.startDate && p.type === 'PMG') : rawPurchases.filter(p => p.type === 'PMG');
-    const hsdStock = hsdOP.reduce((s, p) => s + p.quantity, 0)
-                   - (settings.startDate ? rawSales.filter(s => s.date >= settings.startDate && s.type === 'HSD') : rawSales.filter(s => s.type === 'HSD')).reduce((s, x) => s + x.quantity, 0);
-    const pmgStock = pmgOP.reduce((s, p) => s + p.quantity, 0)
-                   - (settings.startDate ? rawSales.filter(s => s.date >= settings.startDate && s.type === 'PMG') : rawSales.filter(s => s.type === 'PMG')).reduce((s, x) => s + x.quantity, 0);
+    // Get Base Purchases (since business start) for cost calculation
+    const basePurchases = settings.startDate ? rawPurchases.filter(p => p.date >= settings.startDate) : rawPurchases;
+    const baseSales     = settings.startDate ? rawSales.filter(s => s.date >= settings.startDate)     : rawSales;
 
-    const hsdOPQ  = hsdOP.reduce((s, p) => s + p.quantity, 0);
-    const hsdOPA  = hsdOP.reduce((s, p) => s + p.totalAmount, 0);
-    const hsdStockAmt = hsdStock * (hsdOPQ > 0 ? hsdOPA / hsdOPQ : 0);
-    const pmgOPQ  = pmgOP.reduce((s, p) => s + p.quantity, 0);
-    const pmgOPA  = pmgOP.reduce((s, p) => s + p.totalAmount, 0);
-    const pmgStockAmt = pmgStock * (pmgOPQ > 0 ? pmgOPA / pmgOPQ : 0);
+    const hsdBaseP = basePurchases.filter(p => p.type === 'HSD');
+    const pmgBaseP = basePurchases.filter(p => p.type === 'PMG');
 
-    return { hsdPurchasedAmount, pmgPurchasedAmount, hsdSoldAmount, pmgSoldAmount, hsdPurchasedQty, pmgPurchasedQty, hsdSoldQty, pmgSoldQty, totalExpense, profit, hsdStock, pmgStock, hsdStockAmt, pmgStockAmt };
-  }, [purchases, sales, expenseEntries, rawPurchases, rawSales, settings.startDate]);
+    const hsdTotalPQty = hsdBaseP.reduce((s, p) => s + p.quantity, 0);
+    const hsdTotalPAmt = hsdBaseP.reduce((s, p) => s + p.totalAmount, 0);
+    const hsdAvgRate   = hsdTotalPQty > 0 ? hsdTotalPAmt / hsdTotalPQty : 0;
+
+    const pmgTotalPQty = pmgBaseP.reduce((s, p) => s + p.quantity, 0);
+    const pmgTotalPAmt = pmgBaseP.reduce((s, p) => s + p.totalAmount, 0);
+    const pmgAvgRate   = pmgTotalPQty > 0 ? pmgTotalPAmt / pmgTotalPQty : 0;
+
+    // Gross Profit = Sales Revenue - Cost of Goods Sold (COGS)
+    // COGS = Sold Qty * Avg Purchase Rate
+    const hsdCOGS = hsdSoldQty * hsdAvgRate;
+    const pmgCOGS = pmgSoldQty * pmgAvgRate;
+    const grossProfit = (hsdSoldAmount + pmgSoldAmount) - (hsdCOGS + pmgCOGS);
+
+    // Net Profit = Gross Profit - Expenses
+    const netProfit = grossProfit - totalExpense;
+
+    // Inventory Stocks
+    const hsdSoldSinceStart = baseSales.filter(s => s.type === 'HSD').reduce((s, x) => s + x.quantity, 0);
+    const pmgSoldSinceStart = baseSales.filter(s => s.type === 'PMG').reduce((s, x) => s + x.quantity, 0);
+    
+    const hsdStock = hsdTotalPQty - hsdSoldSinceStart;
+    const pmgStock = pmgTotalPQty - pmgSoldSinceStart;
+    const hsdStockAmt = hsdStock * hsdAvgRate;
+    const pmgStockAmt = pmgStock * pmgAvgRate;
+
+    return { 
+      hsdSoldAmount, pmgSoldAmount, hsdSoldQty, pmgSoldQty, totalExpense, 
+      grossProfit, netProfit, hsdStock, pmgStock, hsdStockAmt, pmgStockAmt,
+      hsdPurchasedAmount: hsdBaseP.reduce((s, p) => s + (p.date >= (filter === 'overall' ? '0' : today()) ? p.totalAmount : 0), 0), // Temp for visual if needed
+      hsdPurchasedQty: hsdTotalPQty,
+      pmgPurchasedQty: pmgTotalPQty
+    };
+  }, [purchases, sales, expenseEntries, rawPurchases, rawSales, settings.startDate, filter]);
 
   const modules = [
     { label: 'Purchase',  path: '/purchase',  icon: ShoppingCart, color: 'text-primary-600 dark:text-primary-400', bg: 'bg-primary-600/10 border-primary-600/20', desc: `${purchases.length} records`,              fkey: 'F2' },
@@ -279,26 +300,27 @@ export default function Dashboard() {
     <div className="animate-fade-in space-y-6 pb-10 h-full overflow-y-auto smart-scroll pr-2">
 
       {/* ── Top Header: Title | Clock + Theme | User Card ── */}
-      <div className="flex flex-col gap-4">
-        {/* Title and Petrol Icon */}
-        <div className="flex items-center gap-4 sm:gap-5">
-          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl sm:rounded-3xl flex items-center justify-center shadow-xl border border-emerald-500/20 bg-emerald-600/10 flex-shrink-0">
-            <Fuel className="w-7 h-7 sm:w-8 sm:h-8 text-emerald-600 dark:text-emerald-400" />
+      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+
+        {/* Left: Petrol Icon + Title */}
+        <div className="flex items-center gap-5">
+          <div className="w-14 h-14 rounded-3xl flex items-center justify-center shadow-xl border border-emerald-500/20 bg-emerald-600/10 flex-shrink-0">
+            <Fuel className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
           </div>
-          <div className="min-w-0">
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tighter leading-tight truncate">
-              Hammad Rahim <span className="sm:hidden text-emerald-600">FS</span>
-              <span className="hidden sm:inline">Filling Station</span>
-            </h1>
-            <p className="text-slate-500 dark:text-dark-400 text-[10px] sm:text-xs font-bold uppercase tracking-widest">Business Dashboard</p>
+          <div>
+            <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Hammad Rahim Filling Station</h1>
+            <p className="text-slate-500 dark:text-dark-400 text-sm font-bold uppercase tracking-widest">Business Dashboard</p>
           </div>
         </div>
 
-        {/* Clock and User Card Group - Stacks on mobile */}
-        <div className="flex items-center justify-between gap-2">
-          <div className="glass rounded-2xl px-3 py-1.5 sm:px-4 sm:py-2 border border-primary-500/20 shadow-lg bg-primary-500/5 dark:bg-primary-900/10">
+        {/* Right: Clock (with theme toggle) + User card */}
+        <div className="flex items-center gap-3">
+          {/* Premium clock panel */}
+          <div className="glass rounded-2xl px-4 py-2 border border-primary-500/20 shadow-lg bg-primary-500/5 dark:bg-primary-900/10">
             <DigitalClock />
           </div>
+
+          {/* Signed-in user card */}
           <UserCard />
         </div>
       </div>
@@ -403,17 +425,21 @@ export default function Dashboard() {
       {/* ── Financial Overview Cards ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {[
-          { label: 'Total Sales',     value: `₨ ${formatCurrency(stats.hsdSoldAmount + stats.pmgSoldAmount)}`,           icon: TrendingUp,   color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-600/20' },
-          { label: 'Total Purchases', value: `₨ ${formatCurrency(stats.hsdPurchasedAmount + stats.pmgPurchasedAmount)}`, icon: ShoppingCart, color: 'text-primary-600 dark:text-primary-400', bg: 'bg-primary-500/10',  border: 'border-primary-600/20' },
-          { label: 'Total Expenses',  value: `₨ ${formatCurrency(stats.totalExpense)}`,                                   icon: DollarSign,   color: 'text-red-600 dark:text-red-400',         bg: 'bg-red-500/10',      border: 'border-red-600/20' },
-          { label: 'Gross Profit',    value: `₨ ${formatCurrency(stats.profit)}`,                                         icon: BarChart3,    color: stats.profit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400', bg: stats.profit >= 0 ? 'bg-emerald-500/10' : 'bg-red-500/10', border: stats.profit >= 0 ? 'border-emerald-600/20' : 'border-red-600/20' },
+          { label: 'Total Sales',     value: `₨ ${formatCurrency(stats.hsdSoldAmount + stats.pmgSoldAmount)}`,           icon: TrendingUp,   color: 'text-primary-600 dark:text-primary-400', bg: 'bg-primary-500/10', border: 'border-primary-600/20' },
+          { label: 'Total Expenses',  value: `₨ ${formatCurrency(stats.totalExpense)}`,                                   icon: XCircle,      color: 'text-red-600 dark:text-red-400',         bg: 'bg-red-500/10',      border: 'border-red-600/20' },
+          { label: 'Gross Profit',    value: `₨ ${formatCurrency(stats.grossProfit)}`,                                    icon: BarChart3,    color: stats.grossProfit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400', bg: stats.grossProfit >= 0 ? 'bg-emerald-500/10' : 'bg-red-500/10', border: stats.grossProfit >= 0 ? 'border-emerald-600/20' : 'border-red-600/20' },
+          { label: 'Net Profit',      value: `₨ ${formatCurrency(stats.netProfit)}`,                                      icon: DollarSign,   color: stats.netProfit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400', bg: stats.netProfit >= 0 ? 'bg-emerald-500/20' : 'bg-red-500/20', border: stats.netProfit >= 0 ? 'border-emerald-600/30' : 'border-red-600/30' },
         ].map(s => (
           <div key={s.label} className={cn('glass p-6 rounded-3xl border-l-4 shadow-xl animate-in slide-in-from-bottom duration-350 min-w-0 flex flex-col', s.border)}>
             <div className={`w-12 h-12 rounded-2xl ${s.bg} flex items-center justify-center mb-4 flex-shrink-0`}>
               <s.icon className={`w-6 h-6 ${s.color}`} />
             </div>
             <p className="text-[10px] font-black text-slate-400 dark:text-dark-500 uppercase tracking-[0.2em] mb-1 truncate w-full">{s.label}</p>
-            <p className={cn('text-2xl font-black tracking-tighter tabular-nums break-words break-all whitespace-normal leading-tight w-full', s.color)} title={s.value}>{s.value}</p>
+            <p className={cn(
+              'font-black tracking-tighter tabular-nums break-words break-all whitespace-normal leading-tight w-full',
+              s.value.length > 20 ? 'text-lg' : s.value.length > 15 ? 'text-xl' : 'text-2xl',
+              s.color
+            )} title={s.value}>{s.value}</p>
           </div>
         ))}
       </div>
@@ -435,21 +461,21 @@ export default function Dashboard() {
                 <p className="text-sm text-slate-500 dark:text-dark-400 font-bold uppercase tracking-widest truncate w-full">{f.label}</p>
               </div>
             </div>
-            <div className="grid grid-cols-2 xs:grid-cols-3 gap-3 sm:gap-4 lg:gap-6 relative border-t border-slate-100 dark:border-dark-800/60 pt-8">
+            <div className="grid grid-cols-3 gap-4 lg:gap-6 relative border-t border-slate-100 dark:border-dark-800/60 pt-8">
               {[
-                { label: 'Purchase',  qty: f.pQty,    amt: f.pAmt,    highlight: false, hideOnSmall: false },
-                { label: 'Sale',      qty: f.soldQty, amt: f.soldAmt, highlight: false, hideOnSmall: false },
-                { label: 'Remaining', qty: f.stock,   amt: f.stockAmt,highlight: true,  hideOnSmall: false  },
+                { label: 'Purchase',  qty: f.pQty,    amt: f.pAmt,    highlight: false },
+                { label: 'Sale',      qty: f.soldQty, amt: f.soldAmt, highlight: false },
+                { label: 'Remaining', qty: f.stock,   amt: f.stockAmt,highlight: true  },
               ].map(col => (
-                <div key={col.label} className={cn("space-y-1.5 min-w-0")}>
+                <div key={col.label} className="space-y-1.5 min-w-0">
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest truncate">{col.label}</p>
                   <div className="flex items-baseline gap-1">
-                    <span className={cn("font-black tabular-nums tracking-tighter break-all whitespace-normal leading-tight w-full", col.highlight ? `text-lg sm:text-xl lg:text-2xl text-${f.color}-600` : 'text-sm sm:text-lg lg:text-xl text-slate-900 dark:text-white')} title={col.qty.toLocaleString()}>
+                    <span className={cn("font-black tabular-nums tracking-tighter break-all whitespace-normal leading-tight w-full", col.highlight ? `text-xl lg:text-2xl text-${f.color}-600` : 'text-lg lg:text-xl text-slate-900 dark:text-white')} title={col.qty.toLocaleString()}>
                       {col.qty.toLocaleString()}
                     </span>
-                    <span className="text-[8px] font-bold text-slate-400 uppercase break-keep ml-0.5 relative -top-1 block">L</span>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase break-keep ml-0.5 relative -top-1 block">L</span>
                   </div>
-                  <p className="text-[9px] sm:text-[11px] font-bold text-slate-400 tabular-nums break-words break-all whitespace-normal leading-tight w-full">₨ {formatCurrency(col.amt)}</p>
+                  <p className="text-[11px] font-bold text-slate-400 tabular-nums break-words break-all whitespace-normal leading-tight w-full">Avg Purchase: ₨ {formatCurrency(col.label === 'Purchase' ? (f.type === 'HSD' ? (stats as any).hsdAvgRate : (stats as any).pmgAvgRate) : (f.amt / (col.qty || 1)))}</p>
                 </div>
               ))}
             </div>
