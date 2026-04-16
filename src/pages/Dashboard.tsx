@@ -235,33 +235,53 @@ export default function Dashboard() {
   const { purchases, sales, expenseEntries } = filteredData;
 
   const stats = useMemo(() => {
-    const hsdPurchasedAmount = purchases.filter(p => p.type === 'HSD').reduce((s, p) => s + p.totalAmount, 0);
-    const pmgPurchasedAmount = purchases.filter(p => p.type === 'PMG').reduce((s, p) => s + p.totalAmount, 0);
     const hsdSoldAmount      = sales.filter(s => s.type === 'HSD').reduce((s, x) => s + x.amount, 0);
     const pmgSoldAmount      = sales.filter(s => s.type === 'PMG').reduce((s, x) => s + x.amount, 0);
-    const hsdPurchasedQty    = purchases.filter(p => p.type === 'HSD').reduce((s, p) => s + p.quantity, 0);
-    const pmgPurchasedQty    = purchases.filter(p => p.type === 'PMG').reduce((s, p) => s + p.quantity, 0);
     const hsdSoldQty         = sales.filter(s => s.type === 'HSD').reduce((s, x) => s + x.quantity, 0);
     const pmgSoldQty         = sales.filter(s => s.type === 'PMG').reduce((s, x) => s + x.quantity, 0);
-    const totalExpense        = expenseEntries.reduce((s, e) => s + e.amount, 0);
-    const profit              = (hsdSoldAmount + pmgSoldAmount) - (hsdPurchasedAmount + pmgPurchasedAmount);
+    const totalExpense       = expenseEntries.reduce((s, e) => s + e.amount, 0);
 
-    const hsdOP = settings.startDate ? rawPurchases.filter(p => p.date >= settings.startDate && p.type === 'HSD') : rawPurchases.filter(p => p.type === 'HSD');
-    const pmgOP = settings.startDate ? rawPurchases.filter(p => p.date >= settings.startDate && p.type === 'PMG') : rawPurchases.filter(p => p.type === 'PMG');
-    const hsdStock = hsdOP.reduce((s, p) => s + p.quantity, 0)
-                   - (settings.startDate ? rawSales.filter(s => s.date >= settings.startDate && s.type === 'HSD') : rawSales.filter(s => s.type === 'HSD')).reduce((s, x) => s + x.quantity, 0);
-    const pmgStock = pmgOP.reduce((s, p) => s + p.quantity, 0)
-                   - (settings.startDate ? rawSales.filter(s => s.date >= settings.startDate && s.type === 'PMG') : rawSales.filter(s => s.type === 'PMG')).reduce((s, x) => s + x.quantity, 0);
+    // Get Base Purchases (since business start) for cost calculation
+    const basePurchases = settings.startDate ? rawPurchases.filter(p => p.date >= settings.startDate) : rawPurchases;
+    const baseSales     = settings.startDate ? rawSales.filter(s => s.date >= settings.startDate)     : rawSales;
 
-    const hsdOPQ  = hsdOP.reduce((s, p) => s + p.quantity, 0);
-    const hsdOPA  = hsdOP.reduce((s, p) => s + p.totalAmount, 0);
-    const hsdStockAmt = hsdStock * (hsdOPQ > 0 ? hsdOPA / hsdOPQ : 0);
-    const pmgOPQ  = pmgOP.reduce((s, p) => s + p.quantity, 0);
-    const pmgOPA  = pmgOP.reduce((s, p) => s + p.totalAmount, 0);
-    const pmgStockAmt = pmgStock * (pmgOPQ > 0 ? pmgOPA / pmgOPQ : 0);
+    const hsdBaseP = basePurchases.filter(p => p.type === 'HSD');
+    const pmgBaseP = basePurchases.filter(p => p.type === 'PMG');
 
-    return { hsdPurchasedAmount, pmgPurchasedAmount, hsdSoldAmount, pmgSoldAmount, hsdPurchasedQty, pmgPurchasedQty, hsdSoldQty, pmgSoldQty, totalExpense, profit, hsdStock, pmgStock, hsdStockAmt, pmgStockAmt };
-  }, [purchases, sales, expenseEntries, rawPurchases, rawSales, settings.startDate]);
+    const hsdTotalPQty = hsdBaseP.reduce((s, p) => s + p.quantity, 0);
+    const hsdTotalPAmt = hsdBaseP.reduce((s, p) => s + p.totalAmount, 0);
+    const hsdAvgRate   = hsdTotalPQty > 0 ? hsdTotalPAmt / hsdTotalPQty : 0;
+
+    const pmgTotalPQty = pmgBaseP.reduce((s, p) => s + p.quantity, 0);
+    const pmgTotalPAmt = pmgBaseP.reduce((s, p) => s + p.totalAmount, 0);
+    const pmgAvgRate   = pmgTotalPQty > 0 ? pmgTotalPAmt / pmgTotalPQty : 0;
+
+    // Gross Profit = Sales Revenue - Cost of Goods Sold (COGS)
+    // COGS = Sold Qty * Avg Purchase Rate
+    const hsdCOGS = hsdSoldQty * hsdAvgRate;
+    const pmgCOGS = pmgSoldQty * pmgAvgRate;
+    const grossProfit = (hsdSoldAmount + pmgSoldAmount) - (hsdCOGS + pmgCOGS);
+
+    // Net Profit = Gross Profit - Expenses
+    const netProfit = grossProfit - totalExpense;
+
+    // Inventory Stocks
+    const hsdSoldSinceStart = baseSales.filter(s => s.type === 'HSD').reduce((s, x) => s + x.quantity, 0);
+    const pmgSoldSinceStart = baseSales.filter(s => s.type === 'PMG').reduce((s, x) => s + x.quantity, 0);
+    
+    const hsdStock = hsdTotalPQty - hsdSoldSinceStart;
+    const pmgStock = pmgTotalPQty - pmgSoldSinceStart;
+    const hsdStockAmt = hsdStock * hsdAvgRate;
+    const pmgStockAmt = pmgStock * pmgAvgRate;
+
+    return { 
+      hsdSoldAmount, pmgSoldAmount, hsdSoldQty, pmgSoldQty, totalExpense, 
+      grossProfit, netProfit, hsdStock, pmgStock, hsdStockAmt, pmgStockAmt,
+      hsdPurchasedAmount: hsdBaseP.reduce((s, p) => s + (p.date >= (filter === 'overall' ? '0' : today()) ? p.totalAmount : 0), 0), // Temp for visual if needed
+      hsdPurchasedQty: hsdTotalPQty,
+      pmgPurchasedQty: pmgTotalPQty
+    };
+  }, [purchases, sales, expenseEntries, rawPurchases, rawSales, settings.startDate, filter]);
 
   const modules = [
     { label: 'Purchase',  path: '/purchase',  icon: ShoppingCart, color: 'text-primary-600 dark:text-primary-400', bg: 'bg-primary-600/10 border-primary-600/20', desc: `${purchases.length} records`,              fkey: 'F2' },
@@ -405,10 +425,10 @@ export default function Dashboard() {
       {/* ── Financial Overview Cards ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {[
-          { label: 'Total Sales',     value: `₨ ${formatCurrency(stats.hsdSoldAmount + stats.pmgSoldAmount)}`,           icon: TrendingUp,   color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-600/20' },
-          { label: 'Total Purchases', value: `₨ ${formatCurrency(stats.hsdPurchasedAmount + stats.pmgPurchasedAmount)}`, icon: ShoppingCart, color: 'text-primary-600 dark:text-primary-400', bg: 'bg-primary-500/10',  border: 'border-primary-600/20' },
-          { label: 'Total Expenses',  value: `₨ ${formatCurrency(stats.totalExpense)}`,                                   icon: DollarSign,   color: 'text-red-600 dark:text-red-400',         bg: 'bg-red-500/10',      border: 'border-red-600/20' },
-          { label: 'Gross Profit',    value: `₨ ${formatCurrency(stats.profit)}`,                                         icon: BarChart3,    color: stats.profit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400', bg: stats.profit >= 0 ? 'bg-emerald-500/10' : 'bg-red-500/10', border: stats.profit >= 0 ? 'border-emerald-600/20' : 'border-red-600/20' },
+          { label: 'Total Sales',     value: `₨ ${formatCurrency(stats.hsdSoldAmount + stats.pmgSoldAmount)}`,           icon: TrendingUp,   color: 'text-primary-600 dark:text-primary-400', bg: 'bg-primary-500/10', border: 'border-primary-600/20' },
+          { label: 'Total Expenses',  value: `₨ ${formatCurrency(stats.totalExpense)}`,                                   icon: XCircle,      color: 'text-red-600 dark:text-red-400',         bg: 'bg-red-500/10',      border: 'border-red-600/20' },
+          { label: 'Gross Profit',    value: `₨ ${formatCurrency(stats.grossProfit)}`,                                    icon: BarChart3,    color: stats.grossProfit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400', bg: stats.grossProfit >= 0 ? 'bg-emerald-500/10' : 'bg-red-500/10', border: stats.grossProfit >= 0 ? 'border-emerald-600/20' : 'border-red-600/20' },
+          { label: 'Net Profit',      value: `₨ ${formatCurrency(stats.netProfit)}`,                                      icon: DollarSign,   color: stats.netProfit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400', bg: stats.netProfit >= 0 ? 'bg-emerald-500/20' : 'bg-red-500/20', border: stats.netProfit >= 0 ? 'border-emerald-600/30' : 'border-red-600/30' },
         ].map(s => (
           <div key={s.label} className={cn('glass p-6 rounded-3xl border-l-4 shadow-xl animate-in slide-in-from-bottom duration-350 min-w-0 flex flex-col', s.border)}>
             <div className={`w-12 h-12 rounded-2xl ${s.bg} flex items-center justify-center mb-4 flex-shrink-0`}>
@@ -455,7 +475,7 @@ export default function Dashboard() {
                     </span>
                     <span className="text-[9px] font-bold text-slate-400 uppercase break-keep ml-0.5 relative -top-1 block">L</span>
                   </div>
-                  <p className="text-[11px] font-bold text-slate-400 tabular-nums break-words break-all whitespace-normal leading-tight w-full">₨ {formatCurrency(col.amt)}</p>
+                  <p className="text-[11px] font-bold text-slate-400 tabular-nums break-words break-all whitespace-normal leading-tight w-full">Avg Purchase: ₨ {formatCurrency(col.label === 'Purchase' ? (f.type === 'HSD' ? (stats as any).hsdAvgRate : (stats as any).pmgAvgRate) : (f.amt / (col.qty || 1)))}</p>
                 </div>
               ))}
             </div>
