@@ -415,7 +415,11 @@ export default function Dashboard() {
               <s.icon className={`w-6 h-6 ${s.color}`} />
             </div>
             <p className="text-[10px] font-black text-slate-400 dark:text-dark-500 uppercase tracking-[0.2em] mb-1 truncate w-full">{s.label}</p>
-            <p className={cn('text-2xl font-black tracking-tighter tabular-nums break-words break-all whitespace-normal leading-tight w-full', s.color)} title={s.value}>{s.value}</p>
+            <p className={cn(
+              'font-black tracking-tighter tabular-nums break-words break-all whitespace-normal leading-tight w-full',
+              s.value.length > 20 ? 'text-lg' : s.value.length > 15 ? 'text-xl' : 'text-2xl',
+              s.color
+            )} title={s.value}>{s.value}</p>
           </div>
         ))}
       </div>
