@@ -432,8 +432,8 @@ export default function SalePage() {
                     ))}
                   </tbody>
                   {paged.length > 0 && (
-                    <tfoot className="border-t-[3px] border-black dark:border-black bg-slate-50/50 dark:bg-dark-900/50">
-                      <tr className="bg-slate-200 dark:bg-dark-800 border-t-2 border-slate-400">
+                    <tfoot className="border-t-[3px] border-slate-300 dark:border-dark-700 bg-slate-50/50 dark:bg-dark-900/50">
+                      <tr className="bg-slate-200 dark:bg-dark-800">
                         <td colSpan={3} className="px-4 py-3 text-right">
                           <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tighter">Grand Total Analysis</span>
                         </td>
