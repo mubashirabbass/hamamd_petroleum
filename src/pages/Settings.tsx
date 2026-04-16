@@ -266,6 +266,17 @@ function BackupPanel() {
         </div>
       )}
 
+      {/* ── Initial Loading Overlay ────────────────────────────────────────── */}
+      {checkingStatus && !connected && (
+        <div className="bg-white/50 dark:bg-dark-950/50 backdrop-blur-md rounded-2xl border border-slate-200 dark:border-dark-700 p-12 flex flex-col items-center justify-center text-center animate-pulse">
+           <div className="w-20 h-20 bg-primary-500/10 rounded-3xl flex items-center justify-center mb-6 border border-primary-500/20">
+             <RefreshCcw className="w-10 h-10 text-primary-500 animate-spin" />
+           </div>
+           <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Syncing Account Status</h3>
+           <p className="text-sm text-slate-500 dark:text-dark-400 mt-2 font-black uppercase tracking-[0.2em]">Please Wait...</p>
+        </div>
+      )}
+
       {/* ── Connection Status Banner ────────────────────────────────────────── */}
       <div className={cn(
         'rounded-2xl border p-5 flex items-center justify-between gap-4',
@@ -280,17 +291,24 @@ function BackupPanel() {
           </div>
           <div>
             <h3 className={cn('font-black text-lg', connected ? 'text-emerald-400' : 'text-white')}>
-              {connected ? 'Google Drive Connected' : 'Cloud Backup — Setup Required'}
+              {connected ? 'Cloud Backup Connected' : 'Cloud Backup — Setup Required'}
             </h3>
             {connected ? (
-              <div className="flex items-center gap-2 mt-0.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-sm text-emerald-300 font-medium">{driveEmail}</span>
+              <div className="flex flex-col gap-1 mt-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-base text-emerald-600 dark:text-emerald-400 font-black tracking-tight">{driveEmail}</span>
+                </div>
+                {driveName && (
+                  <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] pl-4 flex items-center gap-2 opacity-70">
+                    <UserCog className="w-3 h-3" /> {driveName}
+                  </p>
+                )}
               </div>
             ) : checkingStatus ? (
-              <p className="text-sm text-slate-500 mt-0.5 animate-pulse">Checking connection…</p>
+              <p className="text-sm text-slate-500 mt-0.5 animate-pulse">Verifying credentials…</p>
             ) : (
-              <p className="text-sm text-slate-500 mt-0.5">Connect in 3 steps to enable automatic cloud backups.</p>
+              <p className="text-sm text-slate-500 mt-0.5">Automated backups to your personal Google Drive.</p>
             )}
           </div>
         </div>
@@ -606,6 +624,31 @@ function BackupPanel() {
           </label>
         </div>
       </div>
+
+      {/* ── Premium Processing Overlay ────────────────────────────────────────── */}
+      {progress.active && (
+        <div className="fixed inset-0 z-[10000] flex flex-col items-center justify-center p-6 bg-slate-950/80 backdrop-blur-xl animate-in fade-in duration-500">
+           <div className="relative mb-8">
+              <div className="absolute inset-0 bg-primary-500/20 blur-3xl rounded-full animate-pulse" />
+              <div className="relative w-24 h-24 border-t-4 border-r-4 border-primary-500 rounded-full animate-spin shadow-2xl shadow-primary-500/20" />
+              <Cloud className="absolute inset-0 m-auto w-10 h-10 text-white animate-bounce" />
+           </div>
+           
+           <div className="text-center max-w-sm">
+             <h2 className="text-2xl font-black text-white mb-2 uppercase tracking-tighter">System Processing</h2>
+             <p className="text-primary-400 font-bold text-sm mb-6 animate-pulse uppercase tracking-[0.3em]">{progress.msg}</p>
+             
+             <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-3">
+                <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest leading-relaxed">
+                  Please do not close the software. We are securing your business data across the cloud.
+                </p>
+                <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
+                   <div className="h-full bg-primary-500 w-1/3 animate-[loading_2s_infinite]" />
+                </div>
+             </div>
+           </div>
+        </div>
+      )}
 
       {/* ── Cloud Restore Confirmation Modal ─────────────────────────────────── */}
       {confirmRestore && (

@@ -507,58 +507,51 @@ export default function StockPage() {
           {/* Sidebar selection - Desktop: Sidebar, Mobile: Horizontal Tabs */}
           <div className="w-full lg:w-64 flex-shrink-0 flex flex-col gap-3">
             {/* Mobile View: Horizontal Tabs */}
-            <div className="mobile-tab-list lg:hidden">
-              {[
-                { id: 'HSD', label: 'HSD Stock', icon: Fuel, color: 'text-amber-600', bg: 'bg-amber-600/10' },
-                { id: 'PMG', label: 'PMG Stock', icon: Zap, color: 'text-emerald-600', bg: 'bg-emerald-600/10' },
-              ].map((fuel) => (
-                <button
-                  key={fuel.id}
-                  onClick={() => navigate(`/stock/${fuel.id.toLowerCase()}`)}
-                  className={cn(
-                    "px-5 py-2.5 rounded-xl whitespace-nowrap text-xs font-black uppercase tracking-widest transition-all border flex items-center gap-2",
-                    selectedType === fuel.id 
-                      ? "bg-primary-600 text-white border-primary-600 shadow-md" 
-                      : "bg-white dark:bg-dark-800 text-slate-500 border-slate-200 dark:border-dark-700 hover:bg-slate-50"
-                  )}
-                >
-                  <fuel.icon className={cn("w-4 h-4", selectedType === fuel.id ? 'text-white' : fuel.color)} />
-                  {fuel.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Desktop View: Sidebar List */}
-            <div className="hidden lg:flex flex-col h-full bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700/50 rounded-3xl overflow-hidden shadow-sm">
-              <div className="p-4 bg-slate-50/50 dark:bg-dark-800/30 border-b border-slate-100 dark:border-dark-700/30">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Fuel Categories</p>
-              </div>
-              <div className="p-4 space-y-2">
+            {/* Top Centered Fuel Switcher (Renewed Sub-tabs) */}
+            <div className="flex justify-center mb-6 lg:hidden">
+              <div className="inline-flex p-1 bg-slate-100 dark:bg-dark-900/50 border border-slate-200 dark:border-dark-700 rounded-2xl shadow-inner w-full">
                 {[
-                  { id: 'HSD', label: 'HSD Stock', icon: Fuel, color: 'text-amber-600', bg: 'bg-amber-600/10' },
-                  { id: 'PMG', label: 'PMG Stock', icon: Zap, color: 'text-emerald-600', bg: 'bg-emerald-600/10' },
-                ].map(fuel => (
+                  { id: 'HSD', label: 'HSD', icon: Fuel, color: 'amber' },
+                  { id: 'PMG', label: 'PMG', icon: Zap, color: 'emerald' },
+                ].map((fuel) => (
                   <button
                     key={fuel.id}
                     onClick={() => navigate(`/stock/${fuel.id.toLowerCase()}`)}
                     className={cn(
-                      'w-full flex items-center justify-between p-4 rounded-2xl transition-all duration-300 group relative overflow-hidden border',
+                      "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all duration-300",
                       selectedType === fuel.id
-                        ? 'bg-primary-600 text-white border-transparent shadow-lg shadow-primary-600/30 scale-[1.02]'
-                        : 'bg-transparent text-slate-600 dark:text-dark-400 border-slate-100 dark:border-dark-800 hover:bg-slate-50 dark:hover:bg-dark-800 hover:border-slate-200 dark:hover:border-dark-700'
+                        ? `bg-white dark:bg-dark-800 text-${fuel.color}-600 dark:text-${fuel.color}-400 shadow-md`
+                        : "text-slate-400 hover:text-slate-500"
                     )}
                   >
-                    <div className="flex items-center gap-3">
-                      <fuel.icon className={cn("w-5 h-5", selectedType === fuel.id ? 'text-white' : fuel.color)} />
-                      <span className="font-black text-sm uppercase tracking-tight">{fuel.label}</span>
-                    </div>
-                    <ChevronRight className={cn("w-4 h-4 transition-transform", selectedType === fuel.id ? 'translate-x-0' : '-translate-x-2 opacity-0 group-hover:opacity-100 group-hover:translate-x-0')} />
+                    <fuel.icon className={cn("w-3.5 h-3.5", selectedType === fuel.id ? `text-${fuel.color}-600 dark:text-${fuel.color}-400` : "text-slate-400")} />
+                    {fuel.label}
                   </button>
                 ))}
               </div>
-              <div className="mt-auto p-6 bg-slate-50/50 dark:bg-dark-800/30 border-t border-slate-100 dark:border-dark-700/30">
-                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Last Sync</p>
-                <p className="text-[11px] font-bold text-slate-600 dark:text-dark-300">Working Offline</p>
+            </div>
+
+            {/* Desktop View: Sidebar List (Renewed to Horizontal) */}
+            <div className="hidden lg:flex justify-center mb-8">
+              <div className="inline-flex p-1 bg-slate-100 dark:bg-dark-900/50 border border-slate-200 dark:border-dark-700 rounded-2xl shadow-inner">
+                {[
+                  { id: 'HSD', label: 'HSD DIESEL', icon: Fuel, color: 'amber' },
+                  { id: 'PMG', label: 'PMG PETROL', icon: Zap, color: 'emerald' },
+                ].map((fuel) => (
+                  <button
+                    key={fuel.id}
+                    onClick={() => navigate(`/stock/${fuel.id.toLowerCase()}`)}
+                    className={cn(
+                      "flex items-center gap-3 px-8 py-3 rounded-xl font-black text-xs uppercase tracking-[0.2em] transition-all duration-300",
+                      selectedType === fuel.id
+                        ? `bg-white dark:bg-dark-800 text-${fuel.color}-600 dark:text-${fuel.color}-400 shadow-lg scale-[1.05]`
+                        : "text-slate-400 hover:text-slate-600 dark:hover:text-dark-300"
+                    )}
+                  >
+                    <fuel.icon className={cn("w-4 h-4", selectedType === fuel.id ? `text-${fuel.color}-600 dark:text-${fuel.color}-400` : "text-slate-400")} />
+                    {fuel.label}
+                  </button>
+                ))}
               </div>
             </div>
           </div>

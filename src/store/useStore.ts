@@ -702,6 +702,7 @@ export const useStore = create<AppState>()((set, get) => ({
       nextPurchaseNo: 1, nextSaleNo: 1,
       nextExpenseNo: 1,
       nextAssetNo: 1, nextLiabilityNo: 1, nextCustomerNo: 1,
+      settings: get().settings,
     });
   },
 }));

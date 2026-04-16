@@ -249,7 +249,10 @@ export default function PurchasePage() {
                 </div>
               </div>
             </div>
-            <button onClick={() => setShowForm(true)} className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg shrink-0"><Plus className="w-5 h-5" /></button>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setShowReport(true)} className="w-10 h-10 rounded-full bg-slate-100 dark:bg-dark-800 text-slate-600 dark:text-dark-300 flex items-center justify-center border border-slate-200 dark:border-dark-700 shadow-sm shrink-0"><Printer className="w-5 h-5" /></button>
+              <button onClick={() => setShowForm(true)} className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg shrink-0"><Plus className="w-5 h-5" /></button>
+            </div>
           </div>
 
           <div className="space-y-4 mb-8">
@@ -362,7 +365,17 @@ export default function PurchasePage() {
                 ₨ {formatCurrency(grandTotals.qty > 0 ? grandTotals.total / grandTotals.qty : 0)}
               </p>
             </div>
-            <button onClick={() => setShowForm(true)} className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg"><Plus className="w-5 h-5" /></button>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => setShowReport(true)}
+                className="w-10 h-10 rounded-full bg-slate-100 dark:bg-dark-800 text-slate-600 dark:text-dark-300 flex items-center justify-center border border-slate-200 dark:border-dark-700 shadow-sm"
+              >
+                <Printer className="w-5 h-5" />
+              </button>
+              <button onClick={() => setShowForm(true)} className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg">
+                <Plus className="w-5 h-5" />
+              </button>
+            </div>
           </div>
 
           <div className="glass rounded-xl overflow-hidden flex-1 flex flex-col mb-4">
@@ -398,6 +411,20 @@ export default function PurchasePage() {
                 </tbody>
                 {paged.length > 0 && (
                   <tfoot className="border-t-[3px] border-slate-300 dark:border-dark-700 bg-slate-50/50 dark:bg-dark-900/50">
+                    {/* Page Total Row */}
+                    <tr className="bg-slate-100/50 dark:bg-dark-800/30">
+                      <td className="table-cell table-sticky-col text-right">
+                        <span className="text-[9px] font-black text-slate-500 dark:text-dark-400 uppercase tracking-widest italic">Page Total</span>
+                      </td>
+                      <td className="table-cell text-right whitespace-nowrap">
+                        <span className="text-[10px] font-bold text-slate-600 dark:text-dark-400 tabular-nums">{pageTotals.qty.toLocaleString()} L</span>
+                      </td>
+                      <td className="table-cell text-right whitespace-nowrap font-bold">
+                         <span className="text-[10px] font-bold text-slate-600 dark:text-dark-400 tabular-nums">₨ {formatCurrency(pageTotals.total)}</span>
+                      </td>
+                      <td className="table-cell"></td>
+                    </tr>
+                    {/* Grand Total Row */}
                     <tr className="bg-slate-200 dark:bg-dark-800">
                       <td className="table-cell table-sticky-col text-right">
                         <span className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-tighter">Grand Total Analysis</span>

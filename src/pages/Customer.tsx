@@ -44,6 +44,8 @@ export default function CustomerPage() {
   const [page, setPage] = useState(1);
   const [dashPage, setDashPage] = useState(1);
   const [perPage, setPerPage] = useState(40);
+  const [entrySort, setEntrySort] = useState('date_desc');
+  const [sidebarSort, setSidebarSort] = useState('name_asc');
   const [viewingEntity, setViewingEntity] = useState<any>(null);
   const [editingEntity, setEditingEntity] = useState<any>(null);
   const [form, setForm] = useState({ date: today(), description: '', debit: '', credit: '' });
@@ -57,10 +59,26 @@ export default function CustomerPage() {
 
   const cust = customers.find((c) => c.id === selectedCust);
 
-  const filteredSidebar = useMemo(() =>
-    customers.filter((c) => !custSearch || c.name.toLowerCase().includes(custSearch.toLowerCase()) || c.phone.includes(custSearch)),
-    [customers, custSearch]
-  );
+  const filteredSidebar = useMemo(() => {
+    const list = customers.filter((c) => !custSearch || c.name.toLowerCase().includes(custSearch.toLowerCase()) || c.phone.includes(custSearch));
+    
+    // Calculate aggregate balance per customer for sorting
+    const withBalances = list.map(c => {
+      const entries = filterByStartDate(customerEntries, settings.startDate).filter(e => e.customerId === c.id);
+      const bal = entries.reduce((s, e) => s + e.debit - e.credit, 0);
+      return { ...c, balance: bal };
+    });
+
+    return [...withBalances].sort((a, b) => {
+      switch (sidebarSort) {
+        case 'name_asc':     return a.name.localeCompare(b.name);
+        case 'name_desc':    return b.name.localeCompare(a.name);
+        case 'balance_desc': return b.balance - a.balance;
+        case 'balance_asc':  return a.balance - b.balance;
+        default:             return a.name.localeCompare(b.name);
+      }
+    });
+  }, [customers, custSearch, sidebarSort, customerEntries, settings.startDate]);
 
   const filteredManage = useMemo(() =>
     customers.filter((c) => !manageSearch || c.name.toLowerCase().includes(manageSearch.toLowerCase()) || (c.phone && c.phone.includes(manageSearch))),
@@ -80,10 +98,31 @@ export default function CustomerPage() {
   }, [customerEntries, settings.startDate, selectedCust, search, fromDate, toDate]);
 
   const withBalance = useMemo(() => {
-    const sorted = [...filteredEntries].reverse();
+    // 1. Calculate running balance chronologically (Date Ascending)
+    const chronological = [...filteredEntries].sort((a, b) => a.date.localeCompare(b.date));
     let bal = 0;
-    return sorted.map((e) => { bal += e.debit - e.credit; return { ...e, balance: bal }; }).reverse();
-  }, [filteredEntries]);
+    const computed = chronological.map((e) => {
+      bal += (e.debit || 0) - (e.credit || 0);
+      return { ...e, balance: bal };
+    });
+
+    // 2. Apply user-selected sort
+    return [...computed].sort((a, b) => {
+      switch (entrySort) {
+        case 'date_desc':    return b.date.localeCompare(a.date);
+        case 'date_asc':     return a.date.localeCompare(b.date);
+        case 'name_asc':     return (a.description || '—').localeCompare(b.description || '—');
+        case 'name_desc':    return (b.description || '—').localeCompare(a.description || '—');
+        case 'debit_desc':   return (b.debit || 0) - (a.debit || 0);
+        case 'debit_asc':    return (a.debit || 0) - (b.debit || 0);
+        case 'credit_desc':  return (b.credit || 0) - (a.credit || 0);
+        case 'credit_asc':   return (a.credit || 0) - (b.credit || 0);
+        case 'balance_desc': return b.balance - a.balance;
+        case 'balance_asc':  return a.balance - b.balance;
+        default:             return b.date.localeCompare(a.date);
+      }
+    });
+  }, [filteredEntries, entrySort]);
 
   const paged = paginate(withBalance, page, perPage);
 
@@ -256,6 +295,9 @@ export default function CustomerPage() {
               className="btn-secondary flex items-center gap-2 hover:bg-slate-200 transition-colors"
             >
               <Printer className="w-4 h-4" /> Statement
+            </button>
+            <button onClick={() => setShowReport(true)} className="btn-secondary flex items-center gap-2">
+              <Printer className="w-4 h-4" /> Reports
             </button>
             <button onClick={() => setShowEntryForm(true)} className="btn-primary !bg-pink-600 hover:!bg-pink-500 flex items-center gap-2">
               <Plus className="w-4 h-4" /> New Entry
@@ -501,8 +543,24 @@ export default function CustomerPage() {
                 <p className="text-[10px] font-extrabold text-slate-600 dark:text-dark-200 uppercase tracking-widest">Active Database</p>
                 <span className="text-[10px] font-bold text-slate-300">{filteredSidebar.length}</span>
               </div>
-              <div className="p-2 border-b border-slate-100 dark:border-dark-700/30">
+              <div className="p-2 space-y-2 border-b border-slate-100 dark:border-dark-700/30 bg-slate-50/30">
                 <SearchBar value={custSearch} onChange={setCustSearch} placeholder="Search names..." fullWidth={true} className="!py-1.5 !text-[11px]" />
+                <div className="relative group">
+                  <ArrowUpDown className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 group-hover:text-pink-600 transition-colors pointer-events-none" />
+                  <select
+                    value={sidebarSort}
+                    onChange={(e) => setSidebarSort(e.target.value)}
+                    className="w-full appearance-none pl-7 pr-8 py-1.5 bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700/50 rounded-xl text-[9px] font-black uppercase tracking-wider text-slate-600 dark:text-dark-200 focus:ring-2 focus:ring-pink-600/20 focus:border-pink-600 transition-all cursor-pointer outline-none"
+                  >
+                    <option value="name_asc">A to Z</option>
+                    <option value="name_desc">Z to A</option>
+                    <option value="balance_desc">High Balance</option>
+                    <option value="balance_asc">Low Balance</option>
+                  </select>
+                  <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                    <div className="w-1 h-1 border-r border-b border-current rotate-45" />
+                  </div>
+                </div>
               </div>
               <div className="smart-scroll flex-1 p-2 space-y-1">
                 {filteredSidebar.length === 0 ? (
@@ -567,7 +625,32 @@ export default function CustomerPage() {
 
                   <div className="glass rounded-2xl overflow-hidden border border-slate-200 dark:border-dark-700/50 flex-1 flex flex-col">
                     <div className="flex flex-col md:flex-row md:items-center justify-between p-4 gap-4 border-b border-slate-200 dark:border-dark-700/50 bg-white/30 dark:bg-dark-800/30">
-                      <div className="flex-1 min-w-0"><SearchBar value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search transactions..." /></div>
+                      <div className="flex-1 min-w-0 flex items-center gap-3">
+                        <SearchBar value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search transactions..." />
+                        
+                        <div className="relative group shrink-0">
+                          <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 group-hover:text-pink-600 transition-colors pointer-events-none" />
+                          <select
+                            value={entrySort}
+                            onChange={(e) => setEntrySort(e.target.value)}
+                            className="appearance-none pl-9 pr-8 py-1.5 bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700/50 rounded-xl text-[10px] font-black uppercase tracking-wider text-slate-700 dark:text-dark-200 focus:ring-2 focus:ring-pink-600/20 focus:border-pink-600 transition-all cursor-pointer outline-none shadow-sm"
+                          >
+                            <option value="date_desc">Newest First</option>
+                            <option value="date_asc">Oldest First</option>
+                            <option value="name_asc">A to Z (Desc)</option>
+                            <option value="name_desc">Z to A (Desc)</option>
+                            <option value="debit_desc">Highest Debit</option>
+                            <option value="debit_asc">Lowest Debit</option>
+                            <option value="credit_desc">Highest Credit</option>
+                            <option value="credit_asc">Lowest Credit</option>
+                            <option value="balance_desc">Highest Balance</option>
+                            <option value="balance_asc">Lowest Balance</option>
+                          </select>
+                          <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                            <div className="w-1 h-1 border-r border-b border-current rotate-45" />
+                          </div>
+                        </div>
+                      </div>
                       <div className="flex items-center flex-wrap gap-2">
                         <div className="flex items-center bg-slate-100 dark:bg-dark-800 p-1 rounded-xl border border-slate-200 dark:border-dark-700/50 mr-2">
                           <button onClick={() => { setFromDate(today()); setToDate(today()); setPage(1); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-dark-400 hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all">Today</button>
@@ -580,7 +663,12 @@ export default function CustomerPage() {
                           <input type="date" className="input !py-1 !px-2 !w-32 !text-xs" value={toDate} onChange={(e) => { setToDate(e.target.value); setPage(1); }} />
                         </div>
                         {(fromDate || toDate) && (
-                          <button onClick={() => { setFromDate(''); setToDate(''); setPage(1); }} className="px-3 py-1.5 text-[10px] font-black uppercase tracking-tighter text-red-600 bg-red-50 dark:bg-red-900/20 rounded-lg hover:bg-red-100 transition-all border border-red-200 dark:border-red-800/30">Clear</button>
+                          <>
+                            <button onClick={() => setShowReport(true)} className="px-3 py-1.5 text-[10px] font-black uppercase tracking-tighter text-slate-600 bg-slate-50 dark:bg-dark-900/20 rounded-lg hover:bg-slate-100 transition-all border border-slate-200 dark:border-dark-700/50 flex items-center gap-2">
+                              <Printer className="w-3 h-3" /> Reports
+                            </button>
+                            <button onClick={() => { setFromDate(''); setToDate(''); setPage(1); }} className="px-3 py-1.5 text-[10px] font-black uppercase tracking-tighter text-red-600 bg-red-50 dark:bg-red-900/20 rounded-lg hover:bg-red-100 transition-all border border-red-200 dark:border-red-800/30">Clear</button>
+                          </>
                         )}
                       </div>
                     </div>

@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  ShoppingCart, TrendingUp, BookOpen, DollarSign,
+  ShoppingCart, TrendingUp, DollarSign,
   Package, AlertTriangle, BarChart3, Users, ArrowRight,
   Fuel, Zap, Calendar, XCircle, Keyboard, Sun, Moon,
   User, Mail, Shield, Clock, X, LogOut

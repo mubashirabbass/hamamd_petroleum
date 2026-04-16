@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, Trash2, Droplet, Eye, Edit2, Printer, BarChart3, ArrowRight, History, Zap, Fuel, LayoutGrid, Database } from 'lucide-react';
+import { Plus, Trash2, Eye, Edit2, Printer, BarChart3, ArrowRight, History, Zap, Fuel, LayoutGrid, Database } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { formatCurrency, formatDate, today, paginate, filterByStartDate, startOfMonth, startOfYear, getErrorMessage, cn } from '../lib/utils';
 import { useToast } from '../components/ui/Toast';
@@ -350,26 +350,6 @@ export default function SalePage() {
                 {fuelType} Transaction Entries
               </h2>
               <div className="flex items-center flex-wrap gap-3">
-                {fuelType === 'All' ? (
-                  <>
-                    <div className="glass px-4 py-2 rounded-xl border border-emerald-200 dark:border-dark-700 flex items-center gap-3">
-                      <div className="min-w-0">
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">HSD Avg / L</p>
-                        <p className="text-lg font-black text-emerald-600 dark:text-emerald-400 tabular-nums leading-none font-mono tracking-tighter">
-                          ₨ {formatCurrency(dashStats.HSD.qty > 0 ? dashStats.HSD.amt / dashStats.HSD.qty : 0)}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="glass px-4 py-2 rounded-xl border border-blue-200 dark:border-dark-700 flex items-center gap-3">
-                      <div className="min-w-0">
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">PMG Avg / L</p>
-                        <p className="text-lg font-black text-blue-600 dark:text-blue-400 tabular-nums leading-none font-mono tracking-tighter">
-                          ₨ {formatCurrency(dashStats.PMG.qty > 0 ? dashStats.PMG.amt / dashStats.PMG.qty : 0)}
-                        </p>
-                      </div>
-                    </div>
-                  </>
-                ) : (
                   <div className="glass px-4 py-2 rounded-xl border border-emerald-200 dark:border-dark-700 flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
                       <History className="w-4 h-4 text-emerald-600" />
@@ -381,7 +361,7 @@ export default function SalePage() {
                       </p>
                     </div>
                   </div>
-                )}
+                <button onClick={() => setShowReport(true)} className="btn-secondary !py-2.5 flex items-center gap-2"><Printer className="w-4 h-4" /> Reports</button>
                 <button onClick={() => { closeForm(); setShowForm(true); }} className="btn-primary !bg-emerald-600 flex items-center gap-2"><Plus className="w-4 h-4" /> New Entry</button>
               </div>
             </div>
@@ -433,6 +413,20 @@ export default function SalePage() {
                   </tbody>
                   {paged.length > 0 && (
                     <tfoot className="border-t-[3px] border-slate-300 dark:border-dark-700 bg-slate-50/50 dark:bg-dark-900/50">
+                      {/* Page Total Row */}
+                      <tr className="bg-slate-100/50 dark:bg-dark-800/30">
+                        <td colSpan={3} className="px-4 py-2 text-right">
+                          <span className="text-[10px] font-black text-slate-500 dark:text-dark-400 uppercase tracking-widest italic">Page Total</span>
+                        </td>
+                        <td className="px-4 py-2 text-right whitespace-nowrap">
+                          <span className="text-xs font-bold text-slate-600 dark:text-dark-400 tabular-nums">{pageTotals.qty.toLocaleString()} L</span>
+                        </td>
+                        <td className="px-4 py-2 text-right whitespace-nowrap">
+                           <span className="text-xs font-bold text-slate-600 dark:text-dark-400 tabular-nums">₨ {formatCurrency(pageTotals.amount)}</span>
+                        </td>
+                        <td className="table-cell"></td>
+                      </tr>
+                      {/* Grand Total Row */}
                       <tr className="bg-slate-200 dark:bg-dark-800">
                         <td colSpan={3} className="px-4 py-3 text-right">
                           <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tighter">Grand Total Analysis</span>

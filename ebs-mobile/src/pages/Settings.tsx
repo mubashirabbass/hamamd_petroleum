@@ -253,16 +253,28 @@ function BackupPanel() {
   return (
     <div className="space-y-6 h-full overflow-auto pb-6">
 
-      {/* ── Global Progress Banner ──────────────────────────────────────────── */}
+      {/* ── Premium Processing Overlay ────────────────────────────────────────── */}
       {progress.active && (
-        <div className="bg-slate-900 rounded-2xl border border-white/10 p-4 flex items-center gap-4">
-          <RefreshCcw className="w-5 h-5 text-primary-400 animate-spin shrink-0" />
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-white mb-2">{progress.msg}</p>
-            <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-primary-500 to-primary-400 rounded-full animate-[loading_1.5s_ease-in-out_infinite]" />
-            </div>
-          </div>
+        <div className="fixed inset-0 z-[10000] flex flex-col items-center justify-center p-6 bg-slate-950/90 backdrop-blur-2xl animate-in fade-in duration-500">
+           <div className="relative mb-8">
+              <div className="absolute inset-0 bg-primary-500/30 blur-3xl rounded-full animate-pulse" />
+              <div className="relative w-24 h-24 border-t-4 border-r-4 border-primary-500 rounded-full animate-spin shadow-2xl shadow-primary-500/30" />
+              <Cloud className="absolute inset-0 m-auto w-10 h-10 text-white animate-bounce" />
+           </div>
+           
+           <div className="text-center max-w-sm">
+             <h2 className="text-2xl font-black text-white mb-2 uppercase tracking-tighter">Syncing Securely</h2>
+             <p className="text-primary-400 font-bold text-sm mb-6 animate-pulse uppercase tracking-[0.3em]">{progress.msg}</p>
+             
+             <div className="bg-white/5 border border-white/10 rounded-2xl p-5 space-y-4">
+                <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest leading-relaxed">
+                  Please keep the app open. We are securing your business records.
+                </p>
+                <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                   <div className="h-full bg-primary-500 w-1/3 animate-[loading_2s_infinite]" />
+                </div>
+             </div>
+           </div>
         </div>
       )}
 
@@ -283,9 +295,12 @@ function BackupPanel() {
               {connected ? 'Google Drive Connected' : 'Cloud Backup — Setup Required'}
             </h3>
             {connected ? (
-              <div className="flex items-center gap-2 mt-0.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-sm text-emerald-300 font-medium">{driveEmail}</span>
+              <div className="flex flex-col gap-1 mt-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-base text-emerald-400 font-black tracking-tight">{driveEmail}</span>
+                </div>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest pl-4">Account Verified</p>
               </div>
             ) : checkingStatus ? (
               <p className="text-sm text-slate-500 mt-0.5 animate-pulse">Checking connection…</p>

@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import {
   BarChart3, TrendingUp, TrendingDown, ArrowLeft,
   Package, LayoutList, Fuel, Zap, Clock, Download,
-  ChevronRight, Calendar
+  ChevronRight, Calendar, Printer
 } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useStore, FuelType } from '../store/useStore';
@@ -13,6 +13,7 @@ import {
 import SearchBar from '../components/ui/SearchBar';
 import Pagination from '../components/ui/Pagination';
 import { useToast } from '../components/ui/Toast';
+import PrintReportModal from '../components/modals/PrintReportModal';
 
 // const PER_PAGE = 40; // Replaced by state
 
@@ -65,6 +66,7 @@ export default function StockPage() {
   const [toDate, setToDate] = useState('');
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(40);
+  const [showReport, setShowReport] = useState(false);
 
   // ── Calculation Logic ──
   const stockData = useMemo(() => {
@@ -453,7 +455,8 @@ export default function StockPage() {
 
   if (view === 'manage') {
     return (
-      <div className="animate-fade-in flex flex-col h-[calc(100vh-80px)]">
+      <>
+        <div className="animate-fade-in flex flex-col h-[calc(100vh-80px)]">
         {/* Detail Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div className="flex items-center gap-4">
@@ -502,49 +505,45 @@ export default function StockPage() {
           </div>
         </div>
 
-        {/* Sidebar Layout */}
-        <div className="flex gap-6 flex-1 overflow-hidden">
-          {/* Left Sidebar */}
-          <div className="w-64 flex-shrink-0 flex flex-col bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700/50 rounded-3xl overflow-hidden shadow-sm">
-            <div className="p-4 bg-slate-50/50 dark:bg-dark-800/30 border-b border-slate-100 dark:border-dark-700/30">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Fuel Categories</p>
-            </div>
-            <div className="p-4 space-y-2">
-              {[
-                { id: 'HSD', label: 'HSD Stock', icon: Fuel, color: 'text-amber-600', bg: 'bg-amber-600/10' },
-                { id: 'PMG', label: 'PMG Stock', icon: Zap, color: 'text-emerald-600', bg: 'bg-emerald-600/10' },
-              ].map(fuel => (
-                <button
-                  key={fuel.id}
-                  onClick={() => navigate(`/stock/${fuel.id.toLowerCase()}`)}
-                  className={cn(
-                    'w-full flex items-center justify-between p-4 rounded-2xl transition-all duration-300 group relative overflow-hidden border',
-                    selectedType === fuel.id
-                      ? 'bg-primary-600 text-white border-transparent shadow-lg shadow-primary-600/30 scale-[1.02]'
-                      : 'bg-transparent text-slate-600 dark:text-dark-400 border-slate-100 dark:border-dark-800 hover:bg-slate-50 dark:hover:bg-dark-800 hover:border-slate-200 dark:hover:border-dark-700'
-                  )}
-                >
-                  <div className="flex items-center gap-3">
-                    <fuel.icon className={cn("w-5 h-5", selectedType === fuel.id ? 'text-white' : fuel.color)} />
-                    <span className="font-black text-sm uppercase tracking-tight">{fuel.label}</span>
-                  </div>
-                  <ChevronRight className={cn("w-4 h-4 transition-transform", selectedType === fuel.id ? 'translate-x-0' : '-translate-x-2 opacity-0 group-hover:opacity-100 group-hover:translate-x-0')} />
-                </button>
-              ))}
-            </div>
-            <div className="mt-auto p-6 bg-slate-50/50 dark:bg-dark-800/30 border-t border-slate-100 dark:border-dark-700/30">
-              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Last Sync</p>
-              <p className="text-[11px] font-bold text-slate-600 dark:text-dark-300">Working Offline</p>
-            </div>
+        {/* Top Centered Fuel Switcher (Renewed Sub-tabs) */}
+        <div className="flex justify-center mb-8">
+          <div className="inline-flex p-1 bg-slate-100 dark:bg-dark-900/50 border border-slate-200 dark:border-dark-700 rounded-2xl shadow-inner animate-slide-down">
+            {[
+              { id: 'HSD', label: 'HSD DIESEL', icon: Fuel, color: 'amber' },
+              { id: 'PMG', label: 'PMG PETROL', icon: Zap, color: 'emerald' },
+            ].map((fuel) => (
+              <button
+                key={fuel.id}
+                onClick={() => navigate(`/stock/${fuel.id.toLowerCase()}`)}
+                className={cn(
+                  "flex items-center gap-3 px-8 py-3 rounded-xl font-black text-xs uppercase tracking-[0.2em] transition-all duration-300",
+                  selectedType === fuel.id
+                    ? `bg-white dark:bg-dark-800 text-${fuel.color}-600 dark:text-${fuel.color}-400 shadow-lg scale-[1.05]`
+                    : "text-slate-400 hover:text-slate-600 dark:hover:text-dark-300"
+                )}
+              >
+                <fuel.icon className={cn("w-4 h-4", selectedType === fuel.id ? `text-${fuel.color}-600 dark:text-${fuel.color}-400` : "text-slate-400")} />
+                {fuel.label}
+              </button>
+            ))}
           </div>
+        </div>
 
-          {/* Main Content Area */}
-          <div className="flex-1 overflow-y-auto smart-scroll pr-2 space-y-6">
+        {/* Updated Main Layout (Full Width) */}
+        <div className="flex-1 overflow-hidden">
+          <div className="max-w-5xl mx-auto h-full flex flex-col space-y-6">
+
+          <div className="overflow-y-auto smart-scroll pr-2 space-y-6 pb-10">
             {/* Status Summary Card */}
-            <div className={cn("glass rounded-3xl overflow-hidden border-2 shadow-xl", selectedType === 'HSD' ? 'border-amber-500/20' : 'border-emerald-500/20')}>
-              <div className="p-4 bg-white/50 dark:bg-dark-900/50 border-b border-slate-100 dark:border-dark-800 flex items-center gap-2">
-                <LayoutList className={cn("w-4 h-4", selectedType === 'HSD' ? 'text-amber-500' : 'text-emerald-500')} />
-                <h2 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 dark:text-dark-400">Inventory Status Summary</h2>
+            <div className={cn("glass rounded-3xl overflow-hidden border-2 shadow-xl", selectedType === 'HSD' ? 'border-amber-500/20 shadow-amber-500/5' : 'border-emerald-500/20 shadow-emerald-500/5')}>
+              <div className="p-4 bg-white/50 dark:bg-dark-900/50 border-b border-slate-100 dark:border-dark-800 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <LayoutList className={cn("w-4 h-4", selectedType === 'HSD' ? 'text-amber-500' : 'text-emerald-500')} />
+                  <h2 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 dark:text-dark-400">Inventory Status Summary</h2>
+                </div>
+                <div className={cn("px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest", selectedType === 'HSD' ? "bg-amber-100 dark:bg-amber-900/30 text-amber-600" : "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600")}>
+                  Active Segment
+                </div>
               </div>
               <div className="flex flex-col gap-3 p-4">
                 {[
@@ -583,8 +582,16 @@ export default function StockPage() {
                     <Clock className="w-4 h-4 text-slate-400" />
                     <h3 className="text-sm font-black uppercase tracking-widest text-slate-900 dark:text-white">Transaction History</h3>
                   </div>
-                  <div className="w-64">
-                    <SearchBar value={search} onChange={v => { setSearch(v); setPage(1); }} placeholder="Search History..." />
+                  <div className="flex items-center gap-3">
+                    <button 
+                      onClick={() => setShowReport(true)}
+                      className="btn-secondary !py-1.5 !px-3 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"
+                    >
+                      <Printer className="w-3.5 h-3.5" /> Reports
+                    </button>
+                    <div className="w-64">
+                      <SearchBar value={search} onChange={v => { setSearch(v); setPage(1); }} placeholder="Search History..." />
+                    </div>
                   </div>
                 </div>
                 <div className="overflow-auto smart-scroll max-h-[60vh]">
@@ -636,11 +643,22 @@ export default function StockPage() {
                 />
               </div>
             )}
+            </div>
+  
+            {showReport && (
+              <PrintReportModal 
+                data={filteredHistory} 
+                type="stock" 
+                onClose={() => setShowReport(false)} 
+                title={`${selectedType} STOCK HISTORY`}
+              />
+            )}
           </div>
         </div>
       </div>
-    );
-  }
+    </>
+  );
+}
 
   // ── Overview Render ──
   const cards = [
@@ -814,6 +832,15 @@ export default function StockPage() {
           </table>
         </div>
       </div>
+
+      {showReport && (
+        <PrintReportModal 
+          data={filteredHistory} 
+          type="stock" 
+          onClose={() => setShowReport(false)} 
+          title={`${selectedType} STOCK HISTORY`}
+        />
+      )}
     </div>
   );
 }

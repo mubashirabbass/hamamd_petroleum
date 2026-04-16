@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
-  LayoutDashboard, ShoppingCart, TrendingUp, BookOpen,
+  LayoutDashboard, ShoppingCart, TrendingUp,
   DollarSign, Package, AlertTriangle, BarChart3, Users,
   Settings, LogOut, X
 } from 'lucide-react';
