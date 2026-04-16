@@ -9,7 +9,8 @@ import ManageUsersModal from '../components/modals/ManageUsersModal';
 import { useToast } from '../components/ui/Toast';
 import { cn } from '../lib/utils';
 import DeveloperSettings from '../components/settings/DeveloperSettings';
-import { Terminal } from 'lucide-react';
+import KeyboardShortcutsPanel from '../components/settings/KeyboardShortcutsPanel';
+import { Terminal, Keyboard as KeyboardIcon } from 'lucide-react';
 import { getSetting, setSetting } from '../lib/db';
 import {
   checkConnection,
@@ -720,7 +721,7 @@ function BackupPanel() {
 export default function SettingsPage() {
   const { settings, updateSettings, currentUser, resetAllData } = useStore();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<'general' | 'users' | 'backup' | 'developer' | 'danger'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'users' | 'backup' | 'developer' | 'danger' | 'shortcuts'>('general');
   const [showManageUsers, setShowManageUsers] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
@@ -742,6 +743,7 @@ export default function SettingsPage() {
   const tabs = [
     ...(isStaff ? [] : [
       { id: 'general', label: 'General Setup',    icon: Settings,    color: 'bg-primary-600',  text: 'text-primary-600' },
+      { id: 'shortcuts', label: 'Quick Shortcuts', icon: KeyboardIcon, color: 'bg-amber-500',   text: 'text-amber-500'   },
     ]),
     { id: 'backup',  label: 'Backup & Restore',  icon: Cloud,       color: 'bg-blue-600',     text: 'text-blue-600'    },
     ...(isStaff ? [] : [
@@ -836,6 +838,9 @@ export default function SettingsPage() {
 
           {/* Backup & Restore */}
           {activeTab === 'backup' && <BackupPanel />}
+
+          {/* Shortcuts Management */}
+          {activeTab === 'shortcuts' && <KeyboardShortcutsPanel />}
 
           {/* User Management */}
           {activeTab === 'users' && (

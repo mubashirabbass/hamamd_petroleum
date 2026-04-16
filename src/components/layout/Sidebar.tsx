@@ -75,7 +75,7 @@ export default function Sidebar({ className = '', onNavigate, onCloseMobile }: S
       {/* Logo */}
       <div className="h-16 flex items-center px-4 border-b border-slate-200 dark:border-dark-700/50 gap-3">
         <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-white flex items-center justify-center shadow-lg p-1 border border-slate-200">
-          <img src="/assets/logo-hr.png" alt="HR" className="w-full h-full object-contain" />
+          <img src="/assets/logo-hr.png?v=2" alt="HR" className="w-full h-full object-contain" />
         </div>
         <div>
           <p className="text-slate-900 dark:text-white font-bold text-[15px] leading-tight truncate max-w-[140px]">

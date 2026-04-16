@@ -258,6 +258,51 @@ export default function PrintReportModal({ data, type, onClose, title: customTit
                         </tr>
                       );
                     })}
+
+                    {/* Filler Rows to extend vertical lines and push Page Total to bottom */}
+                    {Array.from({ length: Math.max(0, ROWS_PER_PAGE - chunk.length) }).map((_, fi) => (
+                      <tr key={`filler-${fi}`} style={{ height: '24px', borderBottom: '1px solid #eee' }}>
+                        {isPurchase ? (
+                          <>
+                            <td style={{ borderRight: '1px solid #f0f0f0' }}></td>
+                            <td style={{ borderRight: '1px solid #f0f0f0' }}></td>
+                            <td style={{ borderRight: '1px solid #f0f0f0' }}></td>
+                            <td style={{ borderRight: '1px solid #f0f0f0' }}></td>
+                            <td style={{ borderRight: '1px solid #f0f0f0' }}></td>
+                            <td style={{ borderRight: '1px solid #f0f0f0' }}></td>
+                            <td style={{ borderRight: '1px solid #f0f0f0' }}></td>
+                            <td style={{ borderRight: '1px solid #f0f0f0' }}></td>
+                            <td style={{}}></td>
+                          </>
+                        ) : (
+                          <>
+                            <td style={{ borderRight: '1px solid #f0f0f0', width: '60px' }}></td>
+                            <td style={{ borderRight: '1px solid #f0f0f0' }}></td>
+                            {isSale ? (
+                              <>
+                                <td style={{ borderRight: '1px solid #f0f0f0' }}></td>
+                                <td style={{ borderRight: '1px solid #f0f0f0' }}></td>
+                                <td style={{}}></td>
+                              </>
+                            ) : isLedger ? (
+                              <>
+                                <td style={{ borderRight: '1px solid #f0f0f0' }}></td>
+                                <td style={{ borderRight: '1px solid #f0f0f0' }}></td>
+                                <td style={{}}></td>
+                              </>
+                            ) : isStock ? (
+                              <>
+                                <td style={{ borderRight: '1px solid #f0f0f0' }}></td>
+                                <td style={{ borderRight: '1px solid #f0f0f0' }}></td>
+                                <td style={{}}></td>
+                              </>
+                            ) : (
+                              <td style={{}}></td>
+                            )}
+                          </>
+                        )}
+                      </tr>
+                    ))}
                   </tbody>
                   <tfoot style={{ background: '#f9f9f9', fontWeight: 1000, borderTop: '2px solid #111' }}>
                     {isPurchase ? (

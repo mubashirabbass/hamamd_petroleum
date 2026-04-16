@@ -107,6 +107,14 @@ export interface User {
   createdAt: string;
 }
 
+export interface Shortcut {
+  id:           string;
+  key:          string;
+  label:        string;
+  targetPath:   string;
+  searchParams?: string;
+}
+
 export interface Settings {
   startDate:    string;
   softwareName: string;
@@ -116,6 +124,7 @@ export interface Settings {
   licenseStartDate:    string;
   licenseEndDate:      string;
   authorizedMachineId: string;
+  shortcuts:           Shortcut[];
 }
 
 // ─── Store Interface ──────────────────────────────────────────────────────────
@@ -251,6 +260,23 @@ export const useStore = create<AppState>()((set, get) => ({
           licenseStartDate:    data.settings['licenseStartDate'] || '',
           licenseEndDate:      data.settings['licenseEndDate']   || '',
           authorizedMachineId: data.settings['authorizedMachineId'] || '',
+          shortcuts: (() => {
+            try {
+              const saved = data.settings['shortcuts'];
+              if (saved) return JSON.parse(saved);
+            } catch(e) {}
+            return [
+              { id: '1', key: 'F1',  label: 'Dashboard',   targetPath: '/' },
+              { id: '2', key: 'F2',  label: 'Purchase',    targetPath: '/purchase' },
+              { id: '3', key: 'F3',  label: 'Sale',        targetPath: '/sale' },
+              { id: '4', key: 'F5',  label: 'Expense',     targetPath: '/expense' },
+              { id: '5', key: 'F6',  label: 'Asset',       targetPath: '/asset' },
+              { id: '6', key: 'F7',  label: 'Liability',   targetPath: '/liability' },
+              { id: '7', key: 'F8',  label: 'Stock',       targetPath: '/stock' },
+              { id: '8', key: 'F9',  label: 'Customer',    targetPath: '/customer' },
+              { id: '9', key: 'F10', label: 'Settings',    targetPath: '/settings' },
+            ];
+          })(),
         },
         dbReady: true,
         dbError: null,
@@ -618,6 +644,7 @@ export const useStore = create<AppState>()((set, get) => ({
     licenseStartDate:    '',
     licenseEndDate:      '',
     authorizedMachineId: '',
+    shortcuts:           [],
   },
 
   updateSettings: async (updates) => {
@@ -630,6 +657,7 @@ export const useStore = create<AppState>()((set, get) => ({
     if (updates.licenseEndDate      !== undefined) await setSetting('licenseEndDate',      updates.licenseEndDate);
     if (updates.authorizedMachineId !== undefined) await setSetting('authorizedMachineId', updates.authorizedMachineId);
     if (updates.zoomLevel    !== undefined) await setSetting('zoomLevel',    String(updates.zoomLevel));
+    if (updates.shortcuts    !== undefined) await setSetting('shortcuts',    JSON.stringify(updates.shortcuts));
 
     set({ settings: merged });
   },

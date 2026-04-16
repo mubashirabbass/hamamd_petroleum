@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Plus, Trash2, Users, UserPlus, Printer, Search, Phone, Edit2, Check, X, UserCog, User, BarChart3, ArrowRight, ArrowUpDown } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { formatCurrency, formatDate, today, paginate, filterByStartDate, cn, startOfMonth, startOfYear } from '../lib/utils';
@@ -17,6 +18,7 @@ export default function CustomerPage() {
     addCustomerEntry, updateCustomerEntry, deleteCustomerEntry, addCustomer, updateCustomer, deleteCustomer, settings, currentUser
   } = useStore();
 
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
 
   // Layout State
@@ -50,6 +52,14 @@ export default function CustomerPage() {
   const [editingEntity, setEditingEntity] = useState<any>(null);
   const [form, setForm] = useState({ date: today(), description: '', debit: '', credit: '' });
   const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab === 'register') setActiveTab('register');
+    else if (tab === 'dashboard') setActiveTab('dashboard');
+    else if (tab === 'database') setActiveTab('database');
+    else if (tab === 'manage') setActiveTab('manage');
+  }, [searchParams]);
 
   useEffect(() => {
     if (!selectedCust && customers.length > 0) {

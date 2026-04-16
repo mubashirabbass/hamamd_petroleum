@@ -188,8 +188,8 @@ export default function TransactionReceiptModal({ entity, type, onClose }: Trans
                   <td style={{ padding: '15px 8px', textAlign: 'right', verticalAlign: 'top', fontSize: '14px', fontWeight: 1000 }}>₨ {formatCurrency(entity.amount)}</td>
                 )}
               </tr>
-              {/* Fill vertical space */}
-              <tr style={{ height: '150px' }}>
+              {/* Fill vertical space to push total to bottom and extend vertical lines */}
+              <tr style={{ height: '450px' }}>
                 {headers.map((_, i) => (
                   <td key={i} style={{ borderRight: i < headers.length - 1 ? '1.5px solid #111' : 'none' }}></td>
                 ))}

@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Wallet, Plus, Trash2, Eye, Edit2, Search, Check, X, FileText, Settings, UserPlus, Printer, BarChart3, ArrowRight } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { formatCurrency, formatDate, today, paginate, filterByStartDate, cn, startOfMonth, startOfYear } from '../lib/utils';
@@ -18,6 +19,7 @@ export default function ExpensePage() {
     addExpenseEntry, deleteExpenseEntry, settings, currentUser, updateExpenseEntry 
   } = useStore();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
 
   const [activeTab, setActiveTab] = useState<'dashboard' | 'database' | 'register' | 'manage'>('dashboard');
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
@@ -46,6 +48,13 @@ export default function ExpensePage() {
   const [form, setForm] = useState({ date: today(), details: '', amount: '' });
   const [isSaving, setIsSaving] = useState(false);
   
+  useEffect(() => {
+    if (searchParams.get('action') === 'add') {
+      setActiveTab('database');
+      setShowEntryForm(true);
+    }
+  }, [searchParams]);
+
   useEffect(() => {
     if (!selectedCat && expenseCategories.length > 0) {
       setSelectedCat(expenseCategories[0].id);
