@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Plus, Trash2, Users, UserPlus, Printer, Search, Phone, Edit2, Check, X, UserCog, User, BarChart3, ArrowRight, ArrowUpDown, Save } from 'lucide-react';
+import { Plus, Trash2, Users, UserPlus, Printer, Search, Phone, Edit2, Check, X, UserCog, User, BarChart3, ArrowRight, ArrowUpDown, Save, Shield } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { formatCurrency, formatDate, today, paginate, filterByStartDate, cn, startOfMonth, startOfYear } from '../lib/utils';
 import { useToast } from '../components/ui/Toast';
@@ -38,6 +38,7 @@ export default function CustomerPage() {
   const [manageSearch, setManageSearch] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ name: '', phone: '' });
+
 
   // Transaction Table State
   const [search, setSearch] = useState('');
@@ -147,6 +148,14 @@ export default function CustomerPage() {
     e.preventDefault();
     if (!newName.trim()) return;
 
+    // Strict Validation
+    const cleanPhone = newPhone.replace(/\D/g, '');
+
+    if (newPhone && cleanPhone.length !== 11) {
+      toast('Mobile number must be exactly 11 digits', 'error');
+      return;
+    }
+
     const normalizedName = newName.trim().toLowerCase();
     const normalizedPhone = newPhone.trim();
 
@@ -173,6 +182,14 @@ export default function CustomerPage() {
 
   const handleSaveEdit = (id: string) => {
     if (!editForm.name.trim()) return;
+
+    // Strict Validation
+    const cleanPhone = editForm.phone.replace(/\D/g, '');
+
+    if (editForm.phone && cleanPhone.length !== 11) {
+      toast('Mobile number must be exactly 11 digits', 'error');
+      return;
+    }
 
     const normalizedName = editForm.name.trim().toLowerCase();
     const normalizedPhone = editForm.phone.trim();
@@ -809,14 +826,15 @@ export default function CustomerPage() {
                     </div>
                   </div>
                   <div>
-                    <label className="label text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">Contact Number (Optional)</label>
+                    <label className="label text-[10px] font-black uppercase tracking-widest text-primary-600 mb-2 block">Mobile Number (11 Digits)</label>
                     <div className="relative">
                       <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                       <input
                         className="input !pl-12 !py-4 !text-lg !font-bold"
-                        placeholder="e.g. 0300-1234567"
+                        placeholder="03XXXXXXXXX"
                         value={newPhone}
-                        onChange={e => setNewPhone(e.target.value)}
+                        maxLength={11}
+                        onChange={e => setNewPhone(e.target.value.replace(/\D/g, '').slice(0, 11))}
                       />
                     </div>
                   </div>
@@ -872,7 +890,7 @@ export default function CustomerPage() {
                             <td className="px-6 py-3" colSpan={2} onClick={(e) => e.stopPropagation()}>
                               <div className="flex gap-4">
                                 <input className="input !py-1.5 !text-sm flex-1" value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} autoFocus />
-                                <input className="input !py-1.5 !text-sm flex-1" value={editForm.phone} onChange={e => setEditForm({ ...editForm, phone: e.target.value })} placeholder="Phone" />
+                                <input className="input !py-1.5 !text-sm flex-1" value={editForm.phone} onChange={e => setEditForm({ ...editForm, phone: e.target.value.replace(/\D/g, '').slice(0, 11) })} placeholder="Mobile (11 Digits)" maxLength={11} />
                               </div>
                             </td>
                             <td className="px-6 py-3 text-right" onClick={(e) => e.stopPropagation()}>

@@ -279,6 +279,8 @@ async function initSchema(db: Database): Promise<void> {
       phone TEXT DEFAULT ''
     )
   `);
+  
+
   await db.execute(`
     CREATE TABLE IF NOT EXISTS customer_entries (
       id          TEXT PRIMARY KEY,

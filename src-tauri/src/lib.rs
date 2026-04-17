@@ -2,7 +2,6 @@
 // Handles: SQLite plugin registration, Backup/Restore, Google OAuth2, Drive API
 
 use std::io::{Read, Write};
-use tauri::Manager;
 use tauri_plugin_opener::OpenerExt;
 use std::path::PathBuf;
 
@@ -111,7 +110,7 @@ async fn save_backup_to_path(src: String, dst: String) -> Result<(), String> {
 async fn restore_from_zip(zip_path: String, _app: tauri::AppHandle) -> Result<(), String> {
     let app_dir = get_base_dir()?;
 
-    let db_path = app_dir.join("ebs_business.db");
+    let _db_path = app_dir.join("ebs_business.db");
 
     let file = std::fs::File::open(&zip_path).map_err(|e| {
         format!("Cannot open backup file: {}", e)
@@ -549,7 +548,7 @@ async fn list_drive_backups(access_token: String) -> Result<Vec<serde_json::Valu
 async fn download_drive_backup(
     file_id: String,
     access_token: String,
-    app: tauri::AppHandle,
+    _app: tauri::AppHandle,
 ) -> Result<String, String> {
     let client = reqwest::Client::new();
 

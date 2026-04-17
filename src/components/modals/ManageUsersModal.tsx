@@ -17,11 +17,27 @@ export default function ManageUsersModal({ isOpen, onClose }: ManageUsersModalPr
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<User>>({});
 
+  const formatCnic = (val: string) => {
+    const digits = val.replace(/\D/g, '').slice(0, 13);
+    let res = '';
+    for (let i = 0; i < digits.length; i++) {
+      if (i === 5 || i === 12) res += '-';
+      res += digits[i];
+    }
+    return res;
+  };
+
   if (!isOpen) return null;
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newUser.name || !newUser.email || !newUser.password) return;
+
+    if (newUser.cnic && newUser.cnic.replace(/\D/g, '').length !== 13) {
+      toast('CNIC must be exactly 13 digits', 'error');
+      return;
+    }
+
     addUser(newUser);
     setNewUser({ name: '', email: '', password: '', role: 'Staff', cnic: '', dob: '' });
     setShowAddForm(false);
@@ -34,6 +50,10 @@ export default function ManageUsersModal({ isOpen, onClose }: ManageUsersModalPr
   };
 
   const handleSaveEdit = (id: string) => {
+    if (editForm.cnic && editForm.cnic.replace(/\D/g, '').length !== 13) {
+      toast('CNIC must be exactly 13 digits', 'error');
+      return;
+    }
     updateUser(id, editForm);
     setEditingId(null);
     toast('User updated successfully', 'success');
@@ -87,8 +107,8 @@ export default function ManageUsersModal({ isOpen, onClose }: ManageUsersModalPr
                   </select>
                 </div>
                 <div className="relative">
-                  <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input className="input !pl-10" type="text" placeholder="CNIC (e.g., 12345-1234567-1)" value={newUser.cnic} onChange={e => setNewUser({...newUser, cnic: e.target.value})} />
+                  <Shield className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input className="input !pl-10" type="text" placeholder="CNIC (e.g., 12345-1234567-1)" value={newUser.cnic} onChange={e => setNewUser({...newUser, cnic: formatCnic(e.target.value)})} />
                 </div>
                 <div className="relative">
                   <input className="input" type="date" value={newUser.dob} onChange={e => setNewUser({...newUser, dob: e.target.value})} />
@@ -117,7 +137,7 @@ export default function ManageUsersModal({ isOpen, onClose }: ManageUsersModalPr
                            <option value="Admin">Admin</option>
                            <option value="Staff">Staff</option>
                         </select>
-                        <input className="input !py-1.5 !text-sm" value={editForm.cnic || ''} onChange={e => setEditForm({...editForm, cnic: e.target.value})} placeholder="CNIC" />
+                        <input className="input !py-1.5 !text-sm" value={editForm.cnic || ''} onChange={e => setEditForm({...editForm, cnic: formatCnic(e.target.value)})} placeholder="CNIC" />
                         <input type="date" className="input !py-1.5 !text-sm" value={editForm.dob || ''} onChange={e => setEditForm({...editForm, dob: e.target.value})} />
                         <div className="flex items-center gap-2 justify-end">
                            <button type="button" onClick={() => handleSaveEdit(user.id)} className="p-2 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/10 rounded-lg"><Check className="w-5 h-5" /></button>

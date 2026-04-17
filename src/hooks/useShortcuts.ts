@@ -19,7 +19,9 @@ export const useShortcuts = () => {
       if (window.__ebsRecordingShortcut) return;
 
       const target = e.target as HTMLElement;
-      const isInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
+      if (!target) return;
+
+      const isInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) || target.isContentEditable;
 
       // 2. Find matching shortcut
       const foundShortcut = shortcuts.find(s => {
@@ -55,7 +57,10 @@ export const useShortcuts = () => {
       if (isInput) {
         const isFKey = /^F\d+$/.test(e.key);
         const hasModifier = e.ctrlKey || e.altKey || e.metaKey;
-        if (!isFKey && !hasModifier) return;
+        // Exception: Allow shortcuts with Shift if they aren't single-character typing keys
+        const isComplexShift = e.shiftKey && e.key.length > 1; 
+
+        if (!isFKey && !hasModifier && !isComplexShift) return;
       }
 
       // 4. Role & Visibility Checks
@@ -69,11 +74,14 @@ export const useShortcuts = () => {
 
       // 5. Execute Navigation
       e.preventDefault();
+      e.stopPropagation(); // Prevent the key from reaching specific component listeners
+
       const path = foundShortcut.targetPath + (foundShortcut.searchParams ? '?' + foundShortcut.searchParams : '');
       navigate(path);
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    // Use Capture phase (true) to ensure we catch the key before other elements swallow it
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
   }, [navigate, shortcuts, settings.hiddenMenus, currentUser?.role]);
 };
