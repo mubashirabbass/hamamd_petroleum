@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Landmark, Plus, Trash2, Eye, Edit2, Search, Check, X, FileText, Settings, UserPlus, Printer, BarChart3, ArrowRight, ArrowUpDown } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { formatCurrency, formatDate, today, paginate, filterByStartDate, cn, startOfMonth, startOfYear } from '../lib/utils';
@@ -17,9 +18,18 @@ export default function LiabilityPage() {
     addLiabilityCategory, updateLiabilityCategory, deleteLiabilityCategory,
     addLiabilityEntry, deleteLiabilityEntry, settings, currentUser, updateLiabilityEntry
   } = useStore();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
 
   const [activeTab, setActiveTab] = useState<'dashboard' | 'database' | 'register' | 'manage'>('dashboard');
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab === 'register') setActiveTab('register');
+    else if (tab === 'dashboard') setActiveTab('dashboard');
+    else if (tab === 'database') setActiveTab('database');
+    else if (tab === 'manage') setActiveTab('manage');
+  }, [searchParams]);
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
   const [showEntryForm, setShowEntryForm] = useState(false);
   const [showReport, setShowReport] = useState(false);

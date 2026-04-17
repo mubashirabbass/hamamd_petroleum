@@ -16,32 +16,6 @@ import Stock from '../../pages/Stock';
 import Customer from '../../pages/Customer';
 import Settings from '../../pages/Settings';
 
-const SHORTCUT_MAP: Record<string, string> = {
-  'F1': '/',
-  'F2': '/sale',
-  'F3': '/purchase',
-
-  'F5': '/expense',
-  'F6': '/asset',
-  'F7': '/liability',
-  'F8': '/stock',
-  'F9': '/customer',
-  'F10': '/settings',
-};
-
-const LABEL_MAP: Record<string, string> = {
-  '/': 'Dashboard',
-  '/purchase': 'Purchase',
-  '/sale': 'Sale',
-
-  '/expense': 'Expense',
-  '/asset': 'Asset',
-  '/liability': 'Liability',
-  '/stock': 'Stock',
-  '/customer': 'Customer',
-  '/settings': 'Settings',
-};
-
 export default function Layout() {
   const { settings, currentUser } = useStore();
   const navigate = useNavigate();
@@ -50,10 +24,40 @@ export default function Layout() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      const route = SHORTCUT_MAP[e.key];
-      if (!route) return;
+      // Don't trigger shortcuts if user is typing in an input/textarea
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement).tagName)) {
+        return;
+      }
 
-      const label = LABEL_MAP[route];
+      const shortcuts = settings.shortcuts || [];
+      
+      const foundShortcut = shortcuts.find(s => {
+        const parts = s.key.split('+');
+        const mainKey = parts.pop()?.trim().toUpperCase();
+        
+        const needsCtrl  = parts.some(p => p.trim().toUpperCase() === 'CTRL');
+        const needsShift = parts.some(p => p.trim().toUpperCase() === 'SHIFT');
+        const needsAlt   = parts.some(p => p.trim().toUpperCase() === 'ALT');
+        const needsMeta  = parts.some(p => p.trim().toUpperCase() === 'META');
+
+        const matchModifiers = 
+          e.ctrlKey  === needsCtrl  &&
+          e.shiftKey === needsShift &&
+          e.altKey   === needsAlt   &&
+          e.metaKey  === needsMeta;
+
+        let eventKey = e.key.toUpperCase();
+        if (e.key === ' ') eventKey = 'SPACE';
+        
+        // Handle 'Space' string as well
+        const normalizedMainKey = mainKey === 'SPACE' || mainKey === ' ' ? 'SPACE' : mainKey;
+        
+        return matchModifiers && eventKey === normalizedMainKey;
+      });
+
+      if (!foundShortcut) return;
+
+      const label = foundShortcut.label;
       const hiddenMenus = settings.hiddenMenus || [];
       const isDeveloper = currentUser?.role === 'Developer';
       const isAdmin     = currentUser?.role === 'Admin';
@@ -62,12 +66,15 @@ export default function Layout() {
       if (label === 'Settings' && !isAdmin && !isDeveloper) return;
 
       e.preventDefault();
-      navigate(route);
+      const target = foundShortcut.searchParams 
+        ? `${foundShortcut.targetPath}?${foundShortcut.searchParams}`
+        : foundShortcut.targetPath;
+      navigate(target);
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [navigate, settings.hiddenMenus, currentUser?.role]);
+  }, [navigate, settings.shortcuts, settings.hiddenMenus, currentUser?.role]);
 
   // Helper to determine active view
   const isPath = (path: string) => location.pathname === path;

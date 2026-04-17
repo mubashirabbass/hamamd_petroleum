@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Plus, Trash2, Eye, Edit2, Printer, BarChart3, ArrowRight, History, Zap, Fuel, LayoutGrid, Database } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { formatCurrency, formatDate, today, paginate, filterByStartDate, startOfMonth, startOfYear, getErrorMessage, cn } from '../lib/utils';
@@ -12,11 +13,27 @@ import type { FuelType } from '../store/useStore';
 
 export default function SalePage() {
   const { sales, addSale, deleteSale, settings, currentUser } = useStore();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
+
+  // Layout State
   const [perPage, setPerPage] = useState(20);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'database'>('dashboard');
   const [fuelType, setFuelType] = useState<FuelType>('HSD');
   const [showForm, setShowForm] = useState(false);
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    const type = searchParams.get('type') as FuelType;
+    const action = searchParams.get('action');
+
+    if (tab === 'dashboard') setActiveTab('dashboard');
+    else if (tab === 'database') setActiveTab('database');
+
+    if (type === 'HSD' || type === 'PMG') setFuelType(type);
+
+    if (action === 'add') setShowForm(true);
+  }, [searchParams]);
   const [search, setSearch] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');

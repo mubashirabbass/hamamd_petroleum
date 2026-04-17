@@ -9,6 +9,7 @@ import {
 import { useStore } from '../store/useStore';
 import { useTheme } from '../contexts/ThemeContext';
 import { formatCurrency, today, cn } from '../lib/utils';
+import loginBg from '../../WhatsApp Image 2026-04-08 at 5.20.06 PM.jpeg';
 
 // ─── Digital Clock ────────────────────────────────────────────────────────────
 function DigitalClock() {
@@ -115,7 +116,6 @@ export default function Dashboard() {
   } = useStore();
 
   const [displayText, setDisplayText] = useState('');
-  const [typingFinished, setTypingFinished] = useState(false);
   const fullText = "حماد\u00A0\u00A0\u00A0رحیم\u00A0\u00A0\u00A0فلنگ\u00A0\u00A0\u00A0اسٹیشن\u00A0\u00A0\u00A0مینجمنٹ\u00A0\u00A0\u00A0سسٹم";
 
   useEffect(() => {
@@ -125,7 +125,6 @@ export default function Dashboard() {
       index++;
       if (index > fullText.length) {
         clearInterval(timer);
-        setTypingFinished(true);
       }
     }, 30);
     return () => clearInterval(timer);
@@ -211,20 +210,34 @@ export default function Dashboard() {
 
   return (
     <div className="animate-fade-in space-y-6 pb-10 h-full overflow-y-auto smart-scroll pr-2">
-      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 flex-row-reverse animate-fade-in">
-        <div className="flex items-center gap-5 flex-row-reverse text-right" dir="rtl">
-          <div className="w-14 h-14 rounded-3xl flex items-center justify-center shadow-xl border border-emerald-500/20 bg-emerald-600/10 flex-shrink-0">
-            <Fuel className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
+      <div className="relative overflow-hidden rounded-[2rem] shadow-md border border-slate-200/60 dark:border-dark-700/60 flex flex-col md:flex-row md:items-center justify-between gap-4 flex-row-reverse animate-fade-in">
+        {/* Background Image Layer */}
+        <div 
+           className="absolute inset-0 z-0 opacity-80 bg-cover bg-center transition-all duration-1000 contrast-125 saturate-[1.8] blur-sm" 
+           style={{ backgroundImage: `url(${loginBg})` }}
+        />
+        {/* Gradient Overlay for Text Readability - from Left and Right (Slightly darker for blur depth) */}
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-900/40 via-transparent to-transparent z-0" />
+        <div className="absolute inset-0 bg-gradient-to-l from-slate-900/40 via-transparent to-transparent z-0" />
+
+        {/* Dashboard Title Block */}
+        <div className="flex items-center gap-5 flex-row-reverse text-right relative z-10 px-6 py-3" dir="rtl">
+          <div className="w-14 h-14 rounded-3xl flex items-center justify-center shadow-xl border border-white/20 bg-white/10 flex-shrink-0 backdrop-blur-xl">
+            <Fuel className="w-8 h-8 text-white" />
           </div>
-          <div className="flex flex-col pt-4">
-            <h1 className="text-3xl font-black text-slate-900 dark:text-white font-urdu min-h-[70px] leading-[1.8]">
+          <div className="flex flex-col pt-3">
+            <h1 className="text-3xl sm:text-4xl font-black text-white font-urdu min-h-[70px] leading-[1.8] drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
               {displayText}
             </h1>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="glass rounded-2xl px-4 py-2 border border-primary-500/20 shadow-lg bg-primary-500/5 dark:bg-primary-900/10"><DigitalClock /></div>
-          <UserCard />
+
+        {/* Clock & Profile Block */}
+        <div className="flex items-center gap-3 relative z-10 px-6 py-3">
+          <div className="backdrop-blur-xl rounded-2xl px-4 py-2 border border-white/20 dark:border-dark-700/50 shadow-lg bg-white/60 dark:bg-dark-900/60"><DigitalClock /></div>
+          <div className="backdrop-blur-xl rounded-2xl border border-white/20 dark:border-dark-700/50 shadow-lg bg-white/60 dark:bg-dark-900/60">
+            <UserCard />
+          </div>
         </div>
       </div>
 

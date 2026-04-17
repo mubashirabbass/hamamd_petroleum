@@ -5,19 +5,43 @@ import { useToast } from '../ui/Toast';
 import { cn } from '../../lib/utils';
 
 const AVAILABLE_TARGETS = [
-  { label: 'Dashboard',   path: '/',           params: '' },
-  { label: 'Purchase',    path: '/purchase',    params: '' },
-  { label: 'Sale',        path: '/sale',        params: '' },
-  { label: 'Expense',     path: '/expense',     params: '' },
-  { label: 'Add Expense', path: '/expense',     params: 'action=add' },
-  { label: 'Asset',       path: '/asset',       params: '' },
-  { label: 'Liability',   path: '/liability',   params: '' },
-  { label: 'Stock',       path: '/stock',       params: '' },
-  { label: 'HSD Stock',   path: '/stock/HSD',   params: '' },
-  { label: 'PMG Stock',   path: '/stock/PMG',   params: '' },
-  { label: 'Customer',    path: '/customer',    params: '' },
-  { label: 'Add Customer',path: '/customer',    params: 'tab=register' },
-  { label: 'Settings',    path: '/settings',    params: '' },
+  { label: 'Dashboard',             path: '/',           params: '' },
+  
+  { label: 'Purchase Dash',         path: '/purchase',    params: 'tab=dashboard' },
+  { label: 'Purchase Entries',      path: '/purchase',    params: 'tab=database' },
+  { label: 'Purchase HSD',          path: '/purchase',    params: 'type=HSD' },
+  { label: 'Purchase PMG',          path: '/purchase',    params: 'type=PMG' },
+  { label: 'New Purchase',          path: '/purchase',    params: 'action=add' },
+
+  { label: 'Sale Dash',             path: '/sale',        params: 'tab=dashboard' },
+  { label: 'Sale Entries',          path: '/sale',        params: 'tab=database' },
+  { label: 'Sale HSD',              path: '/sale',        params: 'type=HSD' },
+  { label: 'Sale PMG',              path: '/sale',        params: 'type=PMG' },
+  { label: 'New Sale',              path: '/sale',        params: 'action=add' },
+
+  { label: 'Expense Entries',       path: '/expense',     params: '' },
+  { label: 'Add Expense',           path: '/expense',     params: 'action=add' },
+
+  { label: 'Asset Dash',            path: '/asset',       params: 'tab=dashboard' },
+  { label: 'Asset Entries',         path: '/asset',       params: 'tab=database' },
+  { label: 'Register Asset Cat',    path: '/asset',       params: 'tab=register' },
+  { label: 'Manage Asset Cats',     path: '/asset',       params: 'tab=manage' },
+
+  { label: 'Liability Dash',        path: '/liability',   params: 'tab=dashboard' },
+  { label: 'Liability Entries',     path: '/liability',   params: 'tab=database' },
+  { label: 'Register Liability Cat',path: '/liability',   params: 'tab=register' },
+  { label: 'Manage Liability Cats', path: '/liability',   params: 'tab=manage' },
+
+  { label: 'Stock Overview',        path: '/stock',       params: '' },
+  { label: 'HSD Stock',             path: '/stock/HSD',   params: '' },
+  { label: 'PMG Stock',             path: '/stock/PMG',   params: '' },
+
+  { label: 'Customer Dash',         path: '/customer',    params: 'tab=dashboard' },
+  { label: 'Customer Entries',      path: '/customer',    params: 'tab=database' },
+  { label: 'Register Customer',     path: '/customer',    params: 'tab=register' },
+  { label: 'Manage Customers',      path: '/customer',    params: 'tab=manage' },
+
+  { label: 'Settings',              path: '/settings',    params: '' },
 ];
 
 const DEFAULT_SHORTCUTS: Omit<Shortcut, 'id'>[] = [
@@ -51,30 +75,57 @@ export default function KeyboardShortcutsPanel() {
     if (!recordingId) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if only modifiers are pressed
+      if (['Control', 'Shift', 'Alt', 'Meta'].includes(e.key)) return;
+
       e.preventDefault();
-      const newKey = e.key;
+      
+      const parts = [];
+      if (e.ctrlKey) parts.push('Ctrl');
+      if (e.shiftKey) parts.push('Shift');
+      if (e.altKey) parts.push('Alt');
+      if (e.metaKey) parts.push('Meta');
+      
+      // Map common keys for display
+      let keyName = e.key;
+      if (keyName === ' ') keyName = 'Space';
+      if (keyName.length === 1) keyName = keyName.toUpperCase();
+      
+      parts.push(keyName);
+      const newKeyCombo = parts.join('+');
+
+      // Check for duplicates
+      const isDuplicate = localShortcuts.some(s => s.key === newKeyCombo && s.id !== recordingId);
+      if (isDuplicate) {
+        toast(`Shortcut "${newKeyCombo}" is already assigned to another action.`, 'error');
+        setRecordingId(null);
+        return;
+      }
       
       // Update local state
       setLocalShortcuts(prev => prev.map(s => 
-        s.id === recordingId ? { ...s, key: newKey } : s
+        s.id === recordingId ? { ...s, key: newKeyCombo } : s
       ));
       
       setRecordingId(null);
-      toast(`Key "${newKey}" set successfully!`, 'success');
+      toast(`Shortcut "${newKeyCombo}" set successfully!`, 'success');
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [recordingId, toast]);
+  }, [recordingId, toast, localShortcuts]);
 
   const handleAdd = () => {
+    const newId = Math.random().toString(36).substr(2, 9);
     const newShortcut: Shortcut = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: newId,
       key: '?',
       label: 'New Action',
       targetPath: '/',
     };
     setLocalShortcuts([...localShortcuts, newShortcut]);
+    setRecordingId(newId);
+    toast('New shortcut added. Press a key combination to bind it...', 'info');
   };
 
   const handleDelete = (id: string) => {
@@ -143,19 +194,22 @@ export default function KeyboardShortcutsPanel() {
                 </div>
                 <div className="flex items-center gap-2">
                    <div className={cn(
-                     "px-3 py-1 rounded-lg border font-mono text-xs font-black shadow-inner transition-all",
+                     "px-3 py-1 rounded-lg border font-mono text-xs font-black shadow-inner transition-all min-w-[60px] text-center",
                      recordingId === shortcut.id 
                        ? "bg-amber-100 border-amber-500 text-amber-700 animate-pulse" 
                        : "bg-slate-100 dark:bg-dark-800 border-slate-200 dark:border-dark-700 text-slate-900 dark:text-white"
                    )}>
-                     {shortcut.key === ' ' ? 'Space' : shortcut.key}
+                     {recordingId === shortcut.id ? 'Recording...' : (shortcut.key === ' ' ? 'Space' : shortcut.key)}
                    </div>
                    <button 
                     onClick={() => handleRecord(shortcut.id)}
-                    className="p-1.5 rounded-lg bg-slate-50 dark:bg-dark-800 text-slate-400 hover:text-primary-600 hover:bg-primary-50 transition-colors"
+                    className={cn(
+                      "p-1.5 rounded-lg transition-colors",
+                      recordingId === shortcut.id ? "bg-amber-500 text-white" : "bg-slate-50 dark:bg-dark-800 text-slate-400 hover:text-primary-600 hover:bg-primary-50"
+                    )}
                     title="Re-record key"
                    >
-                     <RefreshCcw className="w-3.5 h-3.5" />
+                     <RefreshCcw className={cn("w-3.5 h-3.5", recordingId === shortcut.id && "animate-spin")} />
                    </button>
                 </div>
               </div>

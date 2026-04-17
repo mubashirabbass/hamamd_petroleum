@@ -52,7 +52,15 @@ export default function ExpensePage() {
   const [sidebarSort, setSidebarSort] = useState('name_asc');
   
   useEffect(() => {
-    if (searchParams.get('action') === 'add') {
+    const tab = searchParams.get('tab');
+    const action = searchParams.get('action');
+
+    if (tab === 'register') setActiveTab('register');
+    else if (tab === 'dashboard') setActiveTab('dashboard');
+    else if (tab === 'database') setActiveTab('database');
+    else if (tab === 'manage') setActiveTab('manage');
+
+    if (action === 'add') {
       setActiveTab('database');
       setShowEntryForm(true);
     }
