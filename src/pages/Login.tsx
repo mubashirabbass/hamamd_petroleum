@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, Mail, ArrowRight, Lock, Flame, Eye, EyeOff } from 'lucide-react';
+import { ShieldCheck, Mail, ArrowRight, Lock, Flame, Eye, EyeOff, User as UserIcon, Calendar, Undo2 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { useToast } from '../components/ui/Toast';
 import loginBg from '../../WhatsApp Image 2026-04-08 at 5.20.06 PM.jpeg';
 import hrLogo from '../../logo_not_png-removebg-preview.png';
 
 export default function Login() {
-  const { settings, login } = useStore();
+  const { settings, login, updateUser } = useStore();
   const { toast } = useToast();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -17,6 +17,13 @@ export default function Login() {
   const [displayText, setDisplayText] = useState('');
   const [typingFinished, setTypingFinished] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [verifiedUserId, setVerifiedUserId] = useState<string | null>(null);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetCnic, setResetCnic] = useState('');
+  const [resetDob, setResetDob] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
   const fullText = "حماد   رحیم   فلنگ   اسٹیشن   مینجمنٹ   سسٹم";
 
   useEffect(() => {
@@ -101,6 +108,48 @@ export default function Login() {
       setIsLoggingIn(false);
       setShowLoginSplash(false);
     }, 1150);
+  };
+
+  const handleVerifyIdentity = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (resetEmail.toLowerCase() === 'master@gmail.com' || resetEmail.toLowerCase() === 'mubashirabbasedu12@gmail.com') {
+      toast('Built-in admin accounts cannot be reset here.', 'error');
+      return;
+    }
+    
+    const user = (settings.users || []).find(u => 
+      u.email.toLowerCase() === resetEmail.toLowerCase() &&
+      u.cnic === resetCnic &&
+      u.dob === resetDob
+    );
+
+    if (!user) {
+      toast('Invalid details. No matching account found.', 'error');
+      return;
+    }
+
+    setVerifiedUserId(user.id);
+    toast('Identity verified. Please enter a new password.', 'success');
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!verifiedUserId) return;
+
+    try {
+      await updateUser(verifiedUserId, { password: newPassword });
+      toast('Password updated securely. You can now log in.', 'success');
+      setShowForgotPassword(false);
+      setVerifiedUserId(null);
+      setEmail(resetEmail);
+      setPassword('');
+      setResetEmail('');
+      setResetCnic('');
+      setResetDob('');
+      setNewPassword('');
+    } catch (err) {
+      toast('Failed to update password.', 'error');
+    }
   };
 
   return (
@@ -195,7 +244,79 @@ export default function Login() {
           {/* subtle shine effect overlay */}
           <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-transparent pointer-events-none" />
           
-          <form onSubmit={handleLogin} className="space-y-5 relative z-10">
+          {showForgotPassword ? (
+            verifiedUserId ? (
+              <form onSubmit={handleResetPassword} className="space-y-4 relative z-10 animate-fade-in">
+                <div className="flex flex-col items-center mb-4">
+                  <p className="text-emerald-400 text-[9px] uppercase tracking-[0.25em] font-black bg-emerald-400/10 backdrop-blur-sm px-4 py-1 rounded-full border border-emerald-400/20 shadow-sm">
+                    Identity Verified
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] uppercase tracking-[0.2em] font-black text-white block px-1">Set New Password</label>
+                  <div className="relative group">
+                    <input type={showNewPassword ? "text" : "password"} placeholder="••••••••" className="w-full bg-white/[0.08] backdrop-blur-xl border border-white/20 rounded-2xl py-3.5 pl-12 pr-12 text-white font-bold focus:outline-none focus:ring-2 focus:ring-white/10 text-sm placeholder:text-white/30" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required />
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 !text-white opacity-100 z-20 pointer-events-none" strokeWidth={2.5} />
+                    <button type="button" onClick={() => setShowNewPassword(!showNewPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 !text-white opacity-100 z-20 focus:outline-none">
+                      {showNewPassword ? <EyeOff className="w-4 h-4" strokeWidth={2.5} /> : <Eye className="w-4 h-4" strokeWidth={2.5} />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button type="button" onClick={() => setVerifiedUserId(null)} className="w-[80px] bg-white/10 text-white font-black py-4 rounded-2xl hover:bg-white/20 flex items-center justify-center transition-all flex-shrink-0">
+                    <Undo2 className="w-5 h-5" />
+                  </button>
+                  <button type="submit" className="flex-1 bg-emerald-600/90 text-white font-black py-4 rounded-2xl shadow-xl hover:bg-emerald-600 flex items-center justify-center gap-2 group transition-all">
+                    Update Password <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <form onSubmit={handleVerifyIdentity} className="space-y-4 relative z-10 animate-fade-in">
+                <div className="flex flex-col items-center mb-4">
+                  <p className="text-amber-400 text-[9px] uppercase tracking-[0.25em] font-black bg-amber-400/10 backdrop-blur-sm px-4 py-1 rounded-full border border-amber-400/20 shadow-sm">
+                    Verify Identity
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] uppercase tracking-[0.2em] font-black text-white block px-1">Registered Email</label>
+                  <div className="relative group">
+                    <input type="email" placeholder="name@example.com" className="w-full bg-white/[0.08] backdrop-blur-xl border border-white/20 rounded-2xl py-3.5 pl-12 pr-4 text-white font-bold focus:outline-none focus:ring-2 focus:ring-white/10 text-sm placeholder:text-white/30" value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} required />
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 !text-white opacity-100 z-20 pointer-events-none" strokeWidth={2.5} />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] uppercase tracking-[0.2em] font-black text-white block px-1">CNIC</label>
+                  <div className="relative group">
+                    <input type="text" placeholder="e.g. 12345-1234567-1" className="w-full bg-white/[0.08] backdrop-blur-xl border border-white/20 rounded-2xl py-3.5 pl-12 pr-4 text-white font-bold focus:outline-none focus:ring-2 focus:ring-white/10 text-sm placeholder:text-white/30" value={resetCnic} onChange={(e) => setResetCnic(e.target.value)} required />
+                    <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 !text-white opacity-100 z-20 pointer-events-none" strokeWidth={2.5} />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] uppercase tracking-[0.2em] font-black text-white block px-1">Date of Birth</label>
+                  <div className="relative group">
+                    <input type="date" className="w-full bg-white/[0.08] backdrop-blur-xl border border-white/20 rounded-2xl py-3.5 pl-12 pr-4 text-white font-bold focus:outline-none focus:ring-2 focus:ring-white/10 text-sm" value={resetDob} onChange={(e) => setResetDob(e.target.value)} required />
+                    <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 !text-white opacity-100 z-20 pointer-events-none" strokeWidth={2.5} />
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button type="button" onClick={() => setShowForgotPassword(false)} className="w-[80px] bg-white/10 text-white font-black py-4 rounded-2xl hover:bg-white/20 flex items-center justify-center transition-all flex-shrink-0">
+                    <Undo2 className="w-5 h-5" />
+                  </button>
+                  <button type="submit" className="flex-1 bg-amber-500/90 text-white font-black py-4 rounded-2xl shadow-xl hover:bg-amber-500 flex items-center justify-center gap-2 group transition-all">
+                    Verify Account <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </button>
+                </div>
+              </form>
+            )
+          ) : (
+            <form onSubmit={handleLogin} className="space-y-5 relative z-10 animate-fade-in">
             <div className="space-y-3">
               <div className="flex flex-col items-center mb-1">
                 <p className="text-white/95 text-[9px] uppercase tracking-[0.25em] font-black bg-white/10 backdrop-blur-sm px-4 py-1 rounded-full border border-white/20 shadow-sm">
@@ -251,7 +372,7 @@ export default function Login() {
 
               <button 
                 type="button"
-                onClick={() => toast('Please contact master admin for password reset.', 'info')}
+                onClick={() => setShowForgotPassword(true)}
                 className="text-[10px] font-black text-white/90 uppercase tracking-widest hover:underline transition-all"
               >
                 Forgot Password
@@ -276,6 +397,7 @@ export default function Login() {
                </div>
             </div>
           </form>
+          )}
         </div>
       </div>
     </div>

@@ -13,7 +13,7 @@ export default function ManageUsersModal({ isOpen, onClose }: ManageUsersModalPr
   const { settings, addUser, updateUser, deleteUser, currentUser } = useStore();
   const { toast } = useToast();
   const [showAddForm, setShowAddForm] = useState(false);
-  const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'Staff' as 'Admin' | 'Staff' });
+  const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'Staff' as 'Admin' | 'Staff', cnic: '', dob: '' });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<User>>({});
 
@@ -23,14 +23,14 @@ export default function ManageUsersModal({ isOpen, onClose }: ManageUsersModalPr
     e.preventDefault();
     if (!newUser.name || !newUser.email || !newUser.password) return;
     addUser(newUser);
-    setNewUser({ name: '', email: '', password: '', role: 'Staff' });
+    setNewUser({ name: '', email: '', password: '', role: 'Staff', cnic: '', dob: '' });
     setShowAddForm(false);
     toast('User account created', 'success');
   };
 
   const handleStartEdit = (user: User) => {
     setEditingId(user.id);
-    setEditForm({ name: user.name, email: user.email, role: user.role, password: user.password });
+    setEditForm({ name: user.name, email: user.email, role: user.role, password: user.password, cnic: user.cnic || '', dob: user.dob || '' });
   };
 
   const handleSaveEdit = (id: string) => {
@@ -86,6 +86,14 @@ export default function ManageUsersModal({ isOpen, onClose }: ManageUsersModalPr
                     <option value="Admin">Administrator (Full Access)</option>
                   </select>
                 </div>
+                <div className="relative">
+                  <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input className="input !pl-10" type="text" placeholder="CNIC (e.g., 12345-1234567-1)" value={newUser.cnic} onChange={e => setNewUser({...newUser, cnic: e.target.value})} />
+                </div>
+                <div className="relative">
+                  <input className="input" type="date" value={newUser.dob} onChange={e => setNewUser({...newUser, dob: e.target.value})} />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black uppercase text-slate-400 pointer-events-none">DOB</span>
+                </div>
                 <div className="md:col-span-2 flex justify-end">
                    <button type="submit" className="btn-primary !px-10 font-bold">Register User</button>
                 </div>
@@ -102,13 +110,15 @@ export default function ManageUsersModal({ isOpen, onClose }: ManageUsersModalPr
               {settings.users.map((user) => (
                 <div key={user.id} className="p-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-dark-800/20 transition-all group">
                    {editingId === user.id ? (
-                     <div className="grid grid-cols-1 md:grid-cols-4 gap-3 flex-1 mr-6">
-                        <input className="input !py-1.5 !text-sm" value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} />
-                        <input className="input !py-1.5 !text-sm" value={editForm.email} onChange={e => setEditForm({...editForm, email: e.target.value})} />
+                     <div className="grid grid-cols-1 md:grid-cols-6 gap-3 flex-1 mr-6">
+                        <input className="input !py-1.5 !text-sm" value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} placeholder="Name" />
+                        <input className="input !py-1.5 !text-sm" value={editForm.email} onChange={e => setEditForm({...editForm, email: e.target.value})} placeholder="Email" />
                         <select className="input !py-1.5 !text-sm" value={editForm.role} onChange={e => setEditForm({...editForm, role: e.target.value as any})}>
                            <option value="Admin">Admin</option>
                            <option value="Staff">Staff</option>
                         </select>
+                        <input className="input !py-1.5 !text-sm" value={editForm.cnic || ''} onChange={e => setEditForm({...editForm, cnic: e.target.value})} placeholder="CNIC" />
+                        <input type="date" className="input !py-1.5 !text-sm" value={editForm.dob || ''} onChange={e => setEditForm({...editForm, dob: e.target.value})} />
                         <div className="flex items-center gap-2 justify-end">
                            <button type="button" onClick={() => handleSaveEdit(user.id)} className="p-2 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/10 rounded-lg"><Check className="w-5 h-5" /></button>
                            <button type="button" onClick={() => setEditingId(null)} className="p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-dark-700 rounded-lg"><X className="w-5 h-5" /></button>

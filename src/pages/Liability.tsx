@@ -403,7 +403,6 @@ export default function LiabilityPage() {
                                                                              // If debit=0, credit=1000, balance=-1000. 
                                                                              // If debit=1000, credit=0, balance=+1000.
                                                                              // If debt_desc, we want more credit. So smaller balance.
-                              case 'debt_desc': return a.balance - b.balance;
                               case 'debt_asc':  return b.balance - a.balance;
                               default:          return 0;
                             }

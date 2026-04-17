@@ -105,6 +105,8 @@ export interface User {
   password:  string;
   role:      'Admin' | 'Staff' | 'Developer';
   createdAt: string;
+  cnic?:     string;
+  dob?:      string;
 }
 
 export interface Shortcut {
@@ -667,8 +669,8 @@ export const useStore = create<AppState>()((set, get) => ({
     const id  = uid();
     const now = new Date().toISOString();
     await db.execute(
-      'INSERT INTO users (id,name,email,password,role,created_at) VALUES (?,?,?,?,?,?)',
-      [id, u.name, u.email, u.password, u.role, now]
+      'INSERT INTO users (id,name,email,password,role,created_at,cnic,dob) VALUES (?,?,?,?,?,?,?,?)',
+      [id, u.name, u.email, u.password, u.role, now, u.cnic || '', u.dob || '']
     );
     const newUser: User = { ...u, id, createdAt: now };
     set(s => ({ settings: { ...s.settings, users: [newUser, ...s.settings.users] } }));
@@ -678,8 +680,8 @@ export const useStore = create<AppState>()((set, get) => ({
     const current = get().settings.users.find(u => u.id === id)!;
     const updated = { ...current, ...data };
     await db.execute(
-      'UPDATE users SET name=?,email=?,password=?,role=? WHERE id=?',
-      [updated.name, updated.email, updated.password, updated.role, id]
+      'UPDATE users SET name=?,email=?,password=?,role=?,cnic=?,dob=? WHERE id=?',
+      [updated.name, updated.email, updated.password, updated.role, updated.cnic || '', updated.dob || '', id]
     );
     set(s => ({
       settings: {

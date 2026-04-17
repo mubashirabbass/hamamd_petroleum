@@ -137,6 +137,9 @@ async function initSchema(db: Database): Promise<void> {
       created_at TEXT NOT NULL
     )
   `);
+  
+  try { await db.execute(`ALTER TABLE users ADD COLUMN cnic TEXT DEFAULT ''`); } catch (e) {}
+  try { await db.execute(`ALTER TABLE users ADD COLUMN dob TEXT DEFAULT ''`); } catch (e) {}
 
   // ── Counters (auto-incrementing bill numbers) ─────────────────────────────
   await db.execute(`
@@ -416,7 +419,7 @@ export async function loadAllData(): Promise<RawDBData> {
     db.select<any[]>('SELECT id, category_id as categoryId, bill_no as billNo, date, description, debit, credit, balance FROM liability_entries ORDER BY rowid DESC'),
     db.select<any[]>('SELECT id, name, phone FROM customers'),
     db.select<any[]>('SELECT id, customer_id as customerId, bill_no as billNo, date, description, debit, credit, balance FROM customer_entries ORDER BY rowid DESC'),
-    db.select<any[]>('SELECT id, name, email, password, role, created_at as createdAt FROM users'),
+    db.select<any[]>('SELECT id, name, email, password, role, created_at as createdAt, cnic, dob FROM users'),
     db.select<{ name: string; value: number }[]>('SELECT name, value FROM counters'),
   ]);
 
