@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Plus, Trash2, Eye, Edit2, Printer, BarChart3, ArrowRight, History, Zap, Fuel, LayoutGrid, Database } from 'lucide-react';
+import { Plus, Trash2, Eye, Edit2, Printer, BarChart3, ArrowRight, History, Zap, Fuel, LayoutGrid, Database, ShoppingCart, Save } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { formatCurrency, formatDate, today, paginate, filterByStartDate, startOfMonth, startOfYear, getErrorMessage, cn } from '../lib/utils';
 import { useToast } from '../components/ui/Toast';
@@ -34,7 +34,24 @@ export default function PurchasePage() {
 
     if (action === 'add') setShowForm(true);
   }, [searchParams]);
-    date: today(), description: '', invoiceNo: '', vehicleNo: '', rate: '', quantity: '', carriage: '', amount: '', totalAmount: '',
+  const [search, setSearch] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const [page, setPage] = useState(1);
+  const [editingEntity, setEditingEntity] = useState<any>(null);
+  const [viewingEntity, setViewingEntity] = useState<any>(null);
+  const [showReport, setShowReport] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [form, setForm] = useState({
+    date: today(),
+    description: '',
+    invoiceNo: '',
+    vehicleNo: '',
+    rate: '',
+    quantity: '',
+    carriage: '',
+    amount: '',
+    totalAmount: '',
   });
 
   const handleFuelSelect = (type: FuelType) => {
@@ -535,29 +552,87 @@ export default function PurchasePage() {
       )}
 
       {showForm && (
-        <Modal title={editingEntity ? `Edit ${fuelType} Purchase` : `Add ${fuelType} Purchase`} onClose={closeForm} wide>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="col-span-2"><label className="label">Date *</label><input type="date" className="input" value={form.date} onChange={(e) => set('date', e.target.value)} required /></div>
-              <div className="col-span-2"><label className="label">Description</label><input className="input" value={form.description} onChange={(e) => set('description', e.target.value)} placeholder="e.g. Purchase order note" /></div>
-              <div><label className="label">Invoice No</label><input className="input" value={form.invoiceNo} onChange={(e) => set('invoiceNo', e.target.value)} placeholder="e.g. INV-202611" /></div>
-              <div><label className="label">Vehicle No</label><input className="input" value={form.vehicleNo} onChange={(e) => set('vehicleNo', e.target.value)} placeholder="e.g. LHR-4567" /></div>
-              <div><label className="label">Rate (₨) *</label><input type="number" step="0.01" className="input" value={form.rate} onChange={(e) => set('rate', e.target.value)} required /></div>
-              <div><label className="label">Quantity (L) *</label><input type="number" step="0.01" className="input" value={form.quantity} onChange={(e) => set('quantity', e.target.value)} required /></div>
-              <div><label className="label">Carriage (₨)</label><input type="number" step="0.01" className="input" value={form.carriage} onChange={(e) => set('carriage', e.target.value)} /></div>
-              <div><label className="label">Amount</label><input className="input bg-slate-50 dark:bg-dark-750 cursor-not-allowed" value={form.amount} readOnly /></div>
-              <div className="col-span-2"><label className="label">Total Amount</label><input className="input bg-slate-50 dark:bg-dark-750 text-primary-600 dark:text-primary-400 font-semibold cursor-not-allowed" value={form.totalAmount} readOnly /></div>
+        <Modal 
+          title={editingEntity ? `Edit ${fuelType} Purchase` : `Add ${fuelType} Purchase`} 
+          onClose={closeForm} 
+          isDesktop 
+          icon={ShoppingCart}
+        >
+          <form onSubmit={handleSubmit} className="flex flex-col gap-1">
+            {/* Header / Info Section */}
+            <div className="bg-slate-50 dark:bg-dark-800/50 rounded-2xl p-4 mb-4 border border-slate-200 dark:border-dark-700/50">
+              <div className="desktop-form-row">
+                <label className="desktop-form-label">Date *</label>
+                <div className="desktop-form-field">
+                  <input type="date" className="input !py-1.5" value={form.date} onChange={(e) => set('date', e.target.value)} required />
+                </div>
+              </div>
+              <div className="desktop-form-row">
+                <label className="desktop-form-label">Invoice No</label>
+                <div className="desktop-form-field">
+                  <input className="input !py-1.5" value={form.invoiceNo} onChange={(e) => set('invoiceNo', e.target.value)} placeholder="e.g. INV-202611" />
+                </div>
+              </div>
+              <div className="desktop-form-row">
+                <label className="desktop-form-label">Vehicle No</label>
+                <div className="desktop-form-field">
+                  <input className="input !py-1.5" value={form.vehicleNo} onChange={(e) => set('vehicleNo', e.target.value)} placeholder="e.g. LHR-4567" />
+                </div>
+              </div>
+              <div className="desktop-form-row">
+                <label className="desktop-form-label">Description</label>
+                <div className="desktop-form-field">
+                  <input className="input !py-1.5" value={form.description} onChange={(e) => set('description', e.target.value)} placeholder="Purchase order note" />
+                </div>
+              </div>
             </div>
-            <div className="flex justify-end gap-2 pt-2">
-              <button type="button" onClick={closeForm} className="btn-secondary" disabled={isSaving}>Cancel</button>
-              <button type="submit" className="btn-primary flex items-center gap-2" disabled={isSaving}>
-                {isSaving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Plus className="w-4 h-4" />}
-                {editingEntity ? 'Update Purchase' : 'Add Purchase'}
-              </button>
+
+            {/* Financials Section */}
+            <div className="px-2 space-y-1">
+              <div className="desktop-form-row">
+                <label className="desktop-form-label text-blue-600 dark:text-blue-400">Rate (₨) *</label>
+                <div className="desktop-form-field">
+                  <input type="number" step="0.01" className="input !py-1.5 !bg-blue-50/30 dark:!bg-blue-900/10 focus:ring-blue-500/20" value={form.rate} onChange={(e) => set('rate', e.target.value)} required />
+                </div>
+              </div>
+              <div className="desktop-form-row">
+                <label className="desktop-form-label text-emerald-600 dark:text-emerald-400">Quantity (L) *</label>
+                <div className="desktop-form-field">
+                  <input type="number" step="0.01" className="input !py-1.5 !bg-emerald-50/30 dark:!bg-emerald-900/10 focus:ring-emerald-500/20" value={form.quantity} onChange={(e) => set('quantity', e.target.value)} required />
+                </div>
+              </div>
+              <div className="desktop-form-row">
+                <label className="desktop-form-label text-amber-600 dark:text-amber-400">Carriage (₨)</label>
+                <div className="desktop-form-field">
+                  <input type="number" step="0.01" className="input !py-1.5 !bg-amber-50/30 dark:!bg-amber-900/10 focus:ring-amber-500/20" value={form.carriage} onChange={(e) => set('carriage', e.target.value)} />
+                </div>
+              </div>
+            </div>
+
+            {/* Footer Summary Strip */}
+            <div className="desktop-form-footer">
+              <div className="desktop-summary-strip flex-1 mr-4">
+                <div className="flex flex-col">
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Gross Amount</span>
+                  <span className="text-sm font-black text-slate-900 dark:text-white font-mono">₨ {formatCurrency(form.amount)}</span>
+                </div>
+                <div className="h-8 w-px bg-slate-200 dark:bg-dark-700" />
+                <div className="flex flex-col">
+                  <span className="text-[9px] font-black text-primary-600 uppercase tracking-tighter">Total Payable</span>
+                  <span className="text-lg font-black text-primary-600 dark:text-primary-400 font-mono tracking-tighter">₨ {formatCurrency(form.totalAmount)}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={closeForm} className="btn-secondary !py-2 !px-4" disabled={isSaving}>Cancel</button>
+                <button type="submit" className="btn-primary !py-2 !px-6" disabled={isSaving}>
+                  {isSaving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Save className="w-4 h-4" />}
+                  {editingEntity ? 'Update' : 'Confirm [F10]'}
+                </button>
+              </div>
             </div>
           </form>
         </Modal>
-      )}
+      ) /* End showForm */}
 
       {viewingEntity && <TransactionReceiptModal entity={viewingEntity} type="purchase" onClose={() => setViewingEntity(null)} />}
       {showReport && <PrintReportModal data={filtered} type="purchase" onClose={() => setShowReport(false)} />}

@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Wallet, Plus, Trash2, Eye, Edit2, Search, Check, X, FileText, Settings, UserPlus, Printer, BarChart3, ArrowRight, ArrowUpDown } from 'lucide-react';
+import { Wallet, Plus, Trash2, Eye, Edit2, Search, Check, X, FileText, Settings, UserPlus, Printer, BarChart3, ArrowRight, ArrowUpDown, Save } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { formatCurrency, formatDate, today, paginate, filterByStartDate, cn, startOfMonth, startOfYear } from '../lib/utils';
 import { useToast } from '../components/ui/Toast';
@@ -778,21 +778,51 @@ export default function ExpensePage() {
       </div>
 
       {showEntryForm && (
-        <Modal title={editingEntity ? `Edit Entry — ${cat?.name}` : `Add Entry — ${cat?.name}`} onClose={closeForm}>
-          <form onSubmit={handleSubmit} className="space-y-3">
-            <div><label className="label">Date *</label><input type="date" className="input" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required /></div>
-            <div><label className="label">Details</label><input className="input" value={form.details} onChange={(e) => setForm({ ...form, details: e.target.value })} placeholder="Expense details" /></div>
-            <div><label className="label">Amount (₨) *</label><input type="number" step="0.01" className="input" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} required /></div>
-            <div className="flex justify-end gap-2 pt-2">
-              <button type="button" onClick={closeForm} className="btn-secondary" disabled={isSaving}>Cancel</button>
-              <button type="submit" className="btn-primary !bg-red-600 flex items-center gap-2" disabled={isSaving}>
-                {isSaving ? (
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                ) : (
-                  <Plus className="w-4 h-4" />
-                )}
-                {editingEntity ? 'Update' : 'Add'} Entry
-              </button>
+        <Modal 
+          title={editingEntity ? `Edit Entry — ${cat?.name}` : `Add Entry — ${cat?.name}`} 
+          onClose={closeForm}
+          isDesktop
+          icon={Wallet}
+        >
+          <form onSubmit={handleSubmit} className="flex flex-col gap-1">
+            <div className="bg-slate-50 dark:bg-dark-800/50 rounded-2xl p-4 mb-4 border border-slate-200 dark:border-dark-700/50">
+              <div className="desktop-form-row">
+                <label className="desktop-form-label">Entry Date</label>
+                <div className="desktop-form-field">
+                  <input type="date" className="input !py-1.5" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required />
+                </div>
+              </div>
+              <div className="desktop-form-row">
+                <label className="desktop-form-label">Details</label>
+                <div className="desktop-form-field">
+                  <input className="input !py-1.5" value={form.details} onChange={(e) => setForm({ ...form, details: e.target.value })} placeholder="Expense details" />
+                </div>
+              </div>
+            </div>
+
+            <div className="px-2">
+              <div className="desktop-form-row !border-b-0">
+                <label className="desktop-form-label text-red-600 dark:text-red-400">Amount (₨)</label>
+                <div className="desktop-form-field">
+                  <input type="number" step="0.01" className="input !py-1.5 !bg-red-50/30 dark:!bg-red-900/10 focus:ring-red-500/20" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} required />
+                </div>
+              </div>
+            </div>
+
+            <div className="desktop-form-footer">
+              <div className="desktop-summary-strip flex-1 mr-4">
+                <div className="flex flex-col">
+                  <span className="text-[9px] font-black text-red-600 uppercase tracking-tighter">Total Expense</span>
+                  <span className="text-xl font-black text-red-600 dark:text-red-500 font-mono tracking-tighter">₨ {formatCurrency(Number(form.amount) || 0)}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={closeForm} className="btn-secondary !py-2 !px-4" disabled={isSaving}>Cancel</button>
+                <button type="submit" className="btn-primary !bg-red-600 !hover:bg-red-500 !py-2 !px-6" disabled={isSaving}>
+                  {isSaving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Save className="w-4 h-4" />}
+                  {editingEntity ? 'Update' : 'Confirm [F10]'}
+                </button>
+              </div>
             </div>
           </form>
         </Modal>

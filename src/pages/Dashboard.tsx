@@ -23,6 +23,7 @@ function DigitalClock() {
 
   const hh = now.getHours();
   const mm = String(now.getMinutes()).padStart(2, '0');
+  const ss = String(now.getSeconds()).padStart(2, '0');
   const displayHH = String(hh % 12 || 12).padStart(2, '0');
   const ampm = hh >= 12 ? 'PM' : 'AM';
 
@@ -37,6 +38,8 @@ function DigitalClock() {
           <span className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">{displayHH}</span>
           <span className="text-2xl font-black text-slate-900 dark:text-white mx-0.5">:</span>
           <span className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">{mm}</span>
+          <span className="text-2xl font-black text-slate-900 dark:text-white mx-0.5">:</span>
+          <span className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">{ss}</span>
           <span className="text-[9px] font-black text-primary-600 dark:text-primary-400 uppercase tracking-widest ml-1 mb-0.5">{ampm}</span>
         </div>
         <div className="mt-0.5">
@@ -210,31 +213,35 @@ export default function Dashboard() {
 
   return (
     <div className="animate-fade-in space-y-6 pb-10 h-full overflow-y-auto smart-scroll pr-2">
-      <div className="relative overflow-hidden rounded-[2rem] shadow-md border border-slate-200/60 dark:border-dark-700/60 flex flex-col md:flex-row md:items-center justify-between gap-4 flex-row-reverse animate-fade-in">
-        {/* Background Image Layer */}
-        <div 
-           className="absolute inset-0 z-0 opacity-80 bg-cover bg-center transition-all duration-1000 contrast-125 saturate-[1.8] blur-sm" 
-           style={{ backgroundImage: `url(${loginBg})` }}
-        />
-        {/* Gradient Overlay for Text Readability - from Left and Right (Slightly darker for blur depth) */}
-        <div className="absolute inset-0 bg-gradient-to-r from-slate-900/40 via-transparent to-transparent z-0" />
-        <div className="absolute inset-0 bg-gradient-to-l from-slate-900/40 via-transparent to-transparent z-0" />
+      <div className="relative rounded-[2rem] shadow-md border border-slate-200/60 dark:border-dark-700/60 flex flex-col md:flex-row md:items-center justify-between gap-4 animate-fade-in group overflow-hidden min-h-[100px] px-6 py-4">
+        {/* Background Layer with Overflow Clipping */}
+        <div className="absolute inset-0 z-0">
+          <div 
+             className="absolute inset-0 opacity-80 bg-cover bg-center transition-all duration-1000 contrast-125 saturate-[1.8] blur-sm" 
+             style={{ backgroundImage: `url(${loginBg})` }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-900/60 via-transparent to-slate-900/60" />
+        </div>
 
-        {/* Dashboard Title Block */}
-        <div className="flex items-center gap-5 flex-row-reverse text-right relative z-10 px-6 py-3" dir="rtl">
-          <div className="w-14 h-14 rounded-3xl flex items-center justify-center shadow-xl border border-white/20 bg-white/10 flex-shrink-0 backdrop-blur-xl">
+        {/* 1. Fuel Icon Block (Left side) */}
+        <div className="relative z-10 flex-shrink-0 hidden md:block">
+          <div className="w-14 h-14 rounded-3xl flex items-center justify-center shadow-xl border border-white/20 bg-white/10 backdrop-blur-xl">
             <Fuel className="w-8 h-8 text-white" />
-          </div>
-          <div className="flex flex-col pt-3">
-            <h1 className="text-3xl sm:text-4xl font-black text-white font-urdu min-h-[70px] leading-[1.8] drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
-              {displayText}
-            </h1>
           </div>
         </div>
 
-        {/* Clock & Profile Block */}
-        <div className="flex items-center gap-3 relative z-10 px-6 py-3">
-          <div className="backdrop-blur-xl rounded-2xl px-4 py-2 border border-white/20 dark:border-dark-700/50 shadow-lg bg-white/60 dark:bg-dark-900/60"><DigitalClock /></div>
+        {/* 2. Dashboard Title Block (Center) */}
+        <div className="flex-1 flex flex-col items-center justify-center relative z-10" dir="rtl">
+          <h1 className="text-3xl sm:text-4xl font-black text-white font-urdu min-h-[70px] leading-[1.8] text-center drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
+            {displayText}
+          </h1>
+        </div>
+
+        {/* 3. Clock & Profile Block (Right side) */}
+        <div className="flex items-center gap-3 relative z-10 flex-shrink-0">
+          <div className="backdrop-blur-xl rounded-2xl px-4 py-2 border border-white/20 dark:border-dark-700/50 shadow-lg bg-white/60 dark:bg-dark-900/60">
+            <DigitalClock />
+          </div>
           <div className="backdrop-blur-xl rounded-2xl border border-white/20 dark:border-dark-700/50 shadow-lg bg-white/60 dark:bg-dark-900/60">
             <UserCard />
           </div>

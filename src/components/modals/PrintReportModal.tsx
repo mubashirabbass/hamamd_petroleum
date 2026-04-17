@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { X, Printer, FileText } from 'lucide-react';
 import { useReactToPrint } from 'react-to-print';
 import { formatCurrency, formatDate } from '../../lib/utils';
+import PrintHeader from '../printing/PrintHeader';
 
 interface Props {
   data: any[];
@@ -11,7 +12,7 @@ interface Props {
   customerPhone?: string;
 }
 
-const ROWS_PER_PAGE = 26;
+const ROWS_PER_PAGE = 22;
 
 // ── Amount in words ──────────────────────────────────────────────────────────
 const ONES = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine',
@@ -33,7 +34,10 @@ function toWords(n: number): string {
 
 export default function PrintReportModal({ data, type, onClose, title: customTitle, customerPhone }: Props) {
   const contentRef = useRef<HTMLDivElement>(null);
-  const handlePrint = useReactToPrint({ contentRef });
+  const handlePrint = useReactToPrint({ 
+    contentRef,
+    documentTitle: `${type.toUpperCase()}_REPORT_${customTitle?.split('—')[0]?.trim() || 'General'}_${new Date().toLocaleDateString().replace(/\//g, '-')}`
+  });
 
   const dates = data.map(x => x.date).sort();
   const dateRange = dates.length
@@ -73,20 +77,41 @@ export default function PrintReportModal({ data, type, onClose, title: customTit
       </div>
 
       <style>{`
-        @page { size: A4 portrait; margin: 0; }
+        @page { 
+          size: A4 portrait; 
+          margin: 0; 
+        }
         @media print {
-          html, body { margin: 0 !important; padding: 0 !important; background: #fff !important; }
-          .no-print { display: none !important; }
-          .page-print-container { margin: 0 !important; padding: 0 !important; width: 210mm !important; }
-          .report-page { 
-            page-break-after: always; 
+          * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          html, body { 
             margin: 0 !important; 
+            padding: 0 !important; 
+            background: #fff !important;
             width: 210mm !important;
             height: 297mm !important;
-            transform: scale(1);
-            transform-origin: top left;
           }
-          .report-page:last-child { page-break-after: avoid; }
+          .no-print { display: none !important; }
+          .page-print-container { 
+            margin: 0 !important; 
+            padding: 0 !important; 
+            width: 210mm !important;
+          }
+          .report-page { 
+            position: relative;
+            width: 210mm !important;
+            height: 297mm !important;
+            padding: 10mm !important;
+            margin: 0 !important;
+            overflow: hidden !important;
+            box-sizing: border-box !important;
+            page-break-after: always;
+            background: #fff !important;
+            transform-origin: top center;
+          }
+          .report-page:last-child { 
+            page-break-after: avoid !important;
+            page-break-inside: avoid !important;
+          }
         }
       `}</style>
 
@@ -123,22 +148,7 @@ export default function PrintReportModal({ data, type, onClose, title: customTit
 
             return (
               <div key={pi} className="report-page" style={{ position: 'relative', width: '210mm', minHeight: '297mm', background: '#fff', color: '#000', padding: '12mm 10mm', margin: '0 auto', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
-                <div style={{ border: '4px double #111', padding: '2px', marginBottom: '15px' }}>
-                  <div style={{ border: '1.2px solid #111', padding: '12px 15px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '20px' }}>
-                      <div style={{ width: 85, height: 85, flexShrink: 0 }}>
-                        <img src="/assets/logo-hr.png" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
-                      </div>
-                      <div style={{ textAlign: 'center', flex: 1 }}>
-                        <div style={{ fontSize: '24px', fontWeight: 1000, textTransform: 'uppercase' }}>Hammad Rahim Filling Station</div>
-                        <div style={{ fontSize: '10px', fontWeight: 700, fontStyle: 'italic', textTransform: 'uppercase', color: '#444', marginTop: 4 }}>Muzafar Garh Road, Ada Ghyl Pur, District Jhang</div>
-                      </div>
-                      <div style={{ width: 85, height: 85, flexShrink: 0 }}>
-                        <img src="/assets/logo-go.png" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <PrintHeader />
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', border: '2px solid #111', padding: '8px 15px', marginBottom: '15px', fontSize: '11px', fontWeight: 1000, textTransform: 'uppercase', background: '#f9f9f9' }}>
                   <span>{customTitle || type.toUpperCase() + ' REPORT'}</span>
@@ -389,7 +399,7 @@ export default function PrintReportModal({ data, type, onClose, title: customTit
                           This is a computer generated bill.<br />Errors and omissions are accepted.
                         </div>
                         <div style={{ marginTop: 12, fontSize: '9px', color: '#999', fontStyle: 'italic' }}>
-                          Software Solution by <strong>Mb Soft and Tech</strong> — 0304-1646290
+                          Software Solution by <strong>Mb Soft and Tech</strong> — 0304-1654629
                         </div>
                       </div>
                       <div style={{ textAlign: 'center', width: '280px' }}>

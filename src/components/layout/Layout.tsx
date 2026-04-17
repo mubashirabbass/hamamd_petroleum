@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import { useStore } from '../../store/useStore';
 import { Menu } from 'lucide-react';
+import { useShortcuts } from '../../hooks/useShortcuts';
 
 // Page Imports for Persistence
 import Dashboard from '../../pages/Dashboard';
@@ -22,59 +23,8 @@ export default function Layout() {
   const location = useLocation();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't trigger shortcuts if user is typing in an input/textarea
-      if (['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement).tagName)) {
-        return;
-      }
-
-      const shortcuts = settings.shortcuts || [];
-      
-      const foundShortcut = shortcuts.find(s => {
-        const parts = s.key.split('+');
-        const mainKey = parts.pop()?.trim().toUpperCase();
-        
-        const needsCtrl  = parts.some(p => p.trim().toUpperCase() === 'CTRL');
-        const needsShift = parts.some(p => p.trim().toUpperCase() === 'SHIFT');
-        const needsAlt   = parts.some(p => p.trim().toUpperCase() === 'ALT');
-        const needsMeta  = parts.some(p => p.trim().toUpperCase() === 'META');
-
-        const matchModifiers = 
-          e.ctrlKey  === needsCtrl  &&
-          e.shiftKey === needsShift &&
-          e.altKey   === needsAlt   &&
-          e.metaKey  === needsMeta;
-
-        let eventKey = e.key.toUpperCase();
-        if (e.key === ' ') eventKey = 'SPACE';
-        
-        // Handle 'Space' string as well
-        const normalizedMainKey = mainKey === 'SPACE' || mainKey === ' ' ? 'SPACE' : mainKey;
-        
-        return matchModifiers && eventKey === normalizedMainKey;
-      });
-
-      if (!foundShortcut) return;
-
-      const label = foundShortcut.label;
-      const hiddenMenus = settings.hiddenMenus || [];
-      const isDeveloper = currentUser?.role === 'Developer';
-      const isAdmin     = currentUser?.role === 'Admin';
-
-      if (!isDeveloper && hiddenMenus.includes(label)) return;
-      if (label === 'Settings' && !isAdmin && !isDeveloper) return;
-
-      e.preventDefault();
-      const target = foundShortcut.searchParams 
-        ? `${foundShortcut.targetPath}?${foundShortcut.searchParams}`
-        : foundShortcut.targetPath;
-      navigate(target);
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [navigate, settings.shortcuts, settings.hiddenMenus, currentUser?.role]);
+  // Apply Global Shortcuts
+  useShortcuts();
 
   // Helper to determine active view
   const isPath = (path: string) => location.pathname === path;

@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useReactToPrint } from 'react-to-print';
 import { X, Printer, FileText } from 'lucide-react';
 import { formatCurrency, formatDate } from '../../lib/utils';
+import PrintHeader from '../printing/PrintHeader';
 
 // ── Amount in words ──────────────────────────────────────────────────────────
 const ONES = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine',
@@ -32,7 +33,10 @@ interface TransactionReceiptModalProps {
 
 export default function TransactionReceiptModal({ entity, type, onClose }: TransactionReceiptModalProps) {
   const contentRef = useRef<HTMLDivElement>(null);
-  const handlePrint = useReactToPrint({ contentRef });
+  const handlePrint = useReactToPrint({ 
+    contentRef,
+    documentTitle: `${type.toUpperCase()}_${entity.name || entity.description || 'Receipt'}_${new Date().toLocaleDateString().replace(/\//g, '-')}_${new Date().toLocaleTimeString().replace(/:/g, '-')}`
+  });
 
   useEffect(() => {
     if (!entity) return;
@@ -105,47 +109,45 @@ export default function TransactionReceiptModal({ entity, type, onClose }: Trans
       </div>
 
       <style>{`
-        @page { size: A4 portrait; margin: 0; }
+        @page { 
+          size: A4 portrait; 
+          margin: 0; 
+        }
         @media print {
-          html, body { margin: 0 !important; padding: 0 !important; background: #fff !important; }
-          .no-print { display: none !important; }
-          .page-print-container { margin: 0 !important; padding: 0 !important; width: 210mm !important; }
-          .report-page { 
-            page-break-after: always; 
+          * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          html, body { 
             margin: 0 !important; 
+            padding: 0 !important; 
+            background: #fff !important;
             width: 210mm !important;
             height: 297mm !important;
-            transform: scale(1);
-            transform-origin: top left;
+          }
+          .no-print { display: none !important; }
+          .page-print-container { 
+            margin: 0 !important; 
+            padding: 0 !important; 
+            width: 210mm !important;
+          }
+          .report-page { 
+            position: relative;
+            width: 210mm !important;
+            height: 297mm !important;
+            margin: 0 !important;
+            overflow: hidden !important;
+            box-sizing: border-box !important;
+            page-break-after: avoid !important;
+            page-break-inside: avoid !important;
+            background: #fff !important;
+            transform-origin: top center;
           }
         }
       `}</style>
 
       <div ref={contentRef} className="page-print-container" style={{ width: '210mm', margin: '30px auto' }}>
-        <div className="report-page" style={{ position: 'relative', width: '210mm', height: '297mm', background: '#fff', color: '#000', padding: '12mm 15mm', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
+        <div className="report-page" style={{ position: 'relative', width: '210mm', height: '297mm', background: '#fff', color: '#000', padding: '10mm 12mm 15mm 12mm', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
           
           {/* Formal Letterhead */}
-          <div style={{ border: '4px double #111', padding: '2px', marginBottom: '15px' }}>
-            <div style={{ border: '1.2px solid #111', padding: '12px 15px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '20px' }}>
-                <div style={{ width: 85, height: 85 }}>
-                  <img src="/assets/logo-hr.png" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
-                </div>
-                <div style={{ textAlign: 'center', flex: 1 }}>
-                  <div style={{ fontSize: '24px', fontWeight: 1000, textTransform: 'uppercase' }}>Hammad Rahim Filling Station</div>
-                  <div style={{ fontSize: '10px', fontWeight: 700, fontStyle: 'italic', textTransform: 'uppercase', color: '#444', marginTop: 4 }}>Muzafar Garh Road, Ada Ghyl Pur, District Jhang</div>
-                  <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', textTransform: 'uppercase', fontSize: '9px', fontWeight: 1000, marginTop: 6 }}>
-                    <span>WhatsApp: +92-301-7221831</span>
-                    <span style={{ color: '#111' }}>•</span>
-                    <span>Phone: +92-300-0989192</span>
-                  </div>
-                </div>
-                <div style={{ width: 85, height: 85 }}>
-                  <img src="/assets/logo-go.png" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
-                </div>
-              </div>
-            </div>
-          </div>
+          <PrintHeader />
 
           {/* Invoice Meta Bar */}
           <div style={{ display: 'flex', justifyContent: 'space-between', border: '2.5px solid #111', padding: '8px 15px', marginBottom: '15px', fontSize: '11px', fontWeight: 1000, textTransform: 'uppercase', background: '#f5f5f5' }}>
@@ -189,7 +191,7 @@ export default function TransactionReceiptModal({ entity, type, onClose }: Trans
                 )}
               </tr>
               {/* Fill vertical space to push total to bottom and extend vertical lines */}
-              <tr style={{ height: '450px' }}>
+              <tr style={{ height: '280px' }}>
                 {headers.map((_, i) => (
                   <td key={i} style={{ borderRight: i < headers.length - 1 ? '1.5px solid #111' : 'none' }}></td>
                 ))}
@@ -230,7 +232,7 @@ export default function TransactionReceiptModal({ entity, type, onClose }: Trans
                   This is a computer generated entry.<br />Errors and omissions are accepted.
                 </div>
                 <div style={{ marginTop: 12, fontSize: '9px', color: '#999', fontStyle: 'italic' }}>
-                  Software Solution by <strong>Mb Soft and Tech</strong> — 0304-1646290
+                  Software Solution by <strong>Mb Soft and Tech</strong> — 0304-1654629
                 </div>
               </div>
               <div style={{ textAlign: 'center', width: '280px' }}>

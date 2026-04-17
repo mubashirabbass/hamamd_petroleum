@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Plus, Trash2, Users, UserPlus, Printer, Search, Phone, Edit2, Check, X, UserCog, User, BarChart3, ArrowRight, ArrowUpDown } from 'lucide-react';
+import { Plus, Trash2, Users, UserPlus, Printer, Search, Phone, Edit2, Check, X, UserCog, User, BarChart3, ArrowRight, ArrowUpDown, Save } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { formatCurrency, formatDate, today, paginate, filterByStartDate, cn, startOfMonth, startOfYear } from '../lib/utils';
 import { useToast } from '../components/ui/Toast';
@@ -918,24 +918,59 @@ export default function CustomerPage() {
       </div>
 
       {showEntryForm && (
-        <Modal title={editingEntity ? `Edit Entry — ${cust?.name}` : `Add Entry — ${cust?.name}`} onClose={closeEntryForm}>
-          <form onSubmit={handleSubmitEntry} className="space-y-3">
-            <div><label className="label">Date *</label><input type="date" className="input" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required /></div>
-            <div><label className="label">Description</label><input className="input" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Transaction details" /></div>
-            <div className="grid grid-cols-2 gap-3">
-              <div><label className="label">Debit (₨)</label><input type="number" step="0.01" className="input" value={form.debit} onChange={(e) => setForm({ ...form, debit: e.target.value })} /></div>
-              <div><label className="label">Credit (₨)</label><input type="number" step="0.01" className="input" value={form.credit} onChange={(e) => setForm({ ...form, credit: e.target.value })} /></div>
+        <Modal 
+          title={editingEntity ? `Edit Entry — ${cust?.name}` : `Add Entry — ${cust?.name}`} 
+          onClose={closeEntryForm}
+          isDesktop
+          icon={User}
+        >
+          <form onSubmit={handleSubmitEntry} className="flex flex-col gap-1">
+            <div className="bg-slate-50 dark:bg-dark-800/50 rounded-2xl p-4 mb-4 border border-slate-200 dark:border-dark-700/50">
+              <div className="desktop-form-row">
+                <label className="desktop-form-label">Date *</label>
+                <div className="desktop-form-field">
+                  <input type="date" className="input !py-1.5" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required />
+                </div>
+              </div>
+              <div className="desktop-form-row">
+                <label className="desktop-form-label">Description</label>
+                <div className="desktop-form-field">
+                  <input className="input !py-1.5" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Transaction details" />
+                </div>
+              </div>
             </div>
-            <div className="flex justify-end gap-2 pt-2">
-              <button type="button" onClick={closeEntryForm} className="btn-secondary" disabled={isSaving}>Cancel</button>
-              <button type="submit" className="btn-primary-emerald font-black flex items-center gap-2" disabled={isSaving}>
-                {isSaving ? (
-                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                ) : (
-                  <Plus className="w-4 h-4" />
-                )}
-                {editingEntity ? 'Update Entry' : 'Add Entry'}
-              </button>
+
+            <div className="px-2 space-y-1">
+              <div className="desktop-form-row">
+                <label className="desktop-form-label text-emerald-600 dark:text-emerald-400">Debit (₨)</label>
+                <div className="desktop-form-field">
+                  <input type="number" step="0.01" className="input !py-1.5 !bg-emerald-50/30 dark:!bg-emerald-900/10 focus:ring-emerald-500/20" value={form.debit} onChange={(e) => setForm({ ...form, debit: e.target.value })} placeholder="0.00" />
+                </div>
+              </div>
+              <div className="desktop-form-row !border-b-0">
+                <label className="desktop-form-label text-red-600 dark:text-red-400">Credit (₨)</label>
+                <div className="desktop-form-field">
+                  <input type="number" step="0.01" className="input !py-1.5 !bg-red-50/30 dark:!bg-red-900/10 focus:ring-red-500/20" value={form.credit} onChange={(e) => setForm({ ...form, credit: e.target.value })} placeholder="0.00" />
+                </div>
+              </div>
+            </div>
+
+            <div className="desktop-form-footer">
+              <div className="desktop-summary-strip flex-1 mr-4">
+                <div className="flex flex-col">
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Current Balance Change</span>
+                  <span className={`text-xl font-black font-mono tracking-tighter ${ (Number(form.debit)||0) >= (Number(form.credit)||0) ? 'text-emerald-600 dark:text-emerald-500' : 'text-red-600 dark:text-red-500'}`}>
+                    ₨ {formatCurrency((Number(form.debit)||0) - (Number(form.credit)||0))}
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={closeEntryForm} className="btn-secondary !py-2 !px-4" disabled={isSaving}>Cancel</button>
+                <button type="submit" className="btn-primary-emerald !py-2 !px-6" disabled={isSaving}>
+                  {isSaving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Save className="w-4 h-4" />}
+                  {editingEntity ? 'Update' : 'Confirm [F10]'}
+                </button>
+              </div>
             </div>
           </form>
         </Modal>

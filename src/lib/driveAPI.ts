@@ -236,10 +236,8 @@ export async function downloadLocalBackup(): Promise<string> {
     });
 
     if (savePath) {
-      // Use Tauri FS to read the temp zip and write to user's desired location
-      const { readFile, writeFile } = await import('@tauri-apps/plugin-fs');
-      const data = await readFile(zipPath);
-      await writeFile(savePath, data);
+      // Use the backend to copy the file to the chosen location
+      await invoke('save_backup_to_path', { src: zipPath, dst: savePath });
       return savePath;
     } else {
       throw new Error('Canceled');
@@ -248,8 +246,8 @@ export async function downloadLocalBackup(): Promise<string> {
     if (err instanceof Error && err.message === 'Canceled') {
       throw err;
     }
-    // If saving fails (e.g., plugin not found), fallback to just returning the temp zip path
-    console.warn("Save dialog failed, returning temp path:", err);
+    // Fallback to returning the internal path if something goes wrong
+    console.warn("Save operation failed:", err);
     return zipPath;
   }
 }

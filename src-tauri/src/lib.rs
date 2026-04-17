@@ -89,6 +89,20 @@ async fn create_backup_zip(_app: tauri::AppHandle) -> Result<String, String> {
     Ok(zip_path.to_string_lossy().to_string())
 }
 
+#[tauri::command]
+async fn save_backup_to_path(src: String, dst: String) -> Result<(), String> {
+    let src_path = std::path::Path::new(&src);
+    let dst_path = std::path::Path::new(&dst);
+
+    if !src_path.exists() {
+        return Err("Source backup file not found.".to_string());
+    }
+
+    std::fs::copy(src_path, dst_path)
+        .map(|_| ())
+        .map_err(|e| format!("Failed to save backup to chosen location: {}", e))
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // RESTORE — Extract ZIP and replace the SQLite database
 // ─────────────────────────────────────────────────────────────────────────────
@@ -595,6 +609,7 @@ pub fn run() {
             list_drive_backups,
             download_drive_backup,
             get_machine_id,
+            save_backup_to_path,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Plus, Trash2, Eye, Edit2, Printer, BarChart3, ArrowRight, History, Zap, Fuel, LayoutGrid, Database } from 'lucide-react';
+import { Plus, Trash2, Eye, Edit2, Printer, BarChart3, ArrowRight, History, Zap, Fuel, LayoutGrid, Database, TrendingUp, Save } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { formatCurrency, formatDate, today, paginate, filterByStartDate, startOfMonth, startOfYear, getErrorMessage, cn } from '../lib/utils';
 import { useToast } from '../components/ui/Toast';
@@ -470,21 +470,60 @@ export default function SalePage() {
       )}
 
       {showForm && (
-        <Modal title={editingEntity ? `Edit ${fuelType} Sale` : `Add ${fuelType} Sale`} onClose={closeForm}>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="col-span-2"><label className="label">Date *</label><input type="date" className="input" value={form.date} onChange={(e) => set('date', e.target.value)} required /></div>
-              <div className="col-span-2"><label className="label">Description</label><input className="input" value={form.description || ''} onChange={(e) => set('description', e.target.value)} placeholder="Sale details" /></div>
-              <div><label className="label">Quantity (L) *</label><input type="number" step="0.01" className="input" value={form.quantity} onChange={(e) => set('quantity', e.target.value)} required /></div>
-              <div><label className="label">Rate (₨) *</label><input type="number" step="0.01" className="input" value={form.rate} onChange={(e) => set('rate', e.target.value)} required /></div>
-              <div className="col-span-2"><label className="label">Calculation (Auto)</label><input className="input cursor-not-allowed text-primary-600 dark:text-primary-400 font-bold" value={`₨ ${form.amount}`} readOnly /></div>
+        <Modal 
+          title={editingEntity ? `Edit ${fuelType} Sale` : `Add ${fuelType} Sale`} 
+          onClose={closeForm} 
+          isDesktop 
+          icon={TrendingUp}
+        >
+          <form onSubmit={handleSubmit} className="flex flex-col gap-1">
+            {/* Date & Description */}
+            <div className="bg-slate-50 dark:bg-dark-800/50 rounded-2xl p-4 mb-4 border border-slate-200 dark:border-dark-700/50">
+              <div className="desktop-form-row">
+                <label className="desktop-form-label">Date *</label>
+                <div className="desktop-form-field">
+                  <input type="date" className="input !py-1.5" value={form.date} onChange={(e) => set('date', e.target.value)} required />
+                </div>
+              </div>
+              <div className="desktop-form-row">
+                <label className="desktop-form-label">Description</label>
+                <div className="desktop-form-field">
+                  <input className="input !py-1.5" value={form.description || ''} onChange={(e) => set('description', e.target.value)} placeholder="Daily Sale / Account Sale" />
+                </div>
+              </div>
             </div>
-            <div className="flex justify-end gap-2 pt-2">
-              <button type="button" onClick={closeForm} className="btn-secondary" disabled={isSaving}>Cancel</button>
-              <button type="submit" className="btn-primary-emerald flex items-center gap-2" disabled={isSaving}>
-                {isSaving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Plus className="w-4 h-4" />}
-                {editingEntity ? 'Update Sale' : 'Add Sale'}
-              </button>
+
+            {/* Financial Details */}
+            <div className="px-2 space-y-1">
+              <div className="desktop-form-row">
+                <label className="desktop-form-label text-emerald-600 dark:text-emerald-400">Quantity (L) *</label>
+                <div className="desktop-form-field">
+                  <input type="number" step="0.01" className="input !py-1.5 !bg-emerald-50/30 dark:!bg-emerald-900/10 focus:ring-emerald-500/20" value={form.quantity} onChange={(e) => set('quantity', e.target.value)} required />
+                </div>
+              </div>
+              <div className="desktop-form-row">
+                <label className="desktop-form-label text-blue-600 dark:text-blue-400">Rate (₨) *</label>
+                <div className="desktop-form-field">
+                  <input type="number" step="0.01" className="input !py-1.5 !bg-blue-50/30 dark:!bg-blue-900/10 focus:ring-blue-500/20" value={form.rate} onChange={(e) => set('rate', e.target.value)} required />
+                </div>
+              </div>
+            </div>
+
+            {/* Desktop Footer */}
+            <div className="desktop-form-footer">
+              <div className="desktop-summary-strip flex-1 mr-4">
+                <div className="flex flex-col">
+                  <span className="text-[9px] font-black text-primary-600 uppercase tracking-tighter">Total Amount</span>
+                  <span className="text-xl font-black text-primary-600 dark:text-primary-400 font-mono tracking-tighter">₨ {formatCurrency(form.amount)}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={closeForm} className="btn-secondary !py-2 !px-4" disabled={isSaving}>Cancel</button>
+                <button type="submit" className="btn-primary !py-2 !px-6" disabled={isSaving}>
+                  {isSaving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Save className="w-4 h-4" />}
+                  {editingEntity ? 'Update' : 'Confirm [F10]'}
+                </button>
+              </div>
             </div>
           </form>
         </Modal>

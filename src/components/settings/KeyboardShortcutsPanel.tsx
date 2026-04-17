@@ -68,11 +68,15 @@ export default function KeyboardShortcutsPanel() {
 
   const handleRecord = (id: string) => {
     setRecordingId(id);
+    window.__ebsRecordingShortcut = true;
     toast('Press any key on your keyboard to set the shortcut...', 'info');
   };
 
   useEffect(() => {
-    if (!recordingId) return;
+    if (!recordingId) {
+      window.__ebsRecordingShortcut = false;
+      return;
+    }
 
     const handleKeyDown = (e: KeyboardEvent) => {
       // Ignore if only modifiers are pressed
