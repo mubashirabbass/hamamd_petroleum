@@ -34,11 +34,12 @@ const navItems = [
 
 type SidebarProps = {
   className?: string;
+  isCollapsed?: boolean;
   onNavigate?: () => void;
   onCloseMobile?: () => void;
 };
 
-export default function Sidebar({ className = '', onNavigate, onCloseMobile }: SidebarProps) {
+export default function Sidebar({ className = '', isCollapsed = false, onNavigate, onCloseMobile }: SidebarProps) {
   const location = useLocation();
   const { currentUser, logout, settings, updateSettings } = useStore();
 
@@ -62,7 +63,12 @@ export default function Sidebar({ className = '', onNavigate, onCloseMobile }: S
   };
 
   return (
-    <aside className={`relative h-screen flex-shrink-0 flex flex-col border-r w-56 bg-white/90 dark:bg-dark-900/95 backdrop-blur-xl border-slate-200 dark:border-dark-700/50 ${className}`}>
+    <aside className={cn(
+      "relative h-screen flex-shrink-0 flex flex-col transition-all duration-300 border-r border-slate-200 dark:border-dark-700/50 bg-white/90 dark:bg-dark-900/95 backdrop-blur-xl",
+      isCollapsed ? "w-14" : "w-56",
+      className
+    )}>
+      <div className="flex-1 flex flex-col h-full transition-all duration-300">
       {/* Mobile close button */}
       <button
         onClick={onCloseMobile}
@@ -73,20 +79,28 @@ export default function Sidebar({ className = '', onNavigate, onCloseMobile }: S
       </button>
 
       {/* Logo */}
-      <div className="h-16 flex items-center px-4 border-b border-slate-200 dark:border-dark-700/50 gap-3">
+      <div className={cn(
+        "h-16 flex items-center border-b border-slate-200 dark:border-dark-700/50 gap-3 transition-all duration-300",
+        isCollapsed ? "justify-center" : "px-4"
+      )}>
         <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-white flex items-center justify-center shadow-lg p-1 border border-slate-200">
           <img src="/assets/logo-hr.png?v=2" alt="HR" className="w-full h-full object-contain" />
         </div>
-        <div>
-          <p className="text-slate-900 dark:text-white font-bold text-[15px] leading-tight truncate max-w-[140px]">
-            {settings.softwareName || 'EBS Petroleum'}
-          </p>
-          <p className="text-slate-500 dark:text-dark-500 text-[11px]">Business Suite</p>
-        </div>
+        {!isCollapsed && (
+          <div className="animate-in fade-in slide-in-from-left-2 duration-300">
+            <p className="text-slate-900 dark:text-white font-bold text-[15px] leading-tight truncate max-w-[140px]">
+              {settings.softwareName || 'EBS Petroleum'}
+            </p>
+            <p className="text-slate-500 dark:text-dark-500 text-[11px]">Business Suite</p>
+          </div>
+        )}
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 py-3 px-2 space-y-1 overflow-y-auto">
+      <nav className={cn(
+        "flex-1 py-3 px-2 overflow-y-auto overflow-x-hidden transition-all duration-500",
+        isCollapsed ? "space-y-3" : "space-y-1"
+      )}>
         {navItems
           .filter(item => {
             if (currentUser?.role === 'Developer') return true;
@@ -105,14 +119,17 @@ export default function Sidebar({ className = '', onNavigate, onCloseMobile }: S
                   to={path}
                   end={path === '/stock'}
                   onClick={onNavigate}
+                  title={isCollapsed ? label : ''}
                   className={cn(
-                    'sidebar-item group/item',
-                    active ? 'sidebar-item-active' : 'sidebar-item-inactive font-medium'
+                    'sidebar-item group/item relative',
+                    active ? 'sidebar-item-active' : 'sidebar-item-inactive font-medium',
+                    isCollapsed ? 'justify-center px-0' : ''
                   )}
                 >
-                  <Icon className="w-4 h-4 flex-shrink-0" />
-                  <span className="truncate flex-1">{label}</span>
-                  {item.shortcut && (
+                  <Icon className={cn("w-4 h-4 flex-shrink-0", isCollapsed ? "m-0" : "")} />
+                  {!isCollapsed && <span className="truncate flex-1 animate-in fade-in slide-in-from-left-1 duration-200">{label}</span>}
+                  
+                  {!isCollapsed && item.shortcut && (
                     <kbd className={cn(
                       "hidden group-hover/item:inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[10px] font-black border transition-all duration-300",
                       active 
@@ -124,8 +141,8 @@ export default function Sidebar({ className = '', onNavigate, onCloseMobile }: S
                   )}
                 </NavLink>
 
-                {hasChildren && (
-                  <div className="mt-1 space-y-1 ml-4 border-l border-slate-100 dark:border-dark-700/50 pl-2">
+                {hasChildren && !isCollapsed && (
+                  <div className="mt-1 space-y-1 ml-4 border-l border-slate-100 dark:border-dark-700/50 pl-2 animate-in fade-in slide-in-from-top-1 duration-200">
                     {children.map((child: any) => (
                       <NavLink
                         key={child.path}
@@ -150,47 +167,42 @@ export default function Sidebar({ className = '', onNavigate, onCloseMobile }: S
       </nav>
 
       {/* Zoom Controls */}
-      <div className="px-4 py-3 border-t border-slate-200 dark:border-dark-700/50 space-y-2">
-        <div className="flex items-center justify-between">
-          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-dark-500">Interface Zoom</span>
-          <span className="text-[10px] font-black text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 px-1.5 py-0.5 rounded">
-            {Math.round(settings.zoomLevel * 100)}%
-          </span>
+      {!isCollapsed && (
+        <div className="px-4 py-3 border-t border-slate-200 dark:border-dark-700/50 space-y-2 animate-in fade-in duration-300">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-dark-500">Interface Zoom</span>
+            <span className="text-[10px] font-black text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 px-1.5 py-0.5 rounded">
+              {Math.round(settings.zoomLevel * 100)}%
+            </span>
+          </div>
+          <div className="flex items-center gap-1">
+            <button onClick={() => handleZoom(-0.1)} title="Zoom Out" className="flex-1 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-dark-700/50 hover:bg-slate-50 dark:hover:bg-dark-800 text-slate-600 dark:text-dark-400 transition-colors">
+              <Minus className="w-3.5 h-3.5" />
+            </button>
+            <button onClick={resetZoom} title="Reset Zoom" className="flex-1 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-dark-700/50 hover:bg-slate-50 dark:hover:bg-dark-800 text-slate-600 dark:text-dark-400 transition-colors">
+              <RotateCcw className="w-3.5 h-3.5" />
+            </button>
+            <button onClick={() => handleZoom(0.1)} title="Zoom In" className="flex-1 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-dark-700/50 hover:bg-slate-50 dark:hover:bg-dark-800 text-slate-600 dark:text-dark-400 transition-colors">
+              <Plus className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => handleZoom(-0.1)}
-            title="Zoom Out"
-            className="flex-1 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-dark-700/50 hover:bg-slate-50 dark:hover:bg-dark-800 text-slate-600 dark:text-dark-400 transition-colors"
-          >
-            <Minus className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={resetZoom}
-            title="Reset Zoom"
-            className="flex-1 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-dark-700/50 hover:bg-slate-50 dark:hover:bg-dark-800 text-slate-600 dark:text-dark-400 transition-colors"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={() => handleZoom(0.1)}
-            title="Zoom In"
-            className="flex-1 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-dark-700/50 hover:bg-slate-50 dark:hover:bg-dark-800 text-slate-600 dark:text-dark-400 transition-colors"
-          >
-            <Plus className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      </div>
+      )}
 
       {/* Logout only */}
-      <div className="p-2 border-t border-slate-200 dark:border-dark-700/50">
+      <div className={cn("p-2 border-t border-slate-200 dark:border-dark-700/50", isCollapsed ? "flex justify-center" : "")}>
         <button
           onClick={logout}
-          className="w-full flex items-center gap-3 px-2.5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 text-red-500 hover:text-red-600 hover:bg-red-500/10"
+          title={isCollapsed ? "Logout" : ""}
+          className={cn(
+            "w-full flex items-center gap-3 rounded-lg text-sm font-medium transition-all duration-200 text-red-500 hover:text-red-600 hover:bg-red-500/10",
+            isCollapsed ? "justify-center p-2.5" : "px-2.5 py-2.5"
+          )}
         >
           <LogOut className="w-4 h-4" />
-          <span>Logout</span>
+          {!isCollapsed && <span>Logout</span>}
         </button>
+      </div>
       </div>
     </aside>
   );

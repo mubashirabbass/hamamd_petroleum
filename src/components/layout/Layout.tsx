@@ -73,10 +73,20 @@ export default function Layout() {
   const isPath = (path: string) => location.pathname === path;
   const isStock = location.pathname.startsWith('/stock');
 
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
+
   return (
     <div className="flex h-screen overflow-hidden bg-slate-100 dark:bg-dark-950 transition-colors duration-300">
-      <div className="hidden md:block">
-        <Sidebar />
+      {/* Sidebar Container with Auto-Hide trigger */}
+      <div 
+        className="hidden md:block relative z-50 group"
+        onMouseEnter={() => setIsSidebarExpanded(true)}
+        onMouseLeave={() => setIsSidebarExpanded(false)}
+      >
+        {/* The Trigger Block - a small hot-zone that stays active even when sidebar is w-0 */}
+        <div className="absolute inset-y-0 left-0 w-3 cursor-e-resize" />
+        
+        <Sidebar isCollapsed={!isSidebarExpanded} />
       </div>
 
       {mobileSidebarOpen && (

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, Mail, ArrowRight, Lock, Flame } from 'lucide-react';
+import { ShieldCheck, Mail, ArrowRight, Lock, Flame, Eye, EyeOff } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { useToast } from '../components/ui/Toast';
 import loginBg from '../../WhatsApp Image 2026-04-08 at 5.20.06 PM.jpeg';
@@ -14,6 +14,23 @@ export default function Login() {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [showLoginSplash, setShowLoginSplash] = useState(false);
   const [splashProgress, setSplashProgress] = useState(0);
+  const [displayText, setDisplayText] = useState('');
+  const [typingFinished, setTypingFinished] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const fullText = "حماد   رحیم   فلنگ   اسٹیشن   مینجمنٹ   سسٹم";
+
+  useEffect(() => {
+    let index = 0;
+    const timer = setInterval(() => {
+      setDisplayText(fullText.slice(0, index));
+      index++;
+      if (index > fullText.length) {
+        clearInterval(timer);
+        setTypingFinished(true);
+      }
+    }, 40);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     const savedEmail = localStorage.getItem('ebs_remembered_email');
@@ -152,11 +169,11 @@ export default function Login() {
               </div>
             </div>
             <div className="mt-2 flex flex-col items-center gap-2">
-              <h1 className="login-brand-heading text-xl sm:text-2xl md:text-3xl whitespace-nowrap font-black text-white tracking-tighter text-center leading-tight px-6 py-3 rounded-2xl soft-glass !bg-white/[0.12]">
-                HAMMAD RAHIM FILLING STATION
+              <h1 className={`login-brand-heading text-xl sm:text-2xl md:text-3xl font-black transition-all duration-1000 font-urdu pt-4 min-h-[80px] leading-[1.8] text-center px-6 py-3 rounded-2xl soft-glass !bg-white/[0.12] text-white whitespace-nowrap ${typingFinished ? 'animate-glow-soft' : ''}`}>
+                {displayText}
               </h1>
-              <p className="text-white/90 text-[8px] sm:text-[9px] font-bold uppercase tracking-[0.2em] px-4 py-1.5 soft-glass rounded-full !bg-white/[0.08]">
-                Muzafar Garh Road, Ada Ghyl Pur, District Jhang
+              <p className="text-white/90 text-[10px] sm:text-[11px] font-urdu px-4 py-1.5 soft-glass rounded-full !bg-white/[0.08] mt-1">
+                مظفر گڑھ روڈ، اڈا گھیل پور، ضلع جھنگ
               </p>
               <div className="login-brand-fire flex items-center gap-2 text-amber-300">
                 <Flame className="w-5 h-5 text-orange-400 drop-shadow-[0_0_6px_rgba(251,146,60,0.8)]" />
@@ -187,7 +204,6 @@ export default function Login() {
               </div>
               <label className="text-[10px] uppercase tracking-[0.2em] font-black text-white block px-1">Login Email</label>
               <div className="relative group">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/60 group-focus-within:text-white transition-colors" />
                 <input 
                   type="email"
                   placeholder="name@example.com"
@@ -197,22 +213,30 @@ export default function Login() {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                 />
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 !text-white opacity-100 z-20 pointer-events-none" strokeWidth={2.5} />
               </div>
             </div>
 
             <div className="space-y-2">
               <label className="text-[10px] uppercase tracking-[0.2em] font-black text-white block px-1">Access Password</label>
               <div className="relative group">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/60 group-focus-within:text-white transition-colors" />
                 <input 
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
-                  className="w-full bg-white/[0.08] backdrop-blur-xl border border-white/20 rounded-2xl py-3.5 pl-12 pr-4 text-white font-bold focus:outline-none focus:ring-4 focus:ring-white/10 transition-all text-sm shadow-sm placeholder:text-white/30"
+                  className="w-full bg-white/[0.08] backdrop-blur-xl border border-white/20 rounded-2xl py-3.5 pl-12 pr-12 text-white font-bold focus:outline-none focus:ring-4 focus:ring-white/10 transition-all text-sm shadow-sm placeholder:text-white/30"
                   style={{ backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                 />
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 !text-white opacity-100 z-20 pointer-events-none" strokeWidth={2.5} />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 !text-white opacity-100 z-20 transition-colors focus:outline-none"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" strokeWidth={2.5} /> : <Eye className="w-4 h-4" strokeWidth={2.5} />}
+                </button>
               </div>
             </div>
 

@@ -6,7 +6,7 @@
  * On every mutation: the action writes to SQLite AND updates in-memory state.
  *
  * NO localStorage / sessionStorage is used — data lives in:
- *   Windows: %APPDATA%\com.ebs.business\ebs_business.db
+ *   Installation Folder: ebs_business.db (Portable Mode)
  */
 import { create } from 'zustand';
 import { getDB, getAndBumpCounter, loadAllData, setSetting, runInTransaction } from '../lib/db';

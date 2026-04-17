@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import {
   BarChart3, TrendingUp, TrendingDown, ArrowLeft,
   Package, LayoutList, Fuel, Zap, Clock, Download,
-  ChevronRight, Calendar, Printer
+  ChevronRight, Calendar, Printer, ArrowUpDown
 } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useStore, FuelType } from '../store/useStore';
@@ -67,6 +67,7 @@ export default function StockPage() {
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(40);
   const [showReport, setShowReport] = useState(false);
+  const [entrySort, setEntrySort] = useState('date_desc');
 
   // ── Calculation Logic ──
   const stockData = useMemo(() => {
@@ -131,8 +132,19 @@ export default function StockPage() {
       return { ...item, balance: bal };
     });
 
-    return withBal.reverse();
-  }, [rawPurchases, rawSales, selectedType, view, settings.startDate]);
+    const sorted = [...withBal].sort((a, b) => {
+      switch (entrySort) {
+        case 'date_desc':    return b.date.localeCompare(a.date);
+        case 'date_asc':     return a.date.localeCompare(b.date);
+        case 'qtyIn_desc':   return b.qtyIn - a.qtyIn;
+        case 'qtyOut_desc':  return b.qtyOut - a.qtyOut;
+        case 'balance_desc': return b.balance - a.balance;
+        default:             return b.date.localeCompare(a.date);
+      }
+    });
+
+    return sorted;
+  }, [rawPurchases, rawSales, selectedType, view, settings.startDate, entrySort]);
 
   const filteredHistory = historyData.filter((h) => {
     const matchesSearch = !search || (h.details || '').toLowerCase().includes(search.toLowerCase()) || h.date.includes(search);
@@ -582,17 +594,34 @@ export default function StockPage() {
                     <Clock className="w-4 h-4 text-slate-400" />
                     <h3 className="text-sm font-black uppercase tracking-widest text-slate-900 dark:text-white">Transaction History</h3>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <button 
-                      onClick={() => setShowReport(true)}
-                      className="btn-secondary !py-1.5 !px-3 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"
-                    >
-                      <Printer className="w-3.5 h-3.5" /> Reports
-                    </button>
-                    <div className="w-64">
-                      <SearchBar value={search} onChange={v => { setSearch(v); setPage(1); }} placeholder="Search History..." />
+                    <div className="flex items-center gap-3">
+                      <div className="relative group shrink-0">
+                        <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-600 transition-colors pointer-events-none" />
+                        <select
+                          value={entrySort}
+                          onChange={(e) => setEntrySort(e.target.value)}
+                          className="appearance-none pl-9 pr-8 py-1.5 bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700/50 rounded-xl text-[10px] font-black uppercase tracking-wider text-slate-700 dark:text-dark-200 focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all cursor-pointer outline-none shadow-sm"
+                        >
+                          <option value="date_desc">Newest First</option>
+                          <option value="date_asc">Oldest First</option>
+                          <option value="qtyIn_desc">Highest Purchase</option>
+                          <option value="qtyOut_desc">Highest Sale</option>
+                          <option value="balance_desc">Highest Stock Level</option>
+                        </select>
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                          <div className="w-1 h-1 border-r border-b border-current rotate-45" />
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => setShowReport(true)}
+                        className="btn-secondary !py-1.5 !px-3 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"
+                      >
+                        <Printer className="w-3.5 h-3.5" /> Reports
+                      </button>
+                      <div className="w-64">
+                        <SearchBar value={search} onChange={v => { setSearch(v); setPage(1); }} placeholder="Search History..." />
+                      </div>
                     </div>
-                  </div>
                 </div>
                 <div className="overflow-auto smart-scroll max-h-[60vh]">
                   <table className="w-full">

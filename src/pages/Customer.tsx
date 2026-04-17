@@ -374,16 +374,17 @@ export default function CustomerPage() {
             })()}
 
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4 animate-in slide-in-from-top duration-500 delay-100">
-              <div className="flex-1 max-w-md">
-                <SearchBar 
-                  value={dashboardSearch} 
-                  onChange={setDashboardSearch} 
-                  placeholder="Search customers..." 
-                  fullWidth={true}
-                />
-              </div>
-              <div className="relative group">
-                <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-hover:text-pink-600 transition-colors pointer-events-none" />
+              <div className="flex-1 flex flex-col md:flex-row md:items-center gap-3">
+                <div className="flex-1 max-w-md">
+                  <SearchBar 
+                    value={dashboardSearch} 
+                    onChange={setDashboardSearch} 
+                    placeholder="Search customers..." 
+                    fullWidth={true}
+                  />
+                </div>
+                <div className="relative group shrink-0">
+                  <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-hover:text-pink-600 transition-colors pointer-events-none" />
                 <select
                   value={dashSort}
                   onChange={(e) => setDashSort(e.target.value)}
@@ -401,6 +402,7 @@ export default function CustomerPage() {
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
                   <div className="w-1.5 h-1.5 border-r-2 border-b-2 border-current rotate-45" />
                 </div>
+              </div>
               </div>
               <div className="flex items-center gap-3 ml-auto">
                 <div className="flex items-center bg-slate-100 dark:bg-dark-800 p-1 rounded-xl border border-slate-200 dark:border-dark-700/50">

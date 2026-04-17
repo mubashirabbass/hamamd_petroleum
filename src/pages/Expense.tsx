@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Wallet, Plus, Trash2, Eye, Edit2, Search, Check, X, FileText, Settings, UserPlus, Printer, BarChart3, ArrowRight } from 'lucide-react';
+import { Wallet, Plus, Trash2, Eye, Edit2, Search, Check, X, FileText, Settings, UserPlus, Printer, BarChart3, ArrowRight, ArrowUpDown } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { formatCurrency, formatDate, today, paginate, filterByStartDate, cn, startOfMonth, startOfYear } from '../lib/utils';
 import { useToast } from '../components/ui/Toast';
@@ -47,6 +47,9 @@ export default function ExpensePage() {
   const [perPage, setPerPage] = useState(40);
   const [form, setForm] = useState({ date: today(), details: '', amount: '' });
   const [isSaving, setIsSaving] = useState(false);
+  const [dashSort, setDashSort] = useState('name_asc');
+  const [entrySort, setEntrySort] = useState('date_desc');
+  const [sidebarSort, setSidebarSort] = useState('name_asc');
   
   useEffect(() => {
     if (searchParams.get('action') === 'add') {
@@ -63,10 +66,25 @@ export default function ExpensePage() {
 
   const cat = expenseCategories.find((c) => c.id === selectedCat);
 
-  const filteredSidebar = useMemo(() =>
-    expenseCategories.filter((c) => !sidebarSearch || c.name.toLowerCase().includes(sidebarSearch.toLowerCase())),
-    [expenseCategories, sidebarSearch]
-  );
+  const filteredSidebar = useMemo(() => {
+    const list = expenseCategories.filter((c) => !sidebarSearch || c.name.toLowerCase().includes(sidebarSearch.toLowerCase()));
+    
+    const withTotals = list.map(c => {
+      const entries = filterByStartDate(expenseEntries, settings.startDate).filter(e => e.categoryId === c.id);
+      const total = entries.reduce((s, e) => s + (e.amount || 0), 0);
+      return { ...c, total };
+    });
+
+    return [...withTotals].sort((a, b) => {
+      switch (sidebarSort) {
+        case 'name_asc':     return a.name.localeCompare(b.name);
+        case 'name_desc':    return b.name.localeCompare(a.name);
+        case 'total_desc':   return b.total - a.total;
+        case 'total_asc':    return a.total - b.total;
+        default:             return a.name.localeCompare(b.name);
+      }
+    });
+  }, [expenseCategories, sidebarSearch, sidebarSort, expenseEntries, settings.startDate]);
 
   const filteredManage = useMemo(() =>
     expenseCategories.filter((c) => !manageSearch || c.name.toLowerCase().includes(manageSearch.toLowerCase())),
@@ -75,15 +93,28 @@ export default function ExpensePage() {
 
   const catEntries = useMemo(() => {
     if (!selectedCat) return [];
-    return filterByStartDate(expenseEntries, settings.startDate)
+    
+    const filtered = filterByStartDate(expenseEntries, settings.startDate)
       .filter((e) => e.categoryId === selectedCat)
       .filter((e) => {
-        const matchesSearch = !search || e.details.toLowerCase().includes(search.toLowerCase()) || e.date.includes(search);
+        const matchesSearch = !search || e.details?.toLowerCase().includes(search.toLowerCase()) || e.date.includes(search);
         const matchesFrom = !fromDate || e.date >= fromDate;
         const matchesTo   = !toDate   || e.date <= toDate;
         return matchesSearch && matchesFrom && matchesTo;
       });
-  }, [expenseEntries, settings.startDate, selectedCat, search, fromDate, toDate]);
+
+    return [...filtered].sort((a, b) => {
+      switch (entrySort) {
+        case 'date_desc':    return b.date.localeCompare(a.date);
+        case 'date_asc':     return a.date.localeCompare(b.date);
+        case 'details_asc':  return (a.details || '').localeCompare(b.details || '');
+        case 'details_desc': return (b.details || '').localeCompare(a.details || '');
+        case 'amount_desc':  return (b.amount || 0) - (a.amount || 0);
+        case 'amount_asc':   return (a.amount || 0) - (b.amount || 0);
+        default:             return b.date.localeCompare(a.date);
+      }
+    });
+  }, [expenseEntries, settings.startDate, selectedCat, search, fromDate, toDate, entrySort]);
 
   const paged = paginate(catEntries, page, perPage);
 
@@ -271,15 +302,33 @@ export default function ExpensePage() {
             })()}
 
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-              <div className="flex-1 max-w-md">
-                <SearchBar 
-                  value={dashboardSearch} 
-                  onChange={setDashboardSearch} 
-                  placeholder="Search categories..." 
-                  fullWidth={true}
-                />
+              <div className="flex-1 flex flex-col md:flex-row md:items-center gap-3">
+                <div className="flex-1 max-w-md">
+                  <SearchBar 
+                    value={dashboardSearch} 
+                    onChange={setDashboardSearch} 
+                    placeholder="Search categories..." 
+                    fullWidth={true}
+                  />
+                </div>
+                <div className="relative group shrink-0">
+                <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-hover:text-red-600 transition-colors pointer-events-none" />
+                <select
+                  value={dashSort}
+                  onChange={(e) => setDashSort(e.target.value)}
+                  className="appearance-none pl-10 pr-10 py-2.5 bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700/50 rounded-2xl text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-dark-200 focus:ring-2 focus:ring-red-600/20 focus:border-red-600 transition-all cursor-pointer outline-none shadow-sm"
+                >
+                  <option value="name_asc">A to Z</option>
+                  <option value="name_desc">Z to A</option>
+                  <option value="total_desc">Highest Total</option>
+                  <option value="total_asc">Lowest Total</option>
+                </select>
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                  <div className="w-1.5 h-1.5 border-r-2 border-b-2 border-current rotate-45" />
+                </div>
               </div>
-              <div className="flex items-center gap-3">
+              </div>
+              <div className="flex items-center gap-3 ml-auto">
                 <div className="flex items-center bg-slate-100 dark:bg-dark-800 p-1 rounded-xl border border-slate-200 dark:border-dark-700/50">
                   <button onClick={() => { setFromDate(today()); setToDate(today()); setPage(1); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-dark-400 hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all">Today</button>
                   <button onClick={() => { setFromDate(startOfMonth()); setToDate(today()); setPage(1); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-dark-400 hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all border-l border-slate-200 dark:border-dark-700/50">This Month</button>
@@ -304,16 +353,7 @@ export default function ExpensePage() {
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-dark-800/50 bg-white/50 dark:bg-dark-900/50">
                     {(() => {
-                      const filtered = expenseCategories.filter(c => 
-                        !dashboardSearch || c.name.toLowerCase().includes(dashboardSearch.toLowerCase())
-                      );
-                      
-                      let grandSum = 0;
-                      let grandCount = 0;
-
-                      return (
-                        <>
-                          {paginate(filtered, dashPage, perPage).map(cat => {
+                          const itemsWithTotals = expenseCategories.map(cat => {
                             const entries = filterByStartDate(expenseEntries, settings.startDate)
                               .filter(e => e.categoryId === cat.id)
                               .filter(e => {
@@ -321,52 +361,77 @@ export default function ExpensePage() {
                                 const matchesTo = !toDate || e.date <= toDate;
                                 return matchesFrom && matchesTo;
                               });
-                            const catTotal = entries.reduce((sum, e) => sum + e.amount, 0);
-                            grandSum += catTotal;
-                            grandCount += entries.length;
+                            const catTotal = entries.reduce((sum, e) => sum + (e.amount || 0), 0);
+                            return { ...cat, total: catTotal, count: entries.length };
+                          });
 
-                            return (
-                              <tr 
-                                key={cat.id}
-                                onClick={() => { setSelectedCat(cat.id); setActiveTab('database'); }}
-                                className="table-row hover:bg-slate-50 dark:hover:bg-dark-800/50 transition-all cursor-pointer group text-[11px]"
-                              >
-                                <td className="table-cell">
-                                  <div className="flex items-center gap-3">
-                                    <div className="w-6 h-6 rounded-md bg-red-600/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                      <Wallet className="w-3 h-3 text-red-600" />
-                                    </div>
-                                    <span className="font-bold text-slate-700 dark:text-slate-200">{cat.name}</span>
-                                  </div>
-                                </td>
-                                <td className="table-cell text-right">
-                                  <span className="text-sm font-black text-slate-900 dark:text-white tabular-nums">
-                                    ₨ {formatCurrency(catTotal)}
-                                  </span>
-                                </td>
-                                <td className="table-cell text-center">
-                                  <span className="font-bold text-slate-500 uppercase tracking-widest">{entries.length} Entries</span>
-                                </td>
-                                <td className="table-cell text-right">
-                                  <div className="w-6 h-6 rounded-md bg-slate-100 dark:bg-dark-800 flex items-center justify-center group-hover:bg-red-600 group-hover:text-white transition-all float-right">
-                                    <ArrowRight className="w-3 h-3" />
-                                  </div>
-                                </td>
-                              </tr>
-                            );
-                          })}
+                          // 2. Filter by search
+                          const filtered = itemsWithTotals.filter(c => 
+                            !dashboardSearch || c.name.toLowerCase().includes(dashboardSearch.toLowerCase())
+                          );
+
+                          // 3. Apply Live Sorting
+                          const sorted = [...filtered].sort((a, b) => {
+                            switch (dashSort) {
+                              case 'name_asc':  return a.name.localeCompare(b.name);
+                              case 'name_desc': return b.name.localeCompare(a.name);
+                              case 'total_desc':return b.total - a.total;
+                              case 'total_asc': return a.total - b.total;
+                              default:          return 0;
+                            }
+                          });
                           
-                          {filtered.length > 0 && (
-                            <tr className="font-black text-black dark:text-white bg-slate-100/50 dark:bg-dark-800/50 border-t-2 border-slate-300 dark:border-dark-700">
-                              <td className="table-cell text-left text-xs uppercase tracking-widest text-slate-600 dark:text-slate-400 font-black">Totals for visible accounts</td>
-                              <td className="table-cell text-right text-sm text-red-600 tabular-nums font-black">₨ {formatCurrency(grandSum)}</td>
-                              <td className="table-cell text-center text-xs text-slate-500 font-black">{grandCount} Total</td>
-                              <td className="table-cell"></td>
-                            </tr>
-                          )}
-                        </>
-                      );
-                    })()}
+                          let grandSum = 0;
+                          let grandCount = 0;
+
+                          return (
+                            <>
+                              {paginate(sorted, dashPage, perPage).map(cat => {
+                                grandSum += cat.total;
+                                grandCount += cat.count;
+
+                                return (
+                                  <tr 
+                                    key={cat.id}
+                                    onClick={() => { setSelectedCat(cat.id); setActiveTab('database'); }}
+                                    className="table-row hover:bg-slate-50 dark:hover:bg-dark-800/50 transition-all cursor-pointer group text-[11px]"
+                                  >
+                                    <td className="table-cell">
+                                      <div className="flex items-center gap-3">
+                                        <div className="w-6 h-6 rounded-md bg-red-600/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                          <Wallet className="w-3 h-3 text-red-600" />
+                                        </div>
+                                        <span className="font-bold text-slate-700 dark:text-slate-200">{cat.name}</span>
+                                      </div>
+                                    </td>
+                                    <td className="table-cell text-right">
+                                      <span className="text-sm font-black text-slate-900 dark:text-white tabular-nums">
+                                        ₨ {formatCurrency(cat.total)}
+                                      </span>
+                                    </td>
+                                    <td className="table-cell text-center">
+                                      <span className="font-bold text-slate-500 uppercase tracking-widest">{cat.count} Entries</span>
+                                    </td>
+                                    <td className="table-cell text-right">
+                                      <div className="w-6 h-6 rounded-md bg-slate-100 dark:bg-dark-800 flex items-center justify-center group-hover:bg-red-600 group-hover:text-white transition-all float-right">
+                                        <ArrowRight className="w-3 h-3" />
+                                      </div>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                              
+                              {sorted.length > 0 && (
+                                <tr className="font-black text-black dark:text-white bg-slate-100/50 dark:bg-dark-800/50 border-t-2 border-slate-300 dark:border-dark-700">
+                                  <td className="table-cell text-left text-xs uppercase tracking-widest text-slate-600 dark:text-slate-400 font-black">Totals for visible accounts</td>
+                                  <td className="table-cell text-right text-sm text-red-600 tabular-nums font-black">₨ {formatCurrency(grandSum)}</td>
+                                  <td className="table-cell text-center text-xs text-slate-500 font-black">{grandCount} Total</td>
+                                  <td className="table-cell"></td>
+                                </tr>
+                              )}
+                            </>
+                          );
+                        })()}
                   </tbody>
                 </table>
               </div>
@@ -391,8 +456,24 @@ export default function ExpensePage() {
                 <p className="text-[10px] font-extrabold text-slate-600 dark:text-dark-200 uppercase tracking-widest">Active Categories</p>
                 <span className="text-[10px] font-bold text-slate-300">{filteredSidebar.length}</span>
               </div>
-              <div className="p-2 border-b border-slate-100 dark:border-dark-700/30">
+              <div className="p-2 space-y-2 border-b border-slate-100 dark:border-dark-700/30 bg-slate-50/30">
                 <SearchBar value={sidebarSearch} onChange={setSidebarSearch} placeholder="Search Expense..." fullWidth={true} className="!py-1.5 !text-[11px]" />
+                <div className="relative group">
+                  <ArrowUpDown className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 group-hover:text-red-600 transition-colors pointer-events-none" />
+                  <select
+                    value={sidebarSort}
+                    onChange={(e) => setSidebarSort(e.target.value)}
+                    className="w-full appearance-none pl-7 pr-8 py-1.5 bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700/50 rounded-xl text-[9px] font-black uppercase tracking-wider text-slate-600 dark:text-dark-200 focus:ring-2 focus:ring-red-600/20 focus:border-red-600 transition-all cursor-pointer outline-none"
+                  >
+                    <option value="name_asc">A to Z</option>
+                    <option value="name_desc">Z to A</option>
+                    <option value="total_desc">High Total</option>
+                    <option value="total_asc">Low Total</option>
+                  </select>
+                  <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                    <div className="w-1 h-1 border-r border-b border-current rotate-45" />
+                  </div>
+                </div>
               </div>
               <div className="smart-scroll flex-1 p-2 space-y-1">
                 {filteredSidebar.length === 0 ? (
@@ -448,7 +529,28 @@ export default function ExpensePage() {
 
                   <div className="glass rounded-2xl overflow-hidden border border-slate-200 dark:border-dark-700/50 animate-in slide-in-from-bottom duration-350 delay-150 flex-1 flex flex-col">
                     <div className="flex flex-col md:flex-row md:items-center justify-between p-4 gap-4 border-b border-slate-200 dark:border-dark-700/50 bg-white/30 dark:bg-dark-800/30">
-                      <div className="flex-1 min-w-0"><SearchBar value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search transactions..." /></div>
+                      <div className="flex-1 min-w-0 flex items-center gap-3">
+                        <SearchBar value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search transactions..." />
+                        
+                        <div className="relative group shrink-0">
+                          <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 group-hover:text-red-600 transition-colors pointer-events-none" />
+                          <select
+                            value={entrySort}
+                            onChange={(e) => setEntrySort(e.target.value)}
+                            className="appearance-none pl-9 pr-8 py-1.5 bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700/50 rounded-xl text-[10px] font-black uppercase tracking-wider text-slate-700 dark:text-dark-200 focus:ring-2 focus:ring-red-600/20 focus:border-red-600 transition-all cursor-pointer outline-none shadow-sm"
+                          >
+                            <option value="date_desc">Newest First</option>
+                            <option value="date_asc">Oldest First</option>
+                            <option value="details_asc">A to Z</option>
+                            <option value="details_desc">Z to A</option>
+                            <option value="amount_desc">Highest Amount</option>
+                            <option value="amount_asc">Lowest Amount</option>
+                          </select>
+                          <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                            <div className="w-1 h-1 border-r border-b border-current rotate-45" />
+                          </div>
+                        </div>
+                      </div>
                       <div className="flex items-center flex-wrap gap-2">
                         <div className="flex items-center bg-slate-100 dark:bg-dark-800 p-1 rounded-xl border border-slate-200 dark:border-dark-700/50 mr-2">
                           <button onClick={() => { setFromDate(today()); setToDate(today()); setPage(1); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-dark-400 hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all">Today</button>
