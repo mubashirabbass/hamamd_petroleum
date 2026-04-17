@@ -570,19 +570,19 @@ export default function PurchasePage() {
               <div className="desktop-form-row">
                 <label className="desktop-form-label">Invoice No</label>
                 <div className="desktop-form-field">
-                  <input className="input !py-1.5" value={form.invoiceNo} onChange={(e) => set('invoiceNo', e.target.value)} placeholder="e.g. INV-202611" />
+                  <input className="input !py-1.5" value={form.invoiceNo} onChange={(e) => set('invoiceNo', e.target.value)} placeholder="e.g. INV-202611" dir="auto" />
                 </div>
               </div>
               <div className="desktop-form-row">
                 <label className="desktop-form-label">Vehicle No</label>
                 <div className="desktop-form-field">
-                  <input className="input !py-1.5" value={form.vehicleNo} onChange={(e) => set('vehicleNo', e.target.value)} placeholder="e.g. LHR-4567" />
+                  <input className="input !py-1.5" value={form.vehicleNo} onChange={(e) => set('vehicleNo', e.target.value)} placeholder="e.g. LHR-4567" dir="auto" />
                 </div>
               </div>
               <div className="desktop-form-row">
                 <label className="desktop-form-label">Description</label>
                 <div className="desktop-form-field">
-                  <input className="input !py-1.5" value={form.description} onChange={(e) => set('description', e.target.value)} placeholder="Purchase order note" />
+                  <input className="input !py-1.5" value={form.description} onChange={(e) => set('description', e.target.value)} placeholder="Purchase order note" dir="auto" />
                 </div>
               </div>
             </div>
@@ -592,19 +592,19 @@ export default function PurchasePage() {
               <div className="desktop-form-row">
                 <label className="desktop-form-label text-blue-600 dark:text-blue-400">Rate (₨) *</label>
                 <div className="desktop-form-field">
-                  <input type="number" step="0.01" className="input !py-1.5 !bg-blue-50/30 dark:!bg-blue-900/10 focus:ring-blue-500/20" value={form.rate} onChange={(e) => set('rate', e.target.value)} required />
+                  <input type="number" step="any" className="input !py-1.5 !bg-blue-50/30 dark:!bg-blue-900/10 focus:ring-blue-500/20" value={form.rate} onChange={(e) => set('rate', e.target.value)} required />
                 </div>
               </div>
               <div className="desktop-form-row">
                 <label className="desktop-form-label text-emerald-600 dark:text-emerald-400">Quantity (L) *</label>
                 <div className="desktop-form-field">
-                  <input type="number" step="0.01" className="input !py-1.5 !bg-emerald-50/30 dark:!bg-emerald-900/10 focus:ring-emerald-500/20" value={form.quantity} onChange={(e) => set('quantity', e.target.value)} required />
+                  <input type="number" step="any" className="input !py-1.5 !bg-emerald-50/30 dark:!bg-emerald-900/10 focus:ring-emerald-500/20" value={form.quantity} onChange={(e) => set('quantity', e.target.value)} required />
                 </div>
               </div>
               <div className="desktop-form-row">
-                <label className="desktop-form-label text-amber-600 dark:text-amber-400">Carriage (₨)</label>
+                <label className="desktop-form-label text-amber-600 dark:text-amber-400">Carriage (Rs)</label>
                 <div className="desktop-form-field">
-                  <input type="number" step="0.01" className="input !py-1.5 !bg-amber-50/30 dark:!bg-amber-900/10 focus:ring-amber-500/20" value={form.carriage} onChange={(e) => set('carriage', e.target.value)} />
+                  <input type="number" step="any" className="input !py-1.5 !bg-amber-50/30 dark:!bg-amber-900/10 focus:ring-amber-500/20" value={form.carriage} onChange={(e) => set('carriage', e.target.value)} />
                 </div>
               </div>
             </div>
@@ -614,12 +614,12 @@ export default function PurchasePage() {
               <div className="desktop-summary-strip flex-1 mr-4">
                 <div className="flex flex-col">
                   <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Gross Amount</span>
-                  <span className="text-sm font-black text-slate-900 dark:text-white font-mono">₨ {formatCurrency(form.amount)}</span>
+                  <span className="text-sm font-black text-slate-900 dark:text-white font-mono">Rs {formatCurrency(Number(form.amount))}</span>
                 </div>
                 <div className="h-8 w-px bg-slate-200 dark:bg-dark-700" />
                 <div className="flex flex-col">
                   <span className="text-[9px] font-black text-primary-600 uppercase tracking-tighter">Total Payable</span>
-                  <span className="text-lg font-black text-primary-600 dark:text-primary-400 font-mono tracking-tighter">₨ {formatCurrency(form.totalAmount)}</span>
+                  <span className="text-lg font-black text-primary-600 dark:text-primary-400 font-mono tracking-tighter">Rs {formatCurrency(Number(form.totalAmount))}</span>
                 </div>
               </div>
               <div className="flex items-center gap-2">

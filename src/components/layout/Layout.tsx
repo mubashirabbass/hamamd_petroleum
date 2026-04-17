@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import { useStore } from '../../store/useStore';
 import { Menu } from 'lucide-react';
@@ -18,8 +18,7 @@ import Customer from '../../pages/Customer';
 import Settings from '../../pages/Settings';
 
 export default function Layout() {
-  const { settings, currentUser } = useStore();
-  const navigate = useNavigate();
+  const { } = useStore();
   const location = useLocation();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 

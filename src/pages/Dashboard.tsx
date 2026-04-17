@@ -119,7 +119,7 @@ export default function Dashboard() {
   } = useStore();
 
   const [displayText, setDisplayText] = useState('');
-  const fullText = "حماد\u00A0\u00A0\u00A0رحیم\u00A0\u00A0\u00A0فلنگ\u00A0\u00A0\u00A0اسٹیشن\u00A0\u00A0\u00A0مینجمنٹ\u00A0\u00A0\u00A0سسٹم";
+  const fullText = "حماد   رحیم   فلنگ   اسٹیشن   مینجمنٹ   سسٹم";
 
   useEffect(() => {
     let index = 0;
@@ -213,9 +213,9 @@ export default function Dashboard() {
 
   return (
     <div className="animate-fade-in space-y-6 pb-10 h-full overflow-y-auto smart-scroll pr-2">
-      <div className="relative rounded-[2rem] shadow-md border border-slate-200/60 dark:border-dark-700/60 flex flex-col md:flex-row md:items-center justify-between gap-4 animate-fade-in group overflow-hidden min-h-[100px] px-6 py-4">
+      <div className="relative rounded-[2rem] shadow-md border border-slate-200/60 dark:border-dark-700/60 flex flex-col md:flex-row md:items-center justify-between gap-4 animate-fade-in group min-h-[100px] px-6 py-4">
         {/* Background Layer with Overflow Clipping */}
-        <div className="absolute inset-0 z-0">
+        <div className="absolute inset-0 z-0 rounded-[2rem] overflow-hidden">
           <div 
              className="absolute inset-0 opacity-80 bg-cover bg-center transition-all duration-1000 contrast-125 saturate-[1.8] blur-sm" 
              style={{ backgroundImage: `url(${loginBg})` }}

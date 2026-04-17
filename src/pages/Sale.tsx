@@ -488,7 +488,7 @@ export default function SalePage() {
               <div className="desktop-form-row">
                 <label className="desktop-form-label">Description</label>
                 <div className="desktop-form-field">
-                  <input className="input !py-1.5" value={form.description || ''} onChange={(e) => set('description', e.target.value)} placeholder="Daily Sale / Account Sale" />
+                  <input className="input !py-1.5" value={form.description || ''} onChange={(e) => set('description', e.target.value)} placeholder="Daily Sale / Account Sale" dir="auto" />
                 </div>
               </div>
             </div>
@@ -498,13 +498,13 @@ export default function SalePage() {
               <div className="desktop-form-row">
                 <label className="desktop-form-label text-emerald-600 dark:text-emerald-400">Quantity (L) *</label>
                 <div className="desktop-form-field">
-                  <input type="number" step="0.01" className="input !py-1.5 !bg-emerald-50/30 dark:!bg-emerald-900/10 focus:ring-emerald-500/20" value={form.quantity} onChange={(e) => set('quantity', e.target.value)} required />
+                  <input type="number" step="any" className="input !py-1.5 !bg-emerald-50/30 dark:!bg-emerald-900/10 focus:ring-emerald-500/20" value={form.quantity} onChange={(e) => set('quantity', e.target.value)} required />
                 </div>
               </div>
               <div className="desktop-form-row">
                 <label className="desktop-form-label text-blue-600 dark:text-blue-400">Rate (₨) *</label>
                 <div className="desktop-form-field">
-                  <input type="number" step="0.01" className="input !py-1.5 !bg-blue-50/30 dark:!bg-blue-900/10 focus:ring-blue-500/20" value={form.rate} onChange={(e) => set('rate', e.target.value)} required />
+                  <input type="number" step="any" className="input !py-1.5 !bg-blue-50/30 dark:!bg-blue-900/10 focus:ring-blue-500/20" value={form.rate} onChange={(e) => set('rate', e.target.value)} required />
                 </div>
               </div>
             </div>
@@ -514,7 +514,7 @@ export default function SalePage() {
               <div className="desktop-summary-strip flex-1 mr-4">
                 <div className="flex flex-col">
                   <span className="text-[9px] font-black text-primary-600 uppercase tracking-tighter">Total Amount</span>
-                  <span className="text-xl font-black text-primary-600 dark:text-primary-400 font-mono tracking-tighter">₨ {formatCurrency(form.amount)}</span>
+                  <span className="text-xl font-black text-primary-600 dark:text-primary-400 font-mono tracking-tighter">Rs {formatCurrency(Number(form.amount))}</span>
                 </div>
               </div>
               <div className="flex items-center gap-2">

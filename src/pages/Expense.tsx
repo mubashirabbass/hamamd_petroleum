@@ -683,6 +683,7 @@ export default function ExpensePage() {
                         onChange={e => setNewName(e.target.value)} 
                         required 
                         autoFocus
+                        dir="auto"
                       />
                     </div>
                   </div>
@@ -736,7 +737,7 @@ export default function ExpensePage() {
                            {editingId === c.id ? (
                              <>
                                <td className="px-6 py-3" onClick={(e) => e.stopPropagation()}>
-                                  <input className="input !py-1.5 !text-sm w-full" value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} autoFocus />
+                                  <input className="input !py-1.5 !text-sm w-full" value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} autoFocus dir="auto" />
                                </td>
                                <td className="px-6 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                                   <div className="flex items-center gap-2 justify-end">
@@ -795,7 +796,7 @@ export default function ExpensePage() {
               <div className="desktop-form-row">
                 <label className="desktop-form-label">Details</label>
                 <div className="desktop-form-field">
-                  <input className="input !py-1.5" value={form.details} onChange={(e) => setForm({ ...form, details: e.target.value })} placeholder="Expense details" />
+                  <input className="input !py-1.5" value={form.details} onChange={(e) => setForm({ ...form, details: e.target.value })} placeholder="Expense details" dir="auto" />
                 </div>
               </div>
             </div>
@@ -804,7 +805,7 @@ export default function ExpensePage() {
               <div className="desktop-form-row !border-b-0">
                 <label className="desktop-form-label text-red-600 dark:text-red-400">Amount (₨)</label>
                 <div className="desktop-form-field">
-                  <input type="number" step="0.01" className="input !py-1.5 !bg-red-50/30 dark:!bg-red-900/10 focus:ring-red-500/20" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} required />
+                  <input type="number" step="any" className="input !py-1.5 !bg-red-50/30 dark:!bg-red-900/10 focus:ring-red-500/20" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} required />
                 </div>
               </div>
             </div>

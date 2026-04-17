@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Plus, Trash2, Users, UserPlus, Printer, Search, Phone, Edit2, Check, X, UserCog, User, BarChart3, ArrowRight, ArrowUpDown, Save, Shield } from 'lucide-react';
+import { Plus, Trash2, Users, UserPlus, Printer, Search, Phone, Edit2, Check, X, UserCog, User, BarChart3, ArrowRight, ArrowUpDown, Save } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { formatCurrency, formatDate, today, paginate, filterByStartDate, cn, startOfMonth, startOfYear } from '../lib/utils';
 import { useToast } from '../components/ui/Toast';
@@ -816,8 +816,9 @@ export default function CustomerPage() {
                     <div className="relative">
                       <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                       <input
-                        className="input !pl-12 !py-4 !text-lg !font-bold"
+                        className="input !pl-12 !py-4 !text-lg !font-bold font-urdu"
                         placeholder="e.g. Malik Muhammad Abbass"
+                        dir="auto"
                         value={newName}
                         onChange={e => setNewName(e.target.value)}
                         required
@@ -872,7 +873,7 @@ export default function CustomerPage() {
                 <table className="w-full">
                   <thead className="sticky top-0 z-10 bg-slate-200 dark:bg-dark-800">
                     <tr className="table-header text-[10px]">
-                    <th className="table-cell text-left">Client Name</th>
+                    <th className="table-cell text-left">Client Name (Urdu Support)</th>
                     <th className="table-cell text-left">Contact</th>
                     <th className="table-cell text-center">Actions</th>
                   </tr></thead>
@@ -889,7 +890,7 @@ export default function CustomerPage() {
                           <>
                             <td className="px-6 py-3" colSpan={2} onClick={(e) => e.stopPropagation()}>
                               <div className="flex gap-4">
-                                <input className="input !py-1.5 !text-sm flex-1" value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} autoFocus />
+                                <input className="input !py-1.5 !text-sm flex-1" value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} autoFocus dir="auto" />
                                 <input className="input !py-1.5 !text-sm flex-1" value={editForm.phone} onChange={e => setEditForm({ ...editForm, phone: e.target.value.replace(/\D/g, '').slice(0, 11) })} placeholder="Mobile (11 Digits)" maxLength={11} />
                               </div>
                             </td>
@@ -904,7 +905,7 @@ export default function CustomerPage() {
                           <>
                             <td className="table-cell">
                               <div className="flex items-center gap-3">
-                                <span className="font-bold text-slate-800 dark:text-white">{c.name}</span>
+                                <span className="font-bold text-slate-800 dark:text-white font-urdu">{c.name}</span>
                               </div>
                             </td>
                             <td className="table-cell">
@@ -953,7 +954,7 @@ export default function CustomerPage() {
               <div className="desktop-form-row">
                 <label className="desktop-form-label">Description</label>
                 <div className="desktop-form-field">
-                  <input className="input !py-1.5" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Transaction details" />
+                  <input className="input !py-1.5" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Transaction details" dir="auto" />
                 </div>
               </div>
             </div>
@@ -962,13 +963,13 @@ export default function CustomerPage() {
               <div className="desktop-form-row">
                 <label className="desktop-form-label text-emerald-600 dark:text-emerald-400">Debit (₨)</label>
                 <div className="desktop-form-field">
-                  <input type="number" step="0.01" className="input !py-1.5 !bg-emerald-50/30 dark:!bg-emerald-900/10 focus:ring-emerald-500/20" value={form.debit} onChange={(e) => setForm({ ...form, debit: e.target.value })} placeholder="0.00" />
+                  <input type="number" step="any" className="input !py-1.5 !bg-emerald-50/30 dark:!bg-emerald-900/10 focus:ring-emerald-500/20" value={form.debit} onChange={(e) => setForm({ ...form, debit: e.target.value })} placeholder="0.00" />
                 </div>
               </div>
               <div className="desktop-form-row !border-b-0">
                 <label className="desktop-form-label text-red-600 dark:text-red-400">Credit (₨)</label>
                 <div className="desktop-form-field">
-                  <input type="number" step="0.01" className="input !py-1.5 !bg-red-50/30 dark:!bg-red-900/10 focus:ring-red-500/20" value={form.credit} onChange={(e) => setForm({ ...form, credit: e.target.value })} placeholder="0.00" />
+                  <input type="number" step="any" className="input !py-1.5 !bg-red-50/30 dark:!bg-red-900/10 focus:ring-red-500/20" value={form.credit} onChange={(e) => setForm({ ...form, credit: e.target.value })} placeholder="0.00" />
                 </div>
               </div>
             </div>

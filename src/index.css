@@ -129,10 +129,21 @@
     @apply bg-white border border-slate-300 text-slate-900 rounded-xl px-4 py-2.5 text-sm w-full font-bold
            focus:outline-none focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500
            transition-all placeholder-slate-400;
+    font-family: 'Outfit', 'Noto Nastaliq Urdu', 'Segoe UI', system-ui, sans-serif;
+    unicode-bidi: plaintext;
   }
   html.dark .input {
     @apply bg-dark-850 border-dark-600 text-white placeholder-dark-500;
   }
+
+  /* Urdu specific adjustments for inputs that might contain Nastaliq */
+  .input[dir="rtl"], .input-urdu {
+    font-family: 'Noto Nastaliq Urdu', 'Outfit', sans-serif;
+    line-height: 2.2; /* Nastaliq needs more vertical space */
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+
   .label {
     @apply block text-[10px] font-black text-slate-900/60 mb-2 uppercase tracking-widest;
   }
@@ -175,6 +186,7 @@
   }
   .table-cell {
     @apply px-4 py-2.5 text-[13px] text-black dark:text-white border-r border-slate-300 dark:border-dark-700/50 last:border-r-0 tracking-tight;
+    font-family: 'Outfit', 'Noto Nastaliq Urdu', 'Segoe UI', system-ui, sans-serif;
   }
 
   .table-excel {
@@ -185,6 +197,7 @@
   }
   .table-excel td {
     @apply border border-slate-300 dark:border-dark-700/50 px-4 py-2 text-[13px] text-black dark:text-white font-normal leading-tight;
+    font-family: 'Outfit', 'Noto Nastaliq Urdu', 'Segoe UI', system-ui, sans-serif;
   }
   .table-excel tr:nth-child(even) {
     @apply bg-slate-50 dark:bg-dark-800/60;
@@ -362,6 +375,12 @@ html.dark .smart-scroll:hover::-webkit-scrollbar-thumb {
 .font-urdu {
   font-family: 'Apple Urdu', 'Geeza Pro', 'Noto Nastaliq Urdu', serif;
   line-height: 1.8;
+  unicode-bidi: plaintext;
+  text-align: right;
+}
+
+[dir="auto"] {
+  unicode-bidi: plaintext;
 }
 
 /* ── Print Customizations ────────────────────────────────────────── */

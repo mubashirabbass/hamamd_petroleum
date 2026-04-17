@@ -745,6 +745,7 @@ export default function LiabilityPage() {
                         onChange={e => setNewName(e.target.value)}
                         required
                         autoFocus
+                        dir="auto"
                       />
                     </div>
                   </div>
@@ -798,7 +799,7 @@ export default function LiabilityPage() {
                         {editingId === c.id ? (
                           <>
                             <td className="px-6 py-3" onClick={(e) => e.stopPropagation()}>
-                              <input className="input !py-1.5 !text-sm w-full" value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} autoFocus />
+                              <input className="input !py-1.5 !text-sm w-full" value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} autoFocus dir="auto" />
                             </td>
                             <td className="px-6 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                               <div className="flex items-center gap-2 justify-end">
@@ -857,7 +858,7 @@ export default function LiabilityPage() {
               <div className="desktop-form-row">
                 <label className="desktop-form-label">Description</label>
                 <div className="desktop-form-field">
-                  <input className="input !py-1.5" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Transaction details" />
+                  <input className="input !py-1.5" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Transaction details" dir="auto" />
                 </div>
               </div>
             </div>
@@ -866,13 +867,13 @@ export default function LiabilityPage() {
               <div className="desktop-form-row">
                 <label className="desktop-form-label text-emerald-600 dark:text-emerald-400">Debit (Paid) (₨)</label>
                 <div className="desktop-form-field">
-                  <input type="number" step="0.01" className="input !py-1.5 !bg-emerald-50/30 dark:!bg-emerald-900/10 focus:ring-emerald-500/20" value={form.debit} onChange={(e) => setForm({ ...form, debit: e.target.value })} placeholder="0.00" />
+                  <input type="number" step="any" className="input !py-1.5 !bg-emerald-50/30 dark:!bg-emerald-900/10 focus:ring-emerald-500/20" value={form.debit} onChange={(e) => setForm({ ...form, debit: e.target.value })} placeholder="0.00" />
                 </div>
               </div>
               <div className="desktop-form-row !border-b-0">
                 <label className="desktop-form-label text-red-600 dark:text-red-400">Credit (Owed) (₨)</label>
                 <div className="desktop-form-field">
-                  <input type="number" step="0.01" className="input !py-1.5 !bg-red-50/30 dark:!bg-red-900/10 focus:ring-red-500/20" value={form.credit} onChange={(e) => setForm({ ...form, credit: e.target.value })} placeholder="0.00" />
+                  <input type="number" step="any" className="input !py-1.5 !bg-red-50/30 dark:!bg-red-900/10 focus:ring-red-500/20" value={form.credit} onChange={(e) => setForm({ ...form, credit: e.target.value })} placeholder="0.00" />
                 </div>
               </div>
             </div>
