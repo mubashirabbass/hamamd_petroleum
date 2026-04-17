@@ -1,6 +1,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Plus, Trash2, Eye, Edit2, Printer, BarChart3, ArrowRight, History, Zap, Fuel, LayoutGrid, Database, ShoppingCart, Save } from 'lucide-react';
+import { 
+  Plus, Trash2, Eye, Edit2, Printer, BarChart3, ArrowRight, History, Zap, Fuel, 
+  LayoutGrid, Database, ShoppingCart, Save, Pin, PinOff 
+} from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { formatCurrency, formatDate, today, paginate, filterByStartDate, startOfMonth, startOfYear, getErrorMessage, cn } from '../lib/utils';
 import { useToast } from '../components/ui/Toast';
@@ -21,6 +24,9 @@ export default function PurchasePage() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'database'>('dashboard');
   const [fuelType, setFuelType] = useState<FuelType>('HSD');
   const [showForm, setShowForm] = useState(false);
+  const [isSidebarPinned, setIsSidebarPinned] = useState(false);
+  const [isSidebarHovered, setIsSidebarHovered] = useState(false);
+  const isExpanded = isSidebarPinned || isSidebarHovered;
 
   useEffect(() => {
     const tab = searchParams.get('tab');
@@ -210,9 +216,9 @@ export default function PurchasePage() {
   }, [purchases, settings.startDate, fromDate, toDate]);
 
   return (
-    <div className="animate-fade-in flex flex-col h-full overflow-hidden">
-      {/* Tab Switcher & Filters */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+    <div className="animate-fade-in flex flex-col h-full w-full overflow-hidden">
+      {/* View Switcher Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 pb-0 w-full">
         <div className="flex items-center gap-2 bg-slate-100 dark:bg-dark-800 p-1.5 rounded-2xl border border-slate-200 dark:border-dark-700 w-fit">
           <button
             onClick={() => setActiveTab('dashboard')}
@@ -253,7 +259,7 @@ export default function PurchasePage() {
       </div>
 
       {activeTab === 'dashboard' ? (
-        <div className="flex-1 overflow-y-auto smart-scroll pr-2">
+        <div className="flex-1 flex flex-col h-full w-full overflow-hidden p-4 md:p-6 pb-10">
           {/* Header */}
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-4">
@@ -398,30 +404,62 @@ export default function PurchasePage() {
           </div>
         </div>
       ) : (
-        <div className="flex flex-col md:flex-row gap-4 h-full overflow-hidden">
+        <div className="flex-1 flex gap-4 h-full w-full min-h-0 overflow-hidden p-4">
           {/* Sidebar selection */}
-          <div className="w-full md:w-60 flex-shrink-0 flex flex-col gap-3 h-full">
-            <div className="category-panel flex-1 overflow-y-auto custom-scrollbar">
-              <div className="px-3 py-2">
-                <h2 className="text-[10px] font-extrabold text-slate-600 dark:text-dark-200 uppercase tracking-[0.2em]">Fuel Types</h2>
-              </div>
+          <div 
+            onMouseEnter={() => setIsSidebarHovered(true)}
+            onMouseLeave={() => setIsSidebarHovered(false)}
+            className={cn(
+              "flex-shrink-0 flex flex-col gap-3 h-full transition-all duration-300 ease-in-out border border-slate-200 dark:border-dark-700/50 bg-white/50 dark:bg-dark-900/50 rounded-2xl backdrop-blur-md",
+              isExpanded ? "w-64" : "w-16"
+            )}
+          >
+            <div className="flex items-center justify-between px-3 py-3 border-b border-slate-100 dark:border-dark-800/50">
+              {isExpanded && (
+                <h2 className="text-[10px] font-extrabold text-slate-600 dark:text-dark-200 uppercase tracking-[0.2em] animate-in fade-in slide-in-from-left-2">Fuel Types</h2>
+              )}
+              <button 
+                onClick={() => setIsSidebarPinned(!isSidebarPinned)}
+                className={cn(
+                  "p-1.5 rounded-lg transition-colors ml-auto",
+                  isSidebarPinned ? "text-blue-600 bg-blue-50 dark:bg-blue-900/20" : "text-slate-400 hover:bg-slate-100 dark:hover:bg-dark-800"
+                )}
+                title={isSidebarPinned ? "Unpin Sidebar" : "Pin Sidebar"}
+              >
+                {isSidebarPinned ? <PinOff className="w-3.5 h-3.5" /> : <Pin className="w-3.5 h-3.5" />}
+              </button>
+            </div>
 
-              {(['HSD', 'PMG'] as FuelType[]).map((t) => (
-                <div
-                  key={t}
-                  onClick={() => handleFuelSelect(t)}
-                  className={fuelType === t ? 'category-item-active' : 'category-item-inactive'}
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <span className={`w-1.5 h-1.5 rounded-full ${fuelType === t ? 'bg-primary-600 animate-pulse' : 'bg-slate-300 dark:bg-dark-600'}`}></span>
-                    <span className="truncate">{t} Purchases</span>
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-2">
+              {(['HSD', 'PMG'] as FuelType[]).map((t) => {
+                const Icon = t === 'HSD' ? Fuel : Zap;
+                const active = fuelType === t;
+                return (
+                  <div
+                    key={t}
+                    onClick={() => handleFuelSelect(t)}
+                    className={cn(
+                      "flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200",
+                      active 
+                        ? "bg-blue-600 text-white shadow-lg scale-105" 
+                        : "hover:bg-slate-100 dark:hover:bg-dark-800 text-slate-500",
+                      !isExpanded && "justify-center"
+                    )}
+                    title={!isExpanded ? `${t} Purchases` : ''}
+                  >
+                    <Icon className={cn("w-5 h-5 flex-shrink-0", active ? "text-white" : t === 'HSD' ? "text-amber-500" : "text-emerald-500")} />
+                    {isExpanded && (
+                      <span className="font-black text-xs uppercase tracking-widest truncate animate-in fade-in slide-in-from-left-2">
+                        {t} Purchases
+                      </span>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
-          <div className="flex-1 min-w-0 flex flex-col h-full">
+          <div className="flex-1 min-w-0 flex flex-col h-full pr-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
               <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase flex items-center gap-2">
                 <Database className="w-5 h-5 text-blue-600" />
@@ -444,7 +482,7 @@ export default function PurchasePage() {
               </div>
             </div>
 
-            <div className="glass rounded-xl overflow-hidden flex-1 flex flex-col mb-4">
+            <div className="glass rounded-xl overflow-hidden flex-1 flex flex-col mb-0">
               <div className="flex flex-col md:flex-row md:items-center justify-between p-4 gap-4 border-b border-slate-200 dark:border-dark-700/50">
                 <div className="flex-1 min-w-0"><SearchBar value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search transactions..." /></div>
                 { (fromDate || toDate) && (

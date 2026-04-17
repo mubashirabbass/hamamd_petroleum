@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Wallet, Plus, Trash2, Eye, Edit2, Search, Check, X, FileText, Settings, UserPlus, Printer, BarChart3, ArrowRight, ArrowUpDown, Save } from 'lucide-react';
+import { Wallet, Plus, Trash2, Eye, Edit2, Search, Check, X, FileText, Settings, UserPlus, Printer, BarChart3, ArrowRight, ArrowUpDown, Save, Pin, PinOff, Tag } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { formatCurrency, formatDate, today, paginate, filterByStartDate, cn, startOfMonth, startOfYear } from '../lib/utils';
 import { useToast } from '../components/ui/Toast';
@@ -23,6 +23,9 @@ export default function ExpensePage() {
 
   const [activeTab, setActiveTab] = useState<'dashboard' | 'database' | 'register' | 'manage'>('dashboard');
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
+  const [isSidebarPinned, setIsSidebarPinned] = useState(false);
+  const [isSidebarHovered, setIsSidebarHovered] = useState(false);
+  const isExpanded = isSidebarPinned || isSidebarHovered;
   const [showEntryForm, setShowEntryForm] = useState(false);
   const [showReport, setShowReport] = useState(false);
   
@@ -214,9 +217,9 @@ export default function ExpensePage() {
   };
 
   return (
-    <div className="animate-fade-in space-y-4 flex flex-col h-full overflow-hidden">
+    <div className="animate-fade-in flex flex-col h-full w-full overflow-hidden">
       {/* Parallel Horizontal Tabs */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 pb-0 w-full">
         <div className="flex bg-slate-100 dark:bg-dark-800 p-1 rounded-2xl border border-slate-200 dark:border-dark-700/50 w-full md:w-auto">
           <button 
             onClick={() => setActiveTab('dashboard')}
@@ -278,9 +281,9 @@ export default function ExpensePage() {
         )}
       </div>
 
-      <div className="flex gap-4 h-full overflow-hidden">
+      <div className="flex-1 flex gap-4 h-full w-full overflow-hidden p-4">
         {activeTab === 'dashboard' ? (
-          <div className="flex-1 flex flex-col h-full overflow-hidden">
+          <div className="flex-1 flex flex-col h-full overflow-hidden p-4 md:p-6 pb-10">
             {/* Global Summary Cards */}
             {(() => {
               const allFilteredEntries = filterByStartDate(expenseEntries, settings.startDate)
@@ -458,57 +461,86 @@ export default function ExpensePage() {
             )}
           </div>
         ) : activeTab === 'database' ? (
-          <>
-            <div className="w-64 flex-shrink-0 flex flex-col h-full bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700/50 rounded-2xl overflow-hidden shadow-sm">
-               <div className="p-3 bg-slate-50/50 dark:bg-dark-800/30 border-b border-slate-100 dark:border-dark-700/30 flex items-center justify-between">
-                <p className="text-[10px] font-extrabold text-slate-600 dark:text-dark-200 uppercase tracking-widest">Active Categories</p>
-                <span className="text-[10px] font-bold text-slate-300">{filteredSidebar.length}</span>
+          <div className="flex-1 flex gap-4 h-full w-full min-h-0 overflow-hidden p-4">
+            <div 
+              onMouseEnter={() => setIsSidebarHovered(true)}
+              onMouseLeave={() => setIsSidebarHovered(false)}
+              className={cn(
+                "flex-shrink-0 flex flex-col gap-3 h-full transition-all duration-300 ease-in-out border border-slate-200 dark:border-dark-700/50 bg-white/50 dark:bg-dark-900/50 rounded-2xl backdrop-blur-md",
+                isExpanded ? "w-64" : "w-16"
+              )}
+            >
+              <div className="flex items-center justify-between px-3 py-3 border-b border-slate-100 dark:border-dark-800/50">
+                {isExpanded && (
+                  <h2 className="text-[10px] font-extrabold text-slate-600 dark:text-dark-200 uppercase tracking-[0.2em] animate-in fade-in slide-in-from-left-2">Categories</h2>
+                )}
+                <button 
+                  onClick={() => setIsSidebarPinned(!isSidebarPinned)}
+                  className={cn(
+                    "p-1.5 rounded-lg transition-colors ml-auto",
+                    isSidebarPinned ? "text-red-600 bg-red-50 dark:bg-red-900/20" : "text-slate-400 hover:bg-slate-100 dark:hover:bg-dark-800"
+                  )}
+                  title={isSidebarPinned ? "Unpin Sidebar" : "Pin Sidebar"}
+                >
+                  {isSidebarPinned ? <PinOff className="w-3.5 h-3.5" /> : <Pin className="w-3.5 h-3.5" />}
+                </button>
               </div>
+
               <div className="p-2 space-y-2 border-b border-slate-100 dark:border-dark-700/30 bg-slate-50/30">
-                <SearchBar value={sidebarSearch} onChange={setSidebarSearch} placeholder="Search Expense..." fullWidth={true} className="!py-1.5 !text-[11px]" />
-                <div className="relative group">
-                  <ArrowUpDown className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 group-hover:text-red-600 transition-colors pointer-events-none" />
-                  <select
-                    value={sidebarSort}
-                    onChange={(e) => setSidebarSort(e.target.value)}
-                    className="w-full appearance-none pl-7 pr-8 py-1.5 bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700/50 rounded-xl text-[9px] font-black uppercase tracking-wider text-slate-600 dark:text-dark-200 focus:ring-2 focus:ring-red-600/20 focus:border-red-600 transition-all cursor-pointer outline-none"
-                  >
-                    <option value="name_asc">A to Z</option>
-                    <option value="name_desc">Z to A</option>
-                    <option value="total_desc">High Total</option>
-                    <option value="total_asc">Low Total</option>
-                  </select>
-                  <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                    <div className="w-1 h-1 border-r border-b border-current rotate-45" />
+                {isExpanded ? (
+                  <div className="space-y-2 animate-in fade-in duration-300">
+                    <SearchBar value={sidebarSearch} onChange={setSidebarSearch} placeholder="Search Expense..." fullWidth={true} className="!py-1.5 !text-[11px]" />
+                    <div className="relative group">
+                      <ArrowUpDown className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 group-hover:text-red-600 transition-colors pointer-events-none" />
+                      <select
+                        value={sidebarSort}
+                        onChange={(e) => setSidebarSort(e.target.value)}
+                        className="w-full appearance-none pl-7 pr-8 py-1.5 bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700/50 rounded-xl text-[9px] font-black uppercase tracking-wider text-slate-600 dark:text-dark-200 focus:ring-2 focus:ring-red-600/20 focus:border-red-600 transition-all cursor-pointer outline-none"
+                      >
+                        <option value="name_asc">A to Z</option>
+                        <option value="name_desc">Z to A</option>
+                        <option value="total_desc">High Total</option>
+                        <option value="total_asc">Low Total</option>
+                      </select>
+                      <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                        <div className="w-1 h-1 border-r border-b border-current rotate-45" />
+                      </div>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="flex justify-center py-1">
+                    <Search className="w-4 h-4 text-slate-400" />
+                  </div>
+                )}
               </div>
-              <div className="smart-scroll flex-1 p-2 space-y-1">
+
+              <div className="smart-scroll flex-1 p-2 space-y-1 overflow-y-auto">
                 {filteredSidebar.length === 0 ? (
-                  <div className="p-8 text-center text-xs text-slate-400 italic">No Categories found</div>
+                  isExpanded && <div className="p-8 text-center text-xs text-slate-400 italic">No Categories found</div>
                 ) : (
                   filteredSidebar.map((c) => (
                     <div
                       key={c.id}
                       onClick={() => { setSelectedCat(c.id); setSearch(''); setPage(1); }}
                       className={cn(
-                        'group flex items-center justify-between px-3 py-3 rounded-xl cursor-pointer text-xs font-black transition-all duration-200 border border-transparent',
+                        'group flex items-center gap-3 px-3 py-3 rounded-xl cursor-pointer transition-all duration-200 border border-transparent',
                         selectedCat === c.id 
-                          ? 'bg-red-600/10 text-red-600 border-red-600/10 shadow-sm relative overflow-hidden' 
-                          : 'text-slate-600 dark:text-dark-400 hover:bg-slate-50 dark:hover:bg-dark-800 hover:text-slate-900 dark:hover:text-white hover:border-slate-200 dark:hover:border-dark-700/50'
+                          ? 'bg-red-600 text-white shadow-lg scale-105' 
+                          : 'text-slate-600 dark:text-dark-400 hover:bg-slate-100 dark:hover:bg-dark-800'
                       )}
+                      title={!isExpanded ? c.name : ''}
                     >
-                      {selectedCat === c.id && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-red-600 rounded-r-full"></span>}
-                      <div className="flex flex-col min-w-0">
-                        <p className="truncate text-slate-900 dark:text-white">{c.name}</p>
-                      </div>
+                      <Tag className={cn("w-4 h-4 flex-shrink-0", selectedCat === c.id ? "text-white" : "text-red-600")} />
+                      {isExpanded && (
+                        <p className="truncate text-xs font-black uppercase tracking-widest animate-in fade-in slide-in-from-left-2">{c.name}</p>
+                      )}
                     </div>
                   ))
                 )}
               </div>
             </div>
 
-            <div className="flex-1 min-w-0 flex flex-col h-full pr-1">
+            <div className="flex-1 min-w-0 flex flex-col h-full pr-4">
               {cat ? (
                 <>
                   <div className="flex items-center justify-between mb-5 animate-in slide-in-from-bottom duration-350">
@@ -535,7 +567,7 @@ export default function ExpensePage() {
                     </div>
                   </div>
 
-                  <div className="glass rounded-2xl overflow-hidden border border-slate-200 dark:border-dark-700/50 animate-in slide-in-from-bottom duration-350 delay-150 flex-1 flex flex-col">
+                  <div className="glass rounded-2xl overflow-hidden border border-slate-200 dark:border-dark-700/50 animate-in slide-in-from-bottom duration-350 delay-150 flex-1 flex flex-col mb-0">
                     <div className="flex flex-col md:flex-row md:items-center justify-between p-4 gap-4 border-b border-slate-200 dark:border-dark-700/50 bg-white/30 dark:bg-dark-800/30">
                       <div className="flex-1 min-w-0 flex items-center gap-3">
                         <SearchBar value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search transactions..." />
@@ -656,7 +688,7 @@ export default function ExpensePage() {
                 </div>
               )}
             </div>
-          </>
+          </div>
         ) : activeTab === 'register' ? (
           <div className="flex-1 animate-in zoom-in-95 duration-300">
             <div className="max-w-2xl mx-auto glass p-8 rounded-3xl border border-slate-200 dark:border-dark-700/50 shadow-2xl mt-8">
@@ -677,7 +709,7 @@ export default function ExpensePage() {
                     <div className="relative">
                       <FileText className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                       <input 
-                        className="input !pl-12 !py-4 !text-lg !font-bold" 
+                        className="input !pl-12 !py-4 !text-sm !font-bold" 
                         placeholder="e.g. Electricity, Staff Salary, Rent, etc." 
                         value={newName} 
                         onChange={e => setNewName(e.target.value)} 
@@ -705,7 +737,7 @@ export default function ExpensePage() {
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                   <input 
-                    className="input !pl-10 !py-3 !text-lg !font-bold" 
+                    className="input !pl-10 !py-3 !text-sm !font-bold" 
                     placeholder="Quick search..." 
                     value={manageSearch} 
                     onChange={e => setManageSearch(e.target.value)} 

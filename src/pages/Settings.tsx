@@ -815,7 +815,7 @@ export default function SettingsPage() {
                     Software Starting Date
                   </label>
                   <input type="date"
-                    className="input w-full md:w-80 !py-3 !text-lg !font-bold"
+                    className="input w-full md:w-80 !py-3 !text-sm !font-bold"
                     value={settings.startDate}
                     onChange={handleUpdateStartDate}
                   />

@@ -4,6 +4,7 @@ import Sidebar from './Sidebar';
 import { useStore } from '../../store/useStore';
 import { Menu } from 'lucide-react';
 import { useShortcuts } from '../../hooks/useShortcuts';
+import { cn } from '../../lib/utils';
 
 // Page Imports for Persistence
 import Dashboard from '../../pages/Dashboard';
@@ -30,6 +31,8 @@ export default function Layout() {
   const isStock = location.pathname.startsWith('/stock');
 
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
+
+  const isTransactionPage = ['/purchase', '/sale', '/expense', '/asset', '/liability', '/customer'].some(p => isPath(p)) || isStock;
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-100 dark:bg-dark-950 transition-colors duration-300">
@@ -68,7 +71,7 @@ export default function Layout() {
             Menu
           </button>
         </div>
-        <div className="p-3 md:p-6 h-full">
+        <div className={cn("h-full w-full", isTransactionPage ? "p-0" : "p-3 md:p-6")}>
           {/* Keep-Alive View Container */}
           <div style={{ display: isPath('/') ? 'block' : 'none' }} className="h-full"><Dashboard /></div>
           <div style={{ display: isPath('/purchase') ? 'block' : 'none' }} className="h-full"><Purchase /></div>
