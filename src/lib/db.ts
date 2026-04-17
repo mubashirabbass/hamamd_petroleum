@@ -2,10 +2,11 @@
  * db.ts — SQLite Database Layer for EBS Petroleum
  * ================================================
  * Uses @tauri-apps/plugin-sql (tauri-plugin-sql in Rust)
- * The database file is stored in %APPDATA%\com.ebs.business\ebs_business.db
- * and persists across reinstalls.
+ * The database file is stored in the same folder as the software's .exe file.
+ * (Portable Mode)
  */
 import Database from '@tauri-apps/plugin-sql';
+import { invoke } from '@tauri-apps/api/core';
 
 let _db: Database | null = null;
 let _transactionDepth = 0; // Track recursive transactions if needed
@@ -96,7 +97,9 @@ export async function getDB(): Promise<Database> {
   }
 
   if (!_db) {
-    _db = await Database.load('sqlite:ebs_business.db');
+    const appDir: string = await invoke('get_app_data_path');
+    const dbPath = `sqlite:${appDir}\\ebs_business.db`;
+    _db = await Database.load(dbPath);
     await initSchema(_db);
   }
   return _db;

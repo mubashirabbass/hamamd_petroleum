@@ -114,6 +114,23 @@ export default function Dashboard() {
     expenseEntries: rawExpenses, expenseCategories, settings,
   } = useStore();
 
+  const [displayText, setDisplayText] = useState('');
+  const [typingFinished, setTypingFinished] = useState(false);
+  const fullText = "حماد\u00A0\u00A0\u00A0رحیم\u00A0\u00A0\u00A0فلنگ\u00A0\u00A0\u00A0اسٹیشن\u00A0\u00A0\u00A0مینجمنٹ\u00A0\u00A0\u00A0سسٹم";
+
+  useEffect(() => {
+    let index = 0;
+    const timer = setInterval(() => {
+      setDisplayText(fullText.slice(0, index));
+      index++;
+      if (index > fullText.length) {
+        clearInterval(timer);
+        setTypingFinished(true);
+      }
+    }, 30);
+    return () => clearInterval(timer);
+  }, []);
+
   const [filter, setFilter]     = useState<'today' | 'month' | 'custom' | 'overall'>('overall');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate]     = useState('');
@@ -194,14 +211,15 @@ export default function Dashboard() {
 
   return (
     <div className="animate-fade-in space-y-6 pb-10 h-full overflow-y-auto smart-scroll pr-2">
-      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-        <div className="flex items-center gap-5">
-          <div className="w-14 h-14 rounded-3xl flex items-center justify-center shadow-xl border border-emerald-500/20 bg-emerald-600/10 flex-shrink-0">
-            <Fuel className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
+      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 flex-row-reverse animate-fade-in">
+        <div className="flex items-center gap-4 flex-row-reverse text-right" dir="rtl">
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-xl border border-emerald-500/20 bg-emerald-600/10 flex-shrink-0">
+            <Fuel className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
           </div>
-          <div>
-            <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tighter leading-tight">Hammad Rahim Filling Station</h1>
-            <p className="text-slate-500 dark:text-dark-400 text-[10px] font-black uppercase tracking-[0.2em]">Business Command Center</p>
+          <div className="flex flex-col pt-3">
+            <h1 className="text-xl font-black text-slate-900 dark:text-white font-urdu min-h-[50px] leading-[1.8]">
+              {displayText}
+            </h1>
           </div>
         </div>
         <div className="flex items-center gap-3">

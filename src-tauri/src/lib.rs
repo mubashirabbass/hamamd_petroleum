@@ -4,18 +4,23 @@
 use std::io::{Read, Write};
 use tauri::Manager;
 use tauri_plugin_opener::OpenerExt;
+use std::path::PathBuf;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // UTILITY HELPERS
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Returns the app-data directory path (e.g. %APPDATA%\com.ebs.business on Windows)
-#[tauri::command]
-fn get_app_data_path(app: tauri::AppHandle) -> Result<String, String> {
-    app.path()
-        .app_data_dir()
-        .map(|p| p.to_string_lossy().to_string())
+/// Returns the app-root directory path (where the .exe lives)
+fn get_base_dir() -> Result<PathBuf, String> {
+    std::env::current_exe()
+        .map(|p| p.parent().unwrap().to_path_buf())
         .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn get_app_data_path() -> Result<String, String> {
+    get_base_dir()
+        .map(|p| p.to_string_lossy().to_string())
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -23,11 +28,8 @@ fn get_app_data_path(app: tauri::AppHandle) -> Result<String, String> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 #[tauri::command]
-async fn create_backup_zip(app: tauri::AppHandle) -> Result<String, String> {
-    let app_dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|e| e.to_string())?;
+async fn create_backup_zip(_app: tauri::AppHandle) -> Result<String, String> {
+    let app_dir = get_base_dir()?;
 
     let db_path = app_dir.join("ebs_business.db");
     if !db_path.exists() {
@@ -92,11 +94,8 @@ async fn create_backup_zip(app: tauri::AppHandle) -> Result<String, String> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 #[tauri::command]
-async fn restore_from_zip(zip_path: String, app: tauri::AppHandle) -> Result<(), String> {
-    let app_dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|e| e.to_string())?;
+async fn restore_from_zip(zip_path: String, _app: tauri::AppHandle) -> Result<(), String> {
+    let app_dir = get_base_dir()?;
 
     let db_path = app_dir.join("ebs_business.db");
 
@@ -562,7 +561,7 @@ async fn download_drive_backup(
 
     let data = response.bytes().await.map_err(|e| e.to_string())?;
 
-    let app_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    let app_dir = get_base_dir()?;
     let restore_path = app_dir.join("cloud_restore_temp.zip");
     std::fs::write(&restore_path, &data).map_err(|e| e.to_string())?;
 

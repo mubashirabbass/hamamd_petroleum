@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Outfit:wght@300;400;500;600;700;800;900&family=Noto+Nastaliq+Urdu:wght@400..700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -284,6 +284,47 @@ html.dark .table-sticky-col {
 .animate-slide-up{ animation: slideUp 0.25s ease-out; }
 .animate-slide-in{ animation: slideIn 0.25s ease-out; }
 
+/* ── Aesthetic Reveal ────────────────────────────────── */
+@keyframes reveal-blur {
+  0% { opacity: 0; filter: blur(12px); transform: translateY(15px); }
+  100% { opacity: 1; filter: blur(0); transform: translateY(0); }
+}
+@keyframes shimmer-aesthetic {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+@keyframes breath {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.02); opacity: 0.9; }
+}
+
+.animate-reveal-blur {
+  animation: reveal-blur 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.animate-shimmer-aesthetic {
+  background: linear-gradient(90deg, currentColor 0%, #fff 50%, currentColor 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer-aesthetic 3s linear infinite;
+}
+.animate-breath {
+  animation: breath 4s ease-in-out infinite;
+}
+@keyframes glow-soft {
+  0%, 100% { opacity: 1; filter: drop-shadow(0 0 0px rgba(255,255,255,0)); }
+  50% { opacity: 0.85; filter: drop-shadow(0 0 8px rgba(255,255,255,0.4)); }
+}
+.animate-glow-soft {
+  animation: glow-soft 4s ease-in-out infinite;
+}
+.stagger-1 { animation-delay: 100ms; }
+.stagger-2 { animation-delay: 200ms; }
+.stagger-3 { animation-delay: 300ms; }
+.stagger-4 { animation-delay: 400ms; }
+.stagger-5 { animation-delay: 500ms; }
+.stagger-6 { animation-delay: 600ms; }
+
 /* ── Smart Scrollbar ────────────────────────────────── */
 .smart-scroll {
   scrollbar-width: thin;
@@ -323,13 +364,20 @@ html.dark .smart-scroll:hover::-webkit-scrollbar-thumb {
   @apply sticky top-0 z-10 bg-inherit;
 }
 
+.font-urdu {
+  font-family: 'Apple Urdu', 'Geeza Pro', 'Noto Nastaliq Urdu', serif;
+  line-height: 1.8;
+}
+
 /* ── Numeric Keyboard Helper ─────────────────────────── */
 input[type="number"] {
   -moz-appearance: textfield;
+  appearance: textfield;
 }
 input[type="number"]::-webkit-outer-spin-button,
 input[type="number"]::-webkit-inner-spin-button {
   -webkit-appearance: none;
+  appearance: none;
   margin: 0;
 }
 
