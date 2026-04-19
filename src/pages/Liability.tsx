@@ -262,6 +262,7 @@ export default function LiabilityPage() {
           </button>
         </div>
 
+<<<<<<< Updated upstream
         {activeTab === 'database' && (
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
              <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-dark-800 p-1 rounded-xl border border-slate-200 dark:border-dark-700/50 flex-shrink-0">
@@ -282,12 +283,51 @@ export default function LiabilityPage() {
              { (fromDate || toDate) && (
                 <button onClick={() => { setFromDate(''); setToDate(''); setPage(1); }} className="flex-shrink-0 p-2 text-red-600"><X className="w-4 h-4" /></button>
              )}
+=======
+      {/* Liability account selector for mobile — only visible on small screens in database tab */}
+      {activeTab === 'database' && (
+        <div className="md:hidden px-4 mt-4">
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+            {liabilityCategories.map((c) => (
+              <button
+                key={c.id}
+                onClick={() => { setSelectedCat(c.id); setSearch(''); setPage(1); }}
+                className={cn(
+                  "flex-shrink-0 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                  selectedCat === c.id
+                    ? "bg-primary-600 text-white shadow-lg shadow-primary-600/20"
+                    : "bg-slate-100 dark:bg-dark-800 text-slate-500"
+                )}
+              >
+                {c.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+        {activeTab === 'database' && cat && (
+          <div className="flex gap-2 w-full md:w-auto">
+            <button
+              onClick={() => setShowReport(true)}
+              className="btn-secondary flex items-center gap-2 hover:bg-slate-200 transition-colors flex-1 md:flex-none justify-center"
+            >
+              <Printer className="w-4 h-4" /> Reports
+            </button>
+            <button onClick={() => setShowEntryForm(true)} className="btn-primary !bg-primary-600 hover:!bg-primary-500 flex items-center gap-2 flex-1 md:flex-none justify-center">
+              <Plus className="w-4 h-4" /> New Entry
+            </button>
+>>>>>>> Stashed changes
           </div>
         )}
+
       </div>
 
+<<<<<<< Updated upstream
       <div className="flex-1 flex gap-0 md:gap-4 h-full w-full overflow-hidden">
 
+=======
+      <div className="flex-1 flex flex-col md:flex-row gap-4 h-full w-full overflow-hidden">
+>>>>>>> Stashed changes
         {activeTab === 'dashboard' ? (
           <div className="flex-1 flex flex-col h-full overflow-hidden p-4 md:p-6 pb-10">
             <div className="grid grid-cols-2 gap-3 mb-6">
@@ -428,6 +468,7 @@ export default function LiabilityPage() {
             )}
           </div>
         ) : activeTab === 'database' ? (
+<<<<<<< Updated upstream
           <div className="flex-1 flex flex-col min-h-0 bg-slate-50 dark:bg-dark-950/20 p-4 pb-20">
             {/* Account Pill Switcher */}
             <div className="flex items-center gap-2 overflow-x-auto no-scrollbar mb-4 pb-2">
@@ -445,6 +486,86 @@ export default function LiabilityPage() {
                    {c.name}
                  </button>
                ))}
+=======
+          <div className="flex-1 flex gap-4 h-full w-full min-h-0 overflow-hidden p-4">
+            {/* Sidebar List */}
+            <div 
+              onMouseEnter={() => setIsSidebarHovered(true)}
+              onMouseLeave={() => setIsSidebarHovered(false)}
+              className={cn(
+                "flex-shrink-0 flex-col gap-3 h-full transition-all duration-300 ease-in-out border border-slate-200 dark:border-dark-700/50 bg-white/50 dark:bg-dark-900/50 rounded-2xl backdrop-blur-md hidden md:flex",
+                isExpanded ? "w-64" : "w-16"
+              )}
+            >
+              <div className="flex items-center justify-between px-3 py-3 border-b border-slate-100 dark:border-dark-800/50">
+                {isExpanded && (
+                  <h2 className="text-[10px] font-extrabold text-slate-600 dark:text-dark-200 uppercase tracking-[0.2em] animate-in fade-in slide-in-from-left-2">Accounts</h2>
+                )}
+                <button 
+                  onClick={() => setIsSidebarPinned(!isSidebarPinned)}
+                  className={cn(
+                    "p-1.5 rounded-lg transition-colors ml-auto",
+                    isSidebarPinned ? "text-primary-600 bg-primary-50 dark:bg-primary-900/20" : "text-slate-400 hover:bg-slate-100 dark:hover:bg-dark-800"
+                  )}
+                  title={isSidebarPinned ? "Unpin Sidebar" : "Pin Sidebar"}
+                >
+                  {isSidebarPinned ? <PinOff className="w-3.5 h-3.5" /> : <Pin className="w-3.5 h-3.5" />}
+                </button>
+              </div>
+
+              <div className="p-2 space-y-2 border-b border-slate-100 dark:border-dark-700/30 bg-slate-50/30">
+                {isExpanded ? (
+                  <div className="space-y-2 animate-in fade-in duration-300">
+                    <SearchBar value={sidebarSearch} onChange={setSidebarSearch} placeholder="Search Account..." fullWidth={true} className="!py-1.5 !text-[11px]" />
+                    <div className="relative group">
+                      <ArrowUpDown className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 group-hover:text-primary-600 transition-colors pointer-events-none" />
+                      <select
+                        value={sidebarSort}
+                        onChange={(e) => setSidebarSort(e.target.value)}
+                        className="w-full appearance-none pl-7 pr-8 py-1.5 bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700/50 rounded-xl text-[9px] font-black uppercase tracking-wider text-slate-600 dark:text-dark-200 focus:ring-2 focus:ring-primary-600/20 focus:border-primary-600 transition-all cursor-pointer outline-none"
+                      >
+                        <option value="name_asc">A to Z</option>
+                        <option value="name_desc">Z to A</option>
+                        <option value="balance_desc">High Liability</option>
+                        <option value="balance_asc">Low Liability</option>
+                      </select>
+                      <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                        <div className="w-1 h-1 border-r border-b border-current rotate-45" />
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex justify-center py-1">
+                    <Search className="w-4 h-4 text-slate-400" />
+                  </div>
+                )}
+              </div>
+
+              <div className="smart-scroll flex-1 p-2 space-y-1 overflow-y-auto">
+                {filteredSidebar.length === 0 ? (
+                  isExpanded && <div className="p-8 text-center text-xs text-slate-400 italic">No Accounts found</div>
+                ) : (
+                  filteredSidebar.map((c) => (
+                    <div
+                      key={c.id}
+                      onClick={() => { setSelectedCat(c.id); setSearch(''); setPage(1); }}
+                      className={cn(
+                        'group flex items-center gap-3 px-3 py-3 rounded-xl cursor-pointer transition-all duration-200 border border-transparent',
+                        selectedCat === c.id
+                          ? 'bg-primary-600 text-white shadow-lg scale-105' 
+                          : 'text-slate-600 dark:text-dark-400 hover:bg-slate-100 dark:hover:bg-dark-800'
+                      )}
+                      title={!isExpanded ? c.name : ''}
+                    >
+                      <Landmark className={cn("w-4 h-4 flex-shrink-0", selectedCat === c.id ? "text-white" : "text-primary-600")} />
+                      {isExpanded && (
+                        <p className="truncate text-xs font-black uppercase tracking-widest animate-in fade-in slide-in-from-left-2">{c.name}</p>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+>>>>>>> Stashed changes
             </div>
 
             <div className="mb-4">
@@ -469,11 +590,145 @@ export default function LiabilityPage() {
                   <div className="py-20 text-center">
                     <p className="text-xs font-black text-slate-400 uppercase tracking-widest">No transactions found</p>
                   </div>
+<<<<<<< Updated upstream
                 )}
               </div>
               <div className="mt-4">
                 <Pagination page={page} total={withBalance.length} perPage={perPage} onChange={setPage} />
               </div>
+=======
+
+                  <div className="glass rounded-2xl overflow-hidden border border-slate-200 dark:border-dark-700/50 animate-in slide-in-from-bottom duration-350 delay-150 flex-1 flex flex-col mb-0">
+                    <div className="flex flex-col gap-3 w-full">
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div className="flex-1 min-w-0 flex items-center gap-3">
+                          <SearchBar value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search transactions..." />
+                          
+                          <div className="relative group shrink-0">
+                            <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 group-hover:text-primary-600 transition-colors pointer-events-none" />
+                            <select
+                              value={entrySort}
+                              onChange={(e) => setEntrySort(e.target.value)}
+                              className="appearance-none pl-9 pr-8 py-1.5 bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700/50 rounded-xl text-[10px] font-black uppercase tracking-wider text-slate-700 dark:text-dark-200 focus:ring-2 focus:ring-primary-600/20 focus:border-primary-600 transition-all cursor-pointer outline-none shadow-sm"
+                            >
+                              <option value="date_desc">Newest First</option>
+                              <option value="date_asc">Oldest First</option>
+                              <option value="description_asc">A to Z (Desc)</option>
+                              <option value="description_desc">Z to A (Desc)</option>
+                              <option value="debit_desc">Highest Debit</option>
+                              <option value="debit_asc">Lowest Debit</option>
+                              <option value="credit_desc">Highest Credit</option>
+                              <option value="credit_asc">Lowest Credit</option>
+                              <option value="balance_desc">Highest Balance</option>
+                              <option value="balance_asc">Lowest Balance</option>
+                            </select>
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                              <div className="w-1 h-1 border-r border-b border-current rotate-45" />
+                            </div>
+                          </div>
+                        </div>
+                        { (fromDate || toDate) && (
+                          <button onClick={() => { setFromDate(''); setToDate(''); setPage(1); }} className="md:hidden px-3 py-1.5 text-[10px] font-black uppercase tracking-tighter text-red-600 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 self-end">Clear Filters</button>
+                        )}
+                      </div>
+
+                      <div className="flex flex-col md:flex-row md:items-center gap-3">
+                        <div className="flex items-center overflow-x-auto no-scrollbar">
+                          <div className="flex items-center bg-slate-100 dark:bg-dark-800 p-1 rounded-xl border border-slate-200 dark:border-dark-700/50 shrink-0">
+                            <button onClick={() => { setFromDate(today()); setToDate(today()); setPage(1); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-dark-400 hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all whitespace-nowrap">Today</button>
+                            <button onClick={() => { setFromDate(startOfMonth()); setToDate(today()); setPage(1); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-dark-400 hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all border-l border-slate-200 dark:border-dark-700/50 whitespace-nowrap">This Month</button>
+                            <button onClick={() => { setFromDate(startOfYear()); setToDate(today()); setPage(1); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-dark-400 hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all border-l border-slate-200 dark:border-dark-700/50 whitespace-nowrap">This Year</button>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-2 w-full md:w-auto">
+                          <div className="flex-1 md:flex-none flex items-center gap-1 bg-slate-50 dark:bg-dark-800 px-2 py-1.5 rounded-xl border border-slate-200 dark:border-dark-700/50">
+                            <span className="text-[9px] font-black text-slate-400 uppercase shrink-0">From</span>
+                            <input type="date" className="bg-transparent text-[10px] font-black text-slate-600 dark:text-dark-300 outline-none flex-1 min-w-0 md:w-32" value={fromDate} onChange={(e) => { setFromDate(e.target.value); setPage(1); }} />
+                          </div>
+                          <div className="flex-1 md:flex-none flex items-center gap-1 bg-slate-50 dark:bg-dark-800 px-2 py-1.5 rounded-xl border border-slate-200 dark:border-dark-700/50">
+                            <span className="text-[9px] font-black text-slate-400 uppercase shrink-0">To</span>
+                            <input type="date" className="bg-transparent text-[10px] font-black text-slate-600 dark:text-dark-300 outline-none flex-1 min-w-0 md:w-32" value={toDate} onChange={(e) => { setToDate(e.target.value); setPage(1); }} />
+                          </div>
+                          {(fromDate || toDate) && (
+                            <button onClick={() => { setFromDate(''); setToDate(''); setPage(1); }} className="hidden md:flex px-3 py-1.5 text-[10px] font-black uppercase tracking-tighter text-red-600 bg-red-50 dark:bg-red-900/20 rounded-lg hover:bg-red-100 transition-all border border-red-200 dark:border-red-800/30 whitespace-nowrap">Clear</button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex-1 overflow-auto smart-scroll">
+                    <div className="flex-1 overflow-y-auto smart-scroll">
+                      <table className="w-full table-fixed">
+                        <thead className="sticky top-0 z-10 bg-slate-200 dark:bg-dark-800">
+                          <tr className="text-[9px] font-black uppercase tracking-widest text-slate-500 dark:text-dark-400">
+                            <th className="px-3 py-3 text-left w-[90px]">Date</th>
+                            <th className="px-3 py-3 text-left">Description</th>
+                            <th className="px-3 py-3 text-right w-[80px] md:w-[120px]">Debit</th>
+                            <th className="px-3 py-3 text-right w-[80px] md:w-[120px]">Credit</th>
+                            <th className="px-3 py-3 text-right w-[100px] md:w-[140px] hidden sm:table-cell">Balance</th>
+                            <th className="px-3 py-3 text-center w-[96px]">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 dark:divide-dark-800/50">
+                          {paged.length === 0 ? (
+                            <tr><td colSpan={6} className="px-3 py-12 text-center text-[11px] text-slate-400 italic">No transactions found</td></tr>
+                          ) : paged.map((e) => (
+                            <tr key={e.id} className="group hover:bg-slate-50 dark:hover:bg-dark-800/50 text-[10px]">
+                              <td className="px-3 py-2.5 whitespace-nowrap text-slate-600 dark:text-dark-400 tabular-nums font-bold leading-none">{formatDate(e.date)}</td>
+                              <td className="px-3 py-2.5 text-black dark:text-white font-medium truncate whitespace-nowrap leading-none">{e.description || '—'}</td>
+                              <td className="px-3 py-2.5 text-right font-black text-emerald-600 dark:text-emerald-400 tabular-nums">{e.debit ? formatCurrency(e.debit) : '—'}</td>
+                              <td className="px-3 py-2.5 text-right font-black text-red-600 dark:text-red-400 tabular-nums">{e.credit ? formatCurrency(e.credit) : '—'}</td>
+                              <td className="px-3 py-2.5 text-right font-black text-slate-900 dark:text-white tabular-nums hidden sm:table-cell">₨ {formatCurrency(e.balance)}</td>
+                              <td className="px-3 py-2.5 text-center">
+                                <div className="flex items-center justify-center gap-0.5 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                                  <button onClick={() => setViewingEntity(e)} className="p-1 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded transition-colors" title="View"><Eye className="w-3.5 h-3.5" /></button>
+                                  {currentUser?.role === 'Admin' && (
+                                    <>
+                                      <button onClick={() => handleEdit(e)} className="p-1 text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded transition-colors" title="Edit"><Edit2 className="w-3.5 h-3.5" /></button>
+                                      <button onClick={() => { if (confirm('Delete entry?')) { deleteLiabilityEntry(e.id); toast('Entry deleted', 'warning'); } }} className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors" title="Delete"><Trash2 className="w-3.5 h-3.5" /></button>
+                                    </>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                        <tfoot className="border-t-2 border-slate-300 dark:border-dark-700">
+                          <tr className="bg-slate-100/80 dark:bg-dark-800/50">
+                            <td colSpan={2} className="px-3 py-2 text-right"><span className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">Page Total</span></td>
+                            <td className="px-3 py-2 text-right tabular-nums text-[10px] font-bold text-emerald-600">₨ {formatCurrency(pageTotals.debit)}</td>
+                            <td className="px-3 py-2 text-right tabular-nums text-[10px] font-bold text-red-600">₨ {formatCurrency(pageTotals.credit)}</td>
+                            <td className="hidden sm:table-cell"></td>
+                            <td></td>
+                          </tr>
+                          <tr className="bg-slate-200 dark:bg-dark-800 font-black text-black">
+                            <td colSpan={2} className="px-3 py-2.5 text-right"><span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">Grand Total</span></td>
+                            <td className="px-3 py-2.5 text-right tabular-nums text-xs font-black text-emerald-600">₨ {formatCurrency(totals.debit)}</td>
+                            <td className="px-3 py-2.5 text-right tabular-nums text-xs font-black text-red-600">₨ {formatCurrency(totals.credit)}</td>
+                            <td className="hidden sm:table-cell"></td>
+                            <td></td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+                    </div>
+                    <Pagination
+                      page={page}
+                      total={withBalance.length}
+                      perPage={perPage}
+                      onChange={setPage}
+                      onPerPageChange={(v) => { setPerPage(v); setPage(1); }}
+                    />
+                  </div>
+                </>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-[50vh] text-slate-400 opacity-40">
+                  <Landmark className="w-16 h-16 mb-4" />
+                  <p className="font-medium font-bold">Select an account to view statement</p>
+                </div>
+              )}
+>>>>>>> Stashed changes
             </div>
           </div>
         ) : activeTab === 'register' ? (

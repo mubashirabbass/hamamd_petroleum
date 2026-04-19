@@ -1,13 +1,18 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, ShoppingCart, TrendingUp, BarChart3, MoreHorizontal } from 'lucide-react';
+import { 
+  LayoutDashboard, ShoppingCart, TrendingUp, 
+  DollarSign, Package, AlertTriangle, MoreHorizontal 
+} from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useState, useEffect, useRef } from 'react';
 
 const navItems = [
   { label: 'Home',     path: '/',         icon: LayoutDashboard },
-  { label: 'Sales',    path: '/sale',     icon: TrendingUp },
+  { label: 'Sale',    path: '/sale',     icon: TrendingUp },
   { label: 'Purchase', path: '/purchase', icon: ShoppingCart },
-  { label: 'Stock',    path: '/stock',    icon: BarChart3 },
+  { label: 'Expense',  path: '/expense',  icon: DollarSign },
+  { label: 'Asset',    path: '/asset',    icon: Package },
+  { label: 'Liability',path: '/liability',icon: AlertTriangle },
 ];
 
 export default function BottomNav({ onMore }: { onMore: () => void }) {
