@@ -27,9 +27,7 @@
     }
   },
   "plugins": {
-    "sql": {
-      "preloadConnections": ["sqlite:ebs_business.db"]
-    }
+    "sql": {}
   },
   "bundle": {
     "active": true,

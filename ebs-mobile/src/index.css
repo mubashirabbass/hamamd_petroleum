@@ -16,7 +16,22 @@
   /* ── Light theme (default) ───────────────────────────── */
   body {
     @apply bg-slate-100 text-slate-900 antialiased font-normal;
-    min-height: 100vh;
+    overflow: hidden;            /* blocks scrollbars; Layout container handles content */
+    position: relative;
+    width: 100%;
+    height: 100%;
+  }
+
+  html {
+    height: 100%;
+    width: 100%;
+    /* NO overflow:hidden here — CSS zoom on html needs to scale freely */
+  }
+
+  #root {
+    height: 100%;
+    width: 100%;
+    /* NO overflow:hidden here — Layout's flex container handles content bounds */
   }
 
   /* ── Dark theme ──────────────────────────────────────── */
@@ -88,6 +103,62 @@
     @apply bg-primary-600 hover:bg-primary-500 text-white font-black px-5 py-2.5 rounded-xl
            transition-all duration-200 flex items-center gap-2 text-sm active:scale-95 shadow-md shadow-primary-600/10;
   }
+
+  /* 📱 Mobile Native UI Elements 📱 */
+  .fab-container {
+    @apply fixed bottom-[calc(theme(spacing.20)+env(safe-area-inset-bottom))] right-4 z-[90] flex flex-col items-end gap-3 transition-all duration-300;
+  }
+  .fab-fixed { @apply bottom-4; }
+
+  .fab-btn {
+    @apply w-14 h-14 rounded-2xl bg-primary-600 dark:bg-primary-500 text-white shadow-[0_12px_24px_rgba(0,0,0,0.3)]
+           flex items-center justify-center transition-all duration-300 active:scale-90 active:rotate-12 border border-white/20;
+  }
+
+  .fab-btn-label {
+    @apply bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700 px-3 py-1.5 rounded-xl
+           text-[10px] font-black uppercase tracking-widest text-slate-900 dark:text-white shadow-xl;
+  }
+
+  /* Bottom Sheet Overlay & Box */
+  .bottom-sheet-overlay {
+    @apply fixed inset-0 z-[300] bg-slate-900/40 backdrop-blur-sm animate-fade-in flex items-end transition-opacity duration-300;
+  }
+  .bottom-sheet-active { @apply opacity-100; }
+
+  .bottom-sheet-box {
+    @apply w-full bg-white dark:bg-dark-900 rounded-t-[2.5rem] p-6 pb-[calc(2rem+env(safe-area-inset-bottom))]
+           shadow-[0_-12px_48px_rgba(0,0,0,0.2)] animate-slide-up border-t border-slate-200/60 dark:border-dark-800/60
+           max-h-[85vh] overflow-y-auto overflow-x-hidden smart-scroll max-w-[100vw];
+  }
+
+  .sticky-bottom-actions {
+    @apply fixed bottom-0 left-0 right-0 p-4 pt-1 bg-white/95 dark:bg-dark-900/95 backdrop-blur-md 
+           border-t border-slate-200/60 dark:border-dark-800/60 z-50 flex gap-3 max-w-[100vw] overflow-x-hidden;
+    padding-bottom: calc(theme(spacing.6) + env(safe-area-inset-bottom));
+  }
+
+  /* Animation Overrides */
+  @keyframes slide-up {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+  .animate-slide-up { animation: slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+
+  /* Segmented Controls */
+  .segmented-control {
+    @apply flex p-1 bg-slate-100 dark:bg-dark-800/50 rounded-2xl border border-slate-200 dark:border-dark-700/50 w-full;
+  }
+  .segmented-item {
+    @apply flex-1 py-2 text-center text-[10px] font-black uppercase tracking-widest rounded-xl transition-all duration-200;
+  }
+  .segmented-item-active {
+    @apply bg-white dark:bg-dark-800 text-primary-600 dark:text-primary-400 shadow-sm border border-slate-200/50 dark:border-dark-700/50 scale-[1.02];
+  }
+  .segmented-item-inactive {
+    @apply text-slate-400 dark:text-dark-600 hover:text-slate-600 dark:hover:text-dark-400;
+  }
+
   .btn-secondary {
     @apply bg-slate-200 hover:bg-slate-300 text-slate-900 font-bold px-5 py-2.5 rounded-xl
            transition-all duration-200 flex items-center gap-2 text-sm active:scale-95;
@@ -241,20 +312,51 @@
   .category-item-inactive {
     @apply category-item text-slate-500 hover:bg-slate-50 hover:text-slate-900 hover:border-slate-200;
   }
-  html.dark .category-item-active {
-    @apply bg-primary-600/20 text-primary-400 border-primary-500/20 shadow-none;
-  }
   html.dark .category-item-inactive {
     @apply text-dark-400 hover:bg-dark-700/50 hover:text-dark-100 hover:border-dark-600/50;
   }
 }
 
+/* ── Safe Area Utilities ────────────────────────────── */
+.pt-safe {
+  padding-top: max(env(safe-area-inset-top), 48px);
+}
+.pb-safe {
+  padding-bottom: max(env(safe-area-inset-bottom), 24px);
+}
+.mb-safe {
+  margin-bottom: max(env(safe-area-inset-bottom), 20px);
+}
+.mt-safe {
+  margin-top: max(env(safe-area-inset-top), 32px);
+}
+
+.h-safe {
+  height: calc(100vh - env(safe-area-inset-top, 32px) - env(safe-area-inset-bottom, 20px));
+}
+
+
 /* ── Sticky Table Columns ────────────────────────────── */
 .table-sticky-col {
-  @apply sticky left-0 z-[5] bg-inherit shadow-[4px_0_8px_-4px_rgba(0,0,0,0.1)];
+  @apply sticky left-0 z-[5] bg-inherit;
+  box-shadow: 4px 0 8px -4px rgba(0,0,0,0.1);
 }
 html.dark .table-sticky-col {
-  @apply shadow-[4px_0_8px_-4px_rgba(0,0,0,0.3)];
+  box-shadow: 4px 0 8px -4px rgba(0,0,0,0.3);
+}
+
+/* ── Mobile Layout Helpers ───────────────────────────── */
+@media (max-width: 1024px) {
+  .mobile-hide-sidebar {
+    display: none !important;
+  }
+  .mobile-full-width {
+    width: 100% !important;
+    max-width: none !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    border-radius: 0 !important;
+  }
 }
 
 /* ── Mobile Full Screen Modal ───────────────────────── */

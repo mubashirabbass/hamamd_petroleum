@@ -42,23 +42,25 @@ export default function Sidebar({ className = '', onNavigate, onCloseMobile }: S
   const location = useLocation();
   const { currentUser, logout, settings, updateSettings } = useStore();
 
+  // ── Zoom — CSS zoom on <html> works in Chromium/WebView (all Tauri targets) ──
+  const applyZoom = (zoom: number) => {
+    document.documentElement.style.zoom = String(zoom);
+    // Also try Tauri native zoom for desktop
+    try {
+      const appWindow = getCurrentWebviewWindow();
+      if ((appWindow as any).setZoom) (appWindow as any).setZoom(zoom).catch(() => {});
+    } catch(e) {}
+  };
+
   const handleZoom = async (delta: number) => {
     const newZoom = Math.min(Math.max(settings.zoomLevel + delta, 0.5), 2.0);
     await updateSettings({ zoomLevel: newZoom });
-    document.documentElement.style.zoom = ''; // Clear CSS zoom just in case
-    try {
-      const appWindow = getCurrentWebviewWindow();
-      if ((appWindow as any).setZoom) (appWindow as any).setZoom(newZoom).catch(() => {});
-    } catch(e) {}
+    applyZoom(newZoom);
   };
 
   const resetZoom = async () => {
     await updateSettings({ zoomLevel: 1.0 });
-    document.documentElement.style.zoom = ''; // Clear CSS zoom just in case
-    try {
-      const appWindow = getCurrentWebviewWindow();
-      if ((appWindow as any).setZoom) (appWindow as any).setZoom(1.0).catch(() => {});
-    } catch(e) {}
+    applyZoom(1.0);
   };
 
   return (
@@ -66,7 +68,7 @@ export default function Sidebar({ className = '', onNavigate, onCloseMobile }: S
       {/* Mobile close button */}
       <button
         onClick={onCloseMobile}
-        className="md:hidden absolute top-3 right-3 p-1.5 rounded-lg bg-slate-100 dark:bg-dark-800 text-slate-600 dark:text-dark-300"
+        className="md:hidden absolute top-3 mt-[env(safe-area-inset-top,24px)] right-3 p-1.5 rounded-lg bg-slate-100 dark:bg-dark-800 text-slate-600 dark:text-dark-300"
         aria-label="Close menu"
       >
         <X className="w-4 h-4" />

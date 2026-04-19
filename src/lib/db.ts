@@ -97,8 +97,23 @@ export async function getDB(): Promise<Database> {
   }
 
   if (!_db) {
-    const appDir: string = await invoke('get_app_data_path');
-    const dbPath = `sqlite:${appDir}\\ebs_business.db`;
+    let dbPath = '';
+    // Check if we are on a mobile platform
+    const isMobile = (window as any).__TAURI_INTERNALS__?.mobile;
+
+    if (isMobile) {
+      // On Android/iOS, use a simple filename. 
+      // tauri-plugin-sql automatically puts this in the safe app databases folder.
+      dbPath = 'sqlite:ebs_business.db';
+    } else {
+      // On Desktop (Windows), maintain the "Portable" behavior (next to .exe)
+      const appDir: string = await invoke('get_app_data_path');
+      // Normalize slashes to forward slashes for SQLite compatibility
+      const normalizedAppDir = appDir.replace(/\\/g, '/');
+      dbPath = `sqlite:${normalizedAppDir}/ebs_business.db`;
+    }
+
+    console.log(`[DB] Opening database: ${dbPath}`);
     _db = await Database.load(dbPath);
     await initSchema(_db);
   }

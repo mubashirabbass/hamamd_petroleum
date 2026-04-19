@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Shield, 
   Layout, 
@@ -7,11 +7,14 @@ import {
   Eye, 
   EyeOff, 
   AlertTriangle,
-  Users
+  Users,
+  Key,
+  CheckCircle2
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { useToast } from '../ui/Toast';
 import Modal from '../ui/Modal';
+import { getSetting, setSetting } from '../../lib/db';
 
 const ALL_MENUS = [
   'Dashboard',
@@ -31,6 +34,44 @@ export default function DeveloperSettings() {
   const [softwareName, setSoftwareName] = useState(settings?.softwareName || 'HR Filling Station');
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [resetCode, setResetCode] = useState('');
+
+  // Google API Credentials
+  const [clientId,     setClientId]     = useState('');
+  const [clientSecret, setClientSecret] = useState('');
+  const [showSecret,   setShowSecret]   = useState(false);
+  const [savingCreds,  setSavingCreds]  = useState(false);
+  const [credsSaved,   setCredsSaved]   = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const id  = await getSetting('googleClientId');
+      const sec = await getSetting('googleClientSecret');
+      if (id)  { setClientId(id); setCredsSaved(true); }
+      if (sec) { setClientSecret(sec); }
+    })();
+  }, []);
+
+  const handleSaveCreds = async () => {
+    if (!clientId.trim() || !clientSecret.trim()) {
+      toast('Enter both Client ID and Client Secret.', 'error');
+      return;
+    }
+    setSavingCreds(true);
+    await setSetting('googleClientId',     clientId.trim());
+    await setSetting('googleClientSecret', clientSecret.trim());
+    setCredsSaved(true);
+    setSavingCreds(false);
+    toast('Google API credentials saved! Users can now sign in with Google.', 'success');
+  };
+
+  const handleClearCreds = async () => {
+    await setSetting('googleClientId',     '');
+    await setSetting('googleClientSecret', '');
+    setClientId('');
+    setClientSecret('');
+    setCredsSaved(false);
+    toast('Google API credentials cleared.', 'success');
+  };
 
   const handleSaveBranding = () => {
     updateSettings({ softwareName });
@@ -228,6 +269,83 @@ export default function DeveloperSettings() {
           Use the Standard User Management system in the main settings tab to manage all accounts. 
           As Developer, you have rights to override any password or role.
         </p>
+      </section>
+
+      {/* Google API Credentials */}
+      <section className="bg-white dark:bg-dark-900 rounded-[32px] p-8 border border-slate-200 dark:border-dark-700/50 shadow-sm">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
+            <Key className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+          </div>
+          <div>
+            <h3 className="text-lg font-black text-slate-900 dark:text-white">Google API Credentials</h3>
+            <p className="text-xs text-slate-500 font-bold">Configure once so users can sign in with Google for backups</p>
+          </div>
+        </div>
+
+        {credsSaved ? (
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 p-4 bg-emerald-50 dark:bg-emerald-900/10 rounded-2xl border border-emerald-200 dark:border-emerald-900/20">
+              <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-black text-emerald-700 dark:text-emerald-400">Credentials Configured</p>
+                <p className="text-xs text-slate-500 font-mono truncate">{clientId.slice(0, 40)}…</p>
+              </div>
+              <button onClick={handleClearCreds} className="text-xs font-bold text-red-500 hover:text-red-600 transition-colors shrink-0">
+                Clear
+              </button>
+            </div>
+            <p className="text-xs text-slate-500 bg-blue-50 dark:bg-blue-900/10 p-3 rounded-xl">
+              ✅ Users can now click <strong>"Sign in with Google"</strong> in the Backup section to connect their Google account — no manual entry needed.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <p className="text-xs text-slate-500 mb-4">
+              Enter your Google Cloud OAuth 2.0 credentials. Go to{' '}
+              <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noreferrer"
+                className="text-blue-500 underline font-bold">console.cloud.google.com</a>
+              {' '}→ Credentials → Create OAuth 2.0 Client ID. Set redirect URI to{' '}
+              <code className="text-xs font-mono bg-slate-100 dark:bg-dark-800 px-1.5 py-0.5 rounded">http://localhost:3001/oauth/callback</code>
+            </p>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Client ID</label>
+                <input
+                  type="text"
+                  value={clientId}
+                  onChange={e => setClientId(e.target.value)}
+                  placeholder="1234567890-abc...apps.googleusercontent.com"
+                  className="w-full bg-slate-50 dark:bg-dark-950 border border-slate-200 dark:border-dark-700/50 rounded-2xl px-4 py-3 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Client Secret</label>
+                <div className="relative">
+                  <input
+                    type={showSecret ? 'text' : 'password'}
+                    value={clientSecret}
+                    onChange={e => setClientSecret(e.target.value)}
+                    placeholder="GOCSPX-…"
+                    className="w-full bg-slate-50 dark:bg-dark-950 border border-slate-200 dark:border-dark-700/50 rounded-2xl px-4 py-3 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10"
+                  />
+                  <button type="button" onClick={() => setShowSecret(!showSecret)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+                    {showSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+              <button
+                onClick={handleSaveCreds}
+                disabled={savingCreds || !clientId.trim() || !clientSecret.trim()}
+                className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-2xl text-sm font-black hover:bg-blue-700 transition-all active:scale-95 disabled:opacity-40"
+              >
+                <Save className="w-4 h-4" />
+                {savingCreds ? 'Saving…' : 'Save Google Credentials'}
+              </button>
+            </div>
+          </div>
+        )}
       </section>
 
       {/* Danger Zone */}

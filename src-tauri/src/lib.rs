@@ -17,9 +17,26 @@ fn get_base_dir() -> Result<PathBuf, String> {
 }
 
 #[tauri::command]
-fn get_app_data_path() -> Result<String, String> {
-    get_base_dir()
-        .map(|p| p.to_string_lossy().to_string())
+fn get_app_data_path(app: tauri::AppHandle) -> Result<String, String> {
+    #[cfg(not(mobile))]
+    {
+        // PC / Windows: Maintain "Portable Mode" (next to .exe)
+        get_base_dir()
+            .map(|p| p.to_string_lossy().to_string())
+    }
+
+    #[cfg(mobile)]
+    {
+        // Mobile / Android: Use official writable AppData directory
+        use tauri::Manager;
+        app.path().app_data_dir()
+            .map(|p| {
+                // Ensure the directory exists
+                let _ = std::fs::create_dir_all(&p);
+                p.to_string_lossy().to_string()
+            })
+            .map_err(|e| e.to_string())
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -27,8 +44,15 @@ fn get_app_data_path() -> Result<String, String> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 #[tauri::command]
-async fn create_backup_zip(_app: tauri::AppHandle) -> Result<String, String> {
+async fn create_backup_zip(app: tauri::AppHandle) -> Result<String, String> {
+    #[cfg(not(mobile))]
     let app_dir = get_base_dir()?;
+    
+    #[cfg(mobile)]
+    let app_dir = {
+        use tauri::Manager;
+        app.path().app_data_dir().map_err(|e| e.to_string())?
+    };
 
     let db_path = app_dir.join("ebs_business.db");
     if !db_path.exists() {
@@ -53,6 +77,7 @@ async fn create_backup_zip(_app: tauri::AppHandle) -> Result<String, String> {
     let meta = serde_json::json!({
         "version": "1.0",
         "app": "EBS Petroleum",
+        "device_type": "Desktop",
         "createdAt": chrono::Utc::now().to_rfc3339(),
         "dbFile": "ebs_business.db"
     });
@@ -107,8 +132,15 @@ async fn save_backup_to_path(src: String, dst: String) -> Result<(), String> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 #[tauri::command]
-async fn restore_from_zip(zip_path: String, _app: tauri::AppHandle) -> Result<(), String> {
+async fn restore_from_zip(zip_path: String, app: tauri::AppHandle) -> Result<(), String> {
+    #[cfg(not(mobile))]
     let app_dir = get_base_dir()?;
+    
+    #[cfg(mobile)]
+    let app_dir = {
+        use tauri::Manager;
+        app.path().app_data_dir().map_err(|e| e.to_string())?
+    };
 
     let _db_path = app_dir.join("ebs_business.db");
 
@@ -422,9 +454,19 @@ async fn upload_zip_to_drive(
     zip_path: String,
     access_token: String,
     file_name: String,
+    app: tauri::AppHandle,
 ) -> Result<serde_json::Value, String> {
     let client = reqwest::Client::new();
     let folder_id = get_backup_folder_id(&client, &access_token).await?;
+
+    #[cfg(not(mobile))]
+    let _app_dir = get_base_dir()?;
+    
+    #[cfg(mobile)]
+    let _app_dir = {
+        use tauri::Manager;
+        app.path().app_data_dir().map_err(|e| e.to_string())?
+    };
 
     let file_data = std::fs::read(&zip_path)
         .map_err(|e| format!("Cannot read backup ZIP: {}", e))?;
@@ -548,7 +590,7 @@ async fn list_drive_backups(access_token: String) -> Result<Vec<serde_json::Valu
 async fn download_drive_backup(
     file_id: String,
     access_token: String,
-    _app: tauri::AppHandle,
+    app: tauri::AppHandle,
 ) -> Result<String, String> {
     let client = reqwest::Client::new();
 
@@ -574,7 +616,15 @@ async fn download_drive_backup(
 
     let data = response.bytes().await.map_err(|e| e.to_string())?;
 
+    #[cfg(not(mobile))]
     let app_dir = get_base_dir()?;
+    
+    #[cfg(mobile)]
+    let app_dir = {
+        use tauri::Manager;
+        app.path().app_data_dir().map_err(|e| e.to_string())?
+    };
+
     let restore_path = app_dir.join("cloud_restore_temp.zip");
     std::fs::write(&restore_path, &data).map_err(|e| e.to_string())?;
 

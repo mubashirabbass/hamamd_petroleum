@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   Settings, ShieldCheck, AlertCircle, Calendar, UserCog,
-  Cloud, RefreshCcw, Save, HardDrive, CloudOff, CheckCircle2,
+  Cloud, RefreshCcw, Save, HardDrive, CloudOff,
   Download, Upload, Trash2, Eye, EyeOff,
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
@@ -84,8 +84,8 @@ function BackupPanel() {
     finally     { setLoadingList(false); }
   };
 
-  // ── Save Credentials ───────────────────────────────────────────────────────
-  const handleSaveCreds = async () => {
+  // ── Save credentials then immediately open OAuth ──────────────────────────
+  const handleConnectWithCreds = async () => {
     if (!clientId.trim() || !clientSecret.trim()) {
       toast('Please enter both Client ID and Client Secret.', 'error');
       return;
@@ -95,7 +95,20 @@ function BackupPanel() {
     await setSetting('googleClientSecret', clientSecret.trim());
     setCredsSaved(true);
     setSavingCreds(false);
-    toast('Credentials saved! Now click "Connect Google Account".', 'success');
+    // Immediately trigger OAuth — no second button needed
+    setConnecting(true);
+    try {
+      const info = await connectGoogleDrive();
+      setConnected(true);
+      setDriveEmail(info.email);
+      setDriveName(info.name);
+      toast(`✅ Connected as ${info.name} (${info.email})`, 'success');
+      await fetchList();
+    } catch (err: any) {
+      toast(String(err?.message ?? err), 'error');
+    } finally {
+      setConnecting(false);
+    }
   };
 
   const handleChangeCreds = async () => {
@@ -104,25 +117,11 @@ function BackupPanel() {
     setCredsSaved(false);
     setConnected(false);
     setDriveEmail('');
+    setClientId('');
+    setClientSecret('');
     setBackupList([]);
   };
 
-  // ── Connect Google Drive ───────────────────────────────────────────────────
-  const handleConnect = async () => {
-    setConnecting(true);
-    try {
-      const info = await connectGoogleDrive();
-      setConnected(true);
-      setDriveEmail(info.email);
-      setDriveName(info.name);
-      toast(`Connected as ${info.email}`, 'success');
-      await fetchList();
-    } catch (err: any) {
-      toast(String(err?.message ?? err), 'error');
-    } finally {
-      setConnecting(false);
-    }
-  };
 
   const handleDisconnect = async () => {
     await disconnect();
@@ -154,7 +153,7 @@ function BackupPanel() {
     setProgress({ msg: 'Starting backup…', active: true });
     try {
       const name = await backupNow((msg) => setProgress({ msg, active: true }));
-      toast(`✅ Backup complete: ${name}`, 'success');
+      toast(`✅ Cloud Sync Complete: ${name}`, 'success');
       await fetchList();
     } catch (err: any) {
       toast(`Backup failed: ${err?.message ?? err}`, 'error');
@@ -237,19 +236,6 @@ function BackupPanel() {
     }
   };
 
-  // ─────────────────────────────────────────────────────────────────────────
-  const step = connected ? 3 : credsSaved ? 2 : 1;
-
-  const StepDot = ({ n, done }: { n: number; done: boolean }) => (
-    <div className={cn(
-      'w-8 h-8 rounded-full flex items-center justify-center text-sm font-black shrink-0 transition-all',
-      done              ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30'
-        : n === step    ? 'bg-primary-600 text-white shadow-lg shadow-primary-500/30'
-        :                 'bg-slate-800 text-slate-500'
-    )}>
-      {done ? '✓' : n}
-    </div>
-  );
 
   return (
     <div className="space-y-6 h-full overflow-auto pb-6">
@@ -292,7 +278,7 @@ function BackupPanel() {
           </div>
           <div>
             <h3 className={cn('font-black text-lg', connected ? 'text-emerald-400' : 'text-white')}>
-              {connected ? 'Cloud Backup Connected' : 'Cloud Backup — Setup Required'}
+              {connected ? 'Cloud Backup Connected' : 'Cloud Backup'}
             </h3>
             {connected ? (
               <div className="flex flex-col gap-1 mt-0.5">
@@ -307,9 +293,9 @@ function BackupPanel() {
                 )}
               </div>
             ) : checkingStatus ? (
-              <p className="text-sm text-slate-500 mt-0.5 animate-pulse">Verifying credentials…</p>
+              <p className="text-sm text-slate-500 mt-0.5 animate-pulse">Checking connection…</p>
             ) : (
-              <p className="text-sm text-slate-500 mt-0.5">Automated backups to your personal Google Drive.</p>
+              <p className="text-sm text-slate-500 mt-0.5">Enter your credentials below to connect Google Drive.</p>
             )}
           </div>
         </div>
@@ -334,136 +320,62 @@ function BackupPanel() {
         </div>
       </div>
 
-      {/* ── 3-Step Setup (hidden when connected) ────────────────────────────── */}
-      {!connected && (
+      {/* ── Credential Entry + Connect (hidden when connected) ────────────────── */}
+      {!connected && !checkingStatus && (
         <div className="glass rounded-2xl border border-slate-200/50 dark:border-dark-700/50 overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-200 dark:border-dark-700/50 bg-primary-500/5">
-            <h4 className="font-black text-slate-900 dark:text-white text-sm">
-              Setup Guide — Complete all 3 steps to enable Google Drive backups
-            </h4>
+          <div className="px-6 py-4 border-b border-slate-200 dark:border-dark-700/50 flex items-center justify-between">
+            <h4 className="font-black text-slate-900 dark:text-white text-sm">Connect Google Drive Backup</h4>
+            <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noreferrer"
+              className="text-[11px] text-primary-400 font-bold underline hover:text-primary-300">
+              Get Credentials ↗
+            </a>
           </div>
-          <div className="p-6 space-y-5">
-
-            {/* STEP 1 — Credentials */}
-            <div className={cn(
-              'rounded-xl border p-5 transition-all',
-              credsSaved ? 'border-emerald-500/20 bg-emerald-500/5' : 'border-primary-500/20 bg-primary-500/5'
-            )}>
-              <div className="flex items-start gap-4">
-                <StepDot n={1} done={credsSaved} />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2">
-                    <h5 className="font-black text-slate-900 dark:text-white">Enter Google API Credentials</h5>
-                    {!credsSaved && (
-                      <a href="https://console.cloud.google.com/apis/credentials"
-                        target="_blank" rel="noreferrer"
-                        className="text-[11px] text-primary-400 font-bold underline hover:text-primary-300 shrink-0">
-                        Open Google Console ↗
-                      </a>
-                    )}
-                  </div>
-                  <p className="text-xs text-slate-500 dark:text-dark-400 mt-1 mb-4">
-                    Google Cloud Console → Credentials → Create OAuth 2.0 → Set redirect URI to:{' '}
-                    <code className="px-1.5 py-0.5 bg-slate-100 dark:bg-dark-800 rounded text-primary-400 font-mono text-[11px]">
-                      http://localhost:3001/oauth/callback
-                    </code>
-                  </p>
-                  {!credsSaved ? (
-                    <div className="space-y-3">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-xs font-bold text-slate-500 dark:text-dark-400 mb-1 uppercase tracking-wider">Client ID</label>
-                          <input type="text" value={clientId} onChange={e => setClientId(e.target.value)}
-                            placeholder="1234567890-abc...apps.googleusercontent.com"
-                            className="input w-full !font-mono !text-xs" />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-bold text-slate-500 dark:text-dark-400 mb-1 uppercase tracking-wider">Client Secret</label>
-                          <div className="relative">
-                            <input type={showSecret ? 'text' : 'password'} value={clientSecret}
-                              onChange={e => setClientSecret(e.target.value)} placeholder="GOCSPX-…"
-                              className="input w-full !font-mono !text-xs pr-9" />
-                            <button type="button" onClick={() => setShowSecret(!showSecret)}
-                              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300">
-                              {showSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                      <button onClick={handleSaveCreds} disabled={savingCreds || !clientId.trim() || !clientSecret.trim()}
-                        className="btn-primary flex items-center gap-2 !py-2 !text-sm disabled:opacity-40">
-                        <Save className="w-4 h-4" />
-                        {savingCreds ? 'Saving…' : 'Save Credentials'}
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-emerald-400 font-bold flex items-center gap-2">
-                        <CheckCircle2 className="w-4 h-4" />
-                        Credentials saved
-                        <span className="font-mono text-xs text-slate-500 font-normal">{clientId.slice(0, 24)}…</span>
-                      </span>
-                      <button onClick={handleChangeCreds}
-                        className="text-xs text-slate-500 hover:text-red-400 transition-colors font-medium">
-                        Change
-                      </button>
-                    </div>
-                  )}
+          <div className="p-6 space-y-4">
+            <p className="text-xs text-slate-500 dark:text-dark-400">
+              Enter your Google OAuth 2.0 credentials. The app will automatically sign in and fetch your account name.
+              Set the redirect URI to{' '}
+              <code className="px-1.5 py-0.5 bg-slate-100 dark:bg-dark-800 rounded text-primary-400 font-mono text-[11px]">
+                http://localhost:3001/oauth/callback
+              </code>
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 dark:text-dark-400 mb-1 uppercase tracking-wider">Client ID</label>
+                <input type="text" value={clientId} onChange={e => setClientId(e.target.value)}
+                  placeholder="1234567890-abc...apps.googleusercontent.com"
+                  className="input w-full !font-mono !text-xs" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 dark:text-dark-400 mb-1 uppercase tracking-wider">Client Secret</label>
+                <div className="relative">
+                  <input type={showSecret ? 'text' : 'password'} value={clientSecret}
+                    onChange={e => setClientSecret(e.target.value)} placeholder="GOCSPX-…"
+                    className="input w-full !font-mono !text-xs pr-9" />
+                  <button type="button" onClick={() => setShowSecret(!showSecret)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300">
+                    {showSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
                 </div>
               </div>
             </div>
-
-            {/* STEP 2 — Connect Account */}
-            <div className={cn(
-              'rounded-xl border p-5 transition-all',
-              !credsSaved ? 'opacity-40 border-slate-700' :
-              connected   ? 'border-emerald-500/20 bg-emerald-500/5' :
-                            'border-primary-500/20 bg-primary-500/5'
-            )}>
-              <div className="flex items-start gap-4">
-                <StepDot n={2} done={connected} />
-                <div className="flex-1 min-w-0">
-                  <h5 className="font-black text-slate-900 dark:text-white">Connect Your Google Account</h5>
-                  <p className="text-xs text-slate-500 dark:text-dark-400 mt-1 mb-4">
-                    A browser window will open. Sign in and allow access to Google Drive.
-                    After authorizing, come back and click <strong>Check Status</strong>.
-                  </p>
-                  <div className="flex flex-wrap gap-3">
-                    <button onClick={handleConnect} disabled={!credsSaved || connecting}
-                      className="flex items-center gap-2 px-5 py-2 bg-white border border-slate-200 dark:border-dark-700 text-slate-800 dark:text-white rounded-xl text-sm font-black hover:bg-slate-50 dark:hover:bg-dark-800 transition-colors disabled:opacity-40 shadow-sm">
-                      <svg className="w-4 h-4" viewBox="0 0 24 24">
-                        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
-                        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-                        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
-                        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
-                      </svg>
-                      {connecting ? 'Waiting for browser…' : 'Connect Google Account'}
-                    </button>
-                    <button onClick={handleCheckStatus} disabled={!credsSaved || checkingStatus}
-                      className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-dark-800 text-slate-700 dark:text-dark-200 rounded-xl text-sm font-bold hover:bg-slate-200 dark:hover:bg-dark-700 transition-colors disabled:opacity-40">
-                      <RefreshCcw className={cn('w-3.5 h-3.5', checkingStatus && 'animate-spin')} />
-                      Check Status
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* STEP 3 — Done */}
-            <div className={cn(
-              'rounded-xl border p-5 transition-all',
-              !connected ? 'opacity-40 border-slate-700' : 'border-primary-500/20 bg-primary-500/5'
-            )}>
-              <div className="flex items-start gap-4">
-                <StepDot n={3} done={connected} />
-                <div className="flex-1">
-                  <h5 className="font-black text-slate-900 dark:text-white">Ready to Backup</h5>
-                  <p className="text-xs text-slate-500 dark:text-dark-400 mt-1">
-                    Once connected, use the controls below to back up and restore your data.
-                  </p>
-                </div>
-              </div>
-            </div>
+            <button
+              onClick={handleConnectWithCreds}
+              disabled={savingCreds || connecting || !clientId.trim() || !clientSecret.trim()}
+              className="flex items-center gap-2 px-6 py-3 bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700 text-slate-800 dark:text-white rounded-xl text-sm font-black hover:bg-slate-50 dark:hover:bg-dark-700 transition-all shadow-md active:scale-95 disabled:opacity-40"
+            >
+              <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+              </svg>
+              {connecting ? 'Opening Google Sign-In…' : savingCreds ? 'Saving…' : 'Sign in with Google'}
+            </button>
+            {credsSaved && !connected && (
+              <button onClick={handleChangeCreds} className="text-xs text-red-400 hover:text-red-500 font-bold transition-colors">
+                Clear saved credentials
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -549,17 +461,25 @@ function BackupPanel() {
                     i === 0 ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400'
                             : 'bg-slate-100 dark:bg-dark-800 text-slate-500'
                   )}>
-                    {i === 0 ? '★' : i + 1}
+                    {bk.name.includes('_Desktop') ? '💻' : bk.name.includes('_Mobile') ? '📱' : (i === 0 ? '★' : i + 1)}
                   </div>
                   <div>
-                    <p className="text-sm font-black text-slate-900 dark:text-white">{bk.name}</p>
+                    <div className="flex items-center gap-2">
+                       <p className="text-sm font-black text-slate-900 dark:text-white">{bk.name}</p>
+                       {bk.name.includes('_Desktop') && (
+                        <span className="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[9px] font-black rounded uppercase">Desktop</span>
+                      )}
+                      {bk.name.includes('_Mobile') && (
+                        <span className="px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 text-[9px] font-black rounded uppercase">Mobile</span>
+                      )}
+                    </div>
                     <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-400">
                       {bk.size && <span>{(parseInt(bk.size) / 1024).toFixed(0)} KB</span>}
                       {bk.size && <span>•</span>}
                       <span>{new Date(bk.modifiedTime ?? bk.createdTime ?? '').toLocaleString()}</span>
                       {i === 0 && (
                         <span className="px-1.5 py-0.5 bg-emerald-100 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 font-black rounded text-[10px]">
-                          Latest
+                          Latest Cloud Sync
                         </span>
                       )}
                     </div>

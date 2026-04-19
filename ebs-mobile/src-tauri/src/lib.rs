@@ -18,9 +18,23 @@ fn get_base_dir() -> Result<PathBuf, String> {
 }
 
 #[tauri::command]
-fn get_app_data_path() -> Result<String, String> {
-    get_base_dir()
-        .map(|p| p.to_string_lossy().to_string())
+fn get_app_data_path(app: tauri::AppHandle) -> Result<String, String> {
+    #[cfg(not(mobile))]
+    {
+        // Desktop (Windows): portable mode next to .exe
+        get_base_dir().map(|p| p.to_string_lossy().to_string())
+    }
+
+    #[cfg(mobile)]
+    {
+        // Android: Use the app's private internal storage
+        app.path().app_data_dir()
+            .map(|p| {
+                let _ = std::fs::create_dir_all(&p);
+                p.to_string_lossy().to_string()
+            })
+            .map_err(|e| e.to_string())
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -28,8 +42,14 @@ fn get_app_data_path() -> Result<String, String> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 #[tauri::command]
-async fn create_backup_zip(_app: tauri::AppHandle) -> Result<String, String> {
+async fn create_backup_zip(app: tauri::AppHandle) -> Result<String, String> {
+    #[cfg(not(mobile))]
     let app_dir = get_base_dir()?;
+
+    #[cfg(mobile)]
+    let app_dir = app.path().app_data_dir()
+        .map(|p| { let _ = std::fs::create_dir_all(&p); p })
+        .map_err(|e| e.to_string())?;
 
     let db_path = app_dir.join("ebs_business.db");
     if !db_path.exists() {
@@ -54,6 +74,7 @@ async fn create_backup_zip(_app: tauri::AppHandle) -> Result<String, String> {
     let meta = serde_json::json!({
         "version": "1.0",
         "app": "EBS Petroleum",
+        "device_type": "Mobile",
         "createdAt": chrono::Utc::now().to_rfc3339(),
         "dbFile": "ebs_business.db"
     });
@@ -94,8 +115,13 @@ async fn create_backup_zip(_app: tauri::AppHandle) -> Result<String, String> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 #[tauri::command]
-async fn restore_from_zip(zip_path: String, _app: tauri::AppHandle) -> Result<(), String> {
+async fn restore_from_zip(zip_path: String, app: tauri::AppHandle) -> Result<(), String> {
+    #[cfg(not(mobile))]
     let app_dir = get_base_dir()?;
+
+    #[cfg(mobile)]
+    let app_dir = app.path().app_data_dir()
+        .map_err(|e| e.to_string())?;
 
     let db_path = app_dir.join("ebs_business.db");
 
@@ -561,11 +587,68 @@ async fn download_drive_backup(
 
     let data = response.bytes().await.map_err(|e| e.to_string())?;
 
+    #[cfg(not(mobile))]
     let app_dir = get_base_dir()?;
+
+    #[cfg(mobile)]
+    let app_dir = app.path().app_data_dir()
+        .map(|p| { let _ = std::fs::create_dir_all(&p); p })
+        .map_err(|e| e.to_string())?;
+
     let restore_path = app_dir.join("cloud_restore_temp.zip");
     std::fs::write(&restore_path, &data).map_err(|e| e.to_string())?;
 
     Ok(restore_path.to_string_lossy().to_string())
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// NATIVE FILE SYSTEM HELPERS (Bypasses JS Scoped Permissions on Android)
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[tauri::command]
+async fn save_buffer_to_app_data(
+    filename: String,
+    data: Vec<u8>,
+    app: tauri::AppHandle,
+) -> Result<String, String> {
+    #[cfg(not(mobile))]
+    let app_dir = get_base_dir()?;
+
+    #[cfg(mobile)]
+    let app_dir = app.path().app_data_dir()
+        .map(|p| { let _ = std::fs::create_dir_all(&p); p })
+        .map_err(|e| e.to_string())?;
+
+    let path = app_dir.join(&filename);
+    std::fs::write(&path, &data).map_err(|e| format!("Failed to save buffer: {}", e))?;
+    
+    Ok(path.to_string_lossy().to_string())
+}
+
+#[tauri::command]
+async fn copy_file_native(
+    src: String,
+    dest_filename: String,
+    app: tauri::AppHandle,
+) -> Result<String, String> {
+    // If the Android picker returns a direct file path, we can copy it natively
+    // Note: Android content:// URIs might still require Java side handlers, 
+    // but this cleanly bypasses plugin-fs "forbidden path" blocks for standard paths.
+
+    #[cfg(not(mobile))]
+    let app_dir = get_base_dir()?;
+
+    #[cfg(mobile)]
+    let app_dir = app.path().app_data_dir()
+        .map(|p| { let _ = std::fs::create_dir_all(&p); p })
+        .map_err(|e| e.to_string())?;
+
+    let target_path = app_dir.join(&dest_filename);
+    
+    std::fs::copy(&src, &target_path)
+        .map_err(|e| format!("Native copy failed (Android content URI blocks may still apply to the src): {}", e))?;
+        
+    Ok(target_path.to_string_lossy().to_string())
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -595,6 +678,8 @@ pub fn run() {
             list_drive_backups,
             download_drive_backup,
             get_machine_id,
+            save_buffer_to_app_data,
+            copy_file_native,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

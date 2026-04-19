@@ -98,7 +98,7 @@ export function buildAuthUrl(clientId: string): string {
  * 4. Fetch user info
  * 5. Save everything to SQLite
  */
-export async function connectGoogleDrive(): Promise<{
+export async function connectGoogleDrive(manualPin?: string): Promise<{
   email: string;
   name: string;
 }> {
@@ -111,8 +111,18 @@ export async function connectGoogleDrive(): Promise<{
 
   const authUrl = buildAuthUrl(clientId);
 
-  // Rust starts local server, opens browser, waits for callback
-  const code = await invoke<string>('start_oauth_server_and_get_code', { authUrl });
+  let code = '';
+  if (manualPin) {
+    if (manualPin.includes('code=')) {
+      const match = manualPin.match(/code=([^&]+)/);
+      code = (match && match[1]) ? decodeURIComponent(match[1]) : manualPin.trim();
+    } else {
+      code = manualPin.trim();
+    }
+  } else {
+    // Rust starts local server, opens browser, waits for callback
+    code = await invoke<string>('start_oauth_server_and_get_code', { authUrl });
+  }
 
   // Exchange authorization code for tokens
   const tokens = await invoke<OAuthTokens>('exchange_oauth_code', {
@@ -181,7 +191,7 @@ export async function backupNow(
   onProgress?.('Connecting to Google Drive...');
   const accessToken = await getValidAccessToken();
 
-  const fileName = `EBS_Backup_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}.zip`;
+  const fileName = `EBS_Backup_Desktop_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}.zip`;
 
   onProgress?.('Uploading to Google Drive...');
   await invoke('upload_zip_to_drive', { zipPath, accessToken, fileName });
@@ -255,26 +265,20 @@ export async function downloadLocalBackup(): Promise<string> {
 // ─── Restore from local file ──────────────────────────────────────────────────
 
 export async function restoreFromLocalFile(file: File): Promise<void> {
-  // Write the file to a temp path, then restore
+  // Read file as Uint8Array (Supported natively by Tauri 2.0 binary bridge)
   const arrayBuffer = await file.arrayBuffer();
   const uint8 = new Uint8Array(arrayBuffer);
 
-  // Use Tauri FS to write temp file, then restore
-  // We'll write it via a blob URL approach with invoke
-  const tempPath = await invoke<string>('get_app_data_path');
-  const fullTempPath = `${tempPath}\\local_restore_temp.zip`;
+  const appData = await invoke<string>('get_app_data_path');
+  const fullTempPath = `${appData}/local_restore_temp.zip`;
 
-  // Write via Rust (encodes binary data as base64)
-  await invoke('write_binary_file', {
-    path: fullTempPath,
-    data: Array.from(uint8),
-  }).catch(async () => {
-    // Fallback: use plugin-fs if write_binary_file isn't registered
-    const { writeFile } = await import('@tauri-apps/plugin-fs');
-    await writeFile(fullTempPath, uint8);
-  });
+  // Write directly using plugin-fs (optimized)
+  const { writeFile } = await import('@tauri-apps/plugin-fs');
+  await writeFile(fullTempPath, uint8);
 
   const { closeDB } = await import('./db');
   await closeDB();
+  // Brief delay to ensure file handles are released
+  await new Promise(resolve => setTimeout(resolve, 500));
   await invoke('restore_from_zip', { zipPath: fullTempPath });
 }
