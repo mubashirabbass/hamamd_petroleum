@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { 
   Plus, Trash2, Eye, Edit2, Printer, BarChart3, ArrowRight, History, Zap, Fuel, 
-  LayoutGrid, Database, ShoppingCart, Save, Pin, PinOff 
+  LayoutGrid, Database, Save, Pin, PinOff, ArrowUpDown, XCircle, ShoppingCart
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { formatCurrency, formatDate, today, paginate, filterByStartDate, startOfMonth, startOfYear, getErrorMessage, cn } from '../lib/utils';
@@ -48,11 +48,13 @@ export default function PurchasePage() {
   const [viewingEntity, setViewingEntity] = useState<any>(null);
   const [showReport, setShowReport] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [entrySort, setEntrySort] = useState('date_desc');
   const [form, setForm] = useState({
     date: today(),
     description: '',
     invoiceNo: '',
     vehicleNo: '',
+    details: '',
     rate: '',
     quantity: '',
     carriage: '',
@@ -67,15 +69,22 @@ export default function PurchasePage() {
   };
 
   const filtered = useMemo(() => {
-    return filterByStartDate(purchases, settings.startDate)
+    let list = filterByStartDate(purchases, settings.startDate)
       .filter((p) => p.type === fuelType)
       .filter((p) => {
-        const matchesSearch = !search || p.date.includes(search) || (p.invoiceNo && p.invoiceNo.toLowerCase().includes(search.toLowerCase()));
+        const matchesSearch = !search || p.date.includes(search) || (p.invoiceNo && p.invoiceNo.toLowerCase().includes(search.toLowerCase())) || (p.vehicleNo && p.vehicleNo.toLowerCase().includes(search.toLowerCase()));
         const matchesFrom = !fromDate || p.date >= fromDate;
         const matchesTo = !toDate || p.date <= toDate;
         return matchesSearch && matchesFrom && matchesTo;
       });
-  }, [purchases, settings.startDate, fuelType, search, fromDate, toDate]);
+
+    if (entrySort === 'date_desc') list.sort((a,b) => b.date.localeCompare(a.date));
+    if (entrySort === 'date_asc')  list.sort((a,b) => a.date.localeCompare(b.date));
+    if (entrySort === 'qty_desc')   list.sort((a,b) => b.quantity - a.quantity);
+    if (entrySort === 'amt_desc')   list.sort((a,b) => b.totalAmount - a.totalAmount);
+    
+    return list;
+  }, [purchases, settings.startDate, fuelType, search, fromDate, toDate, entrySort]);
 
   const paged = paginate(filtered, page, perPage);
 
@@ -106,6 +115,7 @@ export default function PurchasePage() {
       description: form.description,
       invoiceNo: form.invoiceNo,
       vehicleNo: form.vehicleNo,
+      details: form.details,
       rate: parseFloat(form.rate),
       quantity: parseFloat(form.quantity),
       carriage: parseFloat(form.carriage) || 0,
@@ -140,6 +150,7 @@ export default function PurchasePage() {
       description: '',
       invoiceNo: '',
       vehicleNo: '',
+      details: '',
       rate: '',
       quantity: '',
       carriage: '',
@@ -151,7 +162,7 @@ export default function PurchasePage() {
   const closeForm = () => {
     setShowForm(false);
     setEditingEntity(null);
-    setForm({ date: today(), description: '', invoiceNo: '', vehicleNo: '', rate: '', quantity: '', carriage: '', amount: '', totalAmount: '' });
+    setForm({ date: today(), description: '', invoiceNo: '', vehicleNo: '', details: '', rate: '', quantity: '', carriage: '', amount: '', totalAmount: '' });
   };
 
   const handleEdit = (p: any) => {
@@ -161,6 +172,7 @@ export default function PurchasePage() {
       description: p.description || '',
       invoiceNo: p.invoiceNo || '',
       vehicleNo: p.vehicleNo || '',
+      details: p.details || '',
       rate: p.rate.toString(),
       quantity: p.quantity.toString(),
       carriage: p.carriage.toString(),
@@ -484,9 +496,24 @@ export default function PurchasePage() {
 
             <div className="glass rounded-xl overflow-hidden flex-1 flex flex-col mb-0">
               <div className="flex flex-col md:flex-row md:items-center justify-between p-4 gap-4 border-b border-slate-200 dark:border-dark-700/50">
-                <div className="flex-1 min-w-0"><SearchBar value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search transactions..." /></div>
+                <div className="flex-1 min-w-0 flex items-center gap-2">
+                  <SearchBar value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search transactions..." />
+                  <div className="relative group shrink-0">
+                    <ArrowUpDown className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 group-hover:text-emerald-600 transition-colors pointer-events-none" />
+                    <select
+                      value={entrySort}
+                      onChange={(e) => setEntrySort(e.target.value)}
+                      className="appearance-none pl-7 pr-8 py-1.5 bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700/50 rounded-xl text-[9px] font-black uppercase tracking-wider text-slate-700 dark:text-dark-200 focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all cursor-pointer outline-none shadow-sm"
+                    >
+                      <option value="date_desc">Newest</option>
+                      <option value="date_asc">Oldest</option>
+                      <option value="qty_desc">High Qty</option>
+                      <option value="amt_desc">High Amt</option>
+                    </select>
+                  </div>
+                </div>
                 { (fromDate || toDate) && (
-                    <button onClick={() => { setFromDate(''); setToDate(''); setPage(1); }} className="px-3 py-1.5 text-[10px] font-black uppercase tracking-tighter text-red-600 bg-red-50 dark:bg-red-900/20 rounded-lg hover:bg-red-100 transition-all border border-red-200 dark:border-red-800/30">Clear Period</button>
+                    <button onClick={() => { setFromDate(''); setToDate(''); setPage(1); }} className="px-3 py-1.5 text-[10px] font-black uppercase tracking-tighter text-red-600 bg-red-50 dark:bg-red-900/20 rounded-lg hover:bg-red-100 transition-all border border-red-200 dark:border-red-800/30 flex items-center gap-1.5"><XCircle className="w-3 h-3" /> Clear</button>
                 )}
               </div>
 

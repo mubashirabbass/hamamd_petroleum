@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { 
   Plus, Trash2, Eye, Edit2, Printer, BarChart3, ArrowRight, History, Zap, Fuel, 
-  LayoutGrid, Database, TrendingUp, Save, Pin, PinOff 
+  LayoutGrid, Database, TrendingUp, Save, Pin, PinOff, XCircle, ArrowUpDown 
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { formatCurrency, formatDate, today, paginate, filterByStartDate, startOfMonth, startOfYear, getErrorMessage, cn } from '../lib/utils';
@@ -48,6 +48,7 @@ export default function SalePage() {
   const [editingEntity, setEditingEntity] = useState<any>(null);
   const [viewingEntity, setViewingEntity] = useState<any>(null);
   const [showReport, setShowReport] = useState(false);
+  const [entrySort, setEntrySort] = useState('date_desc');
   const [form, setForm] = useState({ date: today(), description: '', quantity: '', rate: '', amount: '' });
   const [isSaving, setIsSaving] = useState(false);
 
@@ -63,15 +64,26 @@ export default function SalePage() {
   };
 
   const filtered = useMemo(() => {
-    return filterByStartDate(sales, settings.startDate)
+    const f = filterByStartDate(sales, settings.startDate)
       .filter((s) => s.type === fuelType)
       .filter((s) => {
-        const matchesSearch = !search || s.date.includes(search);
+        const matchesSearch = !search || s.date.includes(search) || (s.description && s.description.toLowerCase().includes(search.toLowerCase()));
         const matchesFrom = !fromDate || s.date >= fromDate;
         const matchesTo = !toDate || s.date <= toDate;
         return matchesSearch && matchesFrom && matchesTo;
       });
-  }, [sales, settings.startDate, fuelType, search, fromDate, toDate]);
+
+    return [...f].sort((a, b) => {
+      switch (entrySort) {
+        case 'date_desc':     return b.date.localeCompare(a.date);
+        case 'date_asc':      return a.date.localeCompare(b.date);
+        case 'amount_desc':   return b.amount - a.amount;
+        case 'amount_asc':    return a.amount - b.amount;
+        case 'quantity_desc': return b.quantity - a.quantity;
+        default:              return b.date.localeCompare(a.date);
+      }
+    });
+  }, [sales, settings.startDate, fuelType, search, fromDate, toDate, entrySort]);
 
   const paged = paginate(filtered, page, perPage);
   const pageTotals = useMemo(() => ({
