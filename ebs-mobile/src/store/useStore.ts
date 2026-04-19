@@ -136,6 +136,7 @@ interface AppState {
   dbReady:          boolean;
   dbError:          string | null;
   currentMachineId: string | null;
+  localActivationId: string | null;
   initializeFromDB: () => Promise<void>;
 
   // ─ Purchase ───────────────────────────────────────────────────────────────
@@ -228,9 +229,10 @@ export const useStore = create<AppState>()((set, get) => ({
 
   initializeFromDB: async () => {
     try {
-      const [data, machineId] = await Promise.all([
+      const [data, machineId, localActivation] = await Promise.all([
         loadAllData(),
-        invoke<string>('get_machine_id').catch(() => 'UNKNOWN')
+        invoke<string>('get_machine_id').catch(() => 'UNKNOWN'),
+        invoke<string>('get_hwid_activation').catch(() => '')
       ]);
 
       set({
@@ -280,9 +282,20 @@ export const useStore = create<AppState>()((set, get) => ({
             ];
           })(),
         },
+        localActivationId: localActivation || null,
         dbReady: true,
         dbError: null,
       });
+
+      // Smart-Latch Logic: Only save the DB ID locally if it actually matches the current hardware.
+      // This prevents "Auto-Latch Poisoning" when restoring a database from another device.
+      if (!localActivation && data.settings['authorizedMachineId']) {
+        const dbId = data.settings['authorizedMachineId'];
+        if (dbId === machineId) {
+          await invoke('set_hwid_activation', { id: dbId }).catch(console.error);
+          set({ localActivationId: dbId });
+        }
+      }
     } catch (err: any) {
       console.error('[DB] Failed to initialize:', err);
       set({ dbReady: false, dbError: String(err?.message ?? err) });
@@ -657,7 +670,12 @@ export const useStore = create<AppState>()((set, get) => ({
     if (updates.hiddenMenus  !== undefined) await setSetting('hiddenMenus',  JSON.stringify(updates.hiddenMenus));
     if (updates.licenseStartDate    !== undefined) await setSetting('licenseStartDate',    updates.licenseStartDate);
     if (updates.licenseEndDate      !== undefined) await setSetting('licenseEndDate',      updates.licenseEndDate);
-    if (updates.authorizedMachineId !== undefined) await setSetting('authorizedMachineId', updates.authorizedMachineId);
+    if (updates.authorizedMachineId !== undefined) {
+      await setSetting('authorizedMachineId', updates.authorizedMachineId);
+      // Also save to local persistent file
+      await invoke('set_hwid_activation', { id: updates.authorizedMachineId }).catch(console.error);
+      set({ localActivationId: updates.authorizedMachineId });
+    }
     if (updates.zoomLevel    !== undefined) await setSetting('zoomLevel',    String(updates.zoomLevel));
     if (updates.shortcuts    !== undefined) await setSetting('shortcuts',    JSON.stringify(updates.shortcuts));
 
