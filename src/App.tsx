@@ -15,7 +15,7 @@ import Settings   from './pages/Settings';
 import Login      from './pages/Login';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { useStore } from './store/useStore';
-import loginBg from '../WhatsApp Image 2026-04-08 at 5.20.06 PM.jpeg';
+import loginBg from './assets/login-bg.jpg';
 
 function DBSplash({ error }: { error: string | null }) {
   // ... (keeping existing DBSplash code)
@@ -206,32 +206,49 @@ function SystemLocked({ reason }: { reason: 'HARDWARE' | 'LICENSE' }) {
 // ─── App Root ─────────────────────────────────────────────────────────────────
 
 export default function App() {
-  const { currentUser, dbReady, dbError, initializeFromDB, settings, updateSettings } = useStore();
+  const { currentUser, dbReady, dbError, initializeFromDB, settings, updateSettings, logout } = useStore();
   const [booting, setBooting] = useState(true);
 
-  // Zoom management
+  // ── Zoom — CSS zoom on <html>; Chromium/WebView on all Tauri targets supports it ──
+  const applyZoom = (zoom: number) => {
+    document.documentElement.style.zoom = String(zoom);
+    // Secondary: Tauri native zoom for desktop window
+    try {
+      import('@tauri-apps/api/webviewWindow').then(({ getCurrentWebviewWindow }) => {
+        const appWindow = getCurrentWebviewWindow();
+        if ((appWindow as any).setZoom) {
+          (appWindow as any).setZoom(zoom).catch(() => {});
+        }
+      });
+    } catch(e) {}
+  };
+
+  // Zoom management — runs on load + whenever zoomLevel changes
   useEffect(() => {
     if (!dbReady) return;
 
+    // Apply saved zoom level immediately (persisted from last session)
+    applyZoom(settings.zoomLevel);
+
+    // Desktop: Ctrl+scroll wheel zoom
     const handleWheel = (e: WheelEvent) => {
       if (e.ctrlKey) {
         e.preventDefault();
         const delta = e.deltaY < 0 ? 0.1 : -0.1;
         const newZoom = Math.min(Math.max(settings.zoomLevel + delta, 0.5), 2.0);
-        updateSettings({ zoomLevel: newZoom });
+        updateSettings({ zoomLevel: newZoom }); // triggers effect re-run → applyZoom
       }
     };
 
+    // Desktop: Ctrl+= / Ctrl+- / Ctrl+0 zoom
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey) {
         if (e.key === '=' || e.key === '+') {
           e.preventDefault();
-          const newZoom = Math.min(Math.max(settings.zoomLevel + 0.1, 0.5), 2.0);
-          updateSettings({ zoomLevel: newZoom });
+          updateSettings({ zoomLevel: Math.min(settings.zoomLevel + 0.1, 2.0) });
         } else if (e.key === '-' || e.key === '_') {
           e.preventDefault();
-          const newZoom = Math.min(Math.max(settings.zoomLevel - 0.1, 0.5), 2.0);
-          updateSettings({ zoomLevel: newZoom });
+          updateSettings({ zoomLevel: Math.max(settings.zoomLevel - 0.1, 0.5) });
         } else if (e.key === '0') {
           e.preventDefault();
           updateSettings({ zoomLevel: 1.0 });
@@ -241,17 +258,6 @@ export default function App() {
 
     window.addEventListener('wheel', handleWheel, { passive: false });
     window.addEventListener('keydown', handleKeyDown);
-
-    // Apply zoom on change natively
-    try {
-      import('@tauri-apps/api/webviewWindow').then(({ getCurrentWebviewWindow }) => {
-        const appWindow = getCurrentWebviewWindow();
-        if ((appWindow as any).setZoom) {
-          (appWindow as any).setZoom(settings.zoomLevel).catch(() => {});
-        }
-      });
-    } catch(e) {}
-
     return () => {
       window.removeEventListener('wheel', handleWheel);
       window.removeEventListener('keydown', handleKeyDown);
@@ -261,6 +267,43 @@ export default function App() {
   useEffect(() => {
     initializeFromDB().finally(() => setBooting(false));
   }, []);
+
+  // ── Logout on every app close / background ─────────────────────────────
+  useEffect(() => {
+    if (!dbReady) return;
+
+    // Android/mobile: fires when app goes to background or OS kills it
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        logout();
+      }
+    };
+
+    // Fallback for browsers / PWA that miss visibilitychange
+    const handlePageHide = () => logout();
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('pagehide', handlePageHide);
+
+    // Desktop: Tauri close-requested — allows cleanup before the window shuts
+    let unlisten: (() => void) | null = null;
+    import('@tauri-apps/api/webviewWindow')
+      .then(({ getCurrentWebviewWindow }) => {
+        const appWindow = getCurrentWebviewWindow();
+        return appWindow.onCloseRequested(async () => {
+          logout();
+          // Allow the window to close normally
+        });
+      })
+      .then((fn) => { unlisten = fn; })
+      .catch(() => { /* not in Tauri context */ });
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('pagehide', handlePageHide);
+      if (unlisten) unlisten();
+    };
+  }, [dbReady, logout]);
 
   // Security Checks
   const isHardwareLocked = !settings.authorizedMachineId || settings.authorizedMachineId !== useStore.getState().currentMachineId;

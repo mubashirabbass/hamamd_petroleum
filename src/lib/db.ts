@@ -98,7 +98,9 @@ export async function getDB(): Promise<Database> {
 
   if (!_db) {
     const appDir: string = await invoke('get_app_data_path');
-    const dbPath = `sqlite:${appDir}\\ebs_business.db`;
+    // Use forward slash which works on both Android (Linux) and Windows
+    const separator = appDir.includes('\\') ? '\\' : '/';
+    const dbPath = `sqlite:${appDir}${separator}ebs_business.db`;
     _db = await Database.load(dbPath);
     await initSchema(_db);
   }

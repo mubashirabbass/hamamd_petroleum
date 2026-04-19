@@ -1,5 +1,9 @@
-import React, { useState, useMemo } from 'react';
-import { Plus, Trash2, Droplet, Eye, Edit2, Printer, BarChart3, LayoutGrid, Database, Zap, Fuel, History, ArrowRight } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { 
+  Plus, Trash2, Eye, Edit2, Printer, BarChart3, ArrowRight, History, Zap, Fuel, 
+  LayoutGrid, Database, TrendingUp, Save, Pin, PinOff 
+} from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { formatCurrency, formatDate, today, paginate, filterByStartDate, startOfMonth, startOfYear, getErrorMessage, cn } from '../lib/utils';
 import { useToast } from '../components/ui/Toast';
@@ -8,15 +12,35 @@ import Pagination from '../components/ui/Pagination';
 import Modal from '../components/ui/Modal';
 import TransactionReceiptModal from '../components/modals/TransactionReceiptModal';
 import PrintReportModal from '../components/modals/PrintReportModal';
+import FAB from '../components/ui/FAB';
+import MobileActivityCard from '../components/ui/MobileActivityCard';
 import type { FuelType } from '../store/useStore';
 
 export default function SalePage() {
   const { sales, addSale, deleteSale, settings, currentUser } = useStore();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
+
+  // Layout State
   const [perPage, setPerPage] = useState(20);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'database'>('dashboard');
   const [fuelType, setFuelType] = useState<FuelType>('HSD');
   const [showForm, setShowForm] = useState(false);
+  const [isSidebarPinned, setIsSidebarPinned] = useState(true);
+  const isExpanded = isSidebarPinned;
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    const type = searchParams.get('type') as FuelType;
+    const action = searchParams.get('action');
+
+    if (tab === 'dashboard') setActiveTab('dashboard');
+    else if (tab === 'database') setActiveTab('database');
+
+    if (type === 'HSD' || type === 'PMG') setFuelType(type);
+
+    if (action === 'add') setShowForm(true);
+  }, [searchParams]);
   const [search, setSearch] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
@@ -144,269 +168,219 @@ export default function SalePage() {
   };
 
   return (
-    <div className="animate-fade-in flex flex-col h-full overflow-hidden">
-      {/* Tab Switcher & Filters */}
-      <div className="flex flex-col gap-4 mb-4">
-        <div className="flex items-center gap-2 bg-slate-100 dark:bg-dark-800 p-1 rounded-xl border border-slate-200 dark:border-dark-700/50 w-full">
-          <button
-            onClick={() => setActiveTab('dashboard')}
+    <div className="animate-fade-in flex flex-col h-full w-full overflow-hidden">
+      {/* Mobile-Native View and Fuel Switcher */}
+      <div className="flex flex-col gap-3 p-4 bg-white dark:bg-dark-900/50 border-b border-slate-200 dark:border-dark-800 flex-shrink-0 transition-all duration-300">
+        <div className="flex items-center gap-3">
+          <div className="segmented-control flex-1">
+            <button
+              onClick={() => setActiveTab('dashboard')}
+              className={cn("segmented-item", activeTab === 'dashboard' ? "segmented-item-active" : "segmented-item-inactive")}
+            >
+              Analytics
+            </button>
+            <button
+              onClick={() => setActiveTab('database')}
+              className={cn("segmented-item", activeTab === 'database' ? "segmented-item-active" : "segmented-item-inactive")}
+            >
+              History
+            </button>
+          </div>
+          
+          <button 
+            onClick={() => setIsSidebarPinned(!isSidebarPinned)}
             className={cn(
-              "flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all",
-              activeTab === 'dashboard' 
-                ? "bg-white dark:bg-dark-900 text-emerald-600 shadow-sm border border-slate-200 dark:border-dark-700" 
-                : "text-slate-500"
+              "w-9 h-9 flex items-center justify-center rounded-xl flex-shrink-0 transition-all active:scale-95",
+              isSidebarPinned 
+                ? "bg-slate-100 dark:bg-dark-800 text-slate-600 dark:text-dark-300 shadow-inner" 
+                : "bg-emerald-50 dark:bg-emerald-900/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-800/30 shadow-sm"
             )}
+            title={isSidebarPinned ? "Hide Filters" : "Show Filters"}
           >
-            <LayoutGrid className="w-3.5 h-3.5" /> Dashboard
-          </button>
-          <button
-            onClick={() => setActiveTab('database')}
-            className={cn(
-              "flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all",
-              activeTab === 'database' 
-                ? "bg-white dark:bg-dark-900 text-emerald-600 shadow-sm border border-slate-200 dark:border-dark-700" 
-                : "text-slate-500"
-            )}
-          >
-            <Database className="w-3.5 h-3.5" /> Show Entries
+            {isSidebarPinned ? <PinOff className="w-4 h-4" /> : <Pin className="w-4 h-4" />}
           </button>
         </div>
 
-        <div className="flex items-center justify-between gap-2 overflow-x-auto smart-scroll pb-1">
-          <div className="flex items-center bg-slate-100 dark:bg-dark-800 p-1 rounded-xl border border-slate-200 dark:border-dark-700/50 shrink-0">
-            <button onClick={() => { setFromDate(today()); setToDate(today()); setPage(1); }} className="px-3 py-1 text-[9px] font-black uppercase tracking-wider text-slate-600 dark:text-dark-400">Today</button>
-            <button onClick={() => { setFromDate(startOfMonth()); setToDate(today()); setPage(1); }} className="px-3 py-1 text-[9px] font-black uppercase tracking-wider text-slate-600 dark:text-dark-400 border-l border-slate-200 dark:border-dark-700/50">Month</button>
-            <button onClick={() => { setFromDate(startOfYear()); setToDate(today()); setPage(1); }} className="px-3 py-1 text-[9px] font-black uppercase tracking-wider text-slate-600 dark:text-dark-400 border-l border-slate-200 dark:border-dark-700/50">Year</button>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-             <input type="date" className="input !py-1 !px-2 !w-32 !text-xs" value={fromDate} onChange={(e) => { setFromDate(e.target.value); setPage(1); }} />
-          </div>
-        </div>
-      </div>
-
-      {activeTab === 'dashboard' ? (
-        <div className="flex-1 overflow-y-auto smart-scroll">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-600/10 dark:bg-emerald-600/20 flex items-center justify-center">
-                <BarChart3 className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
-              </div>
-              <div className="min-w-0">
-                <h1 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Sales Summary</h1>
-                <div className="flex items-center gap-2 mt-1">
-                  <div className="flex items-center gap-1">
-                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">HSD Avg:</span>
-                    <span className="text-[10px] font-black text-emerald-600 tabular-nums leading-none font-mono">₨ {formatCurrency(dashStats.HSD.avgRate)}</span>
-                  </div>
-                  <div className="w-px h-2 bg-slate-200" />
-                  <div className="flex items-center gap-1">
-                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">PMG Avg:</span>
-                    <span className="text-[10px] font-black text-blue-600 tabular-nums leading-none font-mono">₨ {formatCurrency(dashStats.PMG.avgRate)}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <button onClick={() => setShowReport(true)} className="w-10 h-10 rounded-full bg-slate-100 dark:bg-dark-800 text-slate-600 dark:text-dark-300 flex items-center justify-center border border-slate-200 dark:border-dark-700 shadow-sm"><Printer className="w-5 h-5" /></button>
-              <button onClick={() => setShowForm(true)} className="w-10 h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-lg"><Plus className="w-5 h-5" /></button>
-            </div>
-          </div>
-
-          <div className="space-y-4 mb-8">
-            {[
-              { id: 'HSD', label: 'High Speed Diesel', stats: dashStats.HSD, icon: Fuel, color: 'emerald' },
-              { id: 'PMG', label: 'Premium Motor Gasoline', stats: dashStats.PMG, icon: Zap, color: 'blue' }
-            ].map(fuel => (
-              <div key={fuel.id} className="glass rounded-3xl p-5 border border-slate-200 dark:border-dark-700/50 relative overflow-hidden">
-                <div className={cn("absolute top-0 right-0 w-24 h-24 rounded-bl-full -mr-12 -mt-12 opacity-10", fuel.id === 'HSD' ? 'bg-emerald-500' : 'bg-blue-500')} />
-                
-                <div className="flex items-center gap-3 mb-4">
-                  <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", fuel.id === 'HSD' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600' : 'bg-blue-100 dark:bg-blue-900/30 text-blue-600')}>
-                    <fuel.icon className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">{fuel.id} Sales</h3>
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-4">
-                  <div className="flex items-center justify-between border-b border-slate-100 dark:border-dark-800 pb-3">
-                    <div className="space-y-0.5">
-                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Total Volume</p>
-                      <p className="text-xl font-black text-slate-900 dark:text-white tabular-nums">{fuel.stats.qty.toLocaleString()} <span className="text-[10px] text-slate-400 font-normal">Liters</span></p>
-                    </div>
-                    <div className="space-y-0.5 text-right">
-                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Avg Price / L</p>
-                      <p className="text-xl font-black text-slate-900 dark:text-white tabular-nums">₨ {formatCurrency(fuel.stats.avgRate)}</p>
-                    </div>
-                  </div>
-
-                  <div className="pt-1">
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Gross Revenue Generation</p>
-                    <p className={cn(
-                      "font-black tabular-nums break-words leading-tight text-emerald-600 dark:text-emerald-400",
-                      formatCurrency(fuel.stats.amt).length > 15 ? "text-lg" : "text-2xl"
-                    )}>
-                      <span className="text-lg mr-1 opacity-70 font-black">₨</span>
-                      {formatCurrency(fuel.stats.amt)}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="glass rounded-3xl overflow-hidden border border-slate-200 dark:border-dark-700/50 mb-6">
-            <div className="p-5 border-b border-slate-100 dark:border-dark-800 flex items-center justify-between">
-              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Recent Transactions</h3>
-              <button onClick={() => setActiveTab('database')} className="text-[10px] font-black uppercase text-blue-600 flex items-center gap-1">Show All <ArrowRight className="w-3.5 h-3.5" /></button>
-            </div>
-            <div className="p-2 space-y-2 max-h-[350px] overflow-y-auto smart-scroll">
-              {dashStats.recent.map(s => (
-                <div key={s.id} className="p-3 bg-slate-50/50 dark:bg-dark-800/30 rounded-2xl flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-[8px] font-black bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 px-1.5 py-0.5 rounded uppercase tracking-widest">{s.type}</span>
-                      <span className="text-[10px] font-bold text-slate-400">{formatDate(s.date)}</span>
-                    </div>
-                    <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{s.description || 'Daily Sale'}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-black text-emerald-600 tabular-nums">₨ {formatCurrency(s.amount)}</p>
-                    <p className="text-[10px] font-bold text-slate-400 tabular-nums">{s.quantity.toLocaleString()} L</p>
-                  </div>
-                </div>
-              ))}
-              {dashStats.recent.length === 0 && (
-                <div className="py-8 text-center text-[10px] text-slate-400 italic">No recent sales</div>
-              )}
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="flex-1 min-w-0 flex flex-col h-full overflow-hidden">
-          {/* Header Mobile Toolbar */}
-          <div className="flex items-center justify-between mb-4">
-             <div className="mobile-tab-list">
+        {isSidebarPinned && (
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar animate-in fade-in slide-in-from-top-2 duration-300" style={{ WebkitOverflowScrolling: 'touch' }}>
+            {/* HSD / PMG toggle - never wraps */}
+            <div className="segmented-control !bg-emerald-50/50 dark:!bg-emerald-900/10 !p-0.5 shrink-0 !w-auto">
               {(['HSD', 'PMG'] as FuelType[]).map((t) => (
                 <button
                   key={t}
                   onClick={() => handleFuelSelect(t)}
                   className={cn(
-                    "px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all border",
-                    fuelType === t 
-                      ? "bg-emerald-600 text-white border-emerald-600 shadow-md" 
-                      : "bg-white dark:bg-dark-800 text-slate-500 border-slate-200 dark:border-dark-700"
+                    "segmented-item !py-1.5 !px-4",
+                    fuelType === t ? "!bg-emerald-600 !text-white !shadow-md" : "!text-emerald-600/60"
                   )}
                 >
                   {t}
                 </button>
               ))}
             </div>
-            <div className="flex flex-col items-end mr-3">
-              <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">{fuelType} Records Avg</p>
-              <p className="text-sm font-black text-emerald-600 dark:text-emerald-400 tabular-nums leading-none font-mono">
-                ₨ {formatCurrency(grandTotals.qty > 0 ? grandTotals.amount / grandTotals.qty : 0)}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <button 
-                onClick={() => setShowReport(true)}
-                className="w-10 h-10 rounded-full bg-slate-100 dark:bg-dark-800 text-slate-600 dark:text-dark-300 flex items-center justify-center border border-slate-200 dark:border-dark-700 shadow-sm"
-              >
-                <Printer className="w-5 h-5" />
-              </button>
-              <button onClick={() => setShowForm(true)} className="w-10 h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-lg">
-                <Plus className="w-5 h-5" />
-              </button>
+            {/* Date range */}
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-dark-800 p-1.5 rounded-xl border border-slate-200 dark:border-dark-700/50 shrink-0">
+              <input
+                type="date"
+                className="bg-transparent text-[10px] font-black text-slate-600 dark:text-dark-400 outline-none w-[110px] text-center"
+                value={fromDate}
+                onChange={(e) => { setFromDate(e.target.value); setPage(1); }}
+              />
+              <span className="text-[10px] text-slate-300 font-black">—</span>
+              <input
+                type="date"
+                className="bg-transparent text-[10px] font-black text-slate-600 dark:text-dark-400 outline-none w-[110px] text-center"
+                value={toDate}
+                onChange={(e) => { setToDate(e.target.value); setPage(1); }}
+              />
             </div>
           </div>
+        )}
+      </div>
 
-          <div className="glass rounded-xl overflow-hidden flex-1 flex flex-col mb-4">
-            <div className="p-3 border-b border-slate-200 dark:border-dark-700/50">
-              <SearchBar value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search transactions..." />
-            </div>
+      {activeTab === 'dashboard' ? (
+        <div className="flex-1 flex flex-col h-full w-full overflow-y-auto smart-scroll p-4 md:p-6 pb-20">
+          {/* Compact Stats Grid */}
+          <div className="grid grid-cols-2 gap-3 mb-6">
+            {[
+              { id: 'HSD', label: 'HSD Volume', stats: dashStats.HSD, icon: Fuel, color: 'emerald' },
+              { id: 'PMG', label: 'PMG Volume', stats: dashStats.PMG, icon: Zap, color: 'blue' }
+            ].map(fuel => (
+              <div key={fuel.id} className="glass p-4 rounded-3xl border-l-4 border-emerald-500 shadow-lg relative overflow-hidden">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className={cn("w-7 h-7 rounded-lg flex items-center justify-center", fuel.id === 'HSD' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600' : 'bg-blue-100 dark:bg-blue-900/30 text-blue-600')}>
+                    <fuel.icon className="w-4 h-4" />
+                  </div>
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{fuel.id}</span>
+                </div>
+                <p className="text-sm md:text-xl font-black text-slate-900 dark:text-white tabular-nums leading-none mb-1 truncate">
+                  {fuel.stats.qty.toLocaleString()}<span className="text-[9px] md:text-[10px] ml-1 opacity-50 italic">L</span>
+                </p>
+                <div className="flex flex-col gap-0.5">
+                  <p className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 truncate">Total: ₨ {formatCurrency(fuel.stats.amt)}</p>
+                  <p className="text-[9px] font-bold text-slate-500 truncate">Avg: ₨ {formatCurrency(fuel.stats.avgRate)}/L</p>
+                </div>
+              </div>
+            ))}
+          </div>
 
-            <div className="flex-1 overflow-auto smart-scroll">
-              <table className="w-full">
-                <thead className="sticky top-0 z-10 bg-slate-200 dark:bg-dark-800">
-                  <tr className="table-header text-[9px]">
-                    <th className="table-cell table-sticky-col text-left">Date</th>
-                    <th className="table-cell text-right">Qty (L)</th>
-                    <th className="table-cell text-right font-black">Amount</th>
-                    <th className="table-cell w-10"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paged.length === 0 ? (
-                    <tr><td colSpan={4} className="table-cell text-center text-slate-400 dark:text-dark-500 py-12 italic">No {fuelType} sales found</td></tr>
-                  ) : paged.map((s) => (
-                    <tr key={s.id} className="table-row group hover:bg-slate-50 dark:hover:bg-dark-800/50 text-[10px]">
-                      <td className="table-cell table-sticky-col whitespace-nowrap" onClick={() => setViewingEntity(s)}>{formatDate(s.date)}</td>
-                      <td className="table-cell text-right whitespace-nowrap tabular-nums" onClick={() => setViewingEntity(s)}>{s.quantity.toLocaleString()} L</td>
-                      <td className="table-cell text-right font-semibold text-slate-900 dark:text-white whitespace-nowrap tabular-nums" onClick={() => setViewingEntity(s)}>₨ {formatCurrency(s.amount)}</td>
-                      <td className="table-cell text-right">
-                         <div className="flex items-center justify-end gap-1">
-                            <button onClick={() => setViewingEntity(s)} className="p-1.5 text-blue-500"><Eye className="w-4 h-4" /></button>
-                         </div>
-                      </td>
-                    </tr>
-                  ))}
-                  {paged.length > 0 && (
-                    <tfoot className="border-t-[3px] border-slate-300 dark:border-dark-700 bg-slate-50/50 dark:bg-dark-900/50">
-                      {/* Page Total Row */}
-                      <tr className="bg-slate-100/50 dark:bg-dark-800/30">
-                        <td className="table-cell table-sticky-col text-right">
-                          <span className="text-[9px] font-black text-slate-500 dark:text-dark-400 uppercase tracking-widest italic">Page Total</span>
-                        </td>
-                        <td className="table-cell text-right whitespace-nowrap">
-                          <span className="text-[10px] font-bold text-slate-600 dark:text-dark-400 tabular-nums">{pageTotals.qty.toLocaleString()} L</span>
-                        </td>
-                        <td className="table-cell text-right whitespace-nowrap">
-                          <span className="text-[10px] font-bold text-slate-600 dark:text-dark-400 tabular-nums">₨ {formatCurrency(pageTotals.amount)}</span>
-                        </td>
-                        <td className="table-cell"></td>
-                      </tr>
-                      {/* Grand Total Row */}
-                      <tr className="bg-slate-200 dark:bg-dark-800">
-                        <td className="table-cell table-sticky-col text-right">
-                          <span className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-tighter">Grand Total Analysis</span>
-                        </td>
-                        <td className="table-cell text-right whitespace-nowrap">
-                          <span className="text-[11px] font-black text-slate-900 dark:text-white">{grandTotals.qty.toLocaleString()} L</span>
-                        </td>
-                        <td className="table-cell text-right whitespace-nowrap">
-                          <div className="flex flex-col items-end">
-                            <span className="text-[11px] font-black text-emerald-600 dark:text-emerald-500 leading-none">₨ {formatCurrency(grandTotals.amount)}</span>
-                            <span className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 mt-1 italic tracking-widest font-black">₨ {formatCurrency(grandTotals.qty > 0 ? grandTotals.amount / grandTotals.qty : 0)}/L</span>
-                          </div>
-                        </td>
-                        <td className="table-cell"></td>
-                      </tr>
-                    </tfoot>
-                  )}
-              </table>
+          <div className="flex items-center gap-2 mb-6">
+             <button onClick={() => setShowReport(true)} className="flex-1 btn-secondary !py-2.5 !text-[10px] uppercase tracking-widest flex items-center justify-center gap-2"><Printer className="w-3.5 h-3.5" /> Print Reports</button>
+          </div>
+
+          {/* Recent Activity Mini List */}
+          <div className="flex-1 flex flex-col min-h-0">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Recent Activity</h3>
+              <button 
+                onClick={() => setActiveTab('database')}
+                className="text-[10px] font-black uppercase tracking-widest text-emerald-600"
+              >
+                View History
+              </button>
             </div>
-            <Pagination page={page} total={filtered.length} perPage={perPage} onChange={setPage} onPerPageChange={(v) => { setPerPage(v); setPage(1); }} />
+            <div className="flex-1 overflow-y-auto no-scrollbar smart-scroll">
+              {dashStats.recent.map(s => (
+                <MobileActivityCard
+                  key={s.id}
+                  title={s.description || 'Daily Sale'}
+                  subtitle={`${s.quantity.toLocaleString()} L @ ₨ ${formatCurrency(s.rate)}`}
+                  amount={`₨ ${formatCurrency(s.amount)}`}
+                  date={formatDate(s.date)}
+                  icon={s.type === 'HSD' ? Fuel : Zap}
+                  iconColor={s.type === 'HSD' ? 'text-amber-500' : 'text-blue-500'}
+                  onClick={() => setViewingEntity(s)}
+                />
+              ))}
+              {dashStats.recent.length === 0 && (
+                <div className="py-12 text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest">No Recent Sales</div>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="flex-1 flex flex-col min-h-0 bg-slate-50 dark:bg-dark-950/20 p-4 pb-48">
+          <div className="mb-4">
+            <SearchBar value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search historical sales..." fullWidth />
+          </div>
+
+          <div className="flex-1 overflow-y-auto no-scrollbar smart-scroll">
+            {paged.map((s) => (
+              <MobileActivityCard
+                key={s.id}
+                title={s.description || 'Daily Sale'}
+                subtitle={`${s.quantity.toLocaleString()} L @ ₨ ${formatCurrency(s.rate)}`}
+                amount={`₨ ${formatCurrency(s.amount)}`}
+                date={formatDate(s.date)}
+                icon={s.type === 'HSD' ? Fuel : Zap}
+                iconColor={s.type === 'HSD' ? 'text-amber-500' : 'text-blue-500'}
+                onClick={() => setViewingEntity(s)}
+              />
+            ))}
+            {paged.length === 0 && (
+              <div className="py-20 text-center">
+                <p className="text-xs font-black text-slate-400 uppercase tracking-widest">No entries found for this period</p>
+              </div>
+            )}
+            <div className="mt-4">
+              <Pagination page={page} total={filtered.length} perPage={perPage} onChange={setPage} />
+            </div>
           </div>
         </div>
       )}
 
+      {/* Primary Action FAB */}
+      <FAB 
+        icon={Plus} 
+        label={editingEntity ? "Update" : "Add Sale"}
+        onClick={() => setShowForm(true)}
+        className="!bg-emerald-600"
+      />
+
       {showForm && (
-        <Modal title={editingEntity ? `Edit ${fuelType} Sale` : `Add ${fuelType} Sale`} onClose={closeForm}>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="col-span-2"><label className="label">Date *</label><input type="date" className="input" value={form.date} onChange={(e) => set('date', e.target.value)} required /></div>
-              <div className="col-span-2"><label className="label">Description</label><input className="input" value={form.description || ''} onChange={(e) => set('description', e.target.value)} placeholder="Sale details" /></div>
-              <div><label className="label">Quantity (L) *</label><input type="number" step="0.01" inputMode="decimal" className="input" value={form.quantity} onChange={(e) => set('quantity', e.target.value)} required /></div>
-              <div><label className="label">Rate (₨) *</label><input type="number" step="0.01" inputMode="decimal" className="input" value={form.rate} onChange={(e) => set('rate', e.target.value)} required /></div>
-              <div className="col-span-2"><label className="label">Calculation (Auto)</label><input className="input cursor-not-allowed text-primary-600 dark:text-primary-400 font-bold" value={`₨ ${form.amount}`} readOnly /></div>
+        <Modal 
+          title={editingEntity ? `Edit ${fuelType} Sale` : `Add ${fuelType} Sale`} 
+          onClose={closeForm} 
+          variant="bottom-sheet"
+        >
+          <form onSubmit={handleSubmit} className="flex flex-col h-full bg-slate-50 dark:bg-dark-950/20 -m-6 p-6">
+            <div className="flex-1 space-y-4 mb-20 overflow-y-auto smart-scroll">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-dark-500 px-1">Effective Date</label>
+                <input type="date" className="input w-full !h-12 !bg-white dark:!bg-dark-800" value={form.date} onChange={(e) => set('date', e.target.value)} required />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-dark-500 px-1">Transaction Note</label>
+                <input className="input w-full !h-12 !bg-white dark:!bg-dark-800" value={form.description || ''} onChange={(e) => set('description', e.target.value)} placeholder="e.g., Daily Account Sale" dir="auto" />
+              </div>
+
+              <div className="flex gap-4">
+                <div className="flex-1 space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-emerald-600 px-1">Liters (Qty)</label>
+                  <input type="number" step="any" className="input w-full !h-12 !bg-white dark:!bg-dark-800 !text-xl" value={form.quantity} onChange={(e) => set('quantity', e.target.value)} placeholder="0.00" required />
+                </div>
+                <div className="flex-1 space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-blue-600 px-1">Rate (PKR)</label>
+                  <input type="number" step="any" className="input w-full !h-12 !bg-white dark:!bg-dark-800 !text-xl" value={form.rate} onChange={(e) => set('rate', e.target.value)} placeholder="0.00" required />
+                </div>
+              </div>
+
+              <div className="bg-emerald-600/5 dark:bg-emerald-600/10 p-4 rounded-2xl border border-emerald-600/20">
+                 <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest mb-1">Total Receivable</p>
+                 <p className="text-3xl font-black text-emerald-600 dark:text-emerald-400 tabular-nums leading-none truncate max-w-full">₨ {formatCurrency(Number(form.amount))}</p>
+              </div>
             </div>
-            <div className="flex justify-end gap-2 pt-2">
-              <button type="button" onClick={closeForm} className="btn-secondary" disabled={isSaving}>Cancel</button>
-              <button type="submit" className="btn-primary-emerald flex items-center gap-2" disabled={isSaving}>
-                {isSaving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Plus className="w-4 h-4" />}
-                {editingEntity ? 'Update Sale' : 'Add Sale'}
+
+            <div className="sticky-bottom-actions">
+              <button type="button" onClick={closeForm} className="flex-1 py-4 text-xs font-black uppercase tracking-widest text-slate-400 dark:text-dark-500" disabled={isSaving}>Cancel</button>
+              <button 
+                type="submit" 
+                className="flex-[2] py-4 bg-emerald-600 text-white font-black text-xs uppercase tracking-[0.2em] rounded-2xl shadow-xl shadow-emerald-500/20 active:scale-95 transition-all flex items-center justify-center gap-2" 
+                disabled={isSaving}
+              >
+                {isSaving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Save className="w-4 h-4" />}
+                {editingEntity ? 'Update' : 'Confirm Sale'}
               </button>
             </div>
           </form>

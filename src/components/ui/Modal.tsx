@@ -6,9 +6,10 @@ interface Props {
   onClose: () => void;
   children: React.ReactNode;
   wide?: boolean;
+  variant?: 'center' | 'bottom-sheet';
 }
 
-export default function Modal({ title, onClose, children, wide }: Props) {
+export default function Modal({ title, onClose, children, wide, variant = 'center' }: Props) {
   const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -41,10 +42,10 @@ export default function Modal({ title, onClose, children, wide }: Props) {
   }, []); // Only run on mount to prevent focus jumps while typing
 
   return (
-    <div className="modal-overlay" onClick={onClose} role="dialog" aria-modal="true">
+    <div className={variant === 'bottom-sheet' ? "bottom-sheet-overlay" : "modal-overlay"} onClick={onClose} role="dialog" aria-modal="true">
       <div
         ref={modalRef}
-        className={`modal-box ${wide ? 'max-w-2xl' : 'max-w-md'}`}
+        className={variant === 'bottom-sheet' ? "bottom-sheet-box" : `modal-box ${wide ? 'max-w-2xl' : 'max-w-md'}`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-5">
