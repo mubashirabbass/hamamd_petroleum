@@ -93,8 +93,10 @@ function SystemLocked({ reason }: { reason: 'HARDWARE' | 'LICENSE' }) {
     e.preventDefault();
     const user = settings.users.find(u => u.email === email && u.password === password);
     if (user && user.role === 'Developer') {
-      // If the hardware isn't authorized yet, authorize it automatically now
-      if (!settings.authorizedMachineId && currentMachineId) {
+      // FORCE AUTHORIZATION: If the current machine mismatch occurs (e.g. after a mobile restore), 
+      // let the developer "re-pin" the app to this hardware.
+      const localId = useStore.getState().localActivationId;
+      if (currentMachineId && (!localId || localId !== currentMachineId)) {
         await updateSettings({ authorizedMachineId: currentMachineId });
       }
       login(user);
@@ -103,7 +105,7 @@ function SystemLocked({ reason }: { reason: 'HARDWARE' | 'LICENSE' }) {
     }
   };
 
-  const isUnactivated = !settings.authorizedMachineId;
+  const isUnactivated = !useStore.getState().localActivationId;
 
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-center">
@@ -206,7 +208,7 @@ function SystemLocked({ reason }: { reason: 'HARDWARE' | 'LICENSE' }) {
 // ─── App Root ─────────────────────────────────────────────────────────────────
 
 export default function App() {
-  const { currentUser, dbReady, dbError, initializeFromDB, settings, updateSettings } = useStore();
+  const { currentUser, dbReady, dbError, initializeFromDB, settings, updateSettings, localActivationId } = useStore();
   const [booting, setBooting] = useState(true);
 
   // Zoom management
@@ -263,7 +265,10 @@ export default function App() {
   }, []);
 
   // Security Checks
-  const isHardwareLocked = !settings.authorizedMachineId || settings.authorizedMachineId !== useStore.getState().currentMachineId;
+  // We prefer the locally activated ID (ebs_activation.key) if it exists.
+  // This ensures that restoring a database from another device DOES NOT lock current hardware.
+  const authorizedId = localActivationId || settings.authorizedMachineId;
+  const isHardwareLocked = !authorizedId || authorizedId !== useStore.getState().currentMachineId;
   const isLicenseExpired = (() => {
     const now = new Date().toISOString().split('T')[0];
     const start = settings.licenseStartDate;

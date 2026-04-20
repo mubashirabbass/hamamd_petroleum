@@ -2,17 +2,18 @@ import { useState, useMemo, useEffect } from 'react';
 import {
   BarChart3, TrendingUp, TrendingDown, ArrowLeft,
   Package, LayoutList, Fuel, Zap, Clock, Download,
-  ChevronRight, Calendar, Printer, ArrowUpDown, Pin, PinOff
+  ChevronRight, ArrowUpDown, Printer, ShoppingCart
 } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useStore, FuelType } from '../store/useStore';
 import {
-  formatCurrency, filterByStartDate, formatDate, getErrorMessage,
+  filterByStartDate, formatDate, getErrorMessage,
   paginate, cn, startOfMonth, startOfYear, today
 } from '../lib/utils';
 import SearchBar from '../components/ui/SearchBar';
 import Pagination from '../components/ui/Pagination';
 import { useToast } from '../components/ui/Toast';
+import PullToRefresh from '../components/ui/PullToRefresh';
 import PrintReportModal from '../components/modals/PrintReportModal';
 
 // const PER_PAGE = 40; // Replaced by state
@@ -60,7 +61,6 @@ export default function StockPage() {
   }, [dbReady, initializeFromDB]);
 
   // ── Detail View State ──
-  const [showHistory, setShowHistory] = useState(false);
   const [search, setSearch] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
@@ -68,9 +68,10 @@ export default function StockPage() {
   const [perPage, setPerPage] = useState(40);
   const [showReport, setShowReport] = useState(false);
   const [entrySort, setEntrySort] = useState('date_desc');
-  const [isSidebarPinned, setIsSidebarPinned] = useState(false);
-  const [isSidebarHovered, setIsSidebarHovered] = useState(false);
-  const isExpanded = isSidebarPinned || isSidebarHovered;
+
+  const handleRefresh = async () => {
+    await initializeFromDB();
+  };
 
   // ── Calculation Logic ──
   const stockData = useMemo(() => {
@@ -158,10 +159,6 @@ export default function StockPage() {
 
   const pagedHistory = paginate(filteredHistory, page, perPage);
 
-  const pageTotals = useMemo(() => ({
-    qtyIn: pagedHistory.reduce((s, h) => s + (h.qtyIn || 0), 0),
-    qtyOut: pagedHistory.reduce((s, h) => s + (h.qtyOut || 0), 0),
-  }), [pagedHistory]);
 
   const detailTotals = useMemo(() => {
     if (view !== 'manage') return { in: 0, out: 0 };
@@ -470,197 +467,139 @@ export default function StockPage() {
 
   if (view === 'manage') {
     return (
-      <>
-        <div className="animate-fade-in flex flex-col h-full w-full">
-        {/* Detail Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => navigate('/stock')}
-              className="w-10 h-10 rounded-xl flex items-center justify-center bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700 shadow-sm hover:scale-110 active:scale-95 transition-all text-slate-600 dark:text-dark-400"
-              title="Back to Overview"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
+      <PullToRefresh onRefresh={handleRefresh} className="flex-1 bg-slate-50/50 dark:bg-dark-950/50">
+        <div className="animate-fade-in flex flex-col h-full w-full p-4 md:p-6 pb-20">
+          {/* Detail Header */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
             <div className="flex items-center gap-4">
-              <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg", selectedType === 'HSD' ? 'bg-amber-600/10' : 'bg-emerald-600/10')}>
-                {selectedType === 'HSD' ? <Fuel className="w-8 h-8 text-amber-600" /> : <Zap className="w-8 h-8 text-emerald-600" />}
-              </div>
-              <div>
-                <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase">{selectedType} Stock Status</h1>
-                <p className="text-xs font-bold text-slate-500 dark:text-dark-500 uppercase tracking-widest">Global Inventory Management</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Date Range */}
-          <div className="flex items-center gap-2 bg-white dark:bg-dark-900 p-2 rounded-2xl border border-slate-200 dark:border-dark-700 shadow-sm overflow-x-auto">
-            <div className="flex items-center bg-slate-50 dark:bg-dark-800 p-1 rounded-xl border border-slate-100 dark:border-dark-750 mr-2">
-              <button onClick={() => { setFromDate(today()); setToDate(today()); setPage(1); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all">Today</button>
-              <button onClick={() => { setFromDate(startOfMonth()); setToDate(today()); setPage(1); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all border-l border-slate-200 dark:border-dark-700/50">This Month</button>
-              <button onClick={() => { setFromDate(startOfYear()); setToDate(today()); setPage(1); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all border-l border-slate-200 dark:border-dark-700/50">This Year</button>
-            </div>
-            <div className="flex items-center gap-2 px-2">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">From</span>
-              <input type="date" value={fromDate} onChange={e => { setFromDate(e.target.value); setPage(1); }} className="input !py-1 !px-2 !w-32 !text-xs" />
-            </div>
-            <div className="flex items-center gap-2 px-2 border-l border-slate-100 dark:border-dark-700">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">To</span>
-              <input type="date" value={toDate} onChange={e => { setToDate(e.target.value); setPage(1); }} className="input !py-1 !px-2 !w-32 !text-xs" />
-            </div>
-            {(fromDate || toDate) && (
               <button
-                onClick={() => { setFromDate(''); setToDate(''); setPage(1); }}
-                className="ml-2 px-3 py-1.5 text-[10px] font-black uppercase tracking-tighter text-red-600 bg-red-50 dark:bg-red-900/20 rounded-lg hover:bg-red-100 transition-all border border-red-200 dark:border-red-800/30"
-                title="Clear Filters"
+                onClick={() => navigate('/stock')}
+                className="w-10 h-10 rounded-xl flex items-center justify-center bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700 shadow-sm hover:scale-110 active:scale-95 transition-all text-slate-600 dark:text-dark-400"
+                title="Back to Overview"
               >
-                Clear
+                <ArrowLeft className="w-5 h-5" />
               </button>
-            )}
-          </div>
-        </div>
+              <div className="flex items-center gap-4">
+                <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg", selectedType === 'HSD' ? 'bg-amber-600/10' : 'bg-emerald-600/10')}>
+                  {selectedType === 'HSD' ? <Fuel className="w-8 h-8 text-amber-600" /> : <Zap className="w-8 h-8 text-emerald-600" />}
+                </div>
+                <div>
+                  <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase">{selectedType} Stock Status</h1>
+                  <p className="text-xs font-bold text-slate-500 dark:text-dark-500 uppercase tracking-widest">Global Inventory Management</p>
+                </div>
+              </div>
+            </div>
 
-        {/* Main Content Layout */}
-        <div className="flex gap-4 h-full overflow-hidden p-4">
-          {/* Sidebar selection */}
-          <div 
-            onMouseEnter={() => setIsSidebarHovered(true)}
-            onMouseLeave={() => setIsSidebarHovered(false)}
-            className={cn(
-              "flex-shrink-0 flex flex-col gap-3 h-full transition-all duration-300 ease-in-out border border-slate-200 dark:border-dark-700/50 bg-white/50 dark:bg-dark-900/50 rounded-2xl backdrop-blur-md",
-              isExpanded ? "w-64" : "w-16"
-            )}
-          >
-            <div className="flex items-center justify-between px-3 py-3 border-b border-slate-100 dark:border-dark-800/50">
-              {isExpanded && (
-                <h2 className="text-[10px] font-extrabold text-slate-600 dark:text-dark-200 uppercase tracking-[0.2em] animate-in fade-in slide-in-from-left-2">Fuel Types</h2>
+            {/* Quick Date Range */}
+            <div className="flex items-center gap-2 bg-white dark:bg-dark-900 p-2 rounded-2xl border border-slate-200 dark:border-dark-700 shadow-sm overflow-x-auto">
+              <div className="flex items-center bg-slate-50 dark:bg-dark-800 p-1 rounded-xl border border-slate-100 dark:border-dark-750 mr-2">
+                <button onClick={() => { setFromDate(today()); setToDate(today()); setPage(1); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all">Today</button>
+                <button onClick={() => { setFromDate(startOfMonth()); setToDate(today()); setPage(1); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all border-l border-slate-200 dark:border-dark-700/50">This Month</button>
+                <button onClick={() => { setFromDate(startOfYear()); setToDate(today()); setPage(1); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all border-l border-slate-200 dark:border-dark-700/50">This Year</button>
+              </div>
+              <div className="flex items-center gap-2 px-2">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">From</span>
+                <input type="date" value={fromDate} onChange={e => { setFromDate(e.target.value); setPage(1); }} className="input !py-1 !px-2 !w-32 !text-xs" />
+              </div>
+              <div className="flex items-center gap-2 px-2 border-l border-slate-100 dark:border-dark-700">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">To</span>
+                <input type="date" value={toDate} onChange={e => { setToDate(e.target.value); setPage(1); }} className="input !py-1 !px-2 !w-32 !text-xs" />
+              </div>
+              {(fromDate || toDate) && (
+                <button
+                  onClick={() => { setFromDate(''); setToDate(''); setPage(1); }}
+                  className="ml-2 px-3 py-1.5 text-[10px] font-black uppercase tracking-tighter text-red-600 bg-red-50 dark:bg-red-900/20 rounded-lg hover:bg-red-100 transition-all border border-red-200 dark:border-red-800/30"
+                  title="Clear Filters"
+                >
+                  Clear
+                </button>
               )}
-              <button 
-                onClick={() => setIsSidebarPinned(!isSidebarPinned)}
-                className={cn(
-                  "p-1.5 rounded-lg transition-colors ml-auto",
-                  isSidebarPinned ? "text-blue-600 bg-blue-50 dark:bg-blue-900/20" : "text-slate-400 hover:bg-slate-100 dark:hover:bg-dark-800"
-                )}
-                title={isSidebarPinned ? "Unpin Sidebar" : "Pin Sidebar"}
-              >
-                {isSidebarPinned ? <PinOff className="w-3.5 h-3.5" /> : <Pin className="w-3.5 h-3.5" />}
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-2">
-              {[
-                { id: 'HSD' as FuelType, label: 'HSD DIESEL', icon: Fuel, color: 'amber' },
-                { id: 'PMG' as FuelType, label: 'PMG PETROL', icon: Zap, color: 'emerald' },
-              ].map((fuel) => {
-                const active = selectedType === fuel.id;
-                return (
-                  <div
-                    key={fuel.id}
-                    onClick={() => navigate(`/stock/${fuel.id.toLowerCase()}`)}
-                    className={cn(
-                      "flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200",
-                      active 
-                        ? `bg-${fuel.color}-600 text-white shadow-lg scale-105` 
-                        : "hover:bg-slate-100 dark:hover:bg-dark-800 text-slate-500",
-                      !isExpanded && "justify-center"
-                    )}
-                    title={!isExpanded ? fuel.label : ''}
-                  >
-                    <fuel.icon className={cn("w-5 h-5 flex-shrink-0", active ? "text-white" : `text-${fuel.color}-600`)} />
-                    {isExpanded && (
-                      <span className="font-black text-xs uppercase tracking-widest truncate animate-in fade-in slide-in-from-left-2">
-                        {fuel.label}
-                      </span>
-                    )}
-                  </div>
-                );
-              })}
             </div>
           </div>
 
-          <div className="flex-1 min-w-0 flex flex-col h-full w-full">
-            <div className="overflow-y-auto smart-scroll pr-4 space-y-6 pb-2">
-              {/* Status Summary Card */}
-              <div className={cn("glass rounded-3xl overflow-hidden border-2 shadow-xl", selectedType === 'HSD' ? 'border-amber-500/20 shadow-amber-500/5' : 'border-emerald-500/20 shadow-emerald-500/5')}>
+          <div className="grid grid-cols-1 md:grid-cols-[250px_1fr] gap-6 flex-1 min-h-0">
+            {/* Sidebar selection */}
+            <div className="glass rounded-3xl p-4 flex flex-col gap-4 border border-slate-200 dark:border-dark-700/50">
+              <h2 className="text-[10px] font-extrabold text-slate-400 dark:text-dark-500 uppercase tracking-[0.2em] px-2">Fuel Segments</h2>
+              <div className="space-y-2">
+                {[
+                  { id: 'HSD' as FuelType, label: 'HSD DIESEL', icon: Fuel, color: 'amber' },
+                  { id: 'PMG' as FuelType, label: 'PMG PETROL', icon: Zap, color: 'emerald' },
+                ].map((fuel) => {
+                  const active = selectedType === fuel.id;
+                  return (
+                    <div
+                      key={fuel.id}
+                      onClick={() => navigate(`/stock/${fuel.id.toLowerCase()}`)}
+                      className={cn(
+                        "flex items-center gap-3 p-4 rounded-2xl cursor-pointer transition-all duration-200",
+                        active 
+                          ? `bg-${fuel.color}-600 text-white shadow-lg scale-[1.02]` 
+                          : "hover:bg-slate-100 dark:hover:bg-dark-800 text-slate-500"
+                      )}
+                    >
+                      <fuel.icon className={cn("w-5 h-5 flex-shrink-0", active ? "text-white" : `text-${fuel.color}-600`)} />
+                      <span className="font-black text-xs uppercase tracking-widest truncate">{fuel.label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-6 overflow-y-auto pr-2 smart-scroll">
+              <div className={cn("glass rounded-3xl overflow-hidden border-2 shadow-xl shrink-0", selectedType === 'HSD' ? 'border-amber-500/20' : 'border-emerald-500/20')}>
                 <div className="p-4 bg-white/50 dark:bg-dark-900/50 border-b border-slate-100 dark:border-dark-800 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <LayoutList className={cn("w-4 h-4", selectedType === 'HSD' ? 'text-amber-500' : 'text-emerald-500')} />
                     <h2 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 dark:text-dark-400">Inventory Status Summary</h2>
                   </div>
-                  <div className={cn("px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest", selectedType === 'HSD' ? "bg-amber-100 dark:bg-amber-900/30 text-amber-600" : "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600")}>
-                    Active Segment
-                  </div>
                 </div>
-                <div className="flex flex-col gap-3 p-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4">
                   {[
-                    { label: 'Purchase Stock',  qty: detailTotals.in,  highlight: false, color: 'emerald' },
-                    { label: 'Sale Stock',      qty: detailTotals.out, highlight: false, color: 'red' },
+                    { label: 'Purchase Stock',  qty: detailTotals.in,  color: 'emerald' },
+                    { label: 'Sale Stock',      qty: detailTotals.out, color: 'red' },
                     { label: 'Remaining Stock', qty: stockData[selectedType].current, highlight: true, color: selectedType === 'HSD' ? 'amber' : 'emerald' }
                   ].map(col => (
-                    <div key={col.label} className={cn("flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-4 rounded-2xl border transition-colors", col.highlight ? `bg-${col.color}-500/5 border-${col.color}-500/20 shadow-inner` : "bg-slate-50/50 dark:bg-dark-800/30 border-slate-100 dark:border-dark-700/50")}>
-                      <div className="flex-1 min-w-0">
-                        <p className={cn("text-[10px] font-black uppercase tracking-widest", col.highlight ? `text-${col.color}-600 dark:text-${col.color}-400` : "text-slate-600 dark:text-slate-400")}>{col.label}</p>
-                      </div>
-                      <div className="flex items-baseline gap-1.5 sm:text-right flex-shrink-1">
-                        <span className={cn('font-black tabular-nums break-words', col.highlight ? `text-2xl text-${col.color}-600 dark:text-${col.color}-400` : 'text-xl text-black dark:text-white')} title={col.qty.toLocaleString()}>{col.qty.toLocaleString()}</span>
-                        <span className={cn("text-xs font-black uppercase", col.highlight ? `text-${col.color}-600 dark:text-${col.color}-400` : "text-slate-600 dark:text-slate-400")}>Ltrs</span>
+                    <div key={col.label} className={cn("p-4 rounded-2xl border transition-colors", col.highlight ? `bg-${col.color}-500/5 border-${col.color}-500/20` : "bg-slate-50/5 dark:bg-dark-800/30 border-slate-100 dark:border-dark-700/50")}>
+                      <p className={cn("text-[10px] font-black uppercase tracking-widest mb-2", col.highlight ? `text-${col.color}-600` : "text-slate-500")}>{col.label}</p>
+                      <div className="flex items-baseline gap-1">
+                        <span className={cn('font-black text-2xl tabular-nums', col.highlight ? `text-${col.color}-600` : 'text-slate-900 dark:text-white')}>{col.qty.toLocaleString()}</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase">Ltrs</span>
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* Detailed History Toggle */}
-              <div className="flex justify-center mt-2">
-                <button
-                  onClick={() => setShowHistory(!showHistory)}
-                  className="btn-secondary !text-[10px] !py-1 !px-3 flex items-center gap-2 uppercase font-black tracking-widest"
-                >
-                  {showHistory ? 'Hide Detailed History' : 'Show Detailed History'}
-                </button>
-              </div>
-
-
-            {/* History Table */}
-            {showHistory && (
-              <div className="glass rounded-3xl overflow-hidden shadow-lg border border-slate-200 dark:border-dark-800 animate-slide-up">
-                <div className="p-5 flex items-center justify-between border-b border-slate-100 dark:border-dark-800">
+              {/* History Table */}
+              <div className="glass rounded-3xl overflow-hidden shadow-lg border border-slate-200 dark:border-dark-800 flex-1 flex flex-col min-h-[500px]">
+                <div className="p-5 flex flex-col sm:flex-row shadow-sm gap-4 items-center justify-between border-b border-slate-100 dark:border-dark-800 bg-white/30 dark:bg-dark-900/30">
                   <div className="flex items-center gap-3">
                     <Clock className="w-4 h-4 text-slate-400" />
                     <h3 className="text-sm font-black uppercase tracking-widest text-slate-900 dark:text-white">Transaction History</h3>
                   </div>
-                    <div className="flex items-center gap-3">
-                      <div className="relative group shrink-0">
-                        <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-600 transition-colors pointer-events-none" />
-                        <select
-                          value={entrySort}
-                          onChange={(e) => setEntrySort(e.target.value)}
-                          className="appearance-none pl-9 pr-8 py-1.5 bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700/50 rounded-xl text-[10px] font-black uppercase tracking-wider text-slate-700 dark:text-dark-200 focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all cursor-pointer outline-none shadow-sm"
-                        >
-                          <option value="date_desc">Newest First</option>
-                          <option value="date_asc">Oldest First</option>
-                          <option value="qtyIn_desc">Highest Purchase</option>
-                          <option value="qtyOut_desc">Highest Sale</option>
-                          <option value="balance_desc">Highest Stock Level</option>
-                        </select>
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                          <div className="w-1 h-1 border-r border-b border-current rotate-45" />
-                        </div>
-                      </div>
-                      <button 
-                        onClick={() => setShowReport(true)}
-                        className="btn-secondary !py-1.5 !px-3 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"
+                  <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+                    <div className="relative group flex-1 sm:flex-none">
+                      <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+                      <select
+                        value={entrySort}
+                        onChange={(e) => setEntrySort(e.target.value)}
+                        className="appearance-none pl-9 pr-8 py-2 bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700/50 rounded-xl text-[10px] font-black uppercase tracking-wider text-slate-700 dark:text-dark-200 outline-none w-full shadow-sm"
                       >
-                        <Printer className="w-3.5 h-3.5" /> Reports
-                      </button>
-                      <div className="w-64">
-                        <SearchBar value={search} onChange={v => { setSearch(v); setPage(1); }} placeholder="Search History..." />
-                      </div>
+                        <option value="date_desc">Newest First</option>
+                        <option value="date_asc">Oldest First</option>
+                        <option value="qtyIn_desc">Highest Purchase</option>
+                        <option value="qtyOut_desc">Highest Sale</option>
+                        <option value="balance_desc">Highest Stock Level</option>
+                      </select>
                     </div>
+                    <button onClick={() => setShowReport(true)} className="btn-secondary !py-2 !px-4 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"><Printer className="w-4 h-4" /> Reports</button>
+                    <div className="flex-1 sm:w-64 min-w-[200px]"><SearchBar value={search} onChange={v => { setSearch(v); setPage(1); }} placeholder="Search History..." /></div>
+                  </div>
                 </div>
-                <div className="overflow-auto smart-scroll max-h-[60vh]">
+                <div className="overflow-auto smart-scroll flex-1">
                   <table className="w-full">
-                    <thead className="sticky top-0 z-10 bg-slate-200 dark:bg-dark-800">
+                    <thead className="sticky top-0 z-10 bg-slate-100 dark:bg-dark-800">
                       <tr className="table-header text-[10px]">
                         <th className="table-cell text-left">Date</th>
                         <th className="table-cell text-left">Details</th>
@@ -671,58 +610,33 @@ export default function StockPage() {
                     </thead>
                     <tbody className="divide-y divide-slate-50 dark:divide-dark-800/50">
                       {pagedHistory.length === 0 ? (
-                        <tr><td colSpan={5} className="py-20 text-center text-xs text-slate-400 italic">No records found for this period</td></tr>
+                        <tr><td colSpan={5} className="py-20 text-center text-xs text-slate-400 italic">No records found</td></tr>
                       ) : pagedHistory.map((h, i) => (
-                        <tr key={h.id + (h.date) + i} className="table-row group hover:bg-slate-50 dark:hover:bg-dark-800/50 text-[11px]">
+                        <tr key={`${h.id}-${i}`} className="table-row group hover:bg-slate-50 dark:hover:bg-dark-800/50 text-[11px]">
                           <td className="table-cell whitespace-nowrap font-bold text-slate-600 dark:text-dark-300">{formatDate(h.date)}</td>
-                          <td className="table-cell font-black text-slate-900 dark:text-white truncate max-w-[180px]">{h.details || 'Daily Sale'}</td>
+                          <td className="table-cell font-black text-slate-900 dark:text-white truncate max-w-[200px]">{h.details || 'Daily Sale'}</td>
                           <td className="table-cell text-right text-emerald-600 font-mono font-bold">{h.qtyIn ? `+${h.qtyIn.toLocaleString()}` : '—'}</td>
                           <td className="table-cell text-right text-red-600 font-mono font-bold">{h.qtyOut ? `-${h.qtyOut.toLocaleString()}` : '—'}</td>
                           <td className="table-cell text-right font-black text-slate-900 dark:text-white tabular-nums">{h.balance.toLocaleString()} L</td>
                         </tr>
                       ))}
                     </tbody>
-                    <tfoot>
-                      <tr className="font-black text-black dark:text-white bg-slate-100/50 dark:bg-dark-800/50 border-t-[3px] border-black dark:border-black">
-                        <td colSpan={2} className="table-cell text-right text-xs uppercase tracking-widest text-slate-600 dark:text-slate-400 font-black italic">Page Total</td>
-                        <td className="table-cell text-right font-black font-mono whitespace-nowrap">+{pageTotals.qtyIn.toLocaleString()} L</td>
-                        <td className="table-cell text-right font-black font-mono whitespace-nowrap">-{pageTotals.qtyOut.toLocaleString()} L</td>
-                        <td className="table-cell"></td>
-                      </tr>
-                      <tr className="font-black text-black dark:text-white bg-slate-200/50 dark:bg-dark-700/50 border-t border-slate-300 dark:border-dark-600">
-                        <td colSpan={2} className="table-cell text-right text-xs uppercase tracking-widest text-slate-600 dark:text-slate-300 font-black">Grand Total</td>
-                        <td className="table-cell text-right font-black font-mono whitespace-nowrap">+{detailTotals.in.toLocaleString()} L</td>
-                        <td className="table-cell text-right font-black font-mono whitespace-nowrap">-{detailTotals.out.toLocaleString()} L</td>
-                        <td className="table-cell"></td>
-                      </tr>
-                    </tfoot>
                   </table>
                 </div>
-                <Pagination
-                  page={page}
-                  total={filteredHistory.length}
-                  perPage={perPage}
-                  onChange={setPage}
-                  onPerPageChange={(v) => { setPerPage(v); setPage(1); }}
-                />
+                <div className="p-4 border-t border-slate-100 dark:border-dark-800 bg-white/20 dark:bg-dark-900/20">
+                  <Pagination page={page} total={filteredHistory.length} perPage={perPage} onChange={setPage} onPerPageChange={(v) => { setPerPage(v); setPage(1); }} />
+                </div>
               </div>
-            )}
             </div>
-  
-            {showReport && (
-              <PrintReportModal 
-                data={filteredHistory} 
-                type="stock" 
-                onClose={() => setShowReport(false)} 
-                title={`${selectedType} STOCK HISTORY`}
-              />
-            )}
           </div>
+
+          {showReport && (
+            <PrintReportModal data={filteredHistory} type="stock" onClose={() => setShowReport(false)} title={`${selectedType} STOCK HISTORY`} />
+          )}
         </div>
-      </div>
-    </>
-  );
-}
+      </PullToRefresh>
+    );
+  }
 
   // ── Overview Render ──
   const cards = [
@@ -731,180 +645,131 @@ export default function StockPage() {
   ];
 
   return (
-    <div className="animate-fade-in space-y-8 pb-10 p-4 md:p-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="flex items-center gap-5">
-          <div className="w-14 h-14 rounded-3xl bg-gradient-to-br from-cyan-600 to-cyan-800 flex items-center justify-center shadow-xl shadow-cyan-900/20 border-2 border-white/20">
-            <BarChart3 className="w-7 h-7 text-white" />
+    <PullToRefresh onRefresh={handleRefresh} className="flex-1 bg-slate-50/50 dark:bg-dark-950/50 overflow-y-auto h-full">
+      <div className="animate-fade-in space-y-8 pb-32 p-4 md:p-10 max-w-7xl mx-auto w-full">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="flex items-center gap-5">
+            <div className="w-16 h-16 rounded-[2rem] bg-gradient-to-br from-cyan-600 to-cyan-800 flex items-center justify-center shadow-2xl shadow-cyan-900/20 border border-white/20">
+              <BarChart3 className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h1 className="text-4xl font-black text-slate-900 dark:text-white uppercase tracking-tighter leading-none mb-2">Stock Inventory</h1>
+              <p className="text-slate-500 dark:text-dark-400 text-xs font-bold uppercase tracking-[0.3em]">Real-time Status Overview</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Stock Overview</h1>
-            <p className="text-slate-500 dark:text-dark-400 text-sm font-bold uppercase tracking-widest">Real-time Inventory Status</p>
-          </div>
+          <button onClick={handleDownloadStats} className="px-6 py-4 rounded-2xl bg-emerald-600 text-white hover:bg-emerald-700 transition-all font-black text-xs uppercase tracking-[0.2em] flex items-center gap-3 shadow-xl shadow-emerald-600/20 active:scale-95">
+            <Download className="w-5 h-5" /> Download Full Analytics
+          </button>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleDownloadStats}
-            className="px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 transition-all font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-emerald-600/20"
-          >
-            <Download className="w-4 h-4" />
-            Download Stock Stats
-          </button>
-          {/* Global Date Filter for Overview */}
-          <div className="flex items-center gap-2 bg-white dark:bg-dark-900 p-2 rounded-2xl border border-slate-200 dark:border-dark-700 shadow-sm overflow-x-auto">
-          <div className="flex items-center bg-slate-50 dark:bg-dark-800 p-1 rounded-xl border border-slate-100 dark:border-dark-750 mr-2">
-            <button onClick={() => { setFromDate(today()); setToDate(today()); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all">Today</button>
-            <button onClick={() => { setFromDate(startOfMonth()); setToDate(today()); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all border-l border-slate-200 dark:border-dark-700/50">This Month</button>
-            <button onClick={() => { setFromDate(startOfYear()); setToDate(today()); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all border-l border-slate-200 dark:border-dark-700/50">This Year</button>
+        <div className="bg-white dark:bg-dark-900 p-4 rounded-[2.5rem] border border-slate-200 dark:border-dark-700 shadow-xl flex flex-col lg:flex-row items-center gap-6">
+          <div className="flex items-center bg-slate-50 dark:bg-dark-800 p-1.5 rounded-2xl border border-slate-100 dark:border-dark-750 w-full lg:w-auto overflow-x-auto">
+            <button onClick={() => { setFromDate(today()); setToDate(today()); }} className="flex-1 px-6 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-dark-900 rounded-xl transition-all">Today</button>
+            <button onClick={() => { setFromDate(startOfMonth()); setToDate(today()); }} className="flex-1 px-6 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-dark-900 rounded-xl transition-all border-l border-slate-200 dark:border-dark-700/50">Month</button>
+            <button onClick={() => { setFromDate(startOfYear()); setToDate(today()); }} className="flex-1 px-6 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-dark-900 rounded-xl transition-all border-l border-slate-200 dark:border-dark-700/50">Year</button>
           </div>
-          <div className="flex items-center gap-2 px-3">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">From</span>
-            <input type="date" value={fromDate} onChange={e => { setFromDate(e.target.value); }} className="input !py-1 !px-2 !w-32 !text-xs" />
-          </div>
-          <div className="flex items-center gap-2 px-3 border-l border-slate-100 dark:border-dark-700">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">To</span>
-            <input type="date" value={toDate} onChange={e => { setToDate(e.target.value); }} className="input !py-1 !px-2 !w-32 !text-xs" />
+          <div className="grid grid-cols-2 gap-4 w-full lg:flex-1">
+            <div className="flex items-center gap-3 px-4 py-2 bg-slate-50/50 dark:bg-dark-800/20 rounded-2xl border border-slate-100 dark:border-dark-750">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">From</span>
+              <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} className="input flex-1 !bg-transparent !p-0 !h-auto !border-none !text-xs font-black uppercase" />
+            </div>
+            <div className="flex items-center gap-3 px-4 py-2 bg-slate-50/50 dark:bg-dark-800/20 rounded-2xl border border-slate-100 dark:border-dark-750">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">To</span>
+              <input type="date" value={toDate} onChange={e => setToDate(e.target.value)} className="input flex-1 !bg-transparent !p-0 !h-auto !border-none !text-xs font-black uppercase" />
+            </div>
           </div>
           {(fromDate || toDate) && (
-            <button
-              onClick={() => { setFromDate(''); setToDate(''); }}
-              className="ml-2 px-3 py-1.5 text-[10px] font-black uppercase tracking-tighter text-red-600 bg-red-50 dark:bg-red-900/20 rounded-lg hover:bg-red-100 transition-all border border-red-200 dark:border-red-800/30"
-              title="Clear Filters"
-            >
-              Clear
-            </button>
+            <button onClick={() => { setFromDate(''); setToDate(''); }} className="w-full lg:w-auto px-6 py-3 text-[10px] font-black uppercase tracking-widest text-red-600 bg-red-50 dark:bg-red-900/20 rounded-2xl hover:bg-red-100 transition-all border border-red-200 dark:border-red-800/30">Reset</button>
           )}
         </div>
-        </div>
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {cards.map(({ type, label, color, icon, data }) => (
-          <div key={type} className="glass rounded-[2.5rem] p-8 border border-slate-200 dark:border-dark-700/50 shadow-2xl relative overflow-hidden group">
-            <div className={cn("absolute top-0 right-0 w-40 h-40 rounded-bl-full -mr-20 -mt-20 group-hover:scale-110 transition-transform duration-700 opacity-20", color === 'amber' ? 'bg-amber-500' : 'bg-emerald-500')} />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+          {cards.map(({ type, label, color, icon, data }) => (
+            <div key={type} className="glass rounded-[3rem] p-10 border border-slate-200 dark:border-dark-700/50 shadow-2xl relative overflow-hidden group flex flex-col h-full min-h-[500px]">
+              <div className={cn("absolute top-0 right-0 w-56 h-56 rounded-bl-full -mr-28 -mt-28 group-hover:scale-110 transition-transform duration-700 opacity-20", color === 'amber' ? 'bg-amber-500' : 'bg-emerald-500')} />
 
-            <div className="flex items-center gap-6 mb-10 relative">
-              <div className={cn("w-16 h-16 rounded-3xl flex items-center justify-center border shadow-inner", color === 'amber' ? 'bg-amber-500/10 border-amber-500/20 text-amber-600' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600')}>
-                {icon}
-              </div>
-              <div className="min-w-0">
-                <h2 className={cn("text-2xl font-black tracking-tight", color === 'amber' ? 'text-amber-600' : 'text-emerald-600')}>{type}</h2>
-                <p className="text-xs font-bold text-slate-500 dark:text-dark-500 uppercase tracking-widest truncate">{label}</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4 lg:gap-8 relative border-t border-slate-100 dark:border-dark-800/60 pt-10">
-              {[
-                { label: 'Purchase', qty: data.totalPurchased, value: data.purchaseValue, icon: TrendingUp, color: 'text-emerald-600' },
-                { label: 'Sale', qty: data.totalSold, value: data.saleValue, icon: TrendingDown, color: 'text-red-600' },
-                { label: 'Remaining', qty: data.current, value: null, icon: Package, color: color === 'amber' ? 'text-amber-600' : 'text-emerald-600', highlight: true },
-              ].map(block => (
-                <div key={block.label} className="space-y-2 min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <block.icon className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest truncate">{block.label}</p>
-                  </div>
-                  <div className="flex items-baseline gap-1">
-                    <span className={cn("font-black tabular-nums tracking-tighter break-all whitespace-normal leading-tight w-full", block.highlight ? 'text-2xl lg:text-3xl' : 'text-xl lg:text-2xl text-slate-900 dark:text-white', block.color)}>
-                      {block.qty.toLocaleString()}
-                    </span>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase break-keep ml-1 relative -top-1">L</span>
-                  </div>
-                  {block.value !== null && (
-                    <p className="text-[11px] font-bold text-slate-500 tabular-nums break-words break-all whitespace-normal leading-tight w-full">₨ {formatCurrency(block.value)}</p>
-                  )}
+              <div className="flex items-center gap-8 mb-12 relative z-10">
+                <div className={cn("w-20 h-20 rounded-[2rem] flex items-center justify-center border-2 shadow-2xl", color === 'amber' ? 'bg-amber-500/10 border-amber-500/20 text-amber-600' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600')}>
+                  {icon}
                 </div>
-              ))}
-            </div>
-
-            {/* Progress Visualization */}
-            <div className="mt-8 pt-8 border-t border-slate-100 dark:border-dark-800/60">
-              <div className="flex justify-between text-[11px] font-black uppercase tracking-wider text-slate-400 mb-3">
-                <span>Utilization</span>
-                <span className={color === 'amber' ? 'text-amber-600' : 'text-emerald-600'}>{data.totalPurchased > 0 ? ((data.totalSold / data.totalPurchased) * 100).toFixed(1) : 0}% sold</span>
+                <div>
+                  <h2 className={cn("text-4xl font-black tracking-tighter mb-1", color === 'amber' ? 'text-amber-600' : 'text-emerald-600')}>{type} Fuel</h2>
+                  <p className="text-[10px] font-black text-slate-500 dark:text-dark-500 uppercase tracking-[0.4em]">{label}</p>
+                </div>
               </div>
-              <div className="h-4 bg-slate-100 dark:bg-dark-800 rounded-full overflow-hidden p-1 shadow-inner">
-                <div
-                  className={cn("h-full rounded-full transition-all duration-1000 shadow-lg", color === 'amber' ? 'bg-gradient-to-r from-amber-400 to-amber-600' : 'bg-gradient-to-r from-emerald-400 to-emerald-600')}
-                  style={{ width: `${Math.min(100, data.totalPurchased > 0 ? (data.totalSold / data.totalPurchased) * 100 : 0)}%` }}
-                />
+
+              <div className="grid grid-cols-3 gap-6 relative z-10 border-t border-slate-100 dark:border-dark-800/60 pt-12 flex-shrink-0">
+                {[
+                  { label: 'Purchase', qty: data.totalPurchased, icon: TrendingUp, color: 'text-emerald-600' },
+                  { label: 'Sales',    qty: data.totalSold,      icon: TrendingDown, color: 'text-red-600' },
+                  { label: 'Available', qty: data.current,        icon: Package, color: color === 'amber' ? 'text-amber-600' : 'text-emerald-600', highlight: true },
+                ].map(block => (
+                  <div key={block.label} className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <block.icon className="w-4 h-4 text-slate-400" />
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{block.label}</p>
+                    </div>
+                    <div>
+                      <p className={cn("font-black tabular-nums tracking-tighter leading-none", block.highlight ? 'text-4xl' : 'text-2xl text-slate-900 dark:text-white', block.color)}>
+                        {block.qty.toLocaleString()}
+                      </p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase mt-2">Liters</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-auto pt-12 relative z-10">
+                <div className="flex justify-between text-[11px] font-black uppercase tracking-widest text-slate-400 mb-4">
+                  <span>Stock Availability</span>
+                  <span className={color === 'amber' ? 'text-amber-600' : 'text-emerald-600'}>{data.totalPurchased > 0 ? ((data.totalSold / data.totalPurchased) * 100).toFixed(1) : 0}% Depleted</span>
+                </div>
+                <div className="h-5 bg-slate-100 dark:bg-dark-800 rounded-full overflow-hidden p-1 shadow-inner">
+                  <div
+                    className={cn("h-full rounded-full transition-all duration-1000 shadow-xl", color === 'amber' ? 'bg-gradient-to-r from-amber-400 to-amber-600' : 'bg-gradient-to-r from-emerald-400 to-emerald-600')}
+                    style={{ width: `${Math.min(100, data.totalPurchased > 0 ? (data.totalSold / data.totalPurchased) * 100 : 0)}%` }}
+                  />
+                </div>
+              </div>
+
+              <button
+                onClick={() => navigate(`/stock/${type.toLowerCase()}`)}
+                className={cn(
+                  "w-full mt-12 py-6 rounded-[2rem] font-black text-[10px] uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-4 border-2 shadow-2xl active:scale-95 group relative z-10",
+                  color === 'amber'
+                    ? "bg-amber-600 text-white border-transparent hover:bg-amber-700 shadow-amber-600/30"
+                    : "bg-emerald-600 text-white border-transparent hover:bg-emerald-700 shadow-emerald-600/30"
+                )}
+              >
+                <LayoutList className="w-5 h-5" />
+                Inspect Detail Records
+                <ChevronRight className="w-5 h-5 transition-transform group-hover:translate-x-2" />
+              </button>
+            </div>
+          ))}
+        </div>
+
+        <div className="glass rounded-[3rem] p-10 border-2 border-primary-500/20 bg-primary-600/5 relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-primary-600/5 rounded-bl-full pointer-events-none group-hover:scale-110 transition-transform duration-1000" />
+          <div className="flex flex-col lg:flex-row items-center justify-between gap-10 relative z-10">
+            <div className="flex items-center gap-8">
+              <div className="w-20 h-20 rounded-[2rem] bg-primary-600 flex items-center justify-center shadow-2xl shadow-primary-600/40">
+                <ShoppingCart className="w-10 h-10 text-white" />
+              </div>
+              <div>
+                <h2 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tighter mb-1">Total Network Stock</h2>
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.3em]">Combined HSD + PMG Volume</p>
               </div>
             </div>
-
-            {/* NEW BUTTONS */}
-            <button
-              onClick={() => navigate(`/stock/${type.toLowerCase()}`)}
-              className={cn(
-                "w-full mt-8 py-4 rounded-3xl font-black text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 border shadow-sm active:scale-95 group",
-                color === 'amber'
-                  ? "bg-amber-600 text-white border-transparent hover:bg-amber-700 shadow-amber-600/20"
-                  : "bg-emerald-600 text-white border-transparent hover:bg-emerald-700 shadow-emerald-600/20"
-              )}
-            >
-              <LayoutList className="w-4 h-4" />
-              Manage {type} Stock Details
-              <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-            </button>
+            <div className="px-12 py-8 bg-white dark:bg-dark-900 rounded-[2.5rem] border border-primary-500/10 shadow-2xl text-center lg:text-right">
+                <p className="text-[10px] font-black text-primary-600 uppercase tracking-[0.4em] mb-3 leading-none">Net Inventory</p>
+                <p className="text-5xl font-black text-slate-900 dark:text-white tabular-nums leading-none">
+                  {(stockData.HSD.current + stockData.PMG.current).toLocaleString()} <span className="text-base font-normal text-slate-400 ml-2">Ltrs</span>
+                </p>
+            </div>
           </div>
-        ))}
-      </div>
-
-      {/* Combined Insights Table */}
-      <div className="glass rounded-[2rem] overflow-hidden border border-slate-200 dark:border-dark-700/50 shadow-xl">
-        <div className="p-6 bg-white/30 dark:bg-dark-800/30 border-b border-slate-200 dark:border-dark-700/50 flex items-center gap-3">
-          <Calendar className="w-5 h-5 text-primary-600" />
-          <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Stock Analysis Overview</h2>
-        </div>
-        <div className="overflow-auto smart-scroll max-h-[50vh]">
-          <table className="w-full">
-            <thead className="sticky top-0 z-10">
-              <tr className="bg-slate-50/50 dark:bg-dark-900/50">
-                <th className="px-8 py-5 text-left text-[11px] font-black text-slate-400 uppercase tracking-widest">Fuel Category</th>
-                <th className="px-8 py-5 text-right text-[11px] font-black text-slate-400 uppercase tracking-widest">Purchase Volume (L)</th>
-                <th className="px-8 py-5 text-right text-[11px] font-black text-slate-400 uppercase tracking-widest">Sales Volume (L)</th>
-                <th className="px-8 py-5 text-right text-[11px] font-black text-primary-600 uppercase tracking-widest bg-primary-600/5">Remaining Stock (L)</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-dark-800">
-              <tr className="group hover:bg-slate-50/50 dark:hover:bg-dark-900/40">
-                <td className="px-8 py-5 text-sm font-black text-slate-700 dark:text-dark-300 uppercase tracking-tighter">HSD</td>
-                <td className="px-8 py-5 text-right font-black tabular-nums text-emerald-600">{stockData.HSD.totalPurchased.toLocaleString()} L</td>
-                <td className="px-8 py-5 text-right font-black tabular-nums text-red-600">{stockData.HSD.totalSold.toLocaleString()} L</td>
-                <td className="px-8 py-5 text-right font-black tabular-nums bg-primary-600/5 text-slate-900 dark:text-white">{stockData.HSD.current.toLocaleString()} L</td>
-              </tr>
-              <tr className="group hover:bg-slate-50/50 dark:hover:bg-dark-900/40">
-                <td className="px-8 py-5 text-sm font-black text-slate-700 dark:text-dark-300 uppercase tracking-tighter">PMG</td>
-                <td className="px-8 py-5 text-right font-black tabular-nums text-emerald-600">{stockData.PMG.totalPurchased.toLocaleString()} L</td>
-                <td className="px-8 py-5 text-right font-black tabular-nums text-red-600">{stockData.PMG.totalSold.toLocaleString()} L</td>
-                <td className="px-8 py-5 text-right font-black tabular-nums bg-primary-600/5 text-slate-900 dark:text-white">{stockData.PMG.current.toLocaleString()} L</td>
-              </tr>
-              <tr aria-hidden="true">
-                <td colSpan={4} className="px-0 py-0">
-                  <div className="h-[1px] w-full bg-slate-300 dark:bg-dark-600" />
-                </td>
-              </tr>
-              <tr className="group hover:bg-slate-50/50 dark:hover:bg-dark-900/40">
-                <td className="px-8 py-5 text-sm font-black text-slate-700 dark:text-dark-300 uppercase tracking-tighter">Total Volume</td>
-                <td className="px-8 py-5 text-right font-black tabular-nums text-emerald-600">{(stockData.HSD.totalPurchased + stockData.PMG.totalPurchased).toLocaleString()} L</td>
-                <td className="px-8 py-5 text-right font-black tabular-nums text-red-600">{(stockData.HSD.totalSold + stockData.PMG.totalSold).toLocaleString()} L</td>
-                <td className="px-8 py-5 text-right font-black tabular-nums bg-primary-600/5 text-2xl text-black dark:text-white">
-                  {(stockData.HSD.current + stockData.PMG.current).toLocaleString()} L
-                </td>
-              </tr>
-            </tbody>
-          </table>
         </div>
       </div>
-
-      {showReport && (
-        <PrintReportModal 
-          data={filteredHistory} 
-          type="stock" 
-          onClose={() => setShowReport(false)} 
-          title={`${selectedType} STOCK HISTORY`}
-        />
-      )}
-    </div>
+    </PullToRefresh>
   );
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
+import BottomNav from './BottomNav';
 import { useStore } from '../../store/useStore';
 import { Menu } from 'lucide-react';
 import { useShortcuts } from '../../hooks/useShortcuts';
@@ -22,6 +23,28 @@ export default function Layout() {
   const { } = useStore();
   const location = useLocation();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStart(e.touches[0].clientX);
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStart === null) return;
+    const touchEnd = e.changedTouches[0].clientX;
+    const deltaX = touchEnd - touchStart;
+    
+    // Swipe Right (Open) - from left edge
+    if (deltaX > 60 && touchStart < 40) {
+      setMobileSidebarOpen(true);
+    }
+    // Swipe Left (Close)
+    else if (deltaX < -60 && mobileSidebarOpen) {
+      setMobileSidebarOpen(false);
+    }
+    
+    setTouchStart(null);
+  };
 
   // Apply Global Shortcuts
   useShortcuts();
@@ -35,7 +58,11 @@ export default function Layout() {
   const isTransactionPage = ['/purchase', '/sale', '/expense', '/asset', '/liability', '/customer'].some(p => isPath(p)) || isStock;
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-100 dark:bg-dark-950 transition-colors duration-300">
+    <div 
+      className="flex h-screen overflow-hidden bg-slate-100 dark:bg-dark-950 transition-colors duration-300"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
       {/* Sidebar Container with Auto-Hide trigger */}
       <div 
         className="hidden md:block relative z-50 group"
@@ -84,6 +111,9 @@ export default function Layout() {
           <div style={{ display: isPath('/customer') ? 'block' : 'none' }} className="h-full"><Customer /></div>
           <div style={{ display: isPath('/settings') ? 'block' : 'none' }} className="h-full"><Settings /></div>
         </div>
+
+        {/* Mobile Bottom Navigation */}
+        <BottomNav />
       </main>
     </div>
   );

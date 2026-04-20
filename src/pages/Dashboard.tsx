@@ -232,7 +232,7 @@ export default function Dashboard() {
 
         {/* 2. Dashboard Title Block (Center) */}
         <div className="flex-1 flex flex-col items-center justify-center relative z-10" dir="rtl">
-          <h1 className="text-3xl sm:text-4xl font-black text-white font-urdu min-h-[70px] leading-[1.8] text-center drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
+          <h1 className="text-xl md:text-4xl font-black text-white font-urdu min-h-[50px] leading-[1.6] text-center drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
             {displayText}
           </h1>
         </div>
@@ -285,17 +285,17 @@ export default function Dashboard() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="flex flex-nowrap overflow-x-auto no-scrollbar gap-6 pb-4 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:pb-0">
         {[
           { label: 'Total Sales',   value: `₨ ${formatCurrency(dashboardStats.totalSales)}`,   icon: TrendingUp,   color: 'text-emerald-600', bg: 'bg-emerald-500/10', border: 'border-emerald-600/20' },
-          { label: 'Total Expenses', value: `₨ ${formatCurrency(dashboardStats.totalExpense)}`, icon: XCircle,      color: 'text-red-600',     bg: 'bg-red-500/10',     border: 'border-red-600/20' },
+          { label: 'Expenses',      value: `₨ ${formatCurrency(dashboardStats.totalExpense)}`, icon: XCircle,      color: 'text-red-600',     bg: 'bg-red-500/10',     border: 'border-red-600/20' },
           { label: 'Gross Profit',  value: `₨ ${formatCurrency(dashboardStats.grossProfit)}`,  icon: DollarSign,   color: 'text-primary-600', bg: 'bg-primary-500/10', border: 'border-primary-600/20' },
           { label: 'Net Profit',    value: `₨ ${formatCurrency(dashboardStats.netProfit)}`,    icon: DollarSign,   color: dashboardStats.netProfit >= 0 ? 'text-emerald-600' : 'text-red-600', bg: 'bg-slate-500/5', border: 'border-slate-600/20' },
         ].map(s => (
-          <div key={s.label} className={cn('glass p-6 rounded-3xl border-l-4 shadow-xl animate-in slide-in-from-bottom duration-350 min-w-0 flex flex-col', s.border)}>
-            <div className={`w-12 h-12 rounded-2xl ${s.bg} flex items-center justify-center mb-4 flex-shrink-0`}><s.icon className={`w-6 h-6 ${s.color}`} /></div>
-            <p className="text-[10px] font-black text-slate-400 dark:text-dark-500 uppercase tracking-[0.2em] mb-1 truncate">{s.label}</p>
-            <p className={cn('font-black tracking-tighter tabular-nums break-words break-all leading-tight w-full', s.value.length > 20 ? 'text-lg' : s.value.length > 15 ? 'text-xl' : 'text-2xl', s.color)}>{s.value}</p>
+          <div key={s.label} className={cn('glass p-6 rounded-3xl border shadow-xl animate-in slide-in-from-bottom duration-350 flex flex-col min-w-[200px] sm:min-w-0 transition-transform active:scale-95', s.border)}>
+            <div className={`w-12 h-12 rounded-2xl ${s.bg} flex items-center justify-center mb-6 flex-shrink-0`}><s.icon className={`w-6 h-6 ${s.color}`} /></div>
+            <p className="text-[10px] font-black text-slate-400 dark:text-dark-500 uppercase tracking-[0.2em] mb-2 truncate">{s.label}</p>
+            <p className={cn('font-black tracking-tighter tabular-nums leading-tight w-full', s.value.length > 15 ? 'text-xl' : 'text-2xl', s.color)}>{s.value}</p>
           </div>
         ))}
       </div>

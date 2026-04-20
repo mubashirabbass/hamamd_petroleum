@@ -4,6 +4,7 @@
 use std::io::{Read, Write};
 use tauri_plugin_opener::OpenerExt;
 use std::path::PathBuf;
+mod activation;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // UTILITY HELPERS
@@ -659,6 +660,8 @@ pub fn run() {
             download_drive_backup,
             get_machine_id,
             save_backup_to_path,
+            activation::get_hwid_activation,
+            activation::set_hwid_activation,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

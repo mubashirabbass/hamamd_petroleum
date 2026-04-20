@@ -26,10 +26,10 @@ android {
     }
     signingConfigs {
         create("release") {
-            storeFile = file("C:/Users/User/Desktop/new ebs type/my-release-key.keystore")
-            storePassword = "12345678"
-            keyAlias = "my-key-alias"
-            keyPassword = "12345678"
+            storeFile = file("../../../../ebs-production-new.jks")
+            storePassword = "ebs-password-2026"
+            keyAlias = "ebs-alias"
+            keyPassword = "ebs-password-2026"
         }
     }
     buildTypes {

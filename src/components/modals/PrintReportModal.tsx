@@ -1,8 +1,10 @@
-import { useRef } from 'react';
-import { X, Printer, FileText } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { X, Printer, FileText, Download, Loader2 } from 'lucide-react';
 import { useReactToPrint } from 'react-to-print';
 import { formatCurrency, formatDate } from '../../lib/utils';
 import PrintHeader from '../printing/PrintHeader';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 interface Props {
   data: any[];
@@ -34,10 +36,41 @@ function toWords(n: number): string {
 
 export default function PrintReportModal({ data, type, onClose, title: customTitle, customerPhone }: Props) {
   const contentRef = useRef<HTMLDivElement>(null);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+
   const handlePrint = useReactToPrint({ 
     contentRef,
     documentTitle: `${type.toUpperCase()}_REPORT_${customTitle?.split('—')[0]?.trim() || 'General'}_${new Date().toLocaleDateString().replace(/\//g, '-')}`
   });
+
+  const handleGeneratePDF = async () => {
+    if (!contentRef.current || isGeneratingPDF) return;
+    setIsGeneratingPDF(true);
+    try {
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const container = contentRef.current;
+      const pages = container.getElementsByClassName('report-page');
+      
+      for (let i = 0; i < pages.length; i++) {
+        const canvas = await html2canvas(pages[i] as HTMLElement, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff'
+        });
+        
+        const imgData = canvas.toDataURL('image/jpeg', 0.95);
+        if (i > 0) pdf.addPage();
+        pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297);
+      }
+      
+      pdf.save(`${type.toUpperCase()}_REPORT_${new Date().getTime()}.pdf`);
+    } catch (error) {
+      console.error('PDF Generation Error:', error);
+    } finally {
+      setIsGeneratingPDF(false);
+    }
+  };
 
   const dates = data.map(x => x.date).sort();
   const dateRange = dates.length
@@ -51,74 +84,84 @@ export default function PrintReportModal({ data, type, onClose, title: customTit
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 9999,
-      background: 'rgba(2,6,23,0.9)', backdropFilter: 'blur(12px)',
+      background: 'rgba(2,6,23,0.95)', backdropFilter: 'blur(16px)',
       display: 'flex', flexDirection: 'column', alignItems: 'center',
       fontFamily: "'Times New Roman', serif",
-      overflowY: 'auto', paddingBottom: 60,
+      overflowY: 'auto', paddingBottom: 100,
     }}>
+      {/* Mobile-Friendly Control Bar */}
       <div style={{
-        position: 'sticky', top: 0, zIndex: 10, width: '100%', maxWidth: '950px',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '15px 25px', background: 'rgba(15,23,42,0.98)',
-        borderBottom: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(20px)',
+        position: 'sticky', top: 0, zIndex: 100, width: '100%',
+        display: 'flex', flexDirection: 'column',
+        background: '#0f172a', borderBottom: '1px solid rgba(255,255,255,0.1)',
+        padding: '12px 20px', gap: 12, boxSizing: 'border-box'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <FileText style={{ width: 20, height: 20, color: '#3b82f6' }} />
-          <span style={{ color: '#fff', fontWeight: 1000, fontSize: 16, textTransform: 'uppercase', letterSpacing: '0.15em' }}>Report Document Preview</span>
-        </div>
-        <div style={{ display: 'flex', gap: 12 }}>
-          <button onClick={handlePrint} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 28px', borderRadius: 12, background: 'linear-gradient(135deg,#3b82f6,#1d4ed8)', color: '#fff', fontWeight: 1000, fontSize: 14, border: 'none', cursor: 'pointer', boxShadow: '0 4px 15px rgba(59,130,246,0.3)', textTransform: 'uppercase' }}>
-            <Printer style={{ width: 18, height: 18 }} /> Print Ready
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ padding: 8, background: 'rgba(59,130,246,0.1)', borderRadius: 10 }}>
+              <FileText style={{ width: 18, height: 18, color: '#3b82f6' }} />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <span style={{ color: '#fff', fontWeight: 900, fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Document Preview</span>
+              <span style={{ color: '#64748b', fontSize: 10 }}>{data.length} Records • {chunks.length} Pages</span>
+            </div>
+          </div>
+          <button onClick={onClose} style={{ width: 36, height: 36, borderRadius: 10, background: '#1e293b', border: '1px solid #334155', color: '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <X style={{ width: 20, height: 20 }} />
           </button>
-          <button onClick={onClose} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 44, height: 44, borderRadius: 12, background: '#1e293b', border: '1px solid #334155', color: '#94a3b8', cursor: 'pointer' }}>
-            <X style={{ width: 22, height: 22 }} />
+        </div>
+        
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button 
+            disabled={isGeneratingPDF}
+            onClick={handleGeneratePDF} 
+            style={{ 
+              flex: 1, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, 
+              borderRadius: 12, background: 'linear-gradient(135deg, #059669, #047857)', color: '#fff', 
+              fontWeight: 900, fontSize: 12, border: 'none', cursor: 'pointer', textTransform: 'uppercase',
+              opacity: isGeneratingPDF ? 0.7 : 1
+            }}
+          >
+            {isGeneratingPDF ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+            Generate PDF Report
+          </button>
+          <button 
+            onClick={handlePrint} 
+            className="md-only"
+            style={{ 
+              width: 100, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, 
+              borderRadius: 12, background: '#1e293b', color: '#fff', 
+              fontWeight: 900, fontSize: 12, border: '1px solid #334155', cursor: 'pointer', textTransform: 'uppercase'
+            }}
+          >
+            <Printer style={{ width: 18, height: 18 }} /> Print
           </button>
         </div>
       </div>
 
       <style>{`
-        @page { 
-          size: A4 portrait; 
-          margin: 0; 
-        }
+        @page { size: A4 portrait; margin: 0; }
         @media print {
           * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-          html, body { 
-            margin: 0 !important; 
-            padding: 0 !important; 
-            background: #fff !important;
-            width: 210mm !important;
-            height: 297mm !important;
-          }
+          html, body { margin: 0 !important; padding: 0 !important; background: #fff !important; width: 210mm !important; }
           .no-print { display: none !important; }
-          .page-print-container { 
-            margin: 0 !important; 
-            padding: 0 !important; 
-            width: 210mm !important;
-          }
+          .page-print-container { margin: 0 !important; padding: 0 !important; width: 210mm !important; }
           .report-page { 
-            position: relative;
-            width: 210mm !important;
-            height: 297mm !important;
-            padding: 10mm !important;
-            margin: 0 !important;
-            overflow: hidden !important;
-            box-sizing: border-box !important;
-            page-break-after: always;
-            background: #fff !important;
-            transform-origin: top center;
+            width: 210mm !important; height: 297mm !important; padding: 12mm 10mm !important;
+            margin: 0 !important; box-sizing: border-box !important; position: relative;
+            page-break-after: always; background: #fff !important; color: #000 !important;
           }
-          .report-page:last-child { 
-            page-break-after: avoid !important;
-            page-break-inside: avoid !important;
-          }
+          .report-page:last-child { page-break-after: avoid !important; }
+        }
+        @media (max-width: 768px) {
+          .md-only { display: none !important; }
+          .report-page { transform: scale(0.45); transform-origin: top center; margin-bottom: -160mm !important; }
         }
       `}</style>
 
-      <div ref={contentRef} className="page-print-container" style={{ width: '210mm', margin: '30px auto' }}>
+      <div ref={contentRef} className="page-print-container" style={{ width: '210mm', margin: '20px auto' }}>
           {chunks.map((chunk, pi) => {
             const isLast = pi === chunks.length - 1;
-
             const isLedger = type === 'asset' || type === 'liability' || type === 'customer';
             const isSale = type === 'sale';
             const isPurchase = type === 'purchase';
@@ -147,7 +190,7 @@ export default function PrintReportModal({ data, type, onClose, title: customTit
             }
 
             return (
-              <div key={pi} className="report-page" style={{ position: 'relative', width: '210mm', minHeight: '297mm', background: '#fff', color: '#000', padding: '12mm 10mm', margin: '0 auto', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
+              <div key={pi} className="report-page" style={{ position: 'relative', width: '210mm', height: '297mm', background: '#fff', color: '#000', padding: '12mm 10mm', margin: '0 auto 20px auto', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', boxShadow: '0 20px 50px rgba(0,0,0,0.5)', borderRadius: '2px' }}>
                 <PrintHeader />
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', border: '2px solid #111', padding: '8px 15px', marginBottom: '15px', fontSize: '11px', fontWeight: 1000, textTransform: 'uppercase', background: '#f9f9f9' }}>
@@ -167,12 +210,8 @@ export default function PrintReportModal({ data, type, onClose, title: customTit
                 )}
 
                 <table style={{ 
-                  width: '100%', 
-                  borderCollapse: 'collapse', 
-                  fontSize: isPurchase ? '8px' : '10px', 
-                  borderLeft: '2px solid #111', 
-                  borderRight: '2px solid #111', 
-                  borderBottom: '2px solid #111',
+                  width: '100%', borderCollapse: 'collapse', fontSize: isPurchase ? '8px' : '10px', 
+                  borderLeft: '2px solid #111', borderRight: '2px solid #111', borderBottom: '2px solid #111',
                   tableLayout: isPurchase ? 'fixed' : 'auto'
                 }}>
                   <thead style={{ background: '#f0f0f0', borderTop: '2px solid #111', borderBottom: '2px solid #111' }}>
@@ -229,9 +268,9 @@ export default function PrintReportModal({ data, type, onClose, title: customTit
                           {isPurchase ? (
                             <>
                               <td style={{ padding: '4px 2px', borderRight: '1px solid #f0f0f0' }}>{formatDate(row.date)}</td>
-                              <td style={{ padding: '4px 2px', borderRight: '1px solid #f0f0f0', fontWeight: 'bold', wordBreak: 'break-all' }}>{row.invoiceNo || '—'}</td>
-                              <td style={{ padding: '4px 2px', borderRight: '1px solid #f0f0f0', fontSize: '7px', wordBreak: 'break-word', overflow: 'hidden' }}>{row.description || '—'}</td>
-                              <td style={{ padding: '4px 2px', borderRight: '1px solid #f0f0f0', wordBreak: 'break-all' }}>{row.vehicleNo || '—'}</td>
+                              <td style={{ padding: '4px 2px', borderRight: '1px solid #f0f0f0', fontWeight: 'bold' }}>{row.invoiceNo || '—'}</td>
+                              <td style={{ padding: '4px 2px', borderRight: '1px solid #f0f0f0', fontSize: '7px' }}>{row.description || '—'}</td>
+                              <td style={{ padding: '4px 2px', borderRight: '1px solid #f0f0f0' }}>{row.vehicleNo || '—'}</td>
                               <td style={{ padding: '4px 2px', borderRight: '1px solid #f0f0f0', textAlign: 'right' }}>{formatCurrency(row.rate)}</td>
                               <td style={{ padding: '4px 2px', borderRight: '1px solid #f0f0f0', textAlign: 'right', fontWeight: 'bold' }}>{row.quantity?.toLocaleString()}</td>
                               <td style={{ padding: '4px 2px', borderRight: '1px solid #f0f0f0', textAlign: 'right' }}>{formatCurrency(row.carriage)}</td>
@@ -250,9 +289,9 @@ export default function PrintReportModal({ data, type, onClose, title: customTit
                                 </>
                               ) : isLedger ? (
                                 <>
-                                  <td style={{ padding: '5px 4px', borderRight: '1px solid #f0f0f0', textAlign: 'right', color: '#dc2626', wordBreak: 'break-all' }}>{row.debit ? formatCurrency(row.debit) : '—'}</td>
-                                  <td style={{ padding: '5px 4px', borderRight: '1px solid #f0f0f0', textAlign: 'right', color: '#059669', wordBreak: 'break-all' }}>{row.credit ? formatCurrency(row.credit) : '—'}</td>
-                                  <td style={{ padding: '5px 4px', textAlign: 'right', fontWeight: 'bold', wordBreak: 'break-all' }}>{type === 'customer' ? balText : formatCurrency(row.balance)}</td>
+                                  <td style={{ padding: '5px 4px', borderRight: '1px solid #f0f0f0', textAlign: 'right', color: '#dc2626' }}>{row.debit ? formatCurrency(row.debit) : '—'}</td>
+                                  <td style={{ padding: '5px 4px', borderRight: '1px solid #f0f0f0', textAlign: 'right', color: '#059669' }}>{row.credit ? formatCurrency(row.credit) : '—'}</td>
+                                  <td style={{ padding: '5px 4px', textAlign: 'right', fontWeight: 'bold' }}>{type === 'customer' ? balText : formatCurrency(row.balance)}</td>
                                 </>
                               ) : isStock ? (
                                 <>
@@ -268,49 +307,11 @@ export default function PrintReportModal({ data, type, onClose, title: customTit
                         </tr>
                       );
                     })}
-
-                    {/* Filler Rows to extend vertical lines and push Page Total to bottom */}
                     {Array.from({ length: Math.max(0, ROWS_PER_PAGE - chunk.length) }).map((_, fi) => (
                       <tr key={`filler-${fi}`} style={{ height: '24px', borderBottom: '1px solid #eee' }}>
-                        {isPurchase ? (
-                          <>
-                            <td style={{ borderRight: '1px solid #f0f0f0' }}></td>
-                            <td style={{ borderRight: '1px solid #f0f0f0' }}></td>
-                            <td style={{ borderRight: '1px solid #f0f0f0' }}></td>
-                            <td style={{ borderRight: '1px solid #f0f0f0' }}></td>
-                            <td style={{ borderRight: '1px solid #f0f0f0' }}></td>
-                            <td style={{ borderRight: '1px solid #f0f0f0' }}></td>
-                            <td style={{ borderRight: '1px solid #f0f0f0' }}></td>
-                            <td style={{ borderRight: '1px solid #f0f0f0' }}></td>
-                            <td style={{}}></td>
-                          </>
-                        ) : (
-                          <>
-                            <td style={{ borderRight: '1px solid #f0f0f0', width: '60px' }}></td>
-                            <td style={{ borderRight: '1px solid #f0f0f0' }}></td>
-                            {isSale ? (
-                              <>
-                                <td style={{ borderRight: '1px solid #f0f0f0' }}></td>
-                                <td style={{ borderRight: '1px solid #f0f0f0' }}></td>
-                                <td style={{}}></td>
-                              </>
-                            ) : isLedger ? (
-                              <>
-                                <td style={{ borderRight: '1px solid #f0f0f0' }}></td>
-                                <td style={{ borderRight: '1px solid #f0f0f0' }}></td>
-                                <td style={{}}></td>
-                              </>
-                            ) : isStock ? (
-                              <>
-                                <td style={{ borderRight: '1px solid #f0f0f0' }}></td>
-                                <td style={{ borderRight: '1px solid #f0f0f0' }}></td>
-                                <td style={{}}></td>
-                              </>
-                            ) : (
-                              <td style={{}}></td>
-                            )}
-                          </>
-                        )}
+                        {Array.from({ length: isPurchase ? 9 : isSale || isLedger || isStock ? 5 : 3 }).map((__, tdidx) => (
+                          <td key={tdidx} style={{ borderRight: tdidx === (isPurchase ? 8 : isSale || isLedger || isStock ? 4 : 2) ? 'none' : '1px solid #f0f0f0' }}></td>
+                        ))}
                       </tr>
                     ))}
                   </tbody>
@@ -352,8 +353,6 @@ export default function PrintReportModal({ data, type, onClose, title: customTit
                   </tfoot>
                 </table>
 
-                <div style={{ flex: 1 }}></div>
-
                 {isLast && (
                   <div style={{ marginTop: 'auto', paddingTop: '15px' }}>
                     <div style={{ border: '2px solid #000', display: 'grid', gridTemplateColumns: `repeat(${isLedger ? 3 : 2}, minmax(0, 1fr))`, background: '#f8f8f8', overflow: 'hidden' }}>
@@ -364,13 +363,13 @@ export default function PrintReportModal({ data, type, onClose, title: customTit
                         </div>
                       ) : isLedger ? (
                         <>
-                          <div style={{ padding: '10px 15px', borderRight: '2px solid #000', overflow: 'hidden' }}>
+                          <div style={{ padding: '10px 15px', borderRight: '2px solid #000' }}>
                             <div style={{ fontSize: '9px', fontWeight: 900, textTransform: 'uppercase' }}>Total Debit</div>
-                            <div style={{ fontSize: formatCurrency(totalDebit).length > 25 ? '10px' : '14px', fontWeight: 900, wordBreak: 'break-all' }}>₨ {formatCurrency(totalDebit)}</div>
+                            <div style={{ fontSize: '14px', fontWeight: 900 }}>₨ {formatCurrency(totalDebit)}</div>
                           </div>
-                          <div style={{ padding: '10px 15px', borderRight: '2px solid #000', overflow: 'hidden' }}>
+                          <div style={{ padding: '10px 15px', borderRight: '2px solid #000' }}>
                             <div style={{ fontSize: '9px', fontWeight: 900, textTransform: 'uppercase' }}>Total Credit</div>
-                            <div style={{ fontSize: formatCurrency(totalCredit).length > 25 ? '10px' : '14px', fontWeight: 900, wordBreak: 'break-all' }}>₨ {formatCurrency(totalCredit)}</div>
+                            <div style={{ fontSize: '14px', fontWeight: 900 }}>₨ {formatCurrency(totalCredit)}</div>
                           </div>
                         </>
                       ) : (
@@ -379,20 +378,18 @@ export default function PrintReportModal({ data, type, onClose, title: customTit
                           <div style={{ fontSize: '16px', fontWeight: 900 }}>{data.length} Records</div>
                         </div>
                       )}
-                      <div style={{ padding: '10px 15px', background: '#fff', overflow: 'hidden' }}>
+                      <div style={{ padding: '10px 15px', background: '#fff' }}>
                         <div style={{ fontSize: '9px', fontWeight: 1000, textTransform: 'uppercase' }}>Grand Total</div>
-                        <div style={{ fontSize: formatCurrency(grandTotal).length > 25 ? '14px' : '20px', fontWeight: 1000, borderBottom: '3px solid #000', display: 'inline-block', wordBreak: 'break-all' }}>
+                        <div style={{ fontSize: '20px', fontWeight: 1000, borderBottom: '3px solid #000', display: 'inline-block' }}>
                           ₨ {formatCurrency(grandTotal)} {type === 'customer' ? (totalDebit >= totalCredit ? '(Dr)' : '(Cr)') : ''}
                         </div>
                       </div>
                     </div>
-
                     {!isStock && (
-                      <div style={{ padding: '8px 12px', fontStyle: 'italic', fontSize: '9px', fontWeight: 1000, border: '2px solid #111', borderTop: 'none', lineHeight: '1.4', wordBreak: 'break-word' }}>
+                      <div style={{ padding: '8px 12px', fontStyle: 'italic', fontSize: '9px', fontWeight: 1000, border: '2px solid #111', borderTop: 'none' }}>
                         Amount in words: <span style={{ textTransform: 'uppercase' }}>{toWords(grandTotal)}</span>
                       </div>
                     )}
-
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', paddingTop: 25 }}>
                       <div style={{ textAlign: 'left' }}>
                         <div style={{ fontSize: '10px', fontWeight: 700, fontStyle: 'italic', color: '#555' }}>
