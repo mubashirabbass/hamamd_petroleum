@@ -64,31 +64,41 @@ export default function Sidebar({ className = '', onNavigate, onCloseMobile }: S
   };
 
   return (
-    <aside className={`relative h-screen flex-shrink-0 flex flex-col border-r w-56 bg-white/90 dark:bg-dark-900/95 backdrop-blur-xl border-slate-200 dark:border-dark-700/50 ${className}`}>
-      {/* Mobile close button */}
-      <button
-        onClick={onCloseMobile}
-        className="md:hidden absolute top-3 mt-[env(safe-area-inset-top,24px)] right-3 p-1.5 rounded-lg bg-slate-100 dark:bg-dark-800 text-slate-600 dark:text-dark-300"
-        aria-label="Close menu"
-      >
-        <X className="w-4 h-4" />
-      </button>
-
-      {/* Logo */}
-      <div className="h-16 flex items-center px-4 border-b border-slate-200 dark:border-dark-700/50 gap-3">
-        <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-white flex items-center justify-center shadow-lg p-1 border border-slate-200">
-          <img src="/assets/logo-hr.png" alt="HR" className="w-full h-full object-contain" />
+    <aside className={`relative h-screen flex-shrink-0 flex flex-col border-r w-72 bg-white/95 dark:bg-dark-900/98 backdrop-blur-xl border-slate-200 dark:border-dark-700/50 ${className}`}>
+      
+      {/* ── Header ── */}
+      <div className="pt-[env(safe-area-inset-top,24px)] px-4 py-4 border-b border-slate-100 dark:border-dark-800/60 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-full border-2 border-slate-100 dark:border-dark-800 p-0.5 bg-white shadow-sm flex items-center justify-center overflow-hidden">
+            <img src="/hr-logo.png" alt="HR" className="w-full h-full object-contain" />
+          </div>
+          <div className="flex flex-col">
+            <h2 className="text-[14px] font-black leading-tight text-slate-900 dark:text-white uppercase tracking-tighter">
+              {settings.softwareName || 'HR Filling Sta...'}
+            </h2>
+            <p className="text-[9px] font-black text-slate-400 dark:text-dark-500 uppercase tracking-[0.2em] mt-0.5">Business Suite</p>
+          </div>
         </div>
-        <div>
-          <p className="text-slate-900 dark:text-white font-bold text-[15px] leading-tight truncate max-w-[140px]">
-            {settings.softwareName || 'EBS Petroleum'}
-          </p>
-          <p className="text-slate-500 dark:text-dark-500 text-[11px]">Business Suite</p>
+
+        <div className="flex items-center gap-2">
+            <button 
+              onClick={logout} 
+              className="w-10 h-10 rounded-2xl flex items-center justify-center text-red-500 hover:bg-red-50 active:scale-90 transition-all"
+              title="Logout"
+            >
+                <LogOut className="w-5 h-5" />
+            </button>
+            <button 
+              onClick={onCloseMobile}
+              className="w-10 h-10 rounded-2xl bg-slate-100 dark:bg-dark-800 flex items-center justify-center text-slate-600 dark:text-dark-300 active:scale-90 transition-all sm:hidden"
+            >
+                <X className="w-5 h-5" />
+            </button>
         </div>
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 py-3 px-2 space-y-1 overflow-y-auto">
+      <nav className="flex-1 py-6 px-3 space-y-1.5 overflow-y-auto no-scrollbar smart-scroll">
         {navItems
           .filter(item => {
             if (currentUser?.role === 'Developer') return true;
@@ -109,16 +119,16 @@ export default function Sidebar({ className = '', onNavigate, onCloseMobile }: S
                   onClick={onNavigate}
                   className={cn(
                     'sidebar-item group/item',
-                    active ? 'sidebar-item-active' : 'sidebar-item-inactive font-medium'
+                    active ? 'sidebar-item-active' : 'sidebar-item-inactive'
                   )}
                 >
-                  <Icon className="w-4 h-4 flex-shrink-0" />
-                  <span className="truncate flex-1">{label}</span>
+                  <Icon className={cn("w-5 h-5 flex-shrink-0 transition-transform group-hover/item:scale-110", active ? "text-white" : "text-slate-400")} />
+                  <span className="truncate flex-1 font-[900] tracking-tight">{label}</span>
                   {item.shortcut && (
                     <kbd className={cn(
-                      "hidden group-hover/item:inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[10px] font-black border transition-all duration-300",
+                      "hidden lg:inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[9px] font-black border transition-all duration-300",
                       active 
-                        ? "bg-primary-700/10 border-primary-700/20 text-primary-700 dark:text-primary-400" 
+                        ? "bg-white/20 border-white/20 text-white" 
                         : "bg-slate-100 border-slate-200 text-slate-400 dark:bg-dark-800 dark:border-dark-700 dark:text-dark-500"
                     )}>
                       {item.shortcut}
@@ -127,20 +137,20 @@ export default function Sidebar({ className = '', onNavigate, onCloseMobile }: S
                 </NavLink>
 
                 {hasChildren && (
-                  <div className="mt-1 space-y-1 ml-4 border-l border-slate-100 dark:border-dark-700/50 pl-2">
+                  <div className="mt-2 space-y-1.5 ml-8 border-l-2 border-slate-100 dark:border-dark-800 pl-4 py-1">
                     {children.map((child: any) => (
                       <NavLink
                         key={child.path}
                         to={child.path}
                         onClick={onNavigate}
                         className={({ isActive }) => cn(
-                          'flex items-center gap-2 px-3 py-1.5 rounded-lg text-[13px] font-bold transition-all duration-200',
+                          'flex items-center gap-3 py-2 px-1 rounded-xl text-[12px] font-black transition-all duration-200 uppercase tracking-wider',
                           isActive
-                            ? 'bg-primary-50 text-primary-600 dark:bg-primary-900/20 dark:text-primary-400'
-                            : 'text-slate-400 dark:text-dark-500 hover:text-slate-600 dark:hover:text-dark-300'
+                            ? 'text-primary-600 dark:text-primary-400 translate-x-1'
+                            : 'text-slate-400 hover:text-slate-600'
                         )}
                       >
-                        <span className={cn('w-1 h-1 rounded-full', child.label.includes('HSD') ? 'bg-amber-500' : 'bg-emerald-500')} />
+                        <span className={cn('w-2 h-2 rounded-full', child.label.includes('HSD') ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]' : 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]')} />
                         {child.label}
                       </NavLink>
                     ))}
@@ -151,48 +161,34 @@ export default function Sidebar({ className = '', onNavigate, onCloseMobile }: S
           })}
       </nav>
 
-      {/* Zoom Controls */}
-      <div className="px-4 py-3 border-t border-slate-200 dark:border-dark-700/50 space-y-2">
-        <div className="flex items-center justify-between">
-          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-dark-500">Interface Zoom</span>
-          <span className="text-[10px] font-black text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 px-1.5 py-0.5 rounded">
+      {/* ── Footer / Zoom ── */}
+      <div className="mx-3 mb-6 p-4 bg-slate-50 dark:bg-dark-800/40 rounded-[2rem] border border-slate-100 dark:border-dark-800/60 pb-[calc(1rem+env(safe-area-inset-bottom,12px))]">
+        <div className="flex items-center justify-between mb-4 px-1">
+          <span className="text-[10px] font-[900] uppercase tracking-[0.2em] text-slate-400 dark:text-dark-500">Interface Zoom</span>
+          <span className="text-[10px] font-black text-primary-600 dark:text-primary-400 bg-white dark:bg-dark-800 px-2 py-1 rounded-lg border border-slate-100 dark:border-dark-700">
             {Math.round(settings.zoomLevel * 100)}%
           </span>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
           <button
             onClick={() => handleZoom(-0.1)}
-            title="Zoom Out"
-            className="flex-1 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-dark-700/50 hover:bg-slate-50 dark:hover:bg-dark-800 text-slate-600 dark:text-dark-400 transition-colors"
+            className="flex-1 h-12 flex items-center justify-center rounded-2xl bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700/50 text-slate-600 active:scale-90 transition-all"
           >
-            <Minus className="w-3.5 h-3.5" />
+            <Minus className="w-4 h-4" />
           </button>
           <button
             onClick={resetZoom}
-            title="Reset Zoom"
-            className="flex-1 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-dark-700/50 hover:bg-slate-50 dark:hover:bg-dark-800 text-slate-600 dark:text-dark-400 transition-colors"
+            className="flex-1 h-12 flex items-center justify-center rounded-2xl bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700/50 text-slate-600 active:scale-90 transition-all"
           >
-            <RotateCcw className="w-3.5 h-3.5" />
+            <RotateCcw className="w-4 h-4" />
           </button>
           <button
             onClick={() => handleZoom(0.1)}
-            title="Zoom In"
-            className="flex-1 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-dark-700/50 hover:bg-slate-50 dark:hover:bg-dark-800 text-slate-600 dark:text-dark-400 transition-colors"
+            className="flex-1 h-12 flex items-center justify-center rounded-2xl bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700/50 text-slate-600 active:scale-90 transition-all"
           >
-            <Plus className="w-3.5 h-3.5" />
+            <Plus className="w-4 h-4" />
           </button>
         </div>
-      </div>
-
-      {/* Logout only */}
-      <div className="p-2 border-t border-slate-200 dark:border-dark-700/50">
-        <button
-          onClick={logout}
-          className="w-full flex items-center gap-3 px-2.5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 text-red-500 hover:text-red-600 hover:bg-red-500/10"
-        >
-          <LogOut className="w-4 h-4" />
-          <span>Logout</span>
-        </button>
       </div>
     </aside>
   );

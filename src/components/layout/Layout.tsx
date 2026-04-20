@@ -123,45 +123,38 @@ export default function Layout() {
 
         {/* ── App Bar — safe area pushes content down from notch ── */}
         <header
-          className="flex items-center justify-between pb-3 px-4 bg-white/95 dark:bg-dark-900/95 backdrop-blur-md border-b border-slate-200 dark:border-dark-800 flex-shrink-0 z-[100] shadow-md"
-          style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 12px)' }}
+          className="flex items-center justify-between pb-3 px-4 bg-white dark:bg-dark-950 flex-shrink-0 z-[110] border-b border-slate-100 dark:border-dark-800"
+          style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 48px)' }}
         >
-          {/* Left: menu / back button */}
-          <div className="flex items-center w-10">
-            {location.pathname !== '/' ? (
-              <button
-                onClick={() => navigate(-1)}
-                className="p-2 -ml-2 rounded-xl hover:bg-slate-100 dark:hover:bg-dark-800 text-slate-600 dark:text-dark-400 active:scale-90 transition-all"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
-            ) : (
-              <button
-                onClick={() => setMobileSidebarOpen(true)}
-                className="p-2 -ml-2 rounded-xl hover:bg-slate-100 dark:hover:bg-dark-800 text-slate-600 dark:text-dark-400 active:scale-90 transition-all"
-              >
-                <Menu className="w-5 h-5" />
-              </button>
-            )}
+          {/* Left: Hamburger menu */}
+          <div className="flex items-center w-16">
+            <button
+              onClick={() => setMobileSidebarOpen(true)}
+              className="p-2 -ml-2 text-slate-400 dark:text-dark-500 active:scale-90 transition-all font-bold"
+            >
+              <Menu className="w-6 h-6 flex-shrink-0" />
+            </button>
           </div>
 
-          {/* Centre: logo + title */}
-          <div className="flex flex-col items-center py-2 flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <div className="w-5 h-5 rounded-md bg-white flex items-center justify-center p-0.5 border border-slate-200 shadow-inner overflow-hidden">
+          {/* Centre: logo + title block matching screenshot */}
+          <div className="flex flex-col items-center py-1 flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center p-1 shadow-sm border border-slate-100 overflow-hidden">
                 <img src="/assets/logo-hr.png" alt="Logo" className="w-full h-full object-contain" />
               </div>
-              <span className="font-black text-slate-900 dark:text-white uppercase tracking-tight text-sm truncate">
-                {LABEL_MAP[location.pathname] || (isStock ? 'Stock' : 'Management')}
+              <span className="font-[900] text-slate-800 dark:text-white uppercase tracking-tight text-[16px] leading-none">
+                DASHBOARD
               </span>
             </div>
-            <span className="text-[7px] font-black text-primary-600 dark:text-primary-400 uppercase tracking-[0.2em] leading-none mt-1 opacity-80 truncate max-w-[120px] text-center">
-              {settings.softwareName || 'EBS Petroleum'}
+            <span className="text-[9px] font-black text-[#3658A7] dark:text-primary-400 uppercase tracking-[0.25em] leading-none opacity-90 text-center">
+              {settings.softwareName || 'HR FILLING STATION'}
             </span>
           </div>
 
-          {/* Right: placeholder */}
-          <div className="flex items-center justify-end w-10" />
+          {/* Right: profile placeholder matching spacing */}
+          <div className="flex items-center justify-end w-16">
+             <div className="w-6 h-6" /> 
+          </div>
         </header>
 
         {/* Content container — takes remaining height, no bottom padding needed

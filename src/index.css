@@ -71,7 +71,25 @@
     @apply bg-dark-800/80 border-dark-700/50 shadow-none;
   }
   .glass-card {
-    @apply glass rounded-2xl p-5;
+    @apply glass rounded-[2rem] p-6 shadow-[0_12px_40px_rgba(0,0,0,0.06)] dark:shadow-none;
+  }
+
+  .pill-bar {
+    @apply bg-white dark:bg-dark-800 rounded-[2.5rem] p-1 shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-slate-100 dark:border-dark-700;
+  }
+
+  /* ── Quick Activity Grid Colors ── */
+  .card-lavender { @apply bg-[#E9E9FF] text-[#6366F1] shadow-[0_4px_12px_rgba(99,102,241,0.12)]; }
+  .card-mint     { @apply bg-[#E6FAF2] text-[#10B981] shadow-[0_4px_12px_rgba(16,185,129,0.12)]; }
+  .card-pink     { @apply bg-[#FFF1F5] text-[#F43F5E] shadow-[0_4px_12px_rgba(244,63,94,0.12)]; }
+  .card-peach    { @apply bg-[#FFF8F1] text-[#F59E0B] shadow-[0_4px_12px_rgba(245,158,11,0.12)]; }
+  .card-orange   { @apply bg-[#FFF4E5] text-[#D97706] shadow-[0_4px_12px_rgba(217,119,6,0.12)]; }
+  .card-sky      { @apply bg-[#F0F9FF] text-[#0EA5E9] shadow-[0_4px_12px_rgba(14,165,233,0.12)]; }
+  .card-rose     { @apply bg-[#FFF1F2] text-[#BE185D] shadow-[0_4px_12px_rgba(190,24,93,0.12)]; }
+  .card-blue     { @apply bg-[#EFF6FF] text-[#3B82F6] shadow-[0_4px_12px_rgba(59,130,246,0.12)]; }
+
+  .dashboard-banner-img {
+    @apply absolute inset-0 w-full h-full object-cover;
   }
 
   .premium-glass-card {
@@ -283,10 +301,10 @@
   }
 
   /* ── Sidebar item ───────────────────────────────────── */
-  .sidebar-item { @apply flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-black transition-all duration-200 cursor-pointer border border-transparent; }
-  .sidebar-item-active { @apply sidebar-item bg-primary-600 text-white border-primary-600 shadow-lg shadow-primary-600/30; }
+  .sidebar-item { @apply flex items-center gap-4 px-4 py-3.5 rounded-2xl text-[14px] font-black transition-all duration-200 cursor-pointer border border-transparent; }
+  .sidebar-item-active { @apply sidebar-item bg-primary-600 text-white border-primary-600 shadow-xl shadow-primary-600/20 scale-[1.02]; }
   .sidebar-item-inactive { @apply sidebar-item text-slate-500 hover:text-slate-900 hover:bg-slate-50 dark:text-dark-400 dark:hover:text-white dark:hover:bg-dark-800/60; }
-  html.dark .sidebar-item-active { @apply bg-primary-600 text-white border-primary-500 shadow-lg shadow-primary-900/50; }
+  html.dark .sidebar-item-active { @apply bg-primary-600 text-white border-primary-500 shadow-lg shadow-primary-900/40; }
 
   /* ── Category Panel (Dashboard/Module Sidebars) ─────── */
   .category-panel {
