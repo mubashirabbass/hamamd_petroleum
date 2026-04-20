@@ -226,6 +226,7 @@ export const useStore = create<AppState>()((set, get) => ({
   dbReady: false,
   dbError: null,
   currentMachineId: null,
+  localActivationId: null,
 
   initializeFromDB: async () => {
     try {
