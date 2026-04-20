@@ -263,55 +263,33 @@ export default function AssetPage() {
         </div>
 
         {activeTab === 'database' && (
-          <div className="flex flex-col gap-3">
-             {/* Asset account selector for mobile */}
-             <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-                {assetCategories.map((c) => (
-                  <button
-                    key={c.id}
-                    onClick={() => { setSelectedCat(c.id); setPage(1); }}
-                    className={cn(
-                      "flex-shrink-0 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                      selectedCat === c.id
-                        ? "bg-emerald-600 text-white shadow-lg shadow-emerald-500/20"
-                        : "bg-slate-100 dark:bg-dark-800 text-slate-500"
-                    )}
-                  >
-                    {c.name}
-                  </button>
-                ))}
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+             <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-dark-800 p-1 rounded-xl border border-slate-200 dark:border-dark-700/50 flex-shrink-0">
+                <input 
+                  type="date" 
+                  className="bg-transparent text-[10px] font-black text-slate-600 dark:text-dark-400 outline-none w-24" 
+                  value={fromDate} 
+                  onChange={(e) => { setFromDate(e.target.value); setPage(1); }} 
+                />
+                <span className="text-[10px] text-slate-300">→</span>
+                <input 
+                  type="date" 
+                  className="bg-transparent text-[10px] font-black text-slate-600 dark:text-dark-400 outline-none w-24" 
+                  value={toDate} 
+                  onChange={(e) => { setToDate(e.target.value); setPage(1); }} 
+                />
              </div>
-
-             <div className="flex items-center justify-between gap-2 overflow-x-auto no-scrollbar pb-1">
-                <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-dark-800 p-1 rounded-xl border border-slate-200 dark:border-dark-700/50 flex-shrink-0">
-                    <input 
-                      type="date" 
-                      className="bg-transparent text-[10px] font-black text-slate-600 dark:text-dark-400 outline-none w-24" 
-                      value={fromDate} 
-                      onChange={(e) => { setFromDate(e.target.value); setPage(1); }} 
-                    />
-                    <span className="text-[10px] text-slate-300">→</span>
-                    <input 
-                      type="date" 
-                      className="bg-transparent text-[10px] font-black text-slate-600 dark:text-dark-400 outline-none w-24" 
-                      value={toDate} 
-                      onChange={(e) => { setToDate(e.target.value); setPage(1); }} 
-                    />
-                </div>
-                <div className="flex items-center gap-2">
-                  <button onClick={() => setShowReport(true)} className="p-2.5 rounded-xl bg-slate-100 dark:bg-dark-800 text-slate-600 active:scale-95 transition-all"><Printer className="w-4 h-4" /></button>
-                  { (fromDate || toDate) && (
-                    <button onClick={() => { setFromDate(''); setToDate(''); setPage(1); }} className="flex-shrink-0 p-2.5 rounded-xl bg-red-50 text-red-600"><X className="w-4 h-4" /></button>
-                  )}
-                </div>
-             </div>
+             { (fromDate || toDate) && (
+                <button onClick={() => { setFromDate(''); setToDate(''); setPage(1); }} className="flex-shrink-0 p-2 text-red-600"><X className="w-4 h-4" /></button>
+             )}
           </div>
         )}
       </div>
 
-      <div className="flex-1 flex flex-col md:flex-row gap-4 h-full w-full overflow-hidden">
+      <div className="flex-1 flex gap-0 md:gap-4 h-full w-full overflow-hidden">
+
         {activeTab === 'dashboard' ? (
-          <div className="flex-1 flex flex-col h-full overflow-hidden p-4 md:p-6 pb-20">
+          <div className="flex-1 flex flex-col h-full overflow-hidden p-4 md:p-6 pb-10">
             <div className="grid grid-cols-2 gap-3 mb-6">
               {(() => {
                 const allFilteredEntries = filterByStartDate(assetEntries, settings.startDate)
@@ -320,8 +298,8 @@ export default function AssetPage() {
                     const matchesTo = !toDate || e.date <= toDate;
                     return matchesFrom && matchesTo;
                   });
-                const globalDebit = allFilteredEntries.reduce((sum, e) => sum + (e.debit || 0), 0);
-                const globalCredit = allFilteredEntries.reduce((sum, e) => sum + (e.credit || 0), 0);
+                const globalDebit = allFilteredEntries.reduce((sum, e) => sum + e.debit, 0);
+                const globalCredit = allFilteredEntries.reduce((sum, e) => sum + e.credit, 0);
                 const globalNet = globalDebit - globalCredit;
                 
                 return (
@@ -450,9 +428,27 @@ export default function AssetPage() {
             )}
           </div>
         ) : activeTab === 'database' ? (
-          <div className="flex-1 flex flex-col min-h-0 bg-slate-50 dark:bg-dark-950/20 p-4 pb-20 overflow-hidden">
+          <div className="flex-1 flex flex-col min-h-0 bg-slate-50 dark:bg-dark-950/20 p-4 pb-20">
+            {/* Account Pill Switcher */}
+            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar mb-4 pb-2">
+               {assetCategories.map(c => (
+                 <button
+                   key={c.id}
+                   onClick={() => { setSelectedCat(c.id); setPage(1); }}
+                   className={cn(
+                     "flex-shrink-0 px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all",
+                     selectedCat === c.id 
+                       ? "bg-emerald-600 text-white shadow-lg shadow-emerald-500/20" 
+                       : "bg-white dark:bg-dark-900 text-slate-500 border border-slate-200 dark:border-dark-800"
+                   )}
+                 >
+                   {c.name}
+                 </button>
+               ))}
+            </div>
+
             <div className="mb-4">
-              <SearchBar value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search historical entries..." fullWidth />
+              <SearchBar value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search transactions..." fullWidth />
             </div>
 
             <div className="flex-1 overflow-y-auto no-scrollbar smart-scroll">

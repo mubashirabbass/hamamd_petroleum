@@ -4,8 +4,8 @@
   "version": "1.0.0",
   "identifier": "com.ebs.business.mobile",
   "build": {
-    "beforeDevCommand": "npm run dev:mobile",
-    "devUrl": "http://localhost:1421",
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
     "beforeBuildCommand": "npm run build",
     "frontendDist": "../dist"
   },

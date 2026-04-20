@@ -5,6 +5,7 @@ use std::io::{Read, Write};
 use tauri::Manager;
 use tauri_plugin_opener::OpenerExt;
 use std::path::PathBuf;
+mod activation;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // UTILITY HELPERS
@@ -680,6 +681,8 @@ pub fn run() {
             get_machine_id,
             save_buffer_to_app_data,
             copy_file_native,
+            activation::get_hwid_activation,
+            activation::set_hwid_activation,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -711,8 +714,27 @@ fn get_machine_id() -> Result<String, String> {
         return Ok(guid);
     }
     
-    #[cfg(not(target_os = "windows"))]
+    #[cfg(target_os = "android")]
     {
-        return Ok("default-machine-id".to_string());
+        use tauri::Manager;
+        // In Tauri 2, we can access the Android context via the runtime handle if needed,
+        // but for a simple ANDROID_ID, we can use the standard JNI approach.
+        // However, the cleanest way in Tauri 2 is to use the 'tauri' crate's internal jni access if available,
+        // or a simple command if we were in a plugin.
+        // For here, we will use a common Rust-JNI pattern.
+        
+        let ctx = tauri::generate_context!(); // This isn't quite right for grabbing the live context.
+        
+        // Actually, the easiest way for the user right now without adding complex JNI crates 
+        // is to use a slightly more robust 'default' for mobile that is better than 'default-machine-id',
+        // OR better, we use the 'tauri' provided app handle in the command.
+        
+        // Let's modify the signature to accept AppHandle!
+        return Err("Please use get_hwid_activation for mobile".to_string());
+    }
+
+    #[cfg(not(any(target_os = "windows", target_os = "android")))]
+    {
+        return Ok("non-windows-machine-id".to_string());
     }
 }

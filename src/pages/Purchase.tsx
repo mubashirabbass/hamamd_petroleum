@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { 
   Plus, Trash2, Eye, Edit2, Printer, BarChart3, ArrowRight, History, Zap, Fuel, 
-  LayoutGrid, Database, ShoppingCart, Save, Pin, PinOff 
+  LayoutGrid, Database, ShoppingCart, Save, Pin, PinOff, XCircle, ArrowUpDown 
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { formatCurrency, formatDate, today, paginate, filterByStartDate, startOfMonth, startOfYear, getErrorMessage, cn } from '../lib/utils';
@@ -48,6 +48,7 @@ export default function PurchasePage() {
   const [editingEntity, setEditingEntity] = useState<any>(null);
   const [viewingEntity, setViewingEntity] = useState<any>(null);
   const [showReport, setShowReport] = useState(false);
+  const [entrySort, setEntrySort] = useState('date_desc');
   const [isSaving, setIsSaving] = useState(false);
   const [form, setForm] = useState({
     date: today(),
@@ -68,7 +69,7 @@ export default function PurchasePage() {
   };
 
   const filtered = useMemo(() => {
-    return filterByStartDate(purchases, settings.startDate)
+    const f = filterByStartDate(purchases, settings.startDate)
       .filter((p) => p.type === fuelType)
       .filter((p) => {
         const matchesSearch = !search || p.date.includes(search) || (p.invoiceNo && p.invoiceNo.toLowerCase().includes(search.toLowerCase()));
@@ -76,7 +77,18 @@ export default function PurchasePage() {
         const matchesTo = !toDate || p.date <= toDate;
         return matchesSearch && matchesFrom && matchesTo;
       });
-  }, [purchases, settings.startDate, fuelType, search, fromDate, toDate]);
+
+    return [...f].sort((a, b) => {
+      switch (entrySort) {
+        case 'date_desc':        return b.date.localeCompare(a.date);
+        case 'date_asc':         return a.date.localeCompare(b.date);
+        case 'totalAmount_desc': return b.totalAmount - a.totalAmount;
+        case 'totalAmount_asc':  return a.totalAmount - b.totalAmount;
+        case 'quantity_desc':    return b.quantity - a.quantity;
+        default:                 return b.date.localeCompare(a.date);
+      }
+    });
+  }, [purchases, settings.startDate, fuelType, search, fromDate, toDate, entrySort]);
 
   const paged = paginate(filtered, page, perPage);
 
@@ -235,47 +247,36 @@ export default function PurchasePage() {
           </button>
         </div>
 
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
-             <div className="segmented-control shrink-0 !w-auto">
-                {(['HSD', 'PMG'] as FuelType[]).map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => handleFuelSelect(t)}
-                    className={cn(
-                      "segmented-item !py-1.5 !px-4",
-                      fuelType === t ? "segmented-item-active" : "segmented-item-inactive"
-                    )}
-                  >
-                    {t}
-                  </button>
-                ))}
-             </div>
-             <div className="flex flex-1 items-center gap-1.5 bg-slate-100 dark:bg-dark-800 p-1 rounded-xl border border-slate-200 dark:border-dark-700/50 shrink-0">
-                <input
-                  type="date"
-                  className="bg-transparent text-[10px] font-black text-slate-600 dark:text-dark-400 outline-none w-24"
-                  value={fromDate}
-                  onChange={(e) => { setFromDate(e.target.value); setPage(1); }}
-                />
-                <span className="text-[10px] text-slate-300 font-black">→</span>
-                <input
-                  type="date"
-                  className="bg-transparent text-[10px] font-black text-slate-600 dark:text-dark-400 outline-none w-24"
-                  value={toDate}
-                  onChange={(e) => { setToDate(e.target.value); setPage(1); }}
-                />
-             </div>
-          </div>
-
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
-            <button onClick={() => { setFromDate(today()); setToDate(today()); setPage(1); }} className="px-3 py-1.5 bg-slate-100 dark:bg-dark-800 text-[9px] font-black uppercase rounded-lg border border-slate-200 dark:border-dark-700/50">Today</button>
-            <button onClick={() => { setFromDate(startOfMonth()); setToDate(today()); setPage(1); }} className="px-3 py-1.5 bg-slate-100 dark:bg-dark-800 text-[9px] font-black uppercase rounded-lg border border-slate-200 dark:border-dark-700/50">Month</button>
-            <button onClick={() => { setFromDate(startOfYear()); setToDate(today()); setPage(1); }} className="px-3 py-1.5 bg-slate-100 dark:bg-dark-800 text-[9px] font-black uppercase rounded-lg border border-slate-200 dark:border-dark-700/50">Year</button>
-            {(fromDate || toDate) && (
-              <button onClick={() => { setFromDate(''); setToDate(''); setPage(1); }} className="px-3 py-1.5 bg-red-50 text-red-600 text-[9px] font-black uppercase rounded-lg border border-red-200">Reset</button>
-            )}
-          </div>
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
+           <div className="segmented-control !bg-blue-50/50 dark:!bg-blue-900/10 !p-0.5 shrink-0 !w-auto">
+              {(['HSD', 'PMG'] as FuelType[]).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => handleFuelSelect(t)}
+                  className={cn(
+                    "segmented-item !py-1.5 !px-4",
+                    fuelType === t ? "!bg-blue-600 !text-white !shadow-md" : "!text-blue-600/60"
+                  )}
+                >
+                  {t}
+                </button>
+              ))}
+           </div>
+           <div className="flex items-center gap-1 bg-slate-100 dark:bg-dark-800 p-1.5 rounded-xl border border-slate-200 dark:border-dark-700/50 shrink-0">
+              <input
+                type="date"
+                className="bg-transparent text-[10px] font-black text-slate-600 dark:text-dark-400 outline-none w-[110px] text-center"
+                value={fromDate}
+                onChange={(e) => { setFromDate(e.target.value); setPage(1); }}
+              />
+              <span className="text-[10px] text-slate-300 font-black">—</span>
+              <input
+                type="date"
+                className="bg-transparent text-[10px] font-black text-slate-600 dark:text-dark-400 outline-none w-[110px] text-center"
+                value={toDate}
+                onChange={(e) => { setToDate(e.target.value); setPage(1); }}
+              />
+           </div>
         </div>
       </div>
 
@@ -340,31 +341,29 @@ export default function PurchasePage() {
           </div>
         </div>
       ) : (
-        <div className="flex-1 flex flex-col min-h-0 bg-slate-50 dark:bg-dark-950/20 p-4 pb-20 overflow-hidden">
+        <div className="flex-1 flex flex-col min-h-0 bg-slate-50 dark:bg-dark-950/20 p-4 pb-48">
           <div className="mb-4">
             <SearchBar value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search historical purchases..." fullWidth />
           </div>
 
           <div className="flex-1 overflow-y-auto no-scrollbar smart-scroll">
-            <div className="space-y-3">
-              {paged.map((p) => (
-                <MobileActivityCard
-                  key={p.id}
-                  title={p.description || `Purchase ${p.invoiceNo || ''}`}
-                  subtitle={`${p.quantity.toLocaleString()} L @ ₨ ${formatCurrency(p.rate)}`}
-                  amount={`₨ ${formatCurrency(p.totalAmount)}`}
-                  date={formatDate(p.date)}
-                  icon={p.type === 'HSD' ? Fuel : Zap}
-                  iconColor={p.type === 'HSD' ? 'text-amber-500' : 'text-blue-500'}
-                  onClick={() => setViewingEntity(p)}
-                />
-              ))}
-              {paged.length === 0 && (
-                <div className="py-20 text-center">
-                  <p className="text-xs font-black text-slate-400 uppercase tracking-widest">No entries found for this period</p>
-                </div>
-              )}
-            </div>
+            {paged.map((p) => (
+              <MobileActivityCard
+                key={p.id}
+                title={p.description || `Purchase ${p.invoiceNo || ''}`}
+                subtitle={`${p.quantity.toLocaleString()} L @ ₨ ${formatCurrency(p.rate)}`}
+                amount={`₨ ${formatCurrency(p.totalAmount)}`}
+                date={formatDate(p.date)}
+                icon={p.type === 'HSD' ? Fuel : Zap}
+                iconColor={p.type === 'HSD' ? 'text-amber-500' : 'text-blue-500'}
+                onClick={() => setViewingEntity(p)}
+              />
+            ))}
+            {paged.length === 0 && (
+              <div className="py-20 text-center">
+                <p className="text-xs font-black text-slate-400 uppercase tracking-widest">No entries found for this period</p>
+              </div>
+            )}
             <div className="mt-4">
               <Pagination page={page} total={filtered.length} perPage={perPage} onChange={setPage} />
             </div>

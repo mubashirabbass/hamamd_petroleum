@@ -7,7 +7,7 @@ import { createRequire } from "module";
 const require = createRequire(import.meta.url);
 const qrcode = require("qrcode-terminal");
 
-const PORT = 1420;
+const PORT = 1421; // Port for ebs-mobile
 
 function getLocalIP() {
   const nets = networkInterfaces();
@@ -27,9 +27,9 @@ setTimeout(() => {
   const url = `http://${ip}:${PORT}`;
 
   console.log("\n\x1b[36m╔══════════════════════════════════════════════╗");
-  console.log("║       📱  EBS Mobile Preview — Ready!        ║");
+  console.log("║    📱  EBS MOBILE VIEW PREVIEW — Ready!     ║");
   console.log("╚══════════════════════════════════════════════╝\x1b[0m\n");
-  console.log(`\x1b[32m✅ App URL:\x1b[0m \x1b[1m\x1b[33m${url}\x1b[0m\n`);
+  console.log(`\x1b[32m✅ Mobile App URL:\x1b[0m \x1b[1m\x1b[33m${url}\x1b[0m\n`);
   console.log("\x1b[35m📷 Scan with your phone camera:\x1b[0m\n");
 
   qrcode.generate(url, { small: true });

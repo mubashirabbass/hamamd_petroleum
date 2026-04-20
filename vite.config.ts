@@ -16,8 +16,7 @@ export default defineConfig(async () => ({
   server: {
     port: 1420,
     strictPort: true,
-    host: "0.0.0.0",   // ← exposes on local network for mobile testing
-    allowedHosts: true,
+    host: host || false,
     hmr: host
       ? {
           protocol: "ws",

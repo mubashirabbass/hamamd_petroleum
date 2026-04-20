@@ -1,52 +1,74 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { 
-  Wallet, Plus, Trash2, Eye, Edit2, Search, Check, X, FileText, Settings, 
-  UserPlus, Printer, BarChart3, ArrowRight, ArrowUpDown, Save, Pin, PinOff,
-  ArrowLeft, ChevronRight, Landmark
-} from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
+import { Wallet, Plus, Trash2, Eye, Edit2, Search, Check, X, FileText, Settings, UserPlus, Printer, BarChart3, ArrowRight, ArrowUpDown, Save, Pin, PinOff, Tag } from 'lucide-react';
 import { useStore } from '../store/useStore';
-import { 
-  formatCurrency, formatDate, today, paginate, filterByStartDate, cn, 
-  startOfMonth, startOfYear 
-} from '../lib/utils';
+import { formatCurrency, formatDate, today, paginate, filterByStartDate, cn, startOfMonth, startOfYear } from '../lib/utils';
 import { useToast } from '../components/ui/Toast';
+import SearchBar from '../components/ui/SearchBar';
+import Pagination from '../components/ui/Pagination';
 import Modal from '../components/ui/Modal';
 import TransactionReceiptModal from '../components/modals/TransactionReceiptModal';
 import PrintReportModal from '../components/modals/PrintReportModal';
 import FAB from '../components/ui/FAB';
+import MobileActivityCard from '../components/ui/MobileActivityCard';
+
+// const PER_PAGE = 40; // Replaced by state
 
 export default function ExpensePage() {
   const { 
     expenseCategories, expenseEntries, 
     addExpenseCategory, updateExpenseCategory, deleteExpenseCategory, 
-    addExpenseEntry, deleteExpenseEntry, settings, updateExpenseEntry 
+    addExpenseEntry, deleteExpenseEntry, settings, currentUser, updateExpenseEntry 
   } = useStore();
-  const navigate = useNavigate();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
 
-  const [activeTab, setActiveTab] = useState<'analytics' | 'entries' | 'register' | 'manage'>('analytics');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'database' | 'register' | 'manage'>('dashboard');
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
-  const [dashboardSearch, setDashboardSearch] = useState('');
-  const [dashSort, setDashSort] = useState('name_asc');
-  const [fromDate, setFromDate] = useState(startOfMonth());
-  const [toDate, setToDate] = useState(today());
-  
+  const [isSidebarPinned, setIsSidebarPinned] = useState(false);
+  const isExpanded = isSidebarPinned;
   const [showEntryForm, setShowEntryForm] = useState(false);
-  const [editingEntity, setEditingEntity] = useState<any>(null);
-  const [viewingEntity, setViewingEntity] = useState<any>(null);
   const [showReport, setShowReport] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   
   // Registration Form State
   const [newName, setNewName] = useState('');
-  
-  // Management state
+
+  // Management State
   const [manageSearch, setManageSearch] = useState('');
+  const [sidebarSearch, setSidebarSearch] = useState('');
+  const [dashboardSearch, setDashboardSearch] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ name: '' });
 
+  // Transaction Table State
+  const [search, setSearch] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const [page, setPage] = useState(1);
+  const [dashPage, setDashPage] = useState(1);
+  const [editingEntity, setEditingEntity] = useState<any>(null);
+  const [viewingEntity, setViewingEntity] = useState<any>(null);
+  const [perPage, setPerPage] = useState(40);
   const [form, setForm] = useState({ date: today(), details: '', amount: '' });
+  const [isSaving, setIsSaving] = useState(false);
+  const [dashSort, setDashSort] = useState('name_asc');
+  const [entrySort, setEntrySort] = useState('date_desc');
+  const [sidebarSort, setSidebarSort] = useState('name_asc');
+  
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    const action = searchParams.get('action');
+
+    if (tab === 'register') setActiveTab('register');
+    else if (tab === 'dashboard') setActiveTab('dashboard');
+    else if (tab === 'database') setActiveTab('database');
+    else if (tab === 'manage') setActiveTab('manage');
+
+    if (action === 'add') {
+      setActiveTab('database');
+      setShowEntryForm(true);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (!selectedCat && expenseCategories.length > 0) {
@@ -56,382 +78,565 @@ export default function ExpensePage() {
 
   const cat = expenseCategories.find((c) => c.id === selectedCat);
 
-  const stats = useMemo(() => {
-    const periodEntries = filterByStartDate(expenseEntries, settings.startDate).filter(e => {
-      const matchesFrom = !fromDate || e.date >= fromDate;
-      const matchesTo = !toDate || e.date <= toDate;
-      return matchesFrom && matchesTo;
-    });
-
-    const categoryStats = expenseCategories.map(c => {
-      const entries = periodEntries.filter(e => e.categoryId === c.id);
+  const filteredSidebar = useMemo(() => {
+    const list = expenseCategories.filter((c) => !sidebarSearch || c.name.toLowerCase().includes(sidebarSearch.toLowerCase()));
+    
+    const withTotals = list.map(c => {
+      const entries = filterByStartDate(expenseEntries, settings.startDate).filter(e => e.categoryId === c.id);
       const total = entries.reduce((s, e) => s + (e.amount || 0), 0);
-      return { ...c, total, count: entries.length };
+      return { ...c, total };
     });
 
-    const totalExpenses = periodEntries.reduce((s, e) => s + (e.amount || 0), 0);
+    return [...withTotals].sort((a, b) => {
+      switch (sidebarSort) {
+        case 'name_asc':     return a.name.localeCompare(b.name);
+        case 'name_desc':    return b.name.localeCompare(a.name);
+        case 'total_desc':   return b.total - a.total;
+        case 'total_asc':    return a.total - b.total;
+        default:             return a.name.localeCompare(b.name);
+      }
+    });
+  }, [expenseCategories, sidebarSearch, sidebarSort, expenseEntries, settings.startDate]);
 
-    return { totalExpenses, totalEntries: periodEntries.length, categories: categoryStats };
-  }, [expenseCategories, expenseEntries, settings.startDate, fromDate, toDate]);
+  const filteredManage = useMemo(() =>
+    expenseCategories.filter((c) => !manageSearch || c.name.toLowerCase().includes(manageSearch.toLowerCase())),
+    [expenseCategories, manageSearch]
+  );
 
-  const filteredCategories = useMemo(() => {
-    return stats.categories
-      .filter((c: any) => !dashboardSearch || c.name.toLowerCase().includes(dashboardSearch.toLowerCase()))
-      .sort((a: any, b: any) => {
-        if (dashSort === 'name_asc') return a.name.localeCompare(b.name);
-        if (dashSort === 'name_desc') return b.name.localeCompare(a.name);
-        if (dashSort === 'total_desc') return b.total - a.total;
-        if (dashSort === 'total_asc') return a.total - b.total;
-        return 0;
-      });
-  }, [stats.categories, dashboardSearch, dashSort]);
-
-  const filteredEntries = useMemo(() => {
+  const catEntries = useMemo(() => {
     if (!selectedCat) return [];
-    return filterByStartDate(expenseEntries, settings.startDate)
-      .filter(e => e.categoryId === selectedCat)
-      .filter(e => {
+    
+    const filtered = filterByStartDate(expenseEntries, settings.startDate)
+      .filter((e) => e.categoryId === selectedCat)
+      .filter((e) => {
+        const matchesSearch = !search || e.details?.toLowerCase().includes(search.toLowerCase()) || e.date.includes(search);
         const matchesFrom = !fromDate || e.date >= fromDate;
-        const matchesTo = !toDate || e.date <= toDate;
-        return matchesFrom && matchesTo;
-      })
-      .sort((a, b) => b.date.localeCompare(a.date));
-  }, [expenseEntries, settings.startDate, selectedCat, fromDate, toDate]);
+        const matchesTo   = !toDate   || e.date <= toDate;
+        return matchesSearch && matchesFrom && matchesTo;
+      });
+
+    return [...filtered].sort((a, b) => {
+      switch (entrySort) {
+        case 'date_desc':    return b.date.localeCompare(a.date);
+        case 'date_asc':     return a.date.localeCompare(b.date);
+        case 'details_asc':  return (a.details || '').localeCompare(b.details || '');
+        case 'details_desc': return (b.details || '').localeCompare(a.details || '');
+        case 'amount_desc':  return (b.amount || 0) - (a.amount || 0);
+        case 'amount_asc':   return (a.amount || 0) - (b.amount || 0);
+        default:             return b.date.localeCompare(a.date);
+      }
+    });
+  }, [expenseEntries, settings.startDate, selectedCat, search, fromDate, toDate, entrySort]);
+
+  const paged = paginate(catEntries, page, perPage);
+
+  const pageTotals = paged.reduce((s, e) => s + (e.amount || 0), 0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedCat || !form.date || !form.amount) return;
-
+    if (!selectedCat || !form.date || !form.amount) { toast('Fill required fields', 'error'); return; }
+    
+    const amount = parseFloat(form.amount) || 0;
+    const payload = { categoryId: selectedCat, date: form.date, details: form.details, amount };
+    
     setIsSaving(true);
     try {
-      const amount = parseFloat(form.amount) || 0;
-      const payload = { categoryId: selectedCat, date: form.date, details: form.details, amount };
-
       if (editingEntity) {
         await updateExpenseEntry(editingEntity.id, payload);
         toast('Entry updated', 'success');
+        closeForm(); // Close after edit
       } else {
         await addExpenseEntry(payload);
         toast('Entry added', 'success');
+        resetFormForNext(); // Stay open after add
       }
-      setShowEntryForm(false);
-      setEditingEntity(null);
-    } catch (err) {
-      toast('Failed to save entry', 'error');
+    } catch (err: any) {
+      console.error('Save error:', err);
+      const msg = err?.message || err || 'Unknown database error';
+      toast(`Failed to save: ${msg}`, 'error');
     } finally {
       setIsSaving(false);
     }
   };
 
+  const resetFormForNext = () => {
+    setEditingEntity(null);
+    setForm(prev => ({ ...prev, details: '', amount: '' }));
+  };
+
+  const closeForm = () => {
+    setShowEntryForm(false);
+    setEditingEntity(null);
+    setForm({ date: today(), details: '', amount: '' });
+  };
+
+  const handleEdit = (e: any) => {
+    setEditingEntity(e);
+    setForm({
+      date: e.date,
+      details: e.details || '',
+      amount: e.amount.toString(),
+    });
+    setShowEntryForm(true);
+  };
+
+  const totals = catEntries.reduce((s, e) => s + e.amount, 0);
+
   const handleAddCategory = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newName.trim()) return;
-    if (expenseCategories.some(c => c.name.toLowerCase() === newName.trim().toLowerCase())) {
-        toast('Category already exists', 'error');
-        return;
+
+    const normalized = newName.trim().toLowerCase();
+    if (expenseCategories.some(c => c.name.toLowerCase() === normalized)) {
+      toast('An expense category with this name already exists!', 'error');
+      return;
     }
+
     addExpenseCategory(newName.trim());
     setNewName('');
-    toast('Account created', 'success');
-    setActiveTab('analytics');
+    toast('Account registered successfully', 'success');
+    setActiveTab('dashboard');
+  };
+
+  const handleStartEdit = (cat: any) => {
+    setEditingId(cat.id);
+    setEditForm({ name: cat.name });
+  };
+
+  const handleSaveEdit = (id: string) => {
+    if (!editForm.name.trim()) return;
+
+    const normalized = editForm.name.trim().toLowerCase();
+    if (expenseCategories.some(c => c.id !== id && c.name.toLowerCase() === normalized)) {
+      toast('Another expense category already has this name!', 'error');
+      return;
+    }
+
+    updateExpenseCategory(id, editForm.name.trim());
+    setEditingId(null);
+    toast('Account details updated', 'success');
   };
 
   return (
-    <div className="animate-fade-in flex flex-col h-full w-full bg-slate-50 dark:bg-dark-950 overflow-hidden">
-      {/* ── Header ── */}
-      <div className="bg-white/80 dark:bg-dark-900/80 backdrop-blur-xl border-b border-slate-200 dark:border-dark-800 px-4 py-3 flex items-center justify-between shrink-0">
-        <button onClick={() => navigate('/')} className="w-10 h-10 rounded-full flex items-center justify-center active:scale-90 transition-all font-black text-slate-600">
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        
-        <div className="flex flex-col items-center">
-            <div className="flex items-center gap-2">
-                <img src="/hr-logo.png" alt="" className="w-4 h-4 object-contain" />
-                <span className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-800 dark:text-white">Expense</span>
-            </div>
-            <span className="text-[7px] font-black uppercase tracking-[0.3em] text-primary-600">HR Filling Station</span>
+    <div className="animate-fade-in flex flex-col h-full w-full overflow-hidden">
+      {/* Native Mobile View Switcher */}
+      <div className="flex flex-col gap-3 p-4 bg-white dark:bg-dark-900/50 border-b border-slate-200 dark:border-dark-800 flex-shrink-0">
+        <div className="segmented-control overflow-x-auto no-scrollbar">
+          <button
+            onClick={() => setActiveTab('dashboard')}
+            className={cn("segmented-item", activeTab === 'dashboard' ? "segmented-item-active" : "segmented-item-inactive")}
+          >
+            Analytics
+          </button>
+          <button
+            onClick={() => setActiveTab('database')}
+            className={cn("segmented-item", activeTab === 'database' ? "segmented-item-active" : "segmented-item-inactive")}
+          >
+            History
+          </button>
+          <button
+            onClick={() => setActiveTab('register')}
+            className={cn("segmented-item", activeTab === 'register' ? "segmented-item-active" : "segmented-item-inactive")}
+          >
+            New Acc
+          </button>
+          <button
+            onClick={() => setActiveTab('manage')}
+            className={cn("segmented-item", activeTab === 'manage' ? "segmented-item-active" : "segmented-item-inactive")}
+          >
+            Manage
+          </button>
         </div>
 
-        <div className="w-10" />
+        {activeTab === 'database' && (
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+             <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-dark-800 p-1 rounded-xl border border-slate-200 dark:border-dark-700/50 flex-shrink-0">
+                <input 
+                  type="date" 
+                  className="bg-transparent text-[10px] font-black text-slate-600 dark:text-dark-400 outline-none w-24" 
+                  value={fromDate} 
+                  onChange={(e) => { setFromDate(e.target.value); setPage(1); }} 
+                />
+                <span className="text-[10px] text-slate-300">?"</span>
+                <input 
+                  type="date" 
+                  className="bg-transparent text-[10px] font-black text-slate-600 dark:text-dark-400 outline-none w-24" 
+                  value={toDate} 
+                  onChange={(e) => { setToDate(e.target.value); setPage(1); }} 
+                />
+             </div>
+             { (fromDate || toDate) && (
+                <button onClick={() => { setFromDate(''); setToDate(''); setPage(1); }} className="flex-shrink-0 p-2 text-red-600"><X className="w-4 h-4" /></button>
+             )}
+          </div>
+        )}
       </div>
 
-      <div className="flex-1 overflow-y-auto no-scrollbar smart-scroll pb-32">
-        <div className="p-4 space-y-6">
-          {/* ── Navigation Tabs ── */}
-          <div className="pill-bar flex !p-1.5 h-14 w-full">
-            {[
-                { id: 'analytics', label: 'Analytics' },
-                { id: 'entries', label: 'Entries' },
-                { id: 'register', label: 'New Acc' },
-                { id: 'manage', label: 'Manage' }
-            ].map(tab => (
-                <button 
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
-                  className={cn("flex-1 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all", activeTab === tab.id ? "bg-white dark:bg-dark-700 text-primary-600 shadow-sm" : "text-slate-400")}
-                >
-                  {tab.label}
-                </button>
-            ))}
-          </div>
+      <div className="flex-1 flex gap-0 md:gap-4 h-full w-full overflow-hidden">
 
-          {activeTab === 'analytics' && (
-            <div className="space-y-6">
-              {/* ── Summary High-Card ── */}
-              <div className="glass-card !p-8 border-l-8 border-red-500 shadow-2xl bg-gradient-to-br from-red-50/50 to-white dark:from-red-950/10 transition-all">
-                <p className="text-[10px] font-black text-red-600 uppercase tracking-[0.2em] mb-2">Total Expenses</p>
-                <div className="flex items-baseline gap-2">
-                    <span className="text-[20px] font-black text-slate-400">₨</span>
-                    <span className="text-4xl font-[900] text-slate-900 dark:text-white tracking-tighter tabular-nums">
-                        {formatCurrency(stats.totalExpenses)}
-                    </span>
-                </div>
-              </div>
-
-              {/* ── Summary Grid ── */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="glass-card !p-5 border-l-4 border-slate-300">
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Categories</p>
-                    <p className="text-2xl font-[900] text-slate-800 dark:text-white tabular-nums">{expenseCategories.length}</p>
-                </div>
-                <div className="glass-card !p-5 border-l-4 border-emerald-500">
-                    <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest mb-1.5">Total Entries</p>
-                    <p className="text-2xl font-[900] text-slate-800 dark:text-white tabular-nums">{stats.totalEntries}</p>
-                </div>
-              </div>
-
-              {/* ── Filter Bar ── */}
-              <div className="flex flex-col gap-4">
-                <div className="flex items-center gap-3">
-                    <div className="flex-1 relative">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                        <input 
-                          value={dashboardSearch}
-                          onChange={(e) => setDashboardSearch(e.target.value)}
-                          placeholder="Search..." 
-                          className="w-full h-12 bg-white dark:bg-dark-800 rounded-2xl border border-slate-200 dark:border-dark-700/50 pl-11 pr-4 text-[11px] font-bold outline-none focus:ring-2 focus:ring-primary-500/20"
-                        />
+        {activeTab === 'dashboard' ? (
+          <div className="flex-1 flex flex-col h-full overflow-hidden p-4 md:p-6 pb-20">
+            <div className="grid grid-cols-2 gap-3 mb-6">
+              {(() => {
+                const allFilteredEntries = filterByStartDate(expenseEntries, settings.startDate)
+                  .filter(e => {
+                    const matchesFrom = !fromDate || e.date >= fromDate;
+                    const matchesTo = !toDate || e.date <= toDate;
+                    return matchesFrom && matchesTo;
+                  });
+                const globalTotal = allFilteredEntries.reduce((sum, e) => sum + e.amount, 0);
+                
+                return (
+                  <>
+                    <div className="glass p-4 rounded-3xl border-l-4 border-red-600 shadow-xl bg-gradient-to-br from-red-50 to-white dark:from-red-900/10 dark:to-dark-900 col-span-2">
+                      <p className="text-[10px] font-black text-red-600 uppercase tracking-widest mb-1">Total Expenses</p>
+                      <p className="text-2xl font-black text-slate-900 dark:text-white tabular-nums">₨ {formatCurrency(globalTotal)}</p>
                     </div>
-                    <div className="relative shrink-0">
-                        <select 
-                          value={dashSort}
-                          onChange={(e) => setDashSort(e.target.value)}
-                          className="h-12 pl-10 pr-8 bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700/50 rounded-2xl text-[10px] font-black uppercase tracking-wider outline-none appearance-none"
-                        >
-                            <option value="name_asc">A-Z</option>
-                            <option value="name_desc">Z-A</option>
-                            <option value="total_desc">Expense (High)</option>
-                            <option value="total_asc">Expense (Low)</option>
-                        </select>
-                        <ArrowUpDown className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                    <div className="glass p-4 rounded-3xl border-l-4 border-slate-400 shadow-xl bg-white/50 dark:bg-dark-800/50">
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Categories</p>
+                      <p className="text-xl font-black text-slate-900 dark:text-white">{expenseCategories.length}</p>
                     </div>
-                </div>
+                    <div className="glass p-4 rounded-3xl border-l-4 border-emerald-500 shadow-xl bg-emerald-50/30 dark:bg-emerald-900/10">
+                      <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest mb-1">Total Entries</p>
+                      <p className="text-xl font-black text-slate-900 dark:text-white">{allFilteredEntries.length}</p>
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
 
-                <div className="flex items-center gap-2 p-1.5 bg-slate-200/50 dark:bg-dark-800/50 rounded-2xl border border-slate-200 dark:border-dark-700/50">
-                    <button 
-                      onClick={() => { setFromDate(today()); setToDate(today()); }}
-                      className={cn("flex-1 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all", fromDate === today() ? "bg-white dark:bg-dark-700 text-slate-900 shadow-sm" : "text-slate-400")}
-                    >
-                        Today
-                    </button>
-                    <button 
-                      onClick={() => { setFromDate(startOfMonth()); setToDate(today()); }}
-                      className={cn("flex-1 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all", fromDate === startOfMonth() ? "bg-white dark:bg-dark-700 text-slate-900 shadow-sm" : "text-slate-400")}
-                    >
-                        Month
-                    </button>
-                </div>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
+              {/* Search bar - stays at normal width */}
+              <div className="shrink-0 w-44">
+                <SearchBar
+                  value={dashboardSearch}
+                  onChange={setDashboardSearch}
+                  placeholder="Search..."
+                  fullWidth={true}
+                />
               </div>
+              {/* Period quick-filters */}
+              <div className="flex items-center bg-slate-100 dark:bg-dark-800 p-1 rounded-xl border border-slate-200 dark:border-dark-700/50 shrink-0">
+                <button onClick={() => { setFromDate(today()); setToDate(today()); setPage(1); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-dark-400 hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all whitespace-nowrap">Today</button>
+                <button onClick={() => { setFromDate(startOfMonth()); setToDate(today()); setPage(1); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-dark-400 hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all border-l border-slate-200 dark:border-dark-700/50 whitespace-nowrap">Month</button>
+                <button onClick={() => { setFromDate(startOfYear()); setToDate(today()); setPage(1); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-dark-400 hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all border-l border-slate-200 dark:border-dark-700/50 whitespace-nowrap">Year</button>
+              </div>
+              {(fromDate || toDate) && (
+                <button onClick={() => { setFromDate(''); setToDate(''); setPage(1); }} className="px-3 py-1.5 text-[10px] font-black uppercase tracking-tighter text-red-600 bg-red-50 dark:bg-red-900/20 rounded-lg hover:bg-red-100 transition-all border border-red-200 dark:border-red-800/30 shrink-0">Reset</button>
+              )}
+            </div>
+            </div>
 
-              {/* ── Category List ── */}
-              <div className="space-y-3">
-                {filteredCategories.map((c: any) => (
+            <div className="flex-1 overflow-y-auto no-scrollbar smart-scroll">
+              <div className="space-y-3 mb-20">
+                {(() => {
+                  const itemsWithTotals = expenseCategories.map(cat => {
+                    const entries = filterByStartDate(expenseEntries, settings.startDate)
+                      .filter(e => e.categoryId === cat.id)
+                      .filter(e => {
+                        const matchesFrom = !fromDate || e.date >= fromDate;
+                        const matchesTo = !toDate || e.date <= toDate;
+                        return matchesFrom && matchesTo;
+                      });
+                    const catTotal = entries.reduce((sum, e) => sum + (e.amount || 0), 0);
+                    return { ...cat, total: catTotal, count: entries.length };
+                  });
+
+                  const filtered = itemsWithTotals.filter(c => 
+                    !dashboardSearch || c.name.toLowerCase().includes(dashboardSearch.toLowerCase())
+                  );
+
+                  const sorted = [...filtered].sort((a, b) => {
+                    switch (dashSort) {
+                      case 'name_asc':  return a.name.localeCompare(b.name);
+                      case 'name_desc': return b.name.localeCompare(a.name);
+                      case 'total_desc':return b.total - a.total;
+                      case 'total_asc': return a.total - b.total;
+                      default:          return 0;
+                    }
+                  });
+
+                  return sorted.map(cat => (
                     <div 
-                      key={c.id} 
-                      onClick={() => { setSelectedCat(c.id); setActiveTab('entries'); }}
-                      className="glass-card !p-4 border-l-4 border-red-500 flex items-center justify-between group active:scale-[0.98] transition-all"
+                      key={cat.id}
+                      onClick={() => { setSelectedCat(cat.id); setActiveTab('database'); }}
+                      className="glass p-4 rounded-2xl flex items-center justify-between group active:scale-[0.98] transition-all border-l-4 border-l-red-500 shadow-sm"
                     >
-                        <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-2xl bg-red-50 dark:bg-red-950/20 flex items-center justify-center">
-                                <Wallet className="w-6 h-6 text-red-600" />
-                            </div>
-                            <div>
-                                <p className="text-[14px] font-black text-slate-900 dark:text-white uppercase tracking-tight">{c.name}</p>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{c.count} Entries</p>
-                            </div>
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                          <Wallet className="w-5 h-5 text-red-600" />
                         </div>
-                        <div className="text-right">
-                            <div className="flex items-baseline justify-end gap-1">
-                                <span className="text-lg font-black tabular-nums text-slate-900 dark:text-white">₨ {formatCurrency(c.total)}</span>
-                            </div>
-                            <ChevronRight className="w-4 h-4 text-slate-300 ml-auto mt-0.5 group-active:translate-x-1 transition-transform" />
+                        <div>
+                          <p className="text-[13px] font-black text-slate-900 dark:text-white uppercase tracking-tight">{cat.name}</p>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{cat.count} Entries</p>
                         </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-lg font-black text-slate-900 dark:text-white tabular-nums leading-none">₨ {formatCurrency(cat.total)}</p>
+                        <ArrowRight className="w-4 h-4 text-slate-300 ml-auto mt-1" />
+                      </div>
                     </div>
-                ))}
+                  ));
+                })()}
+              </div>
+            </div>
 
-                {filteredCategories.length === 0 && (
-                    <div className="flex flex-col items-center justify-center py-24 bg-slate-200/20 dark:bg-dark-800/10 rounded-[3rem] border-2 border-dashed border-slate-200 dark:border-dark-700/50">
-                        <Wallet className="w-16 h-16 text-slate-300/50 mb-6" />
-                        <p className="text-sm font-black text-slate-400 uppercase tracking-[0.2em] text-center mb-6 px-10 leading-relaxed">No Categories Registered</p>
-                        <button onClick={() => setActiveTab('register')} className="px-8 py-3.5 bg-red-600/10 text-red-600 text-[10px] font-black uppercase tracking-widest rounded-2xl hover:bg-red-600/20 transition-all">
-                            Register Category →
-                        </button>
-                    </div>
+            {expenseCategories.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-20 bg-slate-50/50 dark:bg-dark-800/30 rounded-3xl border-2 border-dashed border-slate-200 dark:border-dark-700/50">
+                <Wallet className="w-16 h-16 text-slate-300 mb-4" />
+                <p className="text-slate-500 font-black uppercase tracking-widest text-sm">No Categories Registered</p>
+                <button onClick={() => setActiveTab('register')} className="mt-4 text-xs font-black text-red-600 uppercase tracking-widest hover:underline">Register your first category →</button>
+              </div>
+            )}
+          </div>
+        ) : activeTab === 'database' ? (
+          <div className="flex-1 flex flex-col min-h-0 bg-slate-50 dark:bg-dark-950/20 p-4 pb-20">
+            {/* Category Pill Switcher */}
+            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar mb-4 pb-2">
+               {expenseCategories.map(c => (
+                 <button
+                   key={c.id}
+                   onClick={() => { setSelectedCat(c.id); setPage(1); }}
+                   className={cn(
+                     "flex-shrink-0 px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all",
+                     selectedCat === c.id 
+                       ? "bg-red-600 text-white shadow-lg shadow-red-500/20" 
+                       : "bg-white dark:bg-dark-900 text-slate-500 border border-slate-200 dark:border-dark-800"
+                   )}
+                 >
+                   {c.name}
+                 </button>
+               ))}
+            </div>
+
+            <div className="mb-4">
+              <SearchBar value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search entries..." fullWidth />
+            </div>
+
+            <div className="flex-1 overflow-y-auto no-scrollbar smart-scroll">
+              <div className="space-y-3">
+                {paged.map((e) => (
+                  <MobileActivityCard
+                    key={e.id}
+                    title={e.details || 'General Expense'}
+                    subtitle={formatDate(e.date)}
+                    amount={`₨ ${formatCurrency(e.amount)}`}
+                    date={cat?.name || ''}
+                    icon={Wallet}
+                    iconColor="text-red-500"
+                    onClick={() => setViewingEntity(e)}
+                  />
+                ))}
+                {paged.length === 0 && (
+                  <div className="py-20 text-center">
+                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest">No entries found</p>
+                  </div>
                 )}
               </div>
-            </div>
-          )}
-
-          {activeTab === 'entries' && (
-            <div className="space-y-5">
-              {/* ── Sub-Selector ── */}
-              <div className="flex items-center gap-3 overflow-x-auto no-scrollbar pb-2">
-                 {expenseCategories.map((c: any) => (
-                    <button 
-                      key={c.id} 
-                      onClick={() => setSelectedCat(c.id)}
-                      className={cn("px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shrink-0 transition-all", selectedCat === c.id ? "bg-red-600 text-white shadow-lg" : "bg-slate-200/50 text-slate-400")}
-                    >
-                        {c.name}
-                    </button>
-                 ))}
+              <div className="mt-4">
+                <Pagination page={page} total={catEntries.length} perPage={perPage} onChange={setPage} />
               </div>
-
-              <div className="glass-card !p-0 !rounded-[2rem] overflow-hidden border-2 border-slate-100 dark:border-dark-800">
-                <div className="grid grid-cols-4 bg-slate-100/80 dark:bg-dark-800/80 px-2 py-4">
-                    {['DATE', 'DETAILS', 'AMOUNT', 'ACT'].map(h => (
-                        <span key={h} className="text-[8px] font-black text-slate-500 text-center uppercase tracking-widest">{h}</span>
-                    ))}
+            </div>
+          </div>
+        ) : activeTab === 'register' ? (
+          <div className="flex-1 animate-in zoom-in-95 duration-300">
+            <div className="max-w-2xl mx-auto glass p-8 rounded-3xl border border-slate-200 dark:border-dark-700/50 shadow-2xl mt-8">
+              <div className="flex items-center gap-4 mb-8">
+                <div className="w-14 h-14 rounded-2xl bg-red-600/10 flex items-center justify-center">
+                  <Plus className="w-7 h-7 text-red-600" />
                 </div>
-                <div className="divide-y divide-slate-50 dark:divide-dark-800/50 max-h-[500px] overflow-y-auto no-scrollbar smart-scroll">
-                    {filteredEntries.map(e => (
-                         <div 
-                            key={e.id} 
-                            onClick={() => setViewingEntity(e)}
-                            className="grid grid-cols-4 items-center px-1 py-5 hover:bg-slate-50 transition-colors cursor-pointer"
-                         >
-                            <span className="text-[9px] font-bold text-slate-500 text-center">{formatDate(e.date)}</span>
-                            <span className="text-[10px] font-black text-slate-900 dark:text-white text-center truncate px-1 uppercase tracking-tighter">{e.details || '-'}</span>
-                            <span className="text-[10px] font-black text-red-600 text-center tabular-nums">₨ {formatCurrency(e.amount)}</span>
-                            <div className="flex justify-center gap-2">
-                                <button onClick={(e_ev) => { e_ev.stopPropagation(); setEditingEntity(e); setForm({ date: e.date, details: e.details || '', amount: e.amount.toString() }); setShowEntryForm(true); }} className="p-2 text-slate-400 hover:text-primary-600"><Edit2 className="w-3.5 h-3.5" /></button>
-                                <button onClick={(e_ev) => { e_ev.stopPropagation(); if (confirm('Delete?')) deleteExpenseEntry(e.id); }} className="p-2 text-slate-400 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>
-                            </div>
-                         </div>
-                    ))}
+                <div>
+                  <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">New Expense Category</h2>
+                  <p className="text-sm text-slate-500 font-medium">Create a new category in your Expense database</p>
                 </div>
               </div>
-              <button 
-                onClick={() => setShowReport(true)}
-                className="w-full py-4 bg-slate-200/50 rounded-2xl flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500 active:scale-95 transition-all"
-              >
-                  <Printer className="w-4 h-4" /> Print Category Report
-              </button>
-            </div>
-          )}
 
-          {activeTab === 'register' && (
-            <div className="animate-in zoom-in-95 duration-300 max-w-xl mx-auto pt-4">
-              <div className="glass-card !p-8 !rounded-[3rem] border border-red-500/10 shadow-2xl space-y-8">
-                  <div className="flex items-center gap-5">
-                    <div className="w-16 h-16 rounded-[1.5rem] bg-red-600 flex items-center justify-center shadow-lg shadow-red-600/20">
-                        <Plus className="w-8 h-8 text-white" />
-                    </div>
-                    <div>
-                        <h2 className="text-2xl font-[900] text-slate-900 dark:text-white tracking-tighter uppercase">New Category</h2>
-                        <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Register a new expense segment</p>
+              <form onSubmit={handleAddCategory} className="space-y-6">
+                <div className="grid grid-cols-1 gap-6">
+                  <div>
+                    <label className="label text-[10px] font-black uppercase tracking-widest text-red-600 mb-2 block">Category Name *</label>
+                    <div className="relative">
+                      <FileText className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                      <input 
+                        className="input !pl-12 !py-4 !text-sm !font-bold" 
+                        placeholder="e.g. Electricity, Staff Salary, Rent, etc." 
+                        value={newName} 
+                        onChange={e => setNewName(e.target.value)} 
+                        required 
+                        autoFocus
+                        dir="auto"
+                      />
                     </div>
                   </div>
-
-                  <form onSubmit={handleAddCategory} className="space-y-6">
-                    <div className="space-y-2">
-                        <label className="label ml-2">Category Name</label>
-                        <input 
-                          className="input !h-16 !rounded-3xl !border-none !bg-slate-100/50 shadow-inner !text-lg !font-black !px-6"
-                          placeholder="e.g., Electricity, Staff Food"
-                          value={newName}
-                          onChange={e => setNewName(e.target.value)}
-                          required
-                          dir="auto"
-                        />
-                    </div>
-                    <button type="submit" className="w-full py-5 bg-red-600 text-white font-[900] text-sm uppercase tracking-[0.2em] rounded-[2rem] shadow-xl shadow-red-600/20 active:scale-95 transition-all flex items-center justify-center gap-3">
-                        <Check className="w-5 h-5" /> Confirm Category
-                    </button>
-                  </form>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'manage' && (
-            <div className="space-y-4 pt-2">
-                <div className="flex items-center justify-between px-2">
-                    <h3 className="text-[11px] font-black uppercase tracking-widest text-slate-400">Manage Categories</h3>
-                    <span className="text-[10px] font-bold text-slate-300">{expenseCategories.length} Total</span>
                 </div>
-                
-                <div className="space-y-3">
-                    {expenseCategories.map((c: any) => (
-                        <div key={c.id} className="glass-card !p-4 flex items-center justify-between">
-                            {editingId === c.id ? (
-                                <div className="flex-1 flex gap-2">
-                                    <input className="input !h-10 !bg-slate-50 flex-1" value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} autoFocus dir="auto" />
-                                    <button onClick={() => { updateExpenseCategory(c.id, editForm.name); setEditingId(null); toast('Category updated', 'success'); }} className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center text-white shadow-lg"><Check className="w-5 h-5" /></button>
-                                    <button onClick={() => setEditingId(null)} className="w-10 h-10 bg-slate-200 rounded-xl flex items-center justify-center text-slate-500"><X className="w-5 h-5" /></button>
-                                </div>
-                            ) : (
-                                <>
-                                    <span className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-tight">{c.name}</span>
-                                    <div className="flex items-center gap-1">
-                                        <button onClick={() => { setEditingId(c.id); setEditForm({ name: c.name }); }} className="p-2.5 text-slate-400 hover:text-primary-500 hover:bg-slate-50 rounded-xl transition-all"><Edit2 className="w-4 h-4" /></button>
-                                        <button onClick={() => { if (confirm('Delete all data for this category?')) deleteExpenseCategory(c.id); }} className="p-2.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"><Trash2 className="w-4 h-4" /></button>
-                                    </div>
-                                </>
-                            )}
-                        </div>
-                    ))}
+
+                <div className="pt-6 border-t border-slate-100 dark:border-dark-800 flex items-center justify-between">
+                   <p className="text-xs text-slate-400 font-medium italic">All required fields marked with *</p>
+                   <button type="submit" className="btn-primary !px-12 !py-4 font-black shadow-xl shadow-red-600/20 text-base flex items-center gap-2 !bg-red-600 hover:opacity-90">
+                     <Check className="w-5 h-5" /> Complete Registration
+                   </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        ) : (
+          /* Manage View */
+          <div className="flex-1 animate-in slide-in-from-right duration-300 flex flex-col gap-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/50 dark:bg-dark-900/50 p-6 rounded-2xl border border-slate-200 dark:border-dark-700/50 shadow-sm mt-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <input 
+                    className="input !pl-10 !py-3 !text-sm !font-bold" 
+                    placeholder="Quick search..." 
+                    value={manageSearch} 
+                    onChange={e => setManageSearch(e.target.value)} 
+                  />
+                </div>
+                <div className="px-6 py-3 bg-slate-100 dark:bg-dark-800 rounded-2xl text-xs font-black text-slate-500 uppercase tracking-widest border border-slate-200 dark:border-dark-700/50">
+                  {expenseCategories.length} Categories Found
                 </div>
             </div>
-          )}
-        </div>
+
+            <div className="glass rounded-3xl overflow-hidden border border-slate-200 dark:border-dark-700/50 shadow-xl flex-1 flex flex-col">
+               <div className="overflow-y-auto smart-scroll">
+                  <table className="w-full">
+                  <thead className="sticky top-0 z-10 bg-slate-200 dark:bg-dark-800">
+                    <tr className="table-header text-[10px]">
+                        <th className="table-cell text-left">Category Name</th>
+                        <th className="table-cell text-center">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-dark-800/50">
+                      {filteredManage.length === 0 ? (
+                        <tr><td colSpan={2} className="px-6 py-20 text-center text-slate-400 italic font-medium">No results found</td></tr>
+                      ) : filteredManage.map((c) => (
+                        <tr 
+                          key={c.id} 
+                          className="table-row text-[11px] hover:bg-slate-50 dark:hover:bg-dark-800/50 transition-all group cursor-pointer"
+                          onClick={() => handleStartEdit(c)}
+                        >
+                           {editingId === c.id ? (
+                             <>
+                               <td className="px-6 py-3" onClick={(e) => e.stopPropagation()}>
+                                  <input className="input !py-1.5 !text-sm w-full" value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} autoFocus dir="auto" />
+                               </td>
+                               <td className="px-6 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                                  <div className="flex items-center gap-2 justify-end">
+                                     <button onClick={() => handleSaveEdit(c.id)} className="p-2 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/10 rounded-xl"><Check className="w-5 h-5" /></button>
+                                     <button onClick={() => setEditingId(null)} className="p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-dark-700 rounded-xl"><X className="w-5 h-5" /></button>
+                                  </div>
+                               </td>
+                             </>
+                           ) : (
+                             <>
+                               <td className="table-cell">
+                                  <div className="flex items-center gap-3">
+                                     <span className="font-bold text-slate-800 dark:text-white">{c.name}</span>
+                                  </div>
+                               </td>
+                               <td className="table-cell text-right">
+                                  <div className="flex items-center gap-2 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                                     <button onClick={() => handleStartEdit(c)} className="p-2 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-xl"><Edit2 className="w-4 h-4" /></button>
+                                     {currentUser?.role === 'Admin' && (
+                                       <button 
+                                         onClick={(e) => { e.stopPropagation(); if(confirm('Delete category and all history?')) deleteExpenseCategory(c.id); }} 
+                                         className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl"
+                                       >
+                                         <Trash2 className="w-4 h-4" />
+                                       </button>
+                                     )}
+                                  </div>
+                               </td>
+                             </>
+                           )}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+               </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* ── Entry Modal ── */}
       {showEntryForm && (
-        <Modal title={editingEntity ? "Edit Expense" : `Add Expense`} onClose={() => setShowEntryForm(false)} variant="bottom-sheet">
-          <form onSubmit={handleSubmit} className="p-6 space-y-6">
-            <div className="space-y-4">
+        <Modal 
+          title={editingEntity ? `Edit ${cat?.name}` : `Add ${cat?.name}`} 
+          onClose={closeForm} 
+          variant="bottom-sheet"
+        >
+          <form onSubmit={handleSubmit} className="flex flex-col h-full bg-slate-50 dark:bg-dark-950/20 -m-6 p-6">
+            <div className="flex-1 space-y-4 mb-20 overflow-y-auto smart-scroll">
               <div className="space-y-1.5">
-                <label className="label">Entry Date</label>
-                <input type="date" className="input !h-14 !bg-white dark:!bg-dark-800" value={form.date} onChange={e => setForm({...form, date: e.target.value})} required />
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-dark-500 px-1">Entry Date</label>
+                <input type="date" className="input w-full !h-12 !bg-white dark:!bg-dark-800" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required />
               </div>
+
               <div className="space-y-1.5">
-                <label className="label">Details / Note</label>
-                <input className="input !h-14 !bg-white dark:!bg-dark-800" value={form.details} onChange={e => setForm({...form, details: e.target.value})} placeholder="e.g., Electricity Bill" dir="auto" />
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-dark-500 px-1">Details / Note</label>
+                <input className="input w-full !h-12 !bg-white dark:!bg-dark-800" value={form.details} onChange={(e) => setForm({ ...form, details: e.target.value })} placeholder="e.g. Electricity Bill Jan" dir="auto" />
               </div>
+
               <div className="space-y-1.5">
-                <label className="label text-red-600">Amount (PKR) *</label>
-                <input type="number" step="any" className="input !h-14 !bg-white !text-red-600 !text-xl !font-black shadow-inner" value={form.amount} onChange={e => setForm({...form, amount: e.target.value})} placeholder="0.00" required />
+                <label className="text-[10px] font-black uppercase tracking-widest text-red-600 px-1">Amount (PKR)</label>
+                <input type="number" step="any" className="input w-full !h-12 !bg-white dark:!bg-dark-800 !text-xl !text-red-600" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} placeholder="0.00" required />
+              </div>
+
+              <div className="bg-red-600/5 dark:bg-red-600/10 p-5 rounded-3xl border border-red-600/10 text-center">
+                 <p className="text-[10px] font-black text-red-600 uppercase tracking-widest mb-1">Confirming Expense For</p>
+                 <p className="text-xl font-black text-slate-900 dark:text-white truncate">{cat?.name}</p>
               </div>
             </div>
-            <button type="submit" className="w-full py-5 bg-red-600 text-white font-black text-sm uppercase tracking-widest rounded-2xl shadow-xl active:scale-95 transition-all disabled:opacity-50" disabled={isSaving}>
-                {editingEntity ? 'Update Expense' : 'Confirm Expense'}
-            </button>
+
+            <div className="sticky-bottom-actions">
+              <button type="button" onClick={closeForm} className="flex-1 py-4 text-xs font-black uppercase tracking-widest text-slate-400 dark:text-dark-500" disabled={isSaving}>Cancel</button>
+              <button 
+                type="submit" 
+                className="flex-[2] py-4 bg-red-600 text-white font-black text-xs uppercase tracking-[0.2em] rounded-2xl shadow-xl shadow-red-500/20 active:scale-95 transition-all flex items-center justify-center gap-2" 
+                disabled={isSaving}
+              >
+                {isSaving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Save className="w-4 h-4" />}
+                {editingEntity ? 'Update' : 'Confirm Expense'}
+              </button>
+            </div>
           </form>
         </Modal>
       )}
 
-      {/* Primary Action FAB */}
-      {(activeTab === 'analytics' || activeTab === 'entries') && expenseCategories.length > 0 && (
-          <FAB 
-            icon={Plus} 
-            onClick={() => { setEditingEntity(null); setForm({ date: today(), details: '', amount: '' }); setShowEntryForm(true); }} 
-            className="!bg-red-600"
-          />
+      {/* Primary Mobile Action */}
+      {activeTab === 'dashboard' || activeTab === 'database' ? (
+        <FAB 
+          icon={Plus} 
+          onClick={() => {
+            if (!selectedCat && expenseCategories.length > 0) setSelectedCat(expenseCategories[0].id);
+            if (expenseCategories.length === 0) {
+               setActiveTab('register');
+               toast('Please register a category first', 'info');
+            } else {
+               setShowEntryForm(true);
+            }
+          }} 
+          label="NEW"
+        />
+      ) : null}
+
+      {viewingEntity && (
+        <TransactionReceiptModal
+          entity={viewingEntity}
+          type="expense"
+          onClose={() => setViewingEntity(null)}
+        />
       )}
 
-      {viewingEntity && <TransactionReceiptModal entity={viewingEntity} type="expense" onClose={() => setViewingEntity(null)} />}
-      {showReport && <PrintReportModal data={filteredEntries} type="expense" title={`${cat?.name || 'Expense'} Report`} onClose={() => setShowReport(false)} />}
+      {showReport && (
+        <PrintReportModal
+          data={catEntries}
+          type="expense"
+          title={`${cat?.name} Expense Report`}
+          onClose={() => setShowReport(false)}
+        />
+      )}
     </div>
   );
 }

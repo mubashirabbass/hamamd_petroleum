@@ -27,9 +27,3 @@ dist-ssr
 keystore.properties
 *.jks
 *.keystore
-
-# Build Artifacts
-**/target/
-**/build/
-.gradle/
-*.iml
