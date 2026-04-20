@@ -1,7 +1,9 @@
-import { useRef } from 'react';
-import { X, Printer, FileText } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { X, Printer, FileText, Download } from 'lucide-react';
 import { useReactToPrint } from 'react-to-print';
-import { formatCurrency, formatDate } from '../../lib/utils';
+import { toPng } from 'html-to-image';
+import { jsPDF } from 'jspdf';
+import { formatCurrency, formatDate, today } from '../../lib/utils';
 
 interface Props {
   data: any[];
@@ -33,7 +35,33 @@ function toWords(n: number): string {
 
 export default function PrintReportModal({ data, type, onClose, title: customTitle, customerPhone }: Props) {
   const contentRef = useRef<HTMLDivElement>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  
   const handlePrint = useReactToPrint({ contentRef });
+
+  const handleGeneratePDF = async () => {
+    if (!contentRef.current) return;
+    setIsGenerating(true);
+    
+    try {
+      const doc = new jsPDF('p', 'mm', 'a4');
+      const pages = contentRef.current.querySelectorAll('.report-page');
+      
+      for (let i = 0; i < pages.length; i++) {
+        const page = pages[i] as HTMLElement;
+        const canvas = await toPng(page, { pixelRatio: 2 });
+        
+        if (i > 0) doc.addPage();
+        doc.addImage(canvas, 'PNG', 0, 0, 210, 297);
+      }
+      
+      doc.save(`Report_${formatDate(today())}.pdf`);
+    } catch (err) {
+      console.error('PDF Generation Error:', err);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const dates = data.map(x => x.date).sort();
   const dateRange = dates.length
@@ -55,7 +83,9 @@ export default function PrintReportModal({ data, type, onClose, title: customTit
       <div style={{
         position: 'sticky', top: 0, zIndex: 10, width: '100%', maxWidth: '950px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '15px 25px', background: 'rgba(15,23,42,0.98)',
+        padding: '15px 25px', 
+        paddingTop: 'calc(15px + env(safe-area-inset-top, 24px))', // Lower buttons for notches
+        background: 'rgba(15,23,42,0.98)',
         borderBottom: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(20px)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -63,8 +93,20 @@ export default function PrintReportModal({ data, type, onClose, title: customTit
           <span style={{ color: '#fff', fontWeight: 1000, fontSize: 16, textTransform: 'uppercase', letterSpacing: '0.15em' }}>Report Document Preview</span>
         </div>
         <div style={{ display: 'flex', gap: 12 }}>
-          <button onClick={handlePrint} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 28px', borderRadius: 12, background: 'linear-gradient(135deg,#3b82f6,#1d4ed8)', color: '#fff', fontWeight: 1000, fontSize: 14, border: 'none', cursor: 'pointer', boxShadow: '0 4px 15px rgba(59,130,246,0.3)', textTransform: 'uppercase' }}>
-            <Printer style={{ width: 18, height: 18 }} /> Print Ready
+          <button 
+            onClick={handleGeneratePDF} 
+            disabled={isGenerating}
+            style={{ 
+              display: 'flex', alignItems: 'center', gap: 10, padding: '10px 20px', 
+              borderRadius: 12, background: 'linear-gradient(135deg,#059669,#047857)', 
+              color: '#fff', fontWeight: 1000, fontSize: 13, border: 'none', 
+              cursor: 'pointer', boxShadow: '0 4px 15px rgba(5,150,105,0.3)', 
+              textTransform: 'uppercase', opacity: isGenerating ? 0.7 : 1 
+            }}>
+            {isGenerating ? 'Generating...' : <><Download style={{ width: 17, height: 17 }} /> PDF</>}
+          </button>
+          <button onClick={handlePrint} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 20px', borderRadius: 12, background: 'linear-gradient(135deg,#3b82f6,#1d4ed8)', color: '#fff', fontWeight: 1000, fontSize: 13, border: 'none', cursor: 'pointer', boxShadow: '0 4px 15px rgba(59,130,246,0.3)', textTransform: 'uppercase' }}>
+            <Printer style={{ width: 17, height: 17 }} /> Print
           </button>
           <button onClick={onClose} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 44, height: 44, borderRadius: 12, background: '#1e293b', border: '1px solid #334155', color: '#94a3b8', cursor: 'pointer' }}>
             <X style={{ width: 22, height: 22 }} />

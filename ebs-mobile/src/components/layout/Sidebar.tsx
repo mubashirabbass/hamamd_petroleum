@@ -77,13 +77,46 @@ export default function Sidebar({ className = '', onNavigate, onCloseMobile }: S
       {/* Logo */}
       <div className="h-16 flex items-center px-4 border-b border-slate-200 dark:border-dark-700/50 gap-3">
         <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-white flex items-center justify-center shadow-lg p-1 border border-slate-200">
-          <img src="/assets/logo-hr.png" alt="HR" className="w-full h-full object-contain" />
+          <img src="/assets/hr-logo.png" alt="HR" className="w-full h-full object-contain" />
         </div>
         <div>
           <p className="text-slate-900 dark:text-white font-bold text-[15px] leading-tight truncate max-w-[140px]">
-            {settings.softwareName || 'EBS Petroleum'}
+            {settings.softwareName || 'HR Filling Station'}
           </p>
           <p className="text-slate-500 dark:text-dark-500 text-[11px]">Business Suite</p>
+        </div>
+      </div>
+
+      {/* Zoom Controls Uplifted */}
+      <div className="px-4 py-3 border-b border-slate-200 dark:border-dark-700/50 space-y-2 bg-slate-50/50 dark:bg-dark-950/20">
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-dark-500">Interface Zoom</span>
+          <span className="text-[10px] font-black text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 px-1.5 py-0.5 rounded">
+            {Math.round(settings.zoomLevel * 100)}%
+          </span>
+        </div>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => handleZoom(-0.1)}
+            title="Zoom Out"
+            className="flex-1 h-8 flex items-center justify-center bg-white dark:bg-dark-900 rounded-lg border border-slate-200 dark:border-dark-700/50 hover:bg-slate-50 dark:hover:bg-dark-800 text-slate-600 dark:text-dark-400 transition-colors shadow-sm"
+          >
+            <Minus className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={resetZoom}
+            title="Reset Zoom"
+            className="flex-1 h-8 flex items-center justify-center bg-white dark:bg-dark-900 rounded-lg border border-slate-200 dark:border-dark-700/50 hover:bg-slate-50 dark:hover:bg-dark-800 text-slate-600 dark:text-dark-400 transition-colors shadow-sm"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={() => handleZoom(0.1)}
+            title="Zoom In"
+            className="flex-1 h-8 flex items-center justify-center bg-white dark:bg-dark-900 rounded-lg border border-slate-200 dark:border-dark-700/50 hover:bg-slate-50 dark:hover:bg-dark-800 text-slate-600 dark:text-dark-400 transition-colors shadow-sm"
+          >
+            <Plus className="w-3.5 h-3.5" />
+          </button>
         </div>
       </div>
 
@@ -150,39 +183,6 @@ export default function Sidebar({ className = '', onNavigate, onCloseMobile }: S
             );
           })}
       </nav>
-
-      {/* Zoom Controls */}
-      <div className="px-4 py-3 border-t border-slate-200 dark:border-dark-700/50 space-y-2">
-        <div className="flex items-center justify-between">
-          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-dark-500">Interface Zoom</span>
-          <span className="text-[10px] font-black text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 px-1.5 py-0.5 rounded">
-            {Math.round(settings.zoomLevel * 100)}%
-          </span>
-        </div>
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => handleZoom(-0.1)}
-            title="Zoom Out"
-            className="flex-1 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-dark-700/50 hover:bg-slate-50 dark:hover:bg-dark-800 text-slate-600 dark:text-dark-400 transition-colors"
-          >
-            <Minus className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={resetZoom}
-            title="Reset Zoom"
-            className="flex-1 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-dark-700/50 hover:bg-slate-50 dark:hover:bg-dark-800 text-slate-600 dark:text-dark-400 transition-colors"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={() => handleZoom(0.1)}
-            title="Zoom In"
-            className="flex-1 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-dark-700/50 hover:bg-slate-50 dark:hover:bg-dark-800 text-slate-600 dark:text-dark-400 transition-colors"
-          >
-            <Plus className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      </div>
 
       {/* Logout only */}
       <div className="p-2 border-t border-slate-200 dark:border-dark-700/50">

@@ -2,7 +2,8 @@ import { useState, useMemo, useEffect } from 'react';
 import {
   BarChart3, TrendingUp, TrendingDown, ArrowLeft,
   Package, LayoutList, Fuel, Zap, Clock, Download,
-  ChevronRight, Calendar, Printer, ArrowUpDown, Pin, PinOff
+  ChevronRight, Calendar, Printer, ArrowUpDown, Pin, PinOff,
+  ShoppingCart
 } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useStore, FuelType } from '../store/useStore';
@@ -13,6 +14,7 @@ import {
 import SearchBar from '../components/ui/SearchBar';
 import Pagination from '../components/ui/Pagination';
 import { useToast } from '../components/ui/Toast';
+import PullToRefresh from '../components/ui/PullToRefresh';
 import PrintReportModal from '../components/modals/PrintReportModal';
 
 // const PER_PAGE = 40; // Replaced by state
@@ -70,6 +72,10 @@ export default function StockPage() {
   const [entrySort, setEntrySort] = useState('date_desc');
   const [isSidebarPinned, setIsSidebarPinned] = useState(false);
   const isExpanded = isSidebarPinned;
+
+  const handleRefresh = async () => {
+    await initializeFromDB();
+  };
 
   // ── Calculation Logic ──
   const stockData = useMemo(() => {
@@ -469,31 +475,54 @@ export default function StockPage() {
 
   if (view === 'manage') {
     return (
-      <>
-        <div className="animate-fade-in flex flex-col h-full w-full">
-        {/* Detail Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 pb-0">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => navigate('/stock')}
-              className="w-10 h-10 rounded-xl flex items-center justify-center bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700 shadow-sm hover:scale-110 active:scale-95 transition-all text-slate-600 dark:text-dark-400"
-              title="Back to Overview"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <div className="flex items-center gap-3">
-              <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg", selectedType === 'HSD' ? 'bg-amber-600/10' : 'bg-emerald-600/10')}>
-                {selectedType === 'HSD' ? <Fuel className="w-7 h-7 text-amber-600" /> : <Zap className="w-7 h-7 text-emerald-600" />}
-              </div>
-              <div>
-                <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight uppercase leading-none">{selectedType}</h1>
-                <p className="text-[10px] font-bold text-slate-500 dark:text-dark-500 uppercase tracking-widest mt-1">Inventory Control</p>
+      <PullToRefresh 
+        onRefresh={handleRefresh} 
+        scrollId="stock-manage-scroll"
+        className="h-full w-full"
+      >
+        <div className="animate-fade-in flex flex-col w-full p-4 pb-32">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 pb-0">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => navigate('/stock')}
+                className="w-10 h-10 rounded-xl flex items-center justify-center bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700 shadow-sm active:scale-95 transition-all text-slate-600 dark:text-dark-400"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+              <div className="flex items-center gap-3">
+                <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg", selectedType === 'HSD' ? 'bg-amber-600/10' : 'bg-emerald-600/10')}>
+                  {selectedType === 'HSD' ? <Fuel className="w-7 h-7 text-amber-600" /> : <Zap className="w-7 h-7 text-emerald-600" />}
+                </div>
+                <div>
+                  <h1 className="text-xl font-black text-slate-900 dark:text-white uppercase leading-none">{selectedType}</h1>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Inventory Management</p>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Quick Date Range */}
-          <div className="flex items-center gap-2 bg-white dark:bg-dark-900 p-2 rounded-2xl border border-slate-200 dark:border-dark-700 shadow-sm overflow-x-auto no-scrollbar smart-scroll">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+            {[
+              { label: 'Purchase', qty: detailTotals.in, icon: TrendingUp, color: 'blue' },
+              { label: 'Sale', qty: detailTotals.out, icon: TrendingDown, color: 'red' },
+              { label: 'Stock', qty: historyData[0]?.balance || 0, icon: Package, color: 'emerald', highlight: true },
+            ].map(col => (
+              <div key={col.label} className="glass p-5 rounded-3xl border border-slate-200 dark:border-dark-700/50 shadow-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <col.icon className={cn("w-4 h-4", `text-${col.color}-600`)} />
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{col.label}</span>
+                  </div>
+                </div>
+                <div className="flex items-baseline gap-1.5 ml-4">
+                  <span className={cn('font-black tabular-nums tracking-tighter capitalize', col.highlight ? `text-2xl text-emerald-600 dark:text-emerald-400` : 'text-xl text-slate-800 dark:text-white')}>{col.qty.toLocaleString()}</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">L</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-2 bg-white dark:bg-dark-900 p-2 rounded-2xl border border-slate-200 dark:border-dark-700 shadow-sm overflow-x-auto no-scrollbar smart-scroll mt-6">
             <div className="flex items-center bg-slate-50 dark:bg-dark-800 p-1 rounded-xl border border-slate-100 dark:border-dark-750 mr-2 shrink-0">
               <button onClick={() => { setFromDate(today()); setToDate(today()); setPage(1); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all whitespace-nowrap">Today</button>
               <button onClick={() => { setFromDate(startOfMonth()); setToDate(today()); setPage(1); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all border-l border-slate-200 dark:border-dark-700/50 whitespace-nowrap">Month</button>
@@ -512,113 +541,17 @@ export default function StockPage() {
               </button>
             )}
           </div>
-        </div>
 
-        {/* Main Content Layout */}
-        <div className="flex gap-4 h-full overflow-hidden p-4">
-          {/* Sidebar selection */}
-          <div 
-            onClick={() => !isSidebarPinned && setIsSidebarPinned(true)}
-            className={cn(
-                "flex-shrink-0 flex flex-col gap-3 h-full transition-all duration-300 ease-in-out border-r border-slate-200 dark:border-dark-700/50 bg-white dark:bg-dark-900 rounded-none md:rounded-2xl relative",
-                isExpanded ? "w-64" : "w-12 md:w-16 cursor-pointer hover:bg-slate-100",
-                !isExpanded && "hidden md:flex"
-            )}
-          >
-            <div className="flex items-center justify-between px-3 py-3 border-b border-slate-100 dark:border-dark-800/50">
-              {isExpanded && (
-                <h2 className="text-[10px] font-extrabold text-slate-600 dark:text-dark-200 uppercase tracking-[0.2em] animate-in fade-in slide-in-from-left-2">Fuel Types</h2>
-              )}
-              <button 
-                onClick={() => setIsSidebarPinned(!isSidebarPinned)}
-                className={cn(
-                  "p-1.5 rounded-lg transition-colors ml-auto",
-                  isSidebarPinned ? "text-blue-600 bg-blue-50 dark:bg-blue-900/20" : "text-slate-400 hover:bg-slate-100 dark:hover:bg-dark-800"
-                )}
-                title={isSidebarPinned ? "Unpin Sidebar" : "Pin Sidebar"}
+          <div className="mt-6">
+            <div className="flex justify-center mb-6">
+              <button
+                onClick={() => setShowHistory(!showHistory)}
+                className="btn-secondary !text-[10px] !py-1 !px-3 flex items-center gap-2 uppercase font-black tracking-widest"
               >
-                {isSidebarPinned ? <PinOff className="w-3.5 h-3.5" /> : <Pin className="w-3.5 h-3.5" />}
+                {showHistory ? 'Hide Detailed History' : 'Show Detailed History'}
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-2">
-              {[
-                { id: 'HSD' as FuelType, label: 'HSD DIESEL', icon: Fuel, color: 'amber' },
-                { id: 'PMG' as FuelType, label: 'PMG PETROL', icon: Zap, color: 'emerald' },
-              ].map((fuel) => {
-                const active = selectedType === fuel.id;
-                return (
-                  <div
-                    key={fuel.id}
-                    onClick={() => navigate(`/stock/${fuel.id.toLowerCase()}`)}
-                    className={cn(
-                      "flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200",
-                      active 
-                        ? `bg-${fuel.color}-600 text-white shadow-lg scale-105` 
-                        : "hover:bg-slate-100 dark:hover:bg-dark-800 text-slate-500",
-                      !isExpanded && "justify-center"
-                    )}
-                    title={!isExpanded ? fuel.label : ''}
-                  >
-                    <fuel.icon className={cn("w-5 h-5 flex-shrink-0", active ? "text-white" : `text-${fuel.color}-600`)} />
-                    {isExpanded && (
-                      <span className="font-black text-xs uppercase tracking-widest truncate animate-in fade-in slide-in-from-left-2">
-                        {fuel.label}
-                      </span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          </div>
-
-          <div className="flex-1 min-w-0 flex flex-col h-full w-full">
-
-            <div className="overflow-y-auto smart-scroll pr-4 space-y-6 pb-2">
-              {/* Status Summary Card */}
-              <div className={cn("glass rounded-3xl overflow-hidden border-2 shadow-xl", selectedType === 'HSD' ? 'border-amber-500/20 shadow-amber-500/5' : 'border-emerald-500/20 shadow-emerald-500/5')}>
-                <div className="p-4 bg-white/50 dark:bg-dark-900/50 border-b border-slate-100 dark:border-dark-800 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <LayoutList className={cn("w-4 h-4", selectedType === 'HSD' ? 'text-amber-500' : 'text-emerald-500')} />
-                    <h2 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 dark:text-dark-400">Inventory Status Summary</h2>
-                  </div>
-                  <div className={cn("px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest", selectedType === 'HSD' ? "bg-amber-100 dark:bg-amber-900/30 text-amber-600" : "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600")}>
-                    Active Segment
-                  </div>
-                </div>
-                <div className="flex flex-col gap-2 p-3">
-                  {[
-                    { label: 'Purchased Volume', qty: detailTotals.in,  highlight: false, color: 'blue' },
-                    { label: 'Sold Volume',      qty: detailTotals.out, highlight: false, color: 'red' },
-                    { label: 'Current Inventory', qty: stockData[selectedType].current, highlight: true, color: selectedType === 'HSD' ? 'amber' : 'emerald' }
-                  ].map(col => (
-                    <div key={col.label} className={cn("flex items-center justify-between p-3.5 rounded-2xl border transition-colors", col.highlight ? `bg-${col.color}-500/10 border-${col.color}-500/30 shadow-sm` : "bg-slate-50/50 dark:bg-dark-800/30 border-slate-100 dark:border-dark-700/50")}>
-                      <div className="flex-1 min-w-0">
-                        <p className={cn("text-[9px] font-black uppercase tracking-widest", col.highlight ? `text-${col.color}-600 dark:text-${col.color}-400` : "text-slate-500 dark:text-slate-400")}>{col.label}</p>
-                      </div>
-                      <div className="flex items-baseline gap-1.5 ml-4">
-                        <span className={cn('font-black tabular-nums tracking-tighter capitalize', col.highlight ? `text-xl text-${col.color}-600 dark:text-${col.color}-400` : 'text-lg text-slate-800 dark:text-white')}>{col.qty.toLocaleString()}</span>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">L</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Detailed History Toggle */}
-              <div className="flex justify-center mt-2">
-                <button
-                  onClick={() => setShowHistory(!showHistory)}
-                  className="btn-secondary !text-[10px] !py-1 !px-3 flex items-center gap-2 uppercase font-black tracking-widest"
-                >
-                  {showHistory ? 'Hide Detailed History' : 'Show Detailed History'}
-                </button>
-              </div>
-
-
-            {/* History Table */}
             {showHistory && (
               <div className="glass rounded-3xl overflow-hidden shadow-lg border border-slate-200 dark:border-dark-800 animate-slide-up">
                 <div className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 dark:border-dark-800">
@@ -711,7 +644,6 @@ export default function StockPage() {
                 />
               </div>
             )}
-            </div>
           </div>
   
           {showReport && (
@@ -722,10 +654,10 @@ export default function StockPage() {
               title={`${selectedType} STOCK HISTORY`}
             />
           )}
-          </div>
-        </>
-      );
-    }
+        </div>
+      </PullToRefresh>
+    );
+  }
 
   // ── Overview Render ──
   const cards = [
@@ -734,175 +666,86 @@ export default function StockPage() {
   ];
 
   return (
-    <div className="animate-fade-in space-y-8 pb-10 p-4 md:p-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 px-2">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-600 to-cyan-800 flex items-center justify-center shadow-lg border-2 border-white/20">
-            <BarChart3 className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter leading-none">Stock</h1>
-            <p className="text-slate-500 dark:text-dark-400 text-[10px] font-bold uppercase tracking-widest mt-1">Global Inventory Status</p>
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-3">
-          <button
-            onClick={handleDownloadStats}
-            className="w-full md:w-auto px-4 py-2.5 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 transition-all font-black text-[10px] uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20"
-          >
-            <Download className="w-4 h-4" />
-            Stock Report
-          </button>
-          
-          <div className="flex items-center gap-2 bg-white dark:bg-dark-900 p-2 rounded-2xl border border-slate-200 dark:border-dark-700 shadow-sm overflow-x-auto no-scrollbar smart-scroll">
-            <div className="flex items-center bg-slate-50 dark:bg-dark-800 p-1 rounded-xl border border-slate-100 dark:border-dark-750 mr-2 shrink-0">
-              <button onClick={() => { setFromDate(today()); setToDate(today()); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all whitespace-nowrap">Today</button>
-              <button onClick={() => { setFromDate(startOfMonth()); setToDate(today()); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all border-l border-slate-200 dark:border-dark-700/50 whitespace-nowrap">Month</button>
-            </div>
-            <div className="flex items-center gap-2 px-1 shrink-0">
-              <input type="date" value={fromDate} onChange={e => { setFromDate(e.target.value); }} className="input !py-1 !px-2 !w-28 !text-[10px]" />
-              <span className="text-slate-400">→</span>
-              <input type="date" value={toDate} onChange={e => { setToDate(e.target.value); }} className="input !py-1 !px-2 !w-28 !text-[10px]" />
-            </div>
-            {(fromDate || toDate) && (
-              <button
-                onClick={() => { setFromDate(''); setToDate(''); }}
-                className="ml-2 px-3 py-1.5 text-[10px] font-black uppercase tracking-tighter text-red-600 bg-red-50 dark:bg-red-900/20 rounded-lg hover:bg-red-100 transition-all border border-red-200 dark:border-red-800/30 shrink-0"
-              >
-                Clear
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {cards.map(({ type, label, color, icon, data }) => (
-          <div key={type} className="glass rounded-[2.5rem] p-8 border border-slate-200 dark:border-dark-700/50 shadow-2xl relative overflow-hidden group">
-            <div className={cn("absolute top-0 right-0 w-40 h-40 rounded-bl-full -mr-20 -mt-20 group-hover:scale-110 transition-transform duration-700 opacity-20", color === 'amber' ? 'bg-amber-500' : 'bg-emerald-500')} />
-
-            <div className="flex items-center gap-4 mb-8 relative">
-              <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center border shadow-inner", color === 'amber' ? 'bg-amber-500/10 border-amber-500/20 text-amber-600' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600')}>
-                {icon}
+    <div className="flex-1 min-h-0 relative">
+      <PullToRefresh 
+        onRefresh={handleRefresh} 
+        scrollId="stock-main-scroll"
+        className="h-full w-full p-4 pb-32 pt-4"
+      >
+        <div className="animate-fade-in space-y-10">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 px-2">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-600 to-cyan-800 flex items-center justify-center shadow-lg">
+                <BarChart3 className="w-6 h-6 text-white" />
               </div>
-              <div className="min-w-0">
-                <h2 className={cn("text-xl font-black tracking-tight", color === 'amber' ? 'text-amber-600' : 'text-emerald-600')}>{type}</h2>
-                <p className="text-[9px] font-bold text-slate-500 dark:text-dark-500 uppercase tracking-widest truncate">{label}</p>
+              <div>
+                <h1 className="text-2xl font-black text-slate-900 dark:text-white uppercase leading-none">Stock</h1>
+                <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-1">Inventory Overview</p>
               </div>
             </div>
+            <button onClick={handleDownloadStats} className="btn-primary !py-2.5 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-wider"><Download className="w-4 h-4" /> Stock Report</button>
+          </div>
 
-            <div className="grid grid-cols-3 gap-3 relative border-t border-slate-100 dark:border-dark-800/60 pt-6">
-              {[
-                { label: 'Purchase', qty: data.totalPurchased, value: data.purchaseValue, icon: TrendingUp, color: 'text-emerald-600' },
-                { label: 'Sale', qty: data.totalSold, value: data.saleValue, icon: TrendingDown, color: 'text-red-600' },
-                { label: 'Stock', qty: data.current, value: null, icon: Package, color: color === 'amber' ? 'text-amber-600' : 'text-emerald-600', highlight: true },
-              ].map(block => (
-                <div key={block.label} className="space-y-2 min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <block.icon className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest truncate">{block.label}</p>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {cards.map(({ type, label, color, icon, data }) => (
+              <div key={type} className="glass rounded-[2.5rem] p-8 border border-slate-200 dark:border-dark-700/50 shadow-2xl relative overflow-hidden group">
+                <div className="flex items-center gap-4 mb-8">
+                  <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center border shadow-inner", color === 'amber' ? 'bg-amber-500/10 text-amber-600' : 'bg-emerald-500/10 text-emerald-600')}>
+                    {icon}
                   </div>
-                  <div className="flex items-baseline gap-1">
-                    <span className={cn("font-black tabular-nums tracking-tighter break-all whitespace-normal leading-tight w-full", block.highlight ? 'text-2xl lg:text-3xl' : 'text-xl lg:text-2xl text-slate-900 dark:text-white', block.color)}>
-                      {block.qty.toLocaleString()}
-                    </span>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase break-keep ml-1 relative -top-1">L</span>
+                  <div>
+                    <h2 className={cn("text-xl font-black tracking-tight", color === 'amber' ? 'text-amber-600' : 'text-emerald-600')}>{type}</h2>
+                    <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">{label}</p>
                   </div>
-                  {block.value !== null && (
-                    <p className="text-[11px] font-bold text-slate-500 tabular-nums break-words break-all whitespace-normal leading-tight w-full">₨ {formatCurrency(block.value)}</p>
-                  )}
                 </div>
-              ))}
-            </div>
 
-            {/* Progress Visualization */}
-            <div className="mt-8 pt-8 border-t border-slate-100 dark:border-dark-800/60">
-              <div className="flex justify-between text-[11px] font-black uppercase tracking-wider text-slate-400 mb-3">
-                <span>Utilization</span>
-                <span className={color === 'amber' ? 'text-amber-600' : 'text-emerald-600'}>{data.totalPurchased > 0 ? ((data.totalSold / data.totalPurchased) * 100).toFixed(1) : 0}% sold</span>
-              </div>
-              <div className="h-4 bg-slate-100 dark:bg-dark-800 rounded-full overflow-hidden p-1 shadow-inner">
-                <div
-                  className={cn("h-full rounded-full transition-all duration-1000 shadow-lg", color === 'amber' ? 'bg-gradient-to-r from-amber-400 to-amber-600' : 'bg-gradient-to-r from-emerald-400 to-emerald-600')}
-                  style={{ width: `${Math.min(100, data.totalPurchased > 0 ? (data.totalSold / data.totalPurchased) * 100 : 0)}%` }}
-                />
-              </div>
-            </div>
+                <div className="grid grid-cols-3 gap-3 border-t border-slate-100 dark:border-dark-800/60 pt-6">
+                  {[
+                    { label: 'Purchase', qty: data.totalPurchased, icon: TrendingUp, color: 'text-blue-600' },
+                    { label: 'Sale', qty: data.totalSold, icon: TrendingDown, color: 'text-red-600' },
+                    { label: 'Stock', qty: data.current, icon: Package, color: color === 'amber' ? 'text-amber-600' : 'text-emerald-600', highlight: true },
+                  ].map(block => (
+                    <div key={block.label} className="space-y-1">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{block.label}</p>
+                      <p className={cn("font-black tabular-nums tracking-tighter", block.highlight ? 'text-2xl' : 'text-xl text-slate-900 dark:text-white', block.color)}>{block.qty.toLocaleString()} L</p>
+                    </div>
+                  ))}
+                </div>
 
-            {/* NEW BUTTONS */}
-            <button
-              onClick={() => navigate(`/stock/${type.toLowerCase()}`)}
-              className={cn(
-                "w-full mt-8 py-4 rounded-3xl font-black text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 border shadow-sm active:scale-95 group",
-                color === 'amber'
-                  ? "bg-amber-600 text-white border-transparent hover:bg-amber-700 shadow-amber-600/20"
-                  : "bg-emerald-600 text-white border-transparent hover:bg-emerald-700 shadow-emerald-600/20"
-              )}
-            >
-              <LayoutList className="w-4 h-4" />
-              Manage {type} Stock Details
-              <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-            </button>
+                <div className="mt-8 flex flex-col gap-3">
+                  <button
+                    onClick={() => navigate(`/stock/${type.toLowerCase()}`)}
+                    className={cn(
+                      "w-full py-4 rounded-3xl font-black text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 border shadow-sm active:scale-95 group",
+                      color === 'amber' ? "bg-amber-600 text-white" : "bg-emerald-600 text-white"
+                    )}
+                  >
+                    <LayoutList className="w-4 h-4" />
+                    Details
+                    <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                  </button>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => navigate(`/sale?action=add&type=${type}`)}
+                      className="py-3.5 rounded-2xl bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700 text-slate-900 dark:text-white font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-sm active:scale-95"
+                    >
+                      <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
+                      + Sale
+                    </button>
+                    <button
+                      onClick={() => navigate(`/purchase?action=add&type=${type}`)}
+                      className="py-3.5 rounded-2xl bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700 text-slate-900 dark:text-white font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-sm active:scale-95"
+                    >
+                      <ShoppingCart className="w-3.5 h-3.5 text-blue-600" />
+                      + Purchase
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
-
-      {/* Combined Insights Table */}
-      <div className="glass rounded-[2rem] overflow-hidden border border-slate-200 dark:border-dark-700/50 shadow-xl">
-        <div className="p-6 bg-white/30 dark:bg-dark-800/30 border-b border-slate-200 dark:border-dark-700/50 flex items-center gap-3">
-          <Calendar className="w-5 h-5 text-primary-600" />
-          <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Stock Analysis Overview</h2>
         </div>
-        <div className="overflow-auto smart-scroll max-h-[50vh]">
-          <table className="w-full">
-            <thead className="sticky top-0 z-10">
-              <tr className="bg-slate-50/50 dark:bg-dark-900/50">
-                <th className="px-8 py-5 text-left text-[11px] font-black text-slate-400 uppercase tracking-widest">Fuel Category</th>
-                <th className="px-8 py-5 text-right text-[11px] font-black text-slate-400 uppercase tracking-widest">Purchase Volume (L)</th>
-                <th className="px-8 py-5 text-right text-[11px] font-black text-slate-400 uppercase tracking-widest">Sales Volume (L)</th>
-                <th className="px-8 py-5 text-right text-[11px] font-black text-primary-600 uppercase tracking-widest bg-primary-600/5">Remaining Stock (L)</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-dark-800">
-              <tr className="group hover:bg-slate-50/50 dark:hover:bg-dark-900/40">
-                <td className="px-8 py-5 text-sm font-black text-slate-700 dark:text-dark-300 uppercase tracking-tighter">HSD</td>
-                <td className="px-8 py-5 text-right font-black tabular-nums text-emerald-600">{stockData.HSD.totalPurchased.toLocaleString()} L</td>
-                <td className="px-8 py-5 text-right font-black tabular-nums text-red-600">{stockData.HSD.totalSold.toLocaleString()} L</td>
-                <td className="px-8 py-5 text-right font-black tabular-nums bg-primary-600/5 text-slate-900 dark:text-white">{stockData.HSD.current.toLocaleString()} L</td>
-              </tr>
-              <tr className="group hover:bg-slate-50/50 dark:hover:bg-dark-900/40">
-                <td className="px-8 py-5 text-sm font-black text-slate-700 dark:text-dark-300 uppercase tracking-tighter">PMG</td>
-                <td className="px-8 py-5 text-right font-black tabular-nums text-emerald-600">{stockData.PMG.totalPurchased.toLocaleString()} L</td>
-                <td className="px-8 py-5 text-right font-black tabular-nums text-red-600">{stockData.PMG.totalSold.toLocaleString()} L</td>
-                <td className="px-8 py-5 text-right font-black tabular-nums bg-primary-600/5 text-slate-900 dark:text-white">{stockData.PMG.current.toLocaleString()} L</td>
-              </tr>
-              <tr aria-hidden="true">
-                <td colSpan={4} className="px-0 py-0">
-                  <div className="h-[1px] w-full bg-slate-300 dark:bg-dark-600" />
-                </td>
-              </tr>
-              <tr className="group hover:bg-slate-50/50 dark:hover:bg-dark-900/40">
-                <td className="px-8 py-5 text-sm font-black text-slate-700 dark:text-dark-300 uppercase tracking-tighter">Total Volume</td>
-                <td className="px-8 py-5 text-right font-black tabular-nums text-emerald-600">{(stockData.HSD.totalPurchased + stockData.PMG.totalPurchased).toLocaleString()} L</td>
-                <td className="px-8 py-5 text-right font-black tabular-nums text-red-600">{(stockData.HSD.totalSold + stockData.PMG.totalSold).toLocaleString()} L</td>
-                <td className="px-8 py-5 text-right font-black tabular-nums bg-primary-600/5 text-2xl text-black dark:text-white">
-                  {(stockData.HSD.current + stockData.PMG.current).toLocaleString()} L
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {showReport && (
-        <PrintReportModal 
-          data={filteredHistory} 
-          type="stock" 
-          onClose={() => setShowReport(false)} 
-          title={`${selectedType} STOCK HISTORY`}
-        />
-      )}
+      </PullToRefresh>
     </div>
   );
 }
