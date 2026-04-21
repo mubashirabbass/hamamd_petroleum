@@ -221,7 +221,7 @@ export default function Login() {
               <h1 className={`login-brand-heading text-xl sm:text-2xl md:text-3xl font-black transition-all duration-1000 font-urdu pt-4 min-h-[80px] leading-[1.8] text-center px-6 py-3 rounded-2xl soft-glass !bg-white/[0.12] text-white whitespace-nowrap ${typingFinished ? 'animate-glow-soft' : ''}`}>
                 {displayText}
               </h1>
-              <p className="text-white/90 text-[10px] sm:text-[11px] font-urdu px-4 py-1.5 soft-glass rounded-full !bg-white/[0.08] mt-1">
+              <p className="text-white/90 text-[12px] sm:text-[13px] font-urdu px-4 py-1.5 soft-glass rounded-full !bg-white/[0.08] mt-1">
                 مظفر گڑھ روڈ، اڈا گھیل پور، ضلع جھنگ
               </p>
               <div className="login-brand-fire flex items-center gap-2 text-amber-300">

@@ -59,9 +59,14 @@ export default function Layout() {
     const onTouchEnd = (e: TouchEvent) => {
       const dx = e.changedTouches[0].clientX - touchStartX.current;
       const dy = Math.abs(e.changedTouches[0].clientY - touchStartY.current);
-      // Swipe right from left edge (first 30px) with mostly horizontal motion
-      if (touchStartX.current < 30 && dx > 50 && dy < 80) {
+      
+      // Swipe right to OPEN (detect from up to 100px in from left)
+      if (!mobileSidebarOpen && touchStartX.current < 100 && dx > 50 && dy < 80) {
         setMobileSidebarOpen(true);
+      }
+      // Swipe left to CLOSE (detect anywhere when menu is open)
+      else if (mobileSidebarOpen && dx < -50 && dy < 80) {
+        setMobileSidebarOpen(false);
       }
     };
     window.addEventListener('touchstart', onTouchStart, { passive: true });
@@ -70,7 +75,7 @@ export default function Layout() {
       window.removeEventListener('touchstart', onTouchStart);
       window.removeEventListener('touchend',   onTouchEnd);
     };
-  }, []);
+  }, [mobileSidebarOpen]);
 
   // ── Keyboard shortcuts ───────────────────────────────────────────────────────
   useEffect(() => {

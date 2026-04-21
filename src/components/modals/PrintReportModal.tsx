@@ -49,15 +49,23 @@ export default function PrintReportModal({ data, type, onClose, title: customTit
       
       for (let i = 0; i < pages.length; i++) {
         const page = pages[i] as HTMLElement;
-        const canvas = await toPng(page, { pixelRatio: 2 });
+        
+        // Use a slightly lower pixelRatio for faster processing in large reports
+        const dataUrl = await toPng(page, { 
+          pixelRatio: 1.5,
+          cacheBust: true,
+          backgroundColor: '#fff'
+        });
         
         if (i > 0) doc.addPage();
-        doc.addImage(canvas, 'PNG', 0, 0, 210, 297);
+        doc.addImage(dataUrl, 'PNG', 0, 0, 210, 297, undefined, 'FAST');
       }
       
-      doc.save(`Report_${formatDate(today())}.pdf`);
+      const fileName = `${type.toUpperCase()}_Report_${today().replace(/\//g, '-')}.pdf`;
+      doc.save(fileName);
     } catch (err) {
       console.error('PDF Generation Error:', err);
+      alert('Failed to generate PDF. If the report is very large, try printing and choosing "Save as PDF" from the print menu.');
     } finally {
       setIsGenerating(false);
     }

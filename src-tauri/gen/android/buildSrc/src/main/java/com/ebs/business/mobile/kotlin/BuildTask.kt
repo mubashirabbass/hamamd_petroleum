@@ -1,3 +1,5 @@
+package com.ebs.business.mobile.kotlin
+
 import java.io.File
 import org.apache.tools.ant.taskdefs.condition.Os
 import org.gradle.api.DefaultTask
@@ -50,6 +52,13 @@ open class BuildTask : DefaultTask() {
         val release = release ?: throw GradleException("release cannot be null")
         val args = listOf("run", "--", "tauri", "android", "android-studio-script");
 
+        // On Windows, Gradle's process environment may not include the Node.js path.
+        // We inject it explicitly so npm.bat / npm.cmd can be found.
+        val nodePaths = listOf(
+            "C:\\Program Files\\nodejs",
+            System.getenv("APPDATA")?.let { "$it\\npm" } ?: ""
+        ).filter { it.isNotEmpty() }
+
         project.exec {
             workingDir(File(project.projectDir, rootDirRel))
             executable(executable)
@@ -63,6 +72,10 @@ open class BuildTask : DefaultTask() {
                 args("--release")
             }
             args(listOf("--target", target))
+            // Inject Node.js into PATH so npm is resolvable by Gradle on Windows
+            val currentPath = System.getenv("PATH") ?: ""
+            val newPath = (nodePaths + listOf(currentPath)).joinToString(";")
+            environment("PATH", newPath)
         }.assertNormalExitValue()
     }
 }

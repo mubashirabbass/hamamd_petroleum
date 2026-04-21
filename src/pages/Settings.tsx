@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import {
   Settings, ShieldCheck, AlertCircle, Calendar, UserCog,
   Cloud, RefreshCcw, Save, HardDrive, CloudOff, CheckCircle2,
-  Download, Upload, Trash2, Eye, EyeOff,
+  Download, Upload, Trash2, Eye, EyeOff, ArrowRight, Undo2
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import ManageUsersModal from '../components/modals/ManageUsersModal';
@@ -746,6 +746,7 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<'general' | 'users' | 'backup' | 'developer' | 'danger' | 'shortcuts'>('general');
   const [showManageUsers, setShowManageUsers] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
 
   // Staff can now access Settings but with restricted tabs
   const isStaff = currentUser?.role === 'Staff';
@@ -785,42 +786,77 @@ export default function SettingsPage() {
   }, [isStaff]);
 
   return (
-    <div className="animate-fade-in space-y-6 h-full">
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-8">
-        <div className="w-10 h-10 rounded-xl bg-slate-600/10 dark:bg-slate-600/20 flex items-center justify-center">
-          <Settings className="w-6 h-6 text-slate-600 dark:text-slate-400" />
+    <div className="animate-fade-in flex flex-col h-full overflow-hidden">
+      {/* Header — only show if not in mobile detail view */}
+      {!mobileDetailOpen && (
+        <div className="flex items-center gap-3 mb-8 shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-primary-600/10 dark:bg-primary-600/20 flex items-center justify-center">
+            <Settings className="w-6 h-6 text-primary-600" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Settings</h1>
+            <p className="text-sm text-slate-500 dark:text-dark-400">System configuration and management</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Settings</h1>
-          <p className="text-sm text-slate-500 dark:text-dark-400">System configuration and management</p>
-        </div>
-      </div>
+      )}
 
-      <div className="flex flex-col md:flex-row gap-6 items-start h-[calc(100vh-220px)]">
-        {/* Sidebar */}
-        <div className="w-full md:w-64 flex-shrink-0 space-y-1.5 font-bold">
+      <div className="flex flex-1 gap-6 items-start overflow-hidden relative">
+        {/* Sidebar / List Pane */}
+        <div className={cn(
+          "w-full md:w-72 flex-shrink-0 space-y-2 h-full overflow-y-auto no-scrollbar",
+          mobileDetailOpen ? "hidden md:block" : "block"
+        )}>
           {tabs.map((tab) => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id as any)}
+            <button 
+              key={tab.id} 
+              onClick={() => {
+                setActiveTab(tab.id as any);
+                setMobileDetailOpen(true);
+              }}
               className={cn(
-                'w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-all duration-200 border',
+                'w-full flex items-center justify-between px-5 py-4 rounded-2xl text-sm transition-all duration-300 group',
                 activeTab === tab.id
-                  ? 'bg-white dark:bg-dark-900 shadow-sm text-slate-900 dark:text-white border-slate-200 dark:border-dark-700/50'
-                  : 'text-slate-500 dark:text-dark-500 hover:text-slate-700 dark:hover:text-dark-300 hover:bg-slate-50 dark:hover:bg-dark-800/30 border-transparent'
-              )}>
-              <div className={cn(
-                'w-8 h-8 rounded-lg flex items-center justify-center',
-                activeTab === tab.id ? `${tab.color} text-white shadow-lg` : 'bg-slate-100 dark:bg-dark-810'
-              )}>
-                <tab.icon className="w-4 h-4" />
+                  ? 'bg-white dark:bg-dark-900 shadow-xl border-l-4 border-l-primary-600 scale-[1.02] z-10'
+                  : 'bg-white/50 dark:bg-dark-900/40 hover:bg-white dark:hover:bg-dark-800 border-transparent hover:scale-[1.01]'
+              )}
+            >
+              <div className="flex items-center gap-4">
+                <div className={cn(
+                  'w-11 h-11 rounded-2xl flex items-center justify-center transition-all duration-500',
+                  activeTab === tab.id ? `${tab.color} text-white rotate-[360deg] shadow-[0_8px_16px_rgba(0,0,0,0.2)]` : 'bg-slate-100 dark:bg-dark-800 text-slate-500'
+                )}>
+                  <tab.icon className="w-5 h-5" />
+                </div>
+                <div className="text-left">
+                  <p className={cn("font-black uppercase tracking-widest text-[11px]", activeTab === tab.id ? "text-primary-600 dark:text-primary-400" : "text-slate-400")}>
+                    Menu Option
+                  </p>
+                  <p className={cn("font-black text-sm", activeTab === tab.id ? "text-slate-900 dark:text-white" : "text-slate-500 dark:text-dark-500")}>
+                    {tab.label}
+                  </p>
+                </div>
               </div>
-              {tab.label}
+              <ArrowRight className={cn("w-4 h-4 transition-transform", activeTab === tab.id ? "text-primary-600 translate-x-1" : "text-slate-300 opacity-0 group-hover:opacity-100")} />
             </button>
           ))}
         </div>
 
-        {/* Content */}
-        <div className="flex-1 min-w-0 w-full animate-slide-up h-full overflow-auto">
+        {/* Content Pane */}
+        <div className={cn(
+          "flex-1 h-full min-w-0 flex flex-col transition-all duration-500 animate-slide-in",
+          mobileDetailOpen ? "block fixed inset-0 z-[150] bg-slate-50 dark:bg-dark-950 p-4 md:relative md:inset-auto md:p-0" : "hidden md:flex"
+        )}>
+          {/* Mobile Back Button */}
+          {mobileDetailOpen && (
+            <button 
+              onClick={() => setMobileDetailOpen(false)}
+              className="md:hidden flex items-center gap-2 mb-4 px-4 py-3 bg-white dark:bg-dark-900 rounded-xl shadow-sm border border-slate-200 dark:border-dark-800 font-black text-xs uppercase tracking-widest text-slate-500 active:scale-95 transition-all"
+            >
+              <Undo2 className="w-4 h-4" /> Back to List
+            </button>
+          )}
+
+          <div className="flex-1 overflow-y-auto no-scrollbar smart-scroll">
 
           {/* General */}
           {activeTab === 'general' && (

@@ -3,7 +3,7 @@ import {
   BarChart3, TrendingUp, TrendingDown, ArrowLeft,
   Package, LayoutList, Fuel, Zap, Clock, Download,
   ChevronRight, Calendar, Printer, ArrowUpDown, Pin, PinOff,
-  ShoppingCart
+  ShoppingCart, XCircle
 } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useStore, FuelType } from '../store/useStore';
@@ -16,6 +16,7 @@ import Pagination from '../components/ui/Pagination';
 import { useToast } from '../components/ui/Toast';
 import PullToRefresh from '../components/ui/PullToRefresh';
 import PrintReportModal from '../components/modals/PrintReportModal';
+import ModuleHeader from '../components/ui/ModuleHeader';
 
 // const PER_PAGE = 40; // Replaced by state
 
@@ -480,26 +481,13 @@ export default function StockPage() {
         scrollId="stock-manage-scroll"
         className="h-full w-full"
       >
-        <div className="animate-fade-in flex flex-col w-full p-4 pb-32">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 pb-0">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => navigate('/stock')}
-                className="w-10 h-10 rounded-xl flex items-center justify-center bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700 shadow-sm active:scale-95 transition-all text-slate-600 dark:text-dark-400"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
-              <div className="flex items-center gap-3">
-                <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg", selectedType === 'HSD' ? 'bg-amber-600/10' : 'bg-emerald-600/10')}>
-                  {selectedType === 'HSD' ? <Fuel className="w-7 h-7 text-amber-600" /> : <Zap className="w-7 h-7 text-emerald-600" />}
-                </div>
-                <div>
-                  <h1 className="text-xl font-black text-slate-900 dark:text-white uppercase leading-none">{selectedType}</h1>
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Inventory Management</p>
-                </div>
-              </div>
-            </div>
-          </div>
+        <div className="animate-fade-in flex flex-col w-full h-full pb-32">
+          <ModuleHeader 
+            title={selectedType} 
+            icon={selectedType === 'HSD' ? Fuel : Zap} 
+            iconClassName={selectedType === 'HSD' ? "!bg-amber-100 !text-amber-600" : "!bg-emerald-100 !text-emerald-600"}
+            onBack={() => navigate('/stock')}
+          />
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
             {[
@@ -522,22 +510,22 @@ export default function StockPage() {
             ))}
           </div>
 
-          <div className="flex items-center gap-2 bg-white dark:bg-dark-900 p-2 rounded-2xl border border-slate-200 dark:border-dark-700 shadow-sm overflow-x-auto no-scrollbar smart-scroll mt-6">
-            <div className="flex items-center bg-slate-50 dark:bg-dark-800 p-1 rounded-xl border border-slate-100 dark:border-dark-750 mr-2 shrink-0">
-              <button onClick={() => { setFromDate(today()); setToDate(today()); setPage(1); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all whitespace-nowrap">Today</button>
-              <button onClick={() => { setFromDate(startOfMonth()); setToDate(today()); setPage(1); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all border-l border-slate-200 dark:border-dark-700/50 whitespace-nowrap">Month</button>
+          <div className="flex items-center gap-2 bg-white dark:bg-dark-900 p-2 rounded-2xl border border-slate-200 dark:border-dark-700 shadow-sm overflow-x-auto no-scrollbar smart-scroll mt-6 mx-4">
+            <div className="flex items-center bg-slate-50 dark:bg-dark-800 p-1 rounded-xl border border-slate-100 dark:border-dark-750 shrink-0">
+              <button onClick={() => { setFromDate(today()); setToDate(today()); setPage(1); }} className={cn("px-3 py-1 text-[10px] font-black uppercase tracking-wider transition-all rounded-lg", (fromDate === today() && toDate === today()) ? "bg-white dark:bg-dark-900 text-primary-600 shadow-sm" : "text-slate-500")}>Today</button>
+              <button onClick={() => { setFromDate(startOfMonth()); setToDate(today()); setPage(1); }} className={cn("px-3 py-1 text-[10px] font-black uppercase tracking-wider transition-all rounded-lg border-l border-slate-200 dark:border-dark-700/50", (fromDate === startOfMonth() && toDate === today()) ? "bg-white dark:bg-dark-900 text-primary-600 shadow-sm" : "text-slate-500")}>Month</button>
             </div>
             <div className="flex items-center gap-2 px-2 shrink-0">
-              <input type="date" value={fromDate} onChange={e => { setFromDate(e.target.value); setPage(1); }} className="input !py-1 !px-2 !w-28 !text-[10px]" />
+              <input type="date" value={fromDate} onChange={e => { setFromDate(e.target.value); setPage(1); }} className="input !py-1 !px-2 !w-24 !text-[10px]" />
               <span className="text-slate-400">→</span>
-              <input type="date" value={toDate} onChange={e => { setToDate(e.target.value); setPage(1); }} className="input !py-1 !px-2 !w-28 !text-[10px]" />
+              <input type="date" value={toDate} onChange={e => { setToDate(e.target.value); setPage(1); }} className="input !py-1 !px-2 !w-24 !text-[10px]" />
             </div>
             {(fromDate || toDate) && (
               <button
                 onClick={() => { setFromDate(''); setToDate(''); setPage(1); }}
-                className="ml-2 px-3 py-1.5 text-[10px] font-black uppercase tracking-tighter text-red-600 bg-red-50 dark:bg-red-900/20 rounded-lg hover:bg-red-100 transition-all border border-red-200 dark:border-red-800/30 shrink-0"
+                className="p-2 text-red-600 shrink-0"
               >
-                Clear
+                <XCircle className="w-4 h-4" />
               </button>
             )}
           </div>
@@ -673,18 +661,13 @@ export default function StockPage() {
         className="h-full w-full p-4 pb-32 pt-4"
       >
         <div className="animate-fade-in space-y-10">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 px-2">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-600 to-cyan-800 flex items-center justify-center shadow-lg">
-                <BarChart3 className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-black text-slate-900 dark:text-white uppercase leading-none">Stock</h1>
-                <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-1">Inventory Overview</p>
-              </div>
-            </div>
-            <button onClick={handleDownloadStats} className="btn-primary !py-2.5 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-wider"><Download className="w-4 h-4" /> Stock Report</button>
-          </div>
+          <ModuleHeader 
+            title="Stock" 
+            icon={BarChart3} 
+            iconClassName="!bg-cyan-100 !text-cyan-600"
+          >
+            <button onClick={handleDownloadStats} className="btn-primary !py-2 !px-3 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-wider"><Download className="w-3.5 h-3.5" /> Report</button>
+          </ModuleHeader>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {cards.map(({ type, label, color, icon, data }) => (

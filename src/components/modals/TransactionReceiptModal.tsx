@@ -2,6 +2,7 @@ import { useRef, useEffect } from 'react';
 import { useReactToPrint } from 'react-to-print';
 import { X, Printer, FileText, Download, Share2, Camera } from 'lucide-react';
 import { toPng } from 'html-to-image';
+import { jsPDF } from 'jspdf';
 import { formatCurrency, formatDate } from '../../lib/utils';
 
 // ── Amount in words ──────────────────────────────────────────────────────────
@@ -43,11 +44,26 @@ export default function TransactionReceiptModal({ entity, type, onClose }: Trans
         pixelRatio: 2, // Higher quality
       });
       const link = document.createElement('a');
-      link.download = `Bill_${type}_${entity.billNo || entity.id?.slice(0, 8)}.png`;
+      link.download = `Bill_${type}_${entity.billNo || entity.invoiceNo || entity.id?.slice(0, 8)}.png`;
       link.href = dataUrl;
       link.click();
     } catch (err) {
       console.error('Failed to save image', err);
+    }
+  };
+
+  const handleGeneratePDF = async () => {
+    if (!contentRef.current) return;
+    try {
+      const doc = new jsPDF('p', 'mm', 'a4');
+      const dataUrl = await toPng(contentRef.current, { 
+        backgroundColor: '#fff',
+        pixelRatio: 2, 
+      });
+      doc.addImage(dataUrl, 'PNG', 0, 0, 210, 297);
+      doc.save(`Bill_${type}_${entity.billNo || entity.invoiceNo || entity.id?.slice(0, 8)}.pdf`);
+    } catch (err) {
+      console.error('Failed to generate PDF', err);
     }
   };
 
@@ -112,8 +128,11 @@ export default function TransactionReceiptModal({ entity, type, onClose }: Trans
           <span style={{ color: '#fff', fontWeight: 1000, fontSize: 16, textTransform: 'uppercase', letterSpacing: '0.15em' }}>Invoice Preview</span>
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <button onClick={handleSaveImage} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 20px', borderRadius: 12, background: 'rgba(255,255,255,0.1)', color: '#fff', fontWeight: 700, fontSize: 13, border: '1px solid rgba(255,255,255,0.2)', cursor: 'pointer', transition: 'all 0.2s' }}>
-            <Camera style={{ width: 16, height: 16 }} /> Save Image
+          <button onClick={handleSaveImage} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 18px', borderRadius: 12, background: 'rgba(255,255,255,0.08)', color: '#fff', fontWeight: 700, fontSize: 12, border: '1px solid rgba(255,255,255,0.15)', cursor: 'pointer', transition: 'all 0.2s' }}>
+            <Camera style={{ width: 14, height: 14 }} /> Image
+          </button>
+          <button onClick={handleGeneratePDF} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 18px', borderRadius: 12, background: 'linear-gradient(135deg,#059669,#047857)', color: '#fff', fontWeight: 700, fontSize: 12, border: 'none', cursor: 'pointer', boxShadow: '0 4px 12px rgba(5,150,105,0.2)', transition: 'all 0.2s' }}>
+            <Download style={{ width: 14, height: 14 }} /> PDF
           </button>
           <button onClick={handlePrint} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 28px', borderRadius: 12, background: 'linear-gradient(135deg,#3b82f6,#1d4ed8)', color: '#fff', fontWeight: 1000, fontSize: 14, border: 'none', cursor: 'pointer', boxShadow: '0 4px 15px rgba(59,130,246,0.3)', textTransform: 'uppercase' }}>
             <Printer style={{ width: 18, height: 18 }} /> Save PDF / Print

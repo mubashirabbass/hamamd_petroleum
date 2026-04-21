@@ -38,8 +38,8 @@ function DigitalClock() {
           <span className="text-xl md:text-3xl font-black tracking-tight text-slate-900 dark:text-white">{displayHH}</span>
           <span className="text-lg md:text-2xl font-black text-slate-900 dark:text-white mx-0.5">:</span>
           <span className="text-xl md:text-3xl font-black tracking-tight text-slate-900 dark:text-white">{mm}</span>
-          <span className="hidden md:inline text-2xl font-black text-slate-900 dark:text-white mx-0.5">:</span>
-          <span className="hidden md:inline text-3xl font-black tracking-tight text-slate-900 dark:text-white">{ss}</span>
+          <span className="text-lg md:text-2xl font-black text-slate-900 dark:text-white mx-0.5">:</span>
+          <span className="text-xl md:text-3xl font-black tracking-tight text-slate-900 dark:text-white">{ss}</span>
           <span className="text-[8px] md:text-[9px] font-black text-primary-600 dark:text-primary-400 uppercase tracking-widest ml-1 mb-0.5">{ampm}</span>
         </div>
         <div className="mt-0.5">
@@ -236,17 +236,19 @@ export default function Dashboard() {
 
         {/* 2. Dashboard Title Block (Center) */}
         <div className="flex-1 flex flex-col items-center justify-center relative z-10 overflow-hidden" dir="rtl">
-          <h1 className="text-[10px] xs:text-[12px] sm:text-[15px] md:text-2xl lg:text-3xl font-black text-white font-urdu leading-[1.8] text-center drop-shadow-[0_4px_8px_rgba(0,0,0,0.6)] whitespace-nowrap text-ellipsis overflow-hidden w-full px-1">
-            {displayText}
-          </h1>
+          <div className="min-w-[280px] xs:min-w-[320px] md:min-w-[450px] max-w-[90%] mx-auto px-10 py-2.5 bg-white/10 dark:bg-white/5 backdrop-blur-2xl rounded-2xl border border-white/20 shadow-2xl flex items-center justify-center transition-all duration-300">
+            <h1 className="text-[15px] xs:text-[17px] sm:text-[19px] md:text-2xl lg:text-3xl font-black text-white font-urdu leading-[1.8] text-center drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)] whitespace-nowrap">
+              {displayText}
+            </h1>
+          </div>
         </div>
 
         {/* 3. Clock & Profile Block (Right side) */}
-        <div className="flex items-center justify-between md:justify-end gap-2 md:gap-3 relative z-10 w-full md:w-auto">
-          <div className="backdrop-blur-md rounded-2xl px-3 md:px-4 py-1.5 md:py-2 border border-white/30 dark:border-dark-700/50 shadow-lg bg-white/70 dark:bg-dark-900/70 flex-1 md:flex-none">
+        <div className="flex items-center justify-end gap-2 md:gap-3 relative z-10">
+          <div className="backdrop-blur-md rounded-2xl px-3 md:px-4 py-1.5 md:py-2 border border-white/30 dark:border-dark-700/50 shadow-lg bg-white/70 dark:bg-dark-900/70">
             <DigitalClock />
           </div>
-          <div className="backdrop-blur-md rounded-2xl border border-white/30 dark:border-dark-700/50 shadow-lg bg-white/70 dark:bg-dark-900/70">
+          <div className="backdrop-blur-md rounded-2xl border border-white/30 dark:border-dark-700/50 shadow-lg bg-white/70 dark:bg-dark-900/70 ml-auto md:ml-0">
             <UserCard />
           </div>
         </div>

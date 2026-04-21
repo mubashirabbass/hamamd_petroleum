@@ -1,16 +1,24 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, ShoppingCart, TrendingUp, BarChart3, MoreHorizontal } from 'lucide-react';
+import { 
+  LayoutDashboard, ShoppingCart, TrendingUp, BarChart3, 
+  DollarSign, Package, AlertTriangle, Users, Settings 
+} from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useState, useEffect, useRef } from 'react';
 
 const navItems = [
-  { label: 'Home',     path: '/',         icon: LayoutDashboard },
-  { label: 'Sales',    path: '/sale',     icon: TrendingUp },
-  { label: 'Purchase', path: '/purchase', icon: ShoppingCart },
-  { label: 'Stock',    path: '/stock',    icon: BarChart3 },
+  { label: 'Home',     path: '/',           icon: LayoutDashboard },
+  { label: 'Sales',    path: '/sale',       icon: TrendingUp },
+  { label: 'Purchase', path: '/purchase',   icon: ShoppingCart },
+  { label: 'Expense',  path: '/expense',    icon: DollarSign },
+  { label: 'Asset',    path: '/asset',      icon: Package },
+  { label: 'Liability',path: '/liability',  icon: AlertTriangle },
+  { label: 'Stock',    path: '/stock',      icon: BarChart3 },
+  { label: 'Customer', path: '/customer',   icon: Users },
+  { label: 'Settings', path: '/settings',   icon: Settings },
 ];
 
-export default function BottomNav({ onMore }: { onMore: () => void }) {
+export default function BottomNav({ onMore: _onMore }: { onMore: () => void }) {
   const [visible, setVisible] = useState(true);
   const lastScrollY  = useRef(0);
   const lastTouchY   = useRef(0);
@@ -24,7 +32,6 @@ export default function BottomNav({ onMore }: { onMore: () => void }) {
   };
 
   useEffect(() => {
-    // Capture scroll events on any element (captures bubbling)
     const handleScroll = (e: Event) => {
       const el = e.target as HTMLElement;
       const y = el.scrollTop ?? window.scrollY;
@@ -34,7 +41,6 @@ export default function BottomNav({ onMore }: { onMore: () => void }) {
       else if (delta < -8) setVisible(true);
     };
 
-    // Detect upward swipe from bottom third of screen → show nav
     const handleTouchStart = (e: TouchEvent) => {
       lastTouchY.current = e.touches[0].clientY;
     };
@@ -53,7 +59,7 @@ export default function BottomNav({ onMore }: { onMore: () => void }) {
     return () => {
       window.removeEventListener('scroll',     handleScroll,     true);
       window.removeEventListener('touchstart', handleTouchStart);
-      window.removeEventListener('touchend',   handleTouchEnd);
+      window.removeEventListener('touchend',   onTouchEnd);
       if (hideTimer.current) clearTimeout(hideTimer.current);
     };
   }, []);
@@ -65,56 +71,48 @@ export default function BottomNav({ onMore }: { onMore: () => void }) {
         visible ? 'translate-y-0' : 'translate-y-full'
       )}
     >
-      {/* Glassmorphic background that covers safe area too */}
-      <div className="absolute inset-0 bg-white/90 dark:bg-dark-900/90 backdrop-blur-xl border-t border-slate-200 dark:border-dark-800 shadow-[0_-8px_30px_rgb(0,0,0,0.12)]" />
+      <div className="absolute inset-0 bg-white/70 dark:bg-dark-900/70 backdrop-blur-2xl border-t border-slate-200/50 dark:border-dark-800/50 shadow-[0_-8px_30px_rgb(0,0,0,0.08)]" />
 
-      {/* Nav row — fixed h-14, safe-area padding ADDS space below (doesn't compress row) */}
+      {/* Nav row — scrollable horizontally */}
       <div
-        className="relative flex items-center justify-around h-14 px-2"
+        className="relative flex items-center h-16 w-full overflow-x-auto no-scrollbar px-1"
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       >
-        {navItems.map((item) => (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            onClick={() => setVisible(true)}
-            className={({ isActive }) => cn(
-              'flex flex-col items-center justify-center gap-0.5 w-16 h-full transition-all duration-300 relative',
-              isActive
-                ? 'text-primary-600 dark:text-primary-400'
-                : 'text-slate-400 dark:text-dark-500'
-            )}
-          >
-            {({ isActive }) => (
-              <>
-                <div className={cn(
-                  'p-1.5 rounded-xl transition-all duration-300',
-                  isActive ? 'bg-primary-50 dark:bg-primary-900/20' : ''
-                )}>
-                  <item.icon className={cn('w-5 h-5', isActive ? 'scale-110' : '')} />
-                </div>
-                <span className="text-[8px] font-black uppercase tracking-widest leading-none">
-                  {item.label}
-                </span>
-                {isActive && (
-                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-primary-600 dark:bg-primary-400 rounded-b-full" />
-                )}
-              </>
-            )}
-          </NavLink>
-        ))}
-
-        {/* More menu button */}
-        <button
-          onClick={() => { onMore(); setVisible(true); }}
-          className="flex flex-col items-center justify-center gap-0.5 w-16 h-full text-slate-400 dark:text-dark-500 active:scale-90 transition-transform"
-        >
-          <div className="p-1.5">
-            <MoreHorizontal className="w-5 h-5" />
-          </div>
-          <span className="text-[8px] font-black uppercase tracking-widest leading-none">More</span>
-        </button>
+        <div className="flex items-center min-w-max px-2">
+          {navItems.map((item) => (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              onClick={() => setVisible(true)}
+              className={({ isActive }) => cn(
+                'flex flex-col items-center justify-center gap-0.5 w-[72px] h-14 transition-all duration-300 relative',
+                isActive
+                  ? 'text-primary-600 dark:text-primary-400 font-black'
+                  : 'text-slate-400 dark:text-dark-500'
+              )}
+            >
+              {({ isActive }) => (
+                <>
+                  <div className={cn(
+                    'p-1.5 rounded-xl transition-all duration-300',
+                    isActive ? 'bg-primary-50 dark:bg-primary-900/20' : ''
+                  )}>
+                    <item.icon className={cn('w-5 h-5', isActive ? 'scale-110' : '')} />
+                  </div>
+                  <span className="text-[7.5px] font-black uppercase tracking-widest leading-none">
+                    {item.label}
+                  </span>
+                  {isActive && (
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-primary-600 dark:bg-primary-400 rounded-b-full" />
+                  )}
+                </>
+              )}
+            </NavLink>
+          ))}
+        </div>
       </div>
     </nav>
   );
+}
+
 }

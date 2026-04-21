@@ -9,6 +9,7 @@
  *   Installation Folder: ebs_business.db (Portable Mode)
  */
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { getDB, getAndBumpCounter, loadAllData, setSetting, runInTransaction } from '../lib/db';
 import { invoke } from '@tauri-apps/api/core';
 
@@ -221,7 +222,9 @@ const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
 
 // ─── Store ────────────────────────────────────────────────────────────────────
 
-export const useStore = create<AppState>()((set, get) => ({
+export const useStore = create<AppState>()(
+  persist(
+    (set, get) => ({
   // ── DB Init ─────────────────────────────────────────────────────────────────
   dbReady: false,
   dbError: null,
@@ -754,4 +757,8 @@ export const useStore = create<AppState>()((set, get) => ({
       settings: get().settings,
     });
   },
+}), {
+  name: 'ebs-auth-storage',
+  storage: createJSONStorage(() => localStorage),
+  partialize: (state) => ({ currentUser: state.currentUser }),
 }));

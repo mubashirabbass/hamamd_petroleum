@@ -14,6 +14,7 @@ import TransactionReceiptModal from '../components/modals/TransactionReceiptModa
 import PrintReportModal from '../components/modals/PrintReportModal';
 import FAB from '../components/ui/FAB';
 import MobileActivityCard from '../components/ui/MobileActivityCard';
+import ModuleHeader from '../components/ui/ModuleHeader';
 import type { FuelType } from '../store/useStore';
 
 export default function SalePage() {
@@ -26,8 +27,6 @@ export default function SalePage() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'database'>('dashboard');
   const [fuelType, setFuelType] = useState<FuelType>('HSD');
   const [showForm, setShowForm] = useState(false);
-  const [isSidebarPinned, setIsSidebarPinned] = useState(true);
-  const isExpanded = isSidebarPinned;
 
   useEffect(() => {
     const tab = searchParams.get('tab');
@@ -181,73 +180,42 @@ export default function SalePage() {
 
   return (
     <div className="animate-fade-in flex flex-col h-full w-full overflow-hidden">
-      {/* Mobile-Native View and Fuel Switcher */}
-      <div className="flex flex-col gap-3 p-4 bg-white dark:bg-dark-900/50 border-b border-slate-200 dark:border-dark-800 flex-shrink-0 transition-all duration-300">
-        <div className="flex items-center gap-3">
-          <div className="segmented-control flex-1">
+      <ModuleHeader 
+        title="Sale" 
+        icon={TrendingUp} 
+        iconClassName="!bg-emerald-100 !text-emerald-600"
+      >
+        <div className="segmented-control !bg-emerald-50/50 dark:!bg-emerald-900/10 !p-0.5 shrink-0 !w-auto">
+          {(['HSD', 'PMG'] as FuelType[]).map((t) => (
             <button
-              onClick={() => setActiveTab('dashboard')}
-              className={cn("segmented-item", activeTab === 'dashboard' ? "segmented-item-active" : "segmented-item-inactive")}
+              key={t}
+              onClick={() => handleFuelSelect(t)}
+              className={cn(
+                "segmented-item !py-1.5 !px-3 !text-[10px]",
+                fuelType === t ? "!bg-emerald-600 !text-white !shadow-md" : "!text-emerald-600/60"
+              )}
             >
-              Analytics
+              {t}
             </button>
-            <button
-              onClick={() => setActiveTab('database')}
-              className={cn("segmented-item", activeTab === 'database' ? "segmented-item-active" : "segmented-item-inactive")}
-            >
-              History
-            </button>
-          </div>
-          
-          <button 
-            onClick={() => setIsSidebarPinned(!isSidebarPinned)}
-            className={cn(
-              "w-9 h-9 flex items-center justify-center rounded-xl flex-shrink-0 transition-all active:scale-95",
-              isSidebarPinned 
-                ? "bg-slate-100 dark:bg-dark-800 text-slate-600 dark:text-dark-300 shadow-inner" 
-                : "bg-emerald-50 dark:bg-emerald-900/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-800/30 shadow-sm"
-            )}
-            title={isSidebarPinned ? "Hide Filters" : "Show Filters"}
+          ))}
+        </div>
+      </ModuleHeader>
+
+      <div className="flex flex-col gap-3 p-4 bg-white dark:bg-dark-900/50 border-b border-slate-200 dark:border-dark-800 flex-shrink-0">
+        <div className="segmented-control overflow-x-auto no-scrollbar">
+          <button
+            onClick={() => setActiveTab('dashboard')}
+            className={cn("segmented-item", activeTab === 'dashboard' ? "segmented-item-active" : "segmented-item-inactive")}
           >
-            {isSidebarPinned ? <PinOff className="w-4 h-4" /> : <Pin className="w-4 h-4" />}
+            Analytics
+          </button>
+          <button
+            onClick={() => setActiveTab('database')}
+            className={cn("segmented-item", activeTab === 'database' ? "segmented-item-active" : "segmented-item-inactive")}
+          >
+            Ledger
           </button>
         </div>
-
-        {isSidebarPinned && (
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar animate-in fade-in slide-in-from-top-2 duration-300" style={{ WebkitOverflowScrolling: 'touch' }}>
-            {/* HSD / PMG toggle - never wraps */}
-            <div className="segmented-control !bg-emerald-50/50 dark:!bg-emerald-900/10 !p-0.5 shrink-0 !w-auto">
-              {(['HSD', 'PMG'] as FuelType[]).map((t) => (
-                <button
-                  key={t}
-                  onClick={() => handleFuelSelect(t)}
-                  className={cn(
-                    "segmented-item !py-1.5 !px-4",
-                    fuelType === t ? "!bg-emerald-600 !text-white !shadow-md" : "!text-emerald-600/60"
-                  )}
-                >
-                  {t}
-                </button>
-              ))}
-            </div>
-            {/* Date range */}
-            <div className="flex items-center gap-1 bg-slate-100 dark:bg-dark-800 p-1.5 rounded-xl border border-slate-200 dark:border-dark-700/50 shrink-0">
-              <input
-                type="date"
-                className="bg-transparent text-[10px] font-black text-slate-600 dark:text-dark-400 outline-none w-[110px] text-center"
-                value={fromDate}
-                onChange={(e) => { setFromDate(e.target.value); setPage(1); }}
-              />
-              <span className="text-[10px] text-slate-300 font-black">—</span>
-              <input
-                type="date"
-                className="bg-transparent text-[10px] font-black text-slate-600 dark:text-dark-400 outline-none w-[110px] text-center"
-                value={toDate}
-                onChange={(e) => { setToDate(e.target.value); setPage(1); }}
-              />
-            </div>
-          </div>
-        )}
       </div>
 
       {activeTab === 'dashboard' ? (
@@ -312,34 +280,127 @@ export default function SalePage() {
         </div>
       ) : (
         <div className="flex-1 flex flex-col min-h-0 bg-slate-50 dark:bg-dark-950/20 p-4 pb-48">
-          <div className="mb-4">
-            <SearchBar value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search historical sales..." fullWidth />
-          </div>
-
-          <div className="flex-1 overflow-y-auto no-scrollbar smart-scroll">
-            {paged.map((s) => (
-              <MobileActivityCard
-                key={s.id}
-                title={s.description || 'Daily Sale'}
-                subtitle={`${s.quantity.toLocaleString()} L @ ₨ ${formatCurrency(s.rate)}`}
-                amount={`₨ ${formatCurrency(s.amount)}`}
-                date={formatDate(s.date)}
-                icon={s.type === 'HSD' ? Fuel : Zap}
-                iconColor={s.type === 'HSD' ? 'text-amber-500' : 'text-blue-500'}
-                onClick={() => setViewingEntity(s)}
-              />
-            ))}
-            {paged.length === 0 && (
-              <div className="py-20 text-center">
-                <p className="text-xs font-black text-slate-400 uppercase tracking-widest">No entries found for this period</p>
+            <div className="flex items-center gap-2 bg-white dark:bg-dark-900 p-2 rounded-2xl border border-slate-200 dark:border-dark-700 shadow-sm overflow-x-auto no-scrollbar smart-scroll mb-6">
+              <div className="flex-1 min-w-[120px]">
+                <SearchBar 
+                  value={search} 
+                  onChange={setSearch} 
+                  placeholder="Search..." 
+                  fullWidth={true}
+                  className="!py-1.5 !text-[11px]"
+                />
               </div>
-            )}
+              
+              <button 
+                onClick={() => setShowReport(true)}
+                className="btn-secondary !py-2 !px-3 !bg-emerald-50 dark:!bg-emerald-900/10 !text-emerald-600 !border-emerald-200 dark:!border-emerald-800 shrink-0 flex items-center gap-2 text-[10px] uppercase font-black tracking-widest shadow-sm"
+              >
+                <Printer className="w-3.5 h-3.5" /> Print All
+              </button>
+              
+              <div className="relative group shrink-0">
+                <ArrowUpDown className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 group-hover:text-emerald-600 transition-colors pointer-events-none" />
+                <select
+                  value={entrySort}
+                  onChange={(e) => setEntrySort(e.target.value)}
+                  className="appearance-none pl-7 pr-8 py-2 bg-slate-50 dark:bg-dark-800 border border-slate-200 dark:border-dark-700 rounded-xl text-[9px] font-black uppercase tracking-wider text-slate-700 dark:text-dark-200 focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all cursor-pointer outline-none shadow-sm"
+                >
+                  <option value="date_desc">Newest</option>
+                  <option value="date_asc">Oldest</option>
+                  <option value="amount_desc">High Amt</option>
+                  <option value="amount_asc">Low Amt</option>
+                </select>
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                  <div className="w-1 h-1 border-r border-b border-current rotate-45" />
+                </div>
+              </div>
+
+              <div className="flex items-center bg-slate-100 dark:bg-dark-800 p-1 rounded-xl border border-slate-200 dark:border-dark-700/50 shrink-0">
+                <button 
+                  onClick={() => { setFromDate(today()); setToDate(today()); setPage(1); }} 
+                  className={cn("px-3 py-1 text-[10px] font-black uppercase tracking-wider transition-all rounded-lg", (fromDate === today() && toDate === today()) ? "bg-white dark:bg-dark-900 text-emerald-600 shadow-sm" : "text-slate-500")}
+                >
+                  Today
+                </button>
+                <button 
+                  onClick={() => { setFromDate(startOfMonth()); setToDate(today()); setPage(1); }} 
+                  className={cn("px-3 py-1 text-[10px] font-black uppercase tracking-wider transition-all rounded-lg border-l border-slate-200 dark:border-dark-700/50", (fromDate === startOfMonth() && toDate === today()) ? "bg-white dark:bg-dark-900 text-emerald-600 shadow-sm" : "text-slate-500")}
+                >
+                  Month
+                </button>
+              </div>
+
+              {(fromDate || toDate) && (
+                <button onClick={() => { setFromDate(''); setToDate(''); setPage(1); }} className="p-2 text-red-600 shrink-0"><XCircle className="w-4 h-4" /></button>
+              )}
+            </div>
+
+          <div className="flex-1 glass rounded-3xl overflow-hidden border border-slate-200 dark:border-dark-700/50 shadow-xl flex flex-col min-h-0">
+            <div className="flex-1 overflow-x-auto overflow-y-auto smart-scroll">
+              <table className="table-excel min-w-[900px] w-full border-collapse">
+                <thead className="sticky top-0 z-10 bg-slate-200 dark:bg-dark-800 shadow-sm">
+                  <tr className="table-header text-[10px]">
+                    <th className="table-cell text-left px-4">Date</th>
+                    <th className="table-cell text-left px-4">Description</th>
+                    <th className="table-cell text-right px-4">Qty (L)</th>
+                    <th className="table-cell text-right px-4">Rate</th>
+                    <th className="table-cell text-right px-4">Amount</th>
+                    <th className="table-cell text-center px-4">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-dark-800/50">
+                  {paged.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="px-6 py-20 text-center">
+                         <p className="text-xs font-black text-slate-400 uppercase tracking-widest">No entries found for this period</p>
+                      </td>
+                    </tr>
+                  ) : (
+                    paged.map((s) => (
+                      <tr key={s.id} className="table-row text-[11px] hover:bg-slate-50 dark:hover:bg-dark-800/50 transition-all group">
+                        <td className="table-cell whitespace-nowrap font-bold text-slate-600 dark:text-dark-300">{formatDate(s.date)}</td>
+                        <td className="table-cell font-medium text-slate-900 dark:text-white" dir="auto">{s.description || 'Daily Sale'}</td>
+                        <td className="table-cell text-right tabular-nums font-black text-emerald-600">{s.quantity.toLocaleString()}</td>
+                        <td className="table-cell text-right tabular-nums text-slate-600 dark:text-dark-400">₨ {formatCurrency(s.rate)}</td>
+                        <td className="table-cell text-right tabular-nums font-black text-slate-900 dark:text-white">₨ {formatCurrency(s.amount)}</td>
+                        <td className="table-cell text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <button onClick={() => setViewingEntity(s)} className="p-1.5 text-slate-400 hover:text-blue-500 transition-colors" title="View"><Eye className="w-4 h-4" /></button>
+                            <button onClick={() => setViewingEntity(s)} className="p-1.5 text-slate-400 hover:text-emerald-600 transition-colors" title="Print Receipt"><Printer className="w-4 h-4" /></button>
+                            <button onClick={() => handleEdit(s)} className="p-1.5 text-slate-400 hover:text-amber-600 transition-colors" title="Edit"><Edit2 className="w-4 h-4" /></button>
+                            {currentUser?.role === 'Admin' && (
+                              <button onClick={() => { if(confirm('Delete sale?')) deleteSale(s.id); }} className="p-1.5 text-slate-400 hover:text-red-600 transition-colors" title="Delete"><Trash2 className="w-4 h-4" /></button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+                <tfoot className="sticky bottom-0 bg-slate-100 dark:bg-dark-900 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] text-[11px] font-black uppercase tracking-wider">
+                  <tr className="border-t-2 border-slate-300 dark:border-dark-700">
+                    <td colSpan={2} className="px-4 py-3 text-right text-slate-500">Page Total:</td>
+                    <td className="px-4 py-3 text-right text-emerald-600 tabular-nums">{pageTotals.qty.toLocaleString()} L</td>
+                    <td></td>
+                    <td className="px-4 py-3 text-right text-slate-900 dark:text-white tabular-nums border-r border-slate-200 dark:border-dark-800">₨ {formatCurrency(pageTotals.amount)}</td>
+                    <td></td>
+                  </tr>
+                  <tr className="bg-emerald-600 text-white border-t border-white/10">
+                    <td colSpan={2} className="px-4 py-3 text-right opacity-80">Filters Grand Total:</td>
+                    <td className="px-4 py-3 text-right tabular-nums">{grandTotals.qty.toLocaleString()} L</td>
+                    <td></td>
+                    <td className="px-4 py-3 text-right tabular-nums">₨ {formatCurrency(grandTotals.amount)}</td>
+                    <td></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
             <div className="mt-4">
               <Pagination page={page} total={filtered.length} perPage={perPage} onChange={setPage} />
             </div>
           </div>
-        </div>
-      )}
+        )}
 
       {/* Primary Action FAB */}
       <FAB 

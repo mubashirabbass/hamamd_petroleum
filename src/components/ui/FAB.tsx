@@ -20,8 +20,7 @@ export default function FAB({
   return (
     <div className={cn(
       "fab-container",
-      isFixed && "fab-fixed",
-      className
+      isFixed && "fab-fixed"
     )}>
       {label && (
         <span className="fab-btn-label animate-fade-in">
@@ -30,7 +29,7 @@ export default function FAB({
       )}
       <button
         onClick={onClick}
-        className="fab-btn group"
+        className={cn("fab-btn group", className)}
         aria-label={label || 'Action'}
       >
         <Icon className="w-6 h-6 transition-transform group-hover:scale-110 group-active:scale-95" />

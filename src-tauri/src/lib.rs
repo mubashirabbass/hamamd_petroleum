@@ -4,6 +4,7 @@
 use std::io::{Read, Write};
 use tauri::Manager;
 use tauri_plugin_opener::OpenerExt;
+#[cfg(not(mobile))]
 use std::path::PathBuf;
 mod activation;
 
@@ -12,6 +13,7 @@ mod activation;
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Returns the app-root directory path (where the .exe lives)
+#[cfg(not(mobile))]
 fn get_base_dir() -> Result<PathBuf, String> {
     std::env::current_exe()
         .map(|p| p.parent().unwrap().to_path_buf())
@@ -124,7 +126,6 @@ async fn restore_from_zip(zip_path: String, app: tauri::AppHandle) -> Result<(),
     let app_dir = app.path().app_data_dir()
         .map_err(|e| e.to_string())?;
 
-    let db_path = app_dir.join("ebs_business.db");
 
     let file = std::fs::File::open(&zip_path).map_err(|e| {
         format!("Cannot open backup file: {}", e)
@@ -690,6 +691,7 @@ pub fn run() {
 
 #[tauri::command]
 fn get_machine_id() -> Result<String, String> {
+    #[cfg(target_os = "windows")]
     use std::process::Command;
     
     #[cfg(target_os = "windows")]
@@ -716,20 +718,7 @@ fn get_machine_id() -> Result<String, String> {
     
     #[cfg(target_os = "android")]
     {
-        use tauri::Manager;
-        // In Tauri 2, we can access the Android context via the runtime handle if needed,
-        // but for a simple ANDROID_ID, we can use the standard JNI approach.
-        // However, the cleanest way in Tauri 2 is to use the 'tauri' crate's internal jni access if available,
-        // or a simple command if we were in a plugin.
-        // For here, we will use a common Rust-JNI pattern.
-        
-        let ctx = tauri::generate_context!(); // This isn't quite right for grabbing the live context.
-        
-        // Actually, the easiest way for the user right now without adding complex JNI crates 
-        // is to use a slightly more robust 'default' for mobile that is better than 'default-machine-id',
-        // OR better, we use the 'tauri' provided app handle in the command.
-        
-        // Let's modify the signature to accept AppHandle!
+        // For Android, we use the hwid_activation logic or a simpler placeholder.
         return Err("Please use get_hwid_activation for mobile".to_string());
     }
 
