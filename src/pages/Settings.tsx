@@ -735,7 +735,6 @@ function BackupPanel() {
     </div>
   );
 }
-
 // ─────────────────────────────────────────────────────────────────────────────
 // SETTINGS PAGE
 // ─────────────────────────────────────────────────────────────────────────────
@@ -976,6 +975,7 @@ export default function SettingsPage() {
           )}
         </div>
       </div>
+    </div>
 
       <ManageUsersModal isOpen={showManageUsers} onClose={() => setShowManageUsers(false)} />
 

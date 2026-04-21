@@ -45,9 +45,11 @@ export default function BottomNav({ onMore: _onMore }: { onMore: () => void }) {
       lastTouchY.current = e.touches[0].clientY;
     };
     const handleTouchEnd = (e: TouchEvent) => {
-      const endY   = e.changedTouches[0].clientY;
+      const endY   = e.changedTouches[0].clientX; // Note: Use clientY usually but here checking swipe
       const startY = lastTouchY.current;
-      const swipeUp    = startY - endY > 30;
+      // Fixed: logic should check Y for up-swipe
+      const actualEndY = e.changedTouches[0].clientY;
+      const swipeUp    = startY - actualEndY > 30;
       const fromBottom = startY > window.innerHeight * 0.75;
       if (swipeUp && fromBottom) flashVisible();
     };
@@ -59,7 +61,7 @@ export default function BottomNav({ onMore: _onMore }: { onMore: () => void }) {
     return () => {
       window.removeEventListener('scroll',     handleScroll,     true);
       window.removeEventListener('touchstart', handleTouchStart);
-      window.removeEventListener('touchend',   onTouchEnd);
+      window.removeEventListener('touchend',   handleTouchEnd);
       if (hideTimer.current) clearTimeout(hideTimer.current);
     };
   }, []);
@@ -113,6 +115,4 @@ export default function BottomNav({ onMore: _onMore }: { onMore: () => void }) {
       </div>
     </nav>
   );
-}
-
 }
