@@ -223,7 +223,7 @@ export default function PurchasePage() {
     return {
       HSD: getStats('HSD'),
       PMG: getStats('PMG'),
-      recent: [...periodPurchases].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5)
+      recent: [...periodPurchases].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 10)
     };
   }, [purchases, settings.startDate, fromDate, toDate]);
 
@@ -386,7 +386,7 @@ export default function PurchasePage() {
                 Show All Entries <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
-            <div className="overflow-auto max-h-[400px] smart-scroll">
+            <div className="overflow-auto max-h-[500px] smart-scroll">
               <table className="w-full">
                 <thead className="bg-slate-50 dark:bg-dark-900/50">
                   <tr className="text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100 dark:border-dark-800">

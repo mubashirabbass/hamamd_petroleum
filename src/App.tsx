@@ -13,6 +13,7 @@ import Stock      from './pages/Stock';
 import Customer   from './pages/Customer';
 import Settings   from './pages/Settings';
 import Login      from './pages/Login';
+import LoadingSplash from './components/layout/LoadingSplash';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { useStore } from './store/useStore';
 import loginBg from '../WhatsApp Image 2026-04-08 at 5.20.06 PM.jpeg';
@@ -311,6 +312,7 @@ export default function App() {
   return (
     <ThemeProvider>
       <ToastProvider>
+        <LoadingSplash />
         <Router>
           <Routes>
             <Route path="/" element={<Layout />}>

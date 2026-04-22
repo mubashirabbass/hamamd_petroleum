@@ -211,6 +211,10 @@ interface AppState {
   login:       (u: User)  => void;
   logout:      ()          => void;
 
+  // ─ UI State ────────────────────────────────────────────────────────────────
+  isLoading: boolean;
+  triggerSplash: () => void;
+
   // ─ Reset ──────────────────────────────────────────────────────────────────
   resetAllData: () => Promise<void>;
 }
@@ -724,6 +728,13 @@ export const useStore = create<AppState>()((set, get) => ({
   currentUser: null,
   login:  (u) => set({ currentUser: u }),
   logout: ()  => set({ currentUser: null }),
+
+  // ── UI State ─────────────────────────────────────────────────────────────────
+  isLoading: false,
+  triggerSplash: () => {
+    set({ isLoading: true });
+    setTimeout(() => set({ isLoading: false }), 700);
+  },
 
   // ── Reset All Data ────────────────────────────────────────────────────────────
   resetAllData: async () => {

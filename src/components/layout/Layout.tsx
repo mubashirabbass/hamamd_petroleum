@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import BottomNav from './BottomNav';
@@ -20,8 +20,13 @@ import Customer from '../../pages/Customer';
 import Settings from '../../pages/Settings';
 
 export default function Layout() {
-  const { } = useStore();
+  const { triggerSplash } = useStore();
   const location = useLocation();
+
+  useEffect(() => {
+    triggerSplash();
+  }, [location.pathname]);
+
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [touchStart, setTouchStart] = useState<number | null>(null);
 

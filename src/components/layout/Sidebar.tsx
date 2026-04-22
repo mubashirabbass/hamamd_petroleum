@@ -37,7 +37,7 @@ type SidebarProps = {
 
 export default function Sidebar({ className = '', isCollapsed = false, onNavigate, onCloseMobile }: SidebarProps) {
   const location = useLocation();
-  const { logout, settings, updateSettings } = useStore();
+  const { logout, settings, updateSettings, triggerSplash } = useStore();
 
   const handleZoom = async (delta: number) => {
     const newZoom = Math.min(Math.max(settings.zoomLevel + delta, 0.5), 2.0);
@@ -52,33 +52,37 @@ export default function Sidebar({ className = '', isCollapsed = false, onNavigat
     )}>
       <div className="flex-1 flex flex-col h-full overflow-hidden">
         {/* Header */}
-        <div className="h-20 flex items-center px-4 gap-3 border-b border-slate-100 dark:border-dark-800">
-          <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center shadow-xl p-1.5 border border-slate-150">
+        <div className={cn("h-20 flex items-center border-b border-slate-100 dark:border-dark-800 transition-all", isCollapsed ? "justify-center px-1" : "px-4 gap-3")}>
+          <div className="w-10 h-10 rounded-2xl bg-white flex-shrink-0 flex items-center justify-center shadow-xl p-1 border border-slate-150">
             <img src="/assets/logo-hr.png" alt="Logo" className="w-full h-full object-contain" />
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-slate-900 dark:text-white font-black text-sm leading-tight truncate">
-              {settings.softwareName || 'HR Filling Station'}
-            </p>
-            <p className="text-slate-400 dark:text-dark-500 text-[10px] font-bold uppercase tracking-widest">Business Suite</p>
-          </div>
+          {!isCollapsed && (
+            <div className="flex-1 min-w-0">
+              <p className="text-slate-900 dark:text-white font-black text-sm leading-tight truncate">
+                {settings.softwareName || 'HR Filling Station'}
+              </p>
+              <p className="text-slate-400 dark:text-dark-500 text-[10px] font-bold uppercase tracking-widest">Business Suite</p>
+            </div>
+          )}
           {/* Action Buttons in Header */}
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={logout}
-              className="p-1.5 rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all border border-transparent hover:border-red-100 dark:hover:border-red-900/30"
-              title="Sign Out"
-            >
-              <LogOut className="w-5 h-5" />
-            </button>
-            <button
-              onClick={onCloseMobile}
-              className="md:hidden p-1.5 rounded-xl bg-slate-100 dark:bg-dark-800 text-slate-500 dark:text-white hover:bg-slate-200 dark:hover:bg-dark-700 transition-all shadow-sm"
-              aria-label="Close"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
+          {!isCollapsed && (
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={logout}
+                className="p-1.5 rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all border border-transparent hover:border-red-100 dark:hover:border-red-900/30"
+                title="Sign Out"
+              >
+                <LogOut className="w-5 h-5" />
+              </button>
+              <button
+                onClick={onCloseMobile}
+                className="md:hidden p-1.5 rounded-xl bg-slate-100 dark:bg-dark-800 text-slate-500 dark:text-white hover:bg-slate-200 dark:hover:bg-dark-700 transition-all shadow-sm"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Navigation */}
@@ -93,18 +97,23 @@ export default function Sidebar({ className = '', isCollapsed = false, onNavigat
                 <NavLink
                   to={path}
                   end={path === '/stock'}
-                  onClick={onNavigate}
+                  onClick={() => {
+                    triggerSplash();
+                    if (onNavigate) onNavigate();
+                  }}
                   className={cn(
-                    'flex items-center gap-4 px-4 py-3 rounded-2xl text-sm font-black transition-all duration-300 relative group mb-1',
+                    'flex items-center rounded-2xl text-sm font-black transition-all duration-300 relative group mb-1',
+                    isCollapsed ? "justify-center px-0 py-3" : "px-4 py-3 gap-4",
                     active 
                       ? 'bg-primary-600 text-white shadow-[0_8px_20px_rgba(37,99,235,0.35)]' 
                       : 'text-slate-500 dark:text-dark-400 hover:bg-slate-50 dark:hover:bg-dark-800'
                   )}
+                  title={isCollapsed ? label : ""}
                 >
                   <Icon className={cn("w-5 h-5 flex-shrink-0", active ? "scale-110" : "")} />
-                  <span className="flex-1 truncate">{label}</span>
-                  {active && (
-                    <div className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-white rounded-full opacity-0" />
+                  {!isCollapsed && <span className="flex-1 truncate">{label}</span>}
+                  {active && !isCollapsed && (
+                    <div className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-white rounded-full" />
                   )}
                 </NavLink>
 
@@ -116,7 +125,10 @@ export default function Sidebar({ className = '', isCollapsed = false, onNavigat
                         <NavLink
                           key={child.path}
                           to={child.path}
-                          onClick={onNavigate}
+                          onClick={() => {
+                            triggerSplash();
+                            if (onNavigate) onNavigate();
+                          }}
                           className={cn(
                             'flex items-center gap-3 px-4 py-2.5 rounded-xl text-[13px] font-black transition-all duration-200',
                             childActive
@@ -137,29 +149,45 @@ export default function Sidebar({ className = '', isCollapsed = false, onNavigat
         </nav>
 
         {/* Sidebar Footer — Zoom Controls */}
-        <div className="p-4 pb-12 border-t border-slate-100 dark:border-dark-800 bg-slate-50/50 dark:bg-dark-900/50">
-          <div className="flex items-center justify-between mb-3 px-1">
-            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-dark-500">Interface Zoom</span>
-            <span className="text-[10px] font-black text-primary-600 dark:text-primary-400 bg-primary-100 dark:bg-primary-900/30 px-2.5 py-0.5 rounded-full shadow-sm">
-              {Math.round(settings.zoomLevel * 100)}%
-            </span>
-          </div>
-          <div className="flex items-center gap-2 p-1.5 bg-white dark:bg-dark-850 rounded-2xl shadow-sm border border-slate-200 dark:border-dark-800">
+        <div className={cn("border-t border-slate-100 dark:border-dark-800 bg-slate-50/50 dark:bg-dark-900/50 transition-all", isCollapsed ? "p-2 pb-4" : "p-4 pb-4")}>
+          {!isCollapsed && (
+            <div className="flex items-center justify-between mb-3 px-1">
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-dark-500">Interface Zoom</span>
+              <span className="text-[10px] font-black text-primary-600 dark:text-primary-400 bg-primary-100 dark:bg-primary-900/30 px-2.5 py-0.5 rounded-full shadow-sm">
+                {Math.round(settings.zoomLevel * 100)}%
+              </span>
+            </div>
+          )}
+          <div className={cn("flex items-center bg-white dark:bg-dark-850 rounded-2xl shadow-sm border border-slate-200 dark:border-dark-800 overflow-hidden", isCollapsed ? "flex-col gap-2 p-1" : "gap-2 p-1.5")}>
             <button 
               onClick={() => handleZoom(-0.1)} 
-              className="flex-1 h-9 flex items-center justify-center rounded-xl bg-slate-50 dark:bg-dark-800 hover:bg-slate-100 dark:hover:bg-dark-750 text-slate-500 dark:text-dark-200 transition-all active:scale-90"
+              className="flex-1 w-full h-9 flex items-center justify-center rounded-xl bg-slate-50 dark:bg-dark-800 hover:bg-slate-100 dark:hover:bg-dark-750 text-slate-500 dark:text-dark-200 transition-all active:scale-90"
+              title="Zoom Out"
             >
-              <Minus className="w-5 h-5" />
+              <Minus className="w-4 h-4" />
             </button>
-            <div className="w-px h-5 bg-slate-200 dark:bg-dark-700" />
+            {!isCollapsed && <div className="w-px h-5 bg-slate-200 dark:bg-dark-700" />}
             <button 
               onClick={() => handleZoom(0.1)} 
-              className="flex-1 h-9 flex items-center justify-center rounded-xl bg-slate-50 dark:bg-dark-800 hover:bg-slate-100 dark:hover:bg-dark-750 text-slate-500 dark:text-dark-200 transition-all active:scale-90"
+              className="flex-1 w-full h-9 flex items-center justify-center rounded-xl bg-slate-50 dark:bg-dark-800 hover:bg-slate-100 dark:hover:bg-dark-750 text-slate-500 dark:text-dark-200 transition-all active:scale-90"
+              title="Zoom In"
             >
-              <Plus className="w-5 h-5" />
+              <Plus className="w-4 h-4" />
             </button>
           </div>
         </div>
+
+        {/* Developer Tag */}
+        {!isCollapsed && (
+          <div className="px-4 py-3 pb-12">
+            <div className="flex flex-col items-center justify-center p-3 rounded-2xl bg-slate-50 dark:bg-dark-950/50 border border-slate-200 dark:border-dark-800 shadow-sm">
+              <p className="text-[8px] font-black text-slate-400 dark:text-dark-500 uppercase tracking-[0.2em] mb-1">Software Solution By</p>
+              <p className="text-[11px] font-black text-slate-900 dark:text-white uppercase tracking-tight leading-none">MB Soft and Tech</p>
+              <div className="mt-2 h-px w-8 bg-primary-500/30" />
+              <p className="mt-2 text-[10px] font-bold text-primary-600 dark:text-primary-400 font-mono tracking-wider">0304-1654629</p>
+            </div>
+          </div>
+        )}
       </div>
     </aside>
   );
