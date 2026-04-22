@@ -230,7 +230,7 @@ export default function PurchasePage() {
   return (
     <div className="animate-fade-in flex flex-col h-full w-full overflow-hidden">
       <ModuleHeader 
-        title="Purchase" 
+        title="Purchase Entries" 
         icon={ShoppingCart} 
         iconClassName="!bg-blue-100 !text-blue-600"
       >
@@ -262,13 +262,13 @@ export default function PurchasePage() {
             onClick={() => setActiveTab('database')}
             className={cn("segmented-item", activeTab === 'database' ? "segmented-item-active" : "segmented-item-inactive")}
           >
-            Ledger
+            Entries
           </button>
         </div>
       </div>
 
       {activeTab === 'dashboard' ? (
-        <div className="flex-1 flex flex-col h-full w-full overflow-y-auto smart-scroll p-4 md:p-6 pb-20">
+        <div className="flex-1 flex flex-col h-full w-full overflow-y-auto smart-scroll p-4 md:p-6 pb-6">
           {/* Compact Stats Grid — Support horizontal scroll if cards are too wide */}
           <div className="flex gap-4 overflow-x-auto no-scrollbar smart-scroll mb-6 pb-2">
             {[
@@ -302,12 +302,12 @@ export default function PurchasePage() {
           {/* Recent Purchases Mini List */}
           <div className="flex-1 flex flex-col min-h-0">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Recent Deliveries</h3>
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Activity Entries</h3>
               <button 
                 onClick={() => setActiveTab('database')}
                 className="text-[10px] font-black uppercase tracking-widest text-blue-600"
               >
-                View History
+                View Entries
               </button>
             </div>
             <div className="flex-1 overflow-y-auto no-scrollbar smart-scroll">
@@ -386,7 +386,7 @@ export default function PurchasePage() {
               )}
             </div>
 
-          <div className="flex-1 glass rounded-3xl overflow-hidden border border-slate-200 dark:border-dark-700/50 shadow-xl flex flex-col min-h-0">
+          <div className="flex-1 glass rounded-3xl border border-slate-200 dark:border-dark-700/50 shadow-xl flex flex-col min-h-0 container-scroll">
             <div className="flex-1 overflow-x-auto overflow-y-auto smart-scroll">
               <table className="table-excel min-w-[1000px] w-full border-collapse">
                 <thead className="sticky top-0 z-10 bg-slate-200 dark:bg-dark-800 shadow-sm">
@@ -421,7 +421,7 @@ export default function PurchasePage() {
                             <button onClick={() => setViewingEntity(p)} className="p-1.5 text-slate-400 hover:text-blue-500 transition-colors" title="View"><Eye className="w-4 h-4" /></button>
                             <button onClick={() => setViewingEntity(p)} className="p-1.5 text-slate-400 hover:text-emerald-600 transition-colors" title="Print Receipt"><Printer className="w-4 h-4" /></button>
                             <button onClick={() => handleEdit(p)} className="p-1.5 text-slate-400 hover:text-amber-600 transition-colors" title="Edit"><Edit2 className="w-4 h-4" /></button>
-                            {currentUser?.role === 'Admin' && (
+                            {(currentUser?.role === 'Admin' || currentUser?.role === 'Developer') && (
                               <button onClick={() => { if(confirm('Delete purchase?')) deletePurchase(p.id); }} className="p-1.5 text-slate-400 hover:text-red-600 transition-colors" title="Delete"><Trash2 className="w-4 h-4" /></button>
                             )}
                           </div>
@@ -470,7 +470,7 @@ export default function PurchasePage() {
           variant="bottom-sheet"
         >
           <form onSubmit={handleSubmit} className="flex flex-col h-full bg-slate-50 dark:bg-dark-950/20 -m-6 p-6">
-            <div className="flex-1 space-y-4 mb-20 overflow-y-auto smart-scroll no-scrollbar">
+            <div className="flex-1 space-y-4 mb-6 overflow-y-auto smart-scroll no-scrollbar">
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-dark-500 px-1">Entry Date</label>

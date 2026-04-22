@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import { useStore } from '../../store/useStore';
-import { Menu, ArrowLeft } from 'lucide-react';
+import { Menu, ArrowLeft, LogOut } from 'lucide-react';
 
 // Page Imports for Persistence
 import Dashboard from '../../pages/Dashboard';
@@ -42,7 +42,7 @@ const LABEL_MAP: Record<string, string> = {
 };
 
 export default function Layout() {
-  const { settings, currentUser } = useStore();
+  const { settings, currentUser, logout } = useStore();
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -60,8 +60,8 @@ export default function Layout() {
       const dx = e.changedTouches[0].clientX - touchStartX.current;
       const dy = Math.abs(e.changedTouches[0].clientY - touchStartY.current);
       
-      // Swipe right to OPEN (detect from up to 100px in from left)
-      if (!mobileSidebarOpen && touchStartX.current < 100 && dx > 50 && dy < 80) {
+      // Swipe right to OPEN (detect from up to 40px in from left)
+      if (!mobileSidebarOpen && touchStartX.current < 40 && dx > 50 && dy < 80) {
         setMobileSidebarOpen(true);
       }
       // Swipe left to CLOSE (detect anywhere when menu is open)
@@ -165,14 +165,22 @@ export default function Layout() {
             </span>
           </div>
 
-          {/* Right: placeholder */}
-          <div className="flex items-center justify-end w-10" />
+          {/* Right: Logout Button */}
+          <div className="flex items-center justify-end w-10">
+            <button
+              onClick={logout}
+              className="p-2 -mr-2 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 active:scale-90 transition-all"
+              title="Logout"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
+          </div>
         </header>
 
         {/* Content container — takes remaining height, no bottom padding needed
             because the BottomNav auto-hides. Pages handle their own pb for the
             case when nav IS visible (pb-20 in each page scroll wrapper).        */}
-        <div className="flex-1 overflow-hidden bg-slate-50 dark:bg-dark-950/50 relative">
+        <div className="flex-1 overflow-hidden bg-slate-50 dark:bg-dark-950/50 relative pb-[calc(64px+env(safe-area-inset-bottom,0px))] lg:pb-0">
           <div className="w-full h-full relative">
             <div style={{ display: isPath('/')          ? 'block' : 'none' }} className="h-full w-full"><Dashboard /></div>
             <div style={{ display: isPath('/purchase')  ? 'block' : 'none' }} className="h-full w-full"><Purchase /></div>

@@ -2,11 +2,13 @@
 // Handles: SQLite plugin registration, Backup/Restore, Google OAuth2, Drive API
 
 use std::io::{Read, Write};
+#[cfg(mobile)]
 use tauri::Manager;
 use tauri_plugin_opener::OpenerExt;
 #[cfg(not(mobile))]
 use std::path::PathBuf;
 mod activation;
+use rusqlite::Connection;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // UTILITY HELPERS
@@ -21,6 +23,7 @@ fn get_base_dir() -> Result<PathBuf, String> {
 }
 
 #[tauri::command]
+#[allow(unused_variables)]
 fn get_app_data_path(app: tauri::AppHandle) -> Result<String, String> {
     #[cfg(not(mobile))]
     {
@@ -45,6 +48,7 @@ fn get_app_data_path(app: tauri::AppHandle) -> Result<String, String> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 #[tauri::command]
+#[allow(unused_variables)]
 async fn create_backup_zip(app: tauri::AppHandle) -> Result<String, String> {
     #[cfg(not(mobile))]
     let app_dir = get_base_dir()?;
@@ -118,6 +122,7 @@ async fn create_backup_zip(app: tauri::AppHandle) -> Result<String, String> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 #[tauri::command]
+#[allow(unused_variables)]
 async fn restore_from_zip(zip_path: String, app: tauri::AppHandle) -> Result<(), String> {
     #[cfg(not(mobile))]
     let app_dir = get_base_dir()?;
@@ -563,6 +568,7 @@ async fn list_drive_backups(access_token: String) -> Result<Vec<serde_json::Valu
 async fn download_drive_backup(
     file_id: String,
     access_token: String,
+    #[allow(unused_variables)]
     app: tauri::AppHandle,
 ) -> Result<String, String> {
     let client = reqwest::Client::new();
@@ -611,6 +617,7 @@ async fn download_drive_backup(
 async fn save_buffer_to_app_data(
     filename: String,
     data: Vec<u8>,
+    #[allow(unused_variables)]
     app: tauri::AppHandle,
 ) -> Result<String, String> {
     #[cfg(not(mobile))]
@@ -631,6 +638,7 @@ async fn save_buffer_to_app_data(
 async fn copy_file_native(
     src: String,
     dest_filename: String,
+    #[allow(unused_variables)]
     app: tauri::AppHandle,
 ) -> Result<String, String> {
     // If the Android picker returns a direct file path, we can copy it natively
@@ -651,6 +659,292 @@ async fn copy_file_native(
         .map_err(|e| format!("Native copy failed (Android content URI blocks may still apply to the src): {}", e))?;
         
     Ok(target_path.to_string_lossy().to_string())
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DATA EXPORT — JSON Snapshot + CSV Files for crash recovery & portability
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[allow(unused_variables)]
+fn get_db_path(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
+    #[cfg(not(mobile))]
+    { get_base_dir().map(|p| p.join("ebs_business.db")) }
+    #[cfg(mobile)]
+    { app.path().app_data_dir().map(|p| p.join("ebs_business.db")).map_err(|e| e.to_string()) }
+}
+
+#[allow(unused_variables)]
+fn get_export_dir(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
+    #[cfg(not(mobile))]
+    { get_base_dir().map(|p| { let d = p.join("exports"); let _ = std::fs::create_dir_all(&d); d }) }
+    #[cfg(mobile)]
+    { app.path().app_data_dir().map(|p| { let d = p.join("exports"); let _ = std::fs::create_dir_all(&d); d }).map_err(|e| e.to_string()) }
+}
+
+/// Escape a CSV field value
+fn csv_field(v: &str) -> String {
+    if v.contains(',') || v.contains('"') || v.contains('\n') {
+        format!("\"{}\"", v.replace('"', "\"\""))
+    } else {
+        v.to_string()
+    }
+}
+
+/// Export ALL data to JSON + individual CSV files, and return the export folder path.
+/// This is the crash-safe portable dump that can be opened in Excel or imported
+/// into any future app.
+#[tauri::command]
+async fn export_data_snapshot(app: tauri::AppHandle) -> Result<String, String> {
+    let db_path = get_db_path(&app)?;
+    if !db_path.exists() {
+        return Err("No database found. Add some data first.".into());
+    }
+
+    let export_dir = get_export_dir(&app)?;
+    let conn = Connection::open(&db_path).map_err(|e| e.to_string())?;
+
+    let now = chrono::Utc::now();
+    let ts  = now.format("%Y-%m-%d %H:%M UTC").to_string();
+
+    // ── 1. JSON SNAPSHOT ──────────────────────────────────────────────────────
+    let mut root = serde_json::json!({
+        "app": "HR Filling Station",
+        "exportedAt": ts,
+        "version": "2.0",
+        "note": "This file contains ALL business data. Import into any spreadsheet or future app."
+    });
+
+    macro_rules! query_rows {
+        ($conn:expr, $sql:expr) => {{
+            let mut stmt = $conn.prepare($sql).map_err(|e| e.to_string())?;
+            let col_count = stmt.column_count();
+            let col_names: Vec<String> = (0..col_count).map(|i| stmt.column_name(i).unwrap_or("").to_string()).collect();
+            let rows = stmt.query_map([], |row| {
+                let mut obj = serde_json::Map::new();
+                for (i, name) in col_names.iter().enumerate() {
+                    let val: serde_json::Value = match row.get_ref(i) {
+                        Ok(rusqlite::types::ValueRef::Null)    => serde_json::Value::Null,
+                        Ok(rusqlite::types::ValueRef::Integer(n)) => n.into(),
+                        Ok(rusqlite::types::ValueRef::Real(f))    => serde_json::json!(f),
+                        Ok(rusqlite::types::ValueRef::Text(t))    => String::from_utf8_lossy(t).into(),
+                        Ok(rusqlite::types::ValueRef::Blob(_))    => "<blob>".into(),
+                        Err(_) => serde_json::Value::Null,
+                    };
+                    obj.insert(name.clone(), val);
+                }
+                Ok(serde_json::Value::Object(obj))
+            }).map_err(|e| e.to_string())?;
+            let mut result = Vec::new();
+            for r in rows { if let Ok(v) = r { result.push(v); } }
+            (col_names, result)
+        }};
+    }
+
+    let (_, purchases)   = query_rows!(conn, "SELECT bill_no,type,date,description,invoice_no,vehicle_no,details,rate,quantity,carriage,amount,total_amount FROM purchases ORDER BY date");
+    let (_, sales)       = query_rows!(conn, "SELECT bill_no,type,date,description,quantity,rate,amount FROM sales ORDER BY date");
+    let (_, exp_cats)    = query_rows!(conn, "SELECT name FROM expense_categories");
+    let (_, exp_entries) = query_rows!(conn, "SELECT ec.name as category,e.bill_no,e.date,e.details,e.amount FROM expense_entries e JOIN expense_categories ec ON e.category_id=ec.id ORDER BY e.date");
+    let (_, ast_cats)    = query_rows!(conn, "SELECT name FROM asset_categories");
+    let (_, ast_entries) = query_rows!(conn, "SELECT ac.name as category,a.bill_no,a.date,a.description,a.debit,a.credit,a.balance FROM asset_entries a JOIN asset_categories ac ON a.category_id=ac.id ORDER BY a.date");
+    let (_, lib_cats)    = query_rows!(conn, "SELECT name FROM liability_categories");
+    let (_, lib_entries) = query_rows!(conn, "SELECT lc.name as category,l.bill_no,l.date,l.description,l.debit,l.credit,l.balance FROM liability_entries l JOIN liability_categories lc ON l.category_id=lc.id ORDER BY l.date");
+    let (_, customers)   = query_rows!(conn, "SELECT name,phone FROM customers");
+    let (_, cust_entries)= query_rows!(conn, "SELECT c.name as customer,c.phone,ce.bill_no,ce.date,ce.description,ce.debit,ce.credit,ce.balance FROM customer_entries ce JOIN customers c ON ce.customer_id=c.id ORDER BY ce.date");
+    let (_, users)        = query_rows!(conn, "SELECT name,email,role,created_at FROM users");
+    let (_, settings)     = query_rows!(conn, "SELECT key,value FROM app_settings");
+
+    root["purchases"]  = serde_json::Value::Array(purchases.clone());
+    root["sales"]      = serde_json::Value::Array(sales.clone());
+    root["expenses"]   = serde_json::json!({ "categories": exp_cats, "entries": exp_entries.clone() });
+    root["assets"]     = serde_json::json!({ "categories": ast_cats, "entries": ast_entries.clone() });
+    root["liabilities"]= serde_json::json!({ "categories": lib_cats, "entries": lib_entries.clone() });
+    root["customers"]  = serde_json::json!({ "list": customers, "entries": cust_entries.clone() });
+    root["users"]      = serde_json::Value::Array(users.clone());
+    root["settings"]   = serde_json::Value::Array(settings.clone());
+
+    let json_path = export_dir.join("ebs_snapshot.json");
+    std::fs::write(&json_path, serde_json::to_string_pretty(&root).unwrap_or_default())
+        .map_err(|e| format!("Failed to write JSON: {}", e))?;
+
+    // ── 2. CSV FILES ──────────────────────────────────────────────────────────
+    macro_rules! write_csv {
+        ($dir:expr, $name:expr, $headers:expr, $rows:expr, $get_fields:expr) => {{
+            let mut csv = format!("{}\n", $headers);
+            for row in &$rows {
+                let fields: Vec<String> = $get_fields(row);
+                csv.push_str(&fields.iter().map(|f| csv_field(f)).collect::<Vec<_>>().join(","));
+                csv.push('\n');
+            }
+            let p = $dir.join($name);
+            std::fs::write(&p, csv).map_err(|e| format!("CSV write error: {}", e))?;
+        }};
+    }
+
+    fn jstr(v: &serde_json::Value, k: &str) -> String {
+        v.get(k).map(|x| match x {
+            serde_json::Value::String(s) => s.clone(),
+            serde_json::Value::Number(n) => n.to_string(),
+            serde_json::Value::Null      => String::new(),
+            other => other.to_string(),
+        }).unwrap_or_default()
+    }
+
+    write_csv!(export_dir, "01_Purchases.csv",
+        "Bill No,Type,Date,Description,Invoice No,Vehicle No,Details,Rate,Quantity,Carriage,Amount,Total Amount",
+        purchases,
+        |r: &serde_json::Value| vec![
+            jstr(r,"bill_no"),jstr(r,"type"),jstr(r,"date"),jstr(r,"description"),
+            jstr(r,"invoice_no"),jstr(r,"vehicle_no"),jstr(r,"details"),
+            jstr(r,"rate"),jstr(r,"quantity"),jstr(r,"carriage"),jstr(r,"amount"),jstr(r,"total_amount")
+        ]
+    );
+
+    write_csv!(export_dir, "02_Sales.csv",
+        "Bill No,Type,Date,Description,Quantity,Rate,Amount",
+        sales,
+        |r: &serde_json::Value| vec![
+            jstr(r,"bill_no"),jstr(r,"type"),jstr(r,"date"),jstr(r,"description"),
+            jstr(r,"quantity"),jstr(r,"rate"),jstr(r,"amount")
+        ]
+    );
+
+    write_csv!(export_dir, "03_Expenses.csv",
+        "Category,Bill No,Date,Details,Amount",
+        exp_entries,
+        |r: &serde_json::Value| vec![
+            jstr(r,"category"),jstr(r,"bill_no"),jstr(r,"date"),jstr(r,"details"),jstr(r,"amount")
+        ]
+    );
+
+    write_csv!(export_dir, "04_Assets.csv",
+        "Category,Bill No,Date,Description,Debit,Credit,Balance",
+        ast_entries,
+        |r: &serde_json::Value| vec![
+            jstr(r,"category"),jstr(r,"bill_no"),jstr(r,"date"),jstr(r,"description"),
+            jstr(r,"debit"),jstr(r,"credit"),jstr(r,"balance")
+        ]
+    );
+
+    write_csv!(export_dir, "05_Liabilities.csv",
+        "Category,Bill No,Date,Description,Debit,Credit,Balance",
+        lib_entries,
+        |r: &serde_json::Value| vec![
+            jstr(r,"category"),jstr(r,"bill_no"),jstr(r,"date"),jstr(r,"description"),
+            jstr(r,"debit"),jstr(r,"credit"),jstr(r,"balance")
+        ]
+    );
+
+    write_csv!(export_dir, "06_Customers.csv",
+        "Customer Name,Phone,Bill No,Date,Description,Debit,Credit,Balance",
+        cust_entries,
+        |r: &serde_json::Value| vec![
+            jstr(r,"customer"),jstr(r,"phone"),jstr(r,"bill_no"),jstr(r,"date"),
+            jstr(r,"description"),jstr(r,"debit"),jstr(r,"credit"),jstr(r,"balance")
+        ]
+    );
+
+    write_csv!(export_dir, "07_Users.csv",
+        "Name,Email,Role,Created At",
+        users,
+        |r: &serde_json::Value| vec![
+            jstr(r,"name"),jstr(r,"email"),jstr(r,"role"),jstr(r,"created_at")
+        ]
+    );
+
+    write_csv!(export_dir, "08_Settings.csv",
+        "Key,Value",
+        settings,
+        |r: &serde_json::Value| vec![
+            jstr(r,"key"),jstr(r,"value")
+        ]
+    );
+
+    // ── 3. README ─────────────────────────────────────────────────────────────
+    let readme = format!(
+"HR Filling Station — Data Export
+Generated: {}
+
+FILES IN THIS FOLDER:
+  ebs_snapshot.json   — ALL data in JSON format (machine-readable, import into any app)
+  01_Purchases.csv    — Purchase records (open in Microsoft Excel / Google Sheets)
+  02_Sales.csv        — Sales records
+  03_Expenses.csv     — Expense entries with categories
+  04_Assets.csv       — Asset entries with categories
+  05_Liabilities.csv  — Liability entries with categories
+  06_Customers.csv    — Customer ledger (all transactions)
+  07_Users.csv        — Registered users and roles
+  08_Settings.csv     — Application configuration settings
+
+HOW TO OPEN IN EXCEL:
+  1. Open Microsoft Excel
+  2. File → Open → select any .csv file
+  3. All data will be imported with correct columns
+
+HOW TO MIGRATE TO ANOTHER APP:
+  Use ebs_snapshot.json — it contains every record in structured format.
+  A developer can parse this JSON to import into any database system.
+
+BACKUP LOCATION (SQLite database):
+  The raw database file is: ebs_business.db
+  It can be opened with 'DB Browser for SQLite' (free tool) on any PC.
+", ts);
+    std::fs::write(export_dir.join("README.txt"), readme)
+        .map_err(|e| format!("README write error: {}", e))?;
+
+    Ok(export_dir.to_string_lossy().to_string())
+}
+
+/// Create a full portable backup ZIP containing: SQLite DB + JSON + all CSVs.
+/// This is a superset of the regular backup and is fully cross-platform.
+#[tauri::command]
+async fn create_full_export_zip(app: tauri::AppHandle) -> Result<String, String> {
+    // First generate all export files
+    let export_dir_str = export_data_snapshot(app.clone()).await?;
+    let export_dir = std::path::Path::new(&export_dir_str);
+
+    #[cfg(not(mobile))]
+    let app_dir = get_base_dir()?;
+    #[cfg(mobile)]
+    let app_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+
+    let timestamp = chrono::Utc::now().format("%Y%m%d_%H%M%S").to_string();
+    let zip_name  = format!("EBS_FullExport_{}.zip", timestamp);
+    let zip_path  = app_dir.join("backups").join(&zip_name);
+    let _ = std::fs::create_dir_all(app_dir.join("backups"));
+
+    let file = std::fs::File::create(&zip_path).map_err(|e| e.to_string())?;
+    let mut zip = zip::ZipWriter::new(file);
+    let opts = zip::write::FileOptions::<()>::default()
+        .compression_method(zip::CompressionMethod::Deflated);
+
+    // Pack every file from the exports/ folder
+    let entries = std::fs::read_dir(export_dir).map_err(|e| e.to_string())?;
+    for entry in entries.flatten() {
+        let fname = entry.file_name().to_string_lossy().to_string();
+        let data  = std::fs::read(entry.path()).map_err(|e| e.to_string())?;
+        zip.start_file(format!("exports/{}", fname), opts).map_err(|e| e.to_string())?;
+        zip.write_all(&data).map_err(|e| e.to_string())?;
+    }
+
+    // Also pack the raw SQLite database
+    let db_path = app_dir.join("ebs_business.db");
+    if db_path.exists() {
+        let db_data = std::fs::read(&db_path).map_err(|e| e.to_string())?;
+        zip.start_file("ebs_business.db", opts).map_err(|e| e.to_string())?;
+        zip.write_all(&db_data).map_err(|e| e.to_string())?;
+    }
+    // WAL file if present
+    let wal_path = app_dir.join("ebs_business.db-wal");
+    if wal_path.exists() {
+        let wal_data = std::fs::read(&wal_path).map_err(|e| e.to_string())?;
+        zip.start_file("ebs_business.db-wal", opts).map_err(|e| e.to_string())?;
+        zip.write_all(&wal_data).map_err(|e| e.to_string())?;
+    }
+
+    zip.finish().map_err(|e| e.to_string())?;
+
+    Ok(zip_path.to_string_lossy().to_string())
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -682,6 +976,8 @@ pub fn run() {
             get_machine_id,
             save_buffer_to_app_data,
             copy_file_native,
+            export_data_snapshot,
+            create_full_export_zip,
             activation::get_hwid_activation,
             activation::set_hwid_activation,
         ])

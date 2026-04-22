@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Layout     from './components/layout/Layout';
 import { ToastProvider } from './components/ui/Toast';
@@ -16,6 +16,7 @@ import Login      from './pages/Login';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { useStore } from './store/useStore';
 import loginBg from './assets/login-bg.jpg';
+import { invoke } from '@tauri-apps/api/core';
 
 function DBSplash({ error }: { error: string | null }) {
   // ... (keeping existing DBSplash code)
@@ -270,42 +271,34 @@ export default function App() {
     initializeFromDB().finally(() => setBooting(false));
   }, []);
 
-  // ── Logout on every app close / background ─────────────────────────────
+  // ── Auto Data Snapshot (every 30 min + on app background/suspend) ────────────
+  const snapTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const triggerSnapshot = () => {
+    invoke('export_data_snapshot').catch(() => {
+      // Silently fail — data is still safe in SQLite
+    });
+  };
   useEffect(() => {
     if (!dbReady) return;
-
-    // Android/mobile: fires when app goes to background or OS kills it
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden') {
-        logout();
-      }
+    // Run once on DB ready
+    setTimeout(triggerSnapshot, 3000);
+    // Then every 30 minutes
+    snapTimerRef.current = setInterval(triggerSnapshot, 30 * 60 * 1000);
+    // On Android: fires when user presses home or switches app
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') triggerSnapshot();
     };
-
-    // Fallback for browsers / PWA that miss visibilitychange
-    const handlePageHide = () => logout();
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('pagehide', handlePageHide);
-
-    // Desktop: Tauri close-requested — allows cleanup before the window shuts
-    let unlisten: (() => void) | null = null;
-    import('@tauri-apps/api/webviewWindow')
-      .then(({ getCurrentWebviewWindow }) => {
-        const appWindow = getCurrentWebviewWindow();
-        return appWindow.onCloseRequested(async () => {
-          logout();
-          // Allow the window to close normally
-        });
-      })
-      .then((fn) => { unlisten = fn; })
-      .catch(() => { /* not in Tauri context */ });
-
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener('beforeunload', triggerSnapshot);
     return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('pagehide', handlePageHide);
-      if (unlisten) unlisten();
+      if (snapTimerRef.current) clearInterval(snapTimerRef.current);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('beforeunload', triggerSnapshot);
     };
-  }, [dbReady, logout]);
+  }, [dbReady]);
+
+  // Session persistence is now handled by Zustand's persist middleware in useStore.ts.
+  // The following effect was removed to prevent auto-logout when the app is minimized.
 
   // Security Checks
   // We prefer the locally activated ID (ebs_activation.key) if it exists.

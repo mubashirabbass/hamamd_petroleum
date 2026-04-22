@@ -181,7 +181,7 @@ export default function SalePage() {
   return (
     <div className="animate-fade-in flex flex-col h-full w-full overflow-hidden">
       <ModuleHeader 
-        title="Sale" 
+        title="Sales Entries" 
         icon={TrendingUp} 
         iconClassName="!bg-emerald-100 !text-emerald-600"
       >
@@ -219,7 +219,7 @@ export default function SalePage() {
       </div>
 
       {activeTab === 'dashboard' ? (
-        <div className="flex-1 flex flex-col h-full w-full overflow-y-auto smart-scroll p-4 md:p-6 pb-20">
+        <div className="flex-1 flex flex-col h-full w-full overflow-y-auto smart-scroll p-4 md:p-6 pb-6">
           {/* Compact Stats Grid */}
           <div className="grid grid-cols-2 gap-3 mb-6">
             {[
@@ -251,7 +251,7 @@ export default function SalePage() {
           {/* Recent Activity Mini List */}
           <div className="flex-1 flex flex-col min-h-0">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Recent Activity</h3>
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Activity Entries</h3>
               <button 
                 onClick={() => setActiveTab('database')}
                 className="text-[10px] font-black uppercase tracking-widest text-emerald-600"
@@ -335,9 +335,9 @@ export default function SalePage() {
               )}
             </div>
 
-          <div className="flex-1 glass rounded-3xl overflow-hidden border border-slate-200 dark:border-dark-700/50 shadow-xl flex flex-col min-h-0">
+          <div className="flex-1 glass rounded-3xl border border-slate-200 dark:border-dark-700/50 shadow-xl flex flex-col min-h-0 container-scroll">
             <div className="flex-1 overflow-x-auto overflow-y-auto smart-scroll">
-              <table className="table-excel min-w-[900px] w-full border-collapse">
+              <table className="table-excel min-w-[1000px] w-full border-collapse">
                 <thead className="sticky top-0 z-10 bg-slate-200 dark:bg-dark-800 shadow-sm">
                   <tr className="table-header text-[10px]">
                     <th className="table-cell text-left px-4">Date</th>
@@ -368,7 +368,7 @@ export default function SalePage() {
                             <button onClick={() => setViewingEntity(s)} className="p-1.5 text-slate-400 hover:text-blue-500 transition-colors" title="View"><Eye className="w-4 h-4" /></button>
                             <button onClick={() => setViewingEntity(s)} className="p-1.5 text-slate-400 hover:text-emerald-600 transition-colors" title="Print Receipt"><Printer className="w-4 h-4" /></button>
                             <button onClick={() => handleEdit(s)} className="p-1.5 text-slate-400 hover:text-amber-600 transition-colors" title="Edit"><Edit2 className="w-4 h-4" /></button>
-                            {currentUser?.role === 'Admin' && (
+                            {(currentUser?.role === 'Admin' || currentUser?.role === 'Developer') && (
                               <button onClick={() => { if(confirm('Delete sale?')) deleteSale(s.id); }} className="p-1.5 text-slate-400 hover:text-red-600 transition-colors" title="Delete"><Trash2 className="w-4 h-4" /></button>
                             )}
                           </div>
@@ -417,7 +417,7 @@ export default function SalePage() {
           variant="bottom-sheet"
         >
           <form onSubmit={handleSubmit} className="flex flex-col h-full bg-slate-50 dark:bg-dark-950/20 -m-6 p-6">
-            <div className="flex-1 space-y-4 mb-20 overflow-y-auto smart-scroll">
+            <div className="flex-1 space-y-4 mb-6 overflow-y-auto smart-scroll">
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-dark-500 px-1">Effective Date</label>
                 <input type="date" className="input w-full !h-12 !bg-white dark:!bg-dark-800" value={form.date} onChange={(e) => set('date', e.target.value)} required />

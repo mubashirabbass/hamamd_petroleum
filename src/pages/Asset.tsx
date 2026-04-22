@@ -235,7 +235,7 @@ export default function AssetPage() {
   return (
     <div className="animate-fade-in flex flex-col h-full w-full overflow-hidden">
       <ModuleHeader 
-        title="Asset" 
+        title="Asset Entries" 
         icon={Landmark} 
         iconClassName="!bg-emerald-100 !text-emerald-600"
       />
@@ -252,7 +252,7 @@ export default function AssetPage() {
             onClick={() => setActiveTab('database')}
             className={cn("segmented-item", activeTab === 'database' ? "segmented-item-active" : "segmented-item-inactive")}
           >
-            Ledger
+            Entries
           </button>
           <button
             onClick={() => setActiveTab('register')}
@@ -269,10 +269,8 @@ export default function AssetPage() {
         </div>
       </div>
 
-      <div className="flex-1 flex gap-0 md:gap-4 h-full w-full overflow-hidden">
-
         {activeTab === 'dashboard' ? (
-          <div className="flex-1 flex flex-col h-full overflow-hidden p-4 md:p-6 pb-10">
+          <div className="flex-1 flex flex-col h-full overflow-hidden p-4 md:p-6 pb-6">
             <div className="grid grid-cols-2 gap-3 mb-6">
               {(() => {
                 const allFilteredEntries = filterByStartDate(assetEntries, settings.startDate)
@@ -354,7 +352,7 @@ export default function AssetPage() {
 
 
             <div className="flex-1 overflow-y-auto no-scrollbar smart-scroll">
-              <div className="space-y-3 mb-20">
+              <div className="space-y-3 mb-6">
                 {(() => {
                   const itemsWithTotals = assetCategories.map(cat => {
                     const entries = filterByStartDate(assetEntries, settings.startDate)
@@ -418,7 +416,7 @@ export default function AssetPage() {
             )}
           </div>
         ) : activeTab === 'database' ? (
-          <div className="flex-1 flex flex-col min-h-0 bg-slate-50 dark:bg-dark-950/20 p-4 pb-20">
+          <div className="flex-1 flex flex-col min-h-0 bg-slate-50 dark:bg-dark-950/20 p-4 pb-6">
             {/* Account Pill Switcher */}
             <div className="flex items-center gap-2 overflow-x-auto no-scrollbar mb-4 pb-2">
                {assetCategories.map(c => (
@@ -467,10 +465,9 @@ export default function AssetPage() {
               )}
             </div>
 
-            <div className="flex-1 overflow-y-auto no-scrollbar smart-scroll">
-            <div className="flex-1 glass rounded-3xl overflow-hidden border border-slate-200 dark:border-dark-700/50 shadow-xl flex flex-col min-h-0">
+            <div className="flex-1 glass rounded-3xl border border-slate-200 dark:border-dark-700/50 shadow-xl flex flex-col min-h-0 container-scroll">
               <div className="flex-1 overflow-x-auto overflow-y-auto smart-scroll">
-                <table className="table-excel min-w-[900px] w-full border-collapse">
+                <table className="table-excel min-w-[1000px] w-full border-collapse">
                   <thead className="sticky top-0 z-10 bg-slate-200 dark:bg-dark-800 shadow-sm">
                     <tr className="table-header text-[10px]">
                       <th className="table-cell text-left px-4">Date</th>
@@ -504,7 +501,7 @@ export default function AssetPage() {
                               <button onClick={() => setViewingEntity(e)} className="p-1.5 text-slate-400 hover:text-blue-500 transition-colors" title="View"><Eye className="w-4 h-4" /></button>
                               <button onClick={() => setViewingEntity(e)} className="p-1.5 text-slate-400 hover:text-emerald-600 transition-colors" title="Print Receipt"><Printer className="w-4 h-4" /></button>
                               <button onClick={() => handleEdit(e)} className="p-1.5 text-slate-400 hover:text-amber-600 transition-colors" title="Edit"><Edit2 className="w-4 h-4" /></button>
-                              {currentUser?.role === 'Admin' && (
+                              {(currentUser?.role === 'Admin' || currentUser?.role === 'Developer') && (
                                 <button onClick={() => { if(confirm('Delete entry?')) deleteAssetEntry(e.id); }} className="p-1.5 text-slate-400 hover:text-red-500 transition-colors" title="Delete"><Trash2 className="w-4 h-4" /></button>
                               )}
                             </div>
@@ -533,9 +530,8 @@ export default function AssetPage() {
                 </table>
               </div>
             </div>
-              <div className="mt-4">
-                <Pagination page={page} total={withBalance.length} perPage={perPage} onChange={setPage} />
-              </div>
+            <div className="mt-4">
+              <Pagination page={page} total={withBalance.length} perPage={perPage} onChange={setPage} />
             </div>
           </div>
         ) : activeTab === 'register' ? (
@@ -637,7 +633,7 @@ export default function AssetPage() {
                                <td className="table-cell text-right">
                                   <div className="flex items-center gap-2 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
                                      <button onClick={() => handleStartEdit(c)} className="p-2 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-xl"><Edit2 className="w-4 h-4" /></button>
-                                     {currentUser?.role === 'Admin' && (
+                                     {(currentUser?.role === 'Admin' || currentUser?.role === 'Developer') && (
                                        <button 
                                          onClick={(e) => { e.stopPropagation(); if(confirm('Delete account and all history?')) deleteAssetCategory(c.id); }} 
                                          className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl"
@@ -657,7 +653,7 @@ export default function AssetPage() {
             </div>
           </div>
         )}
-      </div>
+
 
       {showEntryForm && (
         <Modal 
@@ -717,12 +713,16 @@ export default function AssetPage() {
         <FAB 
           icon={Plus} 
           onClick={() => {
-            if (!selectedCat && assetCategories.length > 0) setSelectedCat(assetCategories[0].id);
-            if (assetCategories.length === 0) {
-               setActiveTab('register');
-               toast('Please register an account first', 'info');
+            if (activeTab === 'dashboard') {
+              setActiveTab('register');
             } else {
-               setShowEntryForm(true);
+              if (!selectedCat && assetCategories.length > 0) setSelectedCat(assetCategories[0].id);
+              if (assetCategories.length === 0) {
+                 setActiveTab('register');
+                 toast('Please register an asset first', 'info');
+              } else {
+                 setShowEntryForm(true);
+              }
             }
           }} 
           label="NEW"

@@ -760,5 +760,5 @@ export const useStore = create<AppState>()(
 }), {
   name: 'ebs-auth-storage',
   storage: createJSONStorage(() => localStorage),
-  partialize: (state) => ({ currentUser: state.currentUser }),
+  partialize: (state) => ({}),
 }));

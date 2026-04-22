@@ -273,7 +273,7 @@ export default function CustomerPage() {
   return (
     <div className="animate-fade-in flex flex-col h-full w-full overflow-hidden">
       <ModuleHeader 
-        title="Customer" 
+        title="Customer Entries" 
         icon={Users} 
         iconClassName="!bg-pink-100 !text-pink-600"
       />
@@ -290,7 +290,7 @@ export default function CustomerPage() {
             onClick={() => setActiveTab('database')}
             className={cn("segmented-item", activeTab === 'database' ? "segmented-item-active" : "segmented-item-inactive")}
           >
-            Ledger
+            Entries
           </button>
           <button
             onClick={() => setActiveTab('register')}
@@ -307,10 +307,9 @@ export default function CustomerPage() {
         </div>
       </div>
 
-      <div className="flex-1 flex gap-0 md:gap-4 h-full w-full overflow-hidden">
 
         {activeTab === 'dashboard' ? (
-          <div className="flex-1 flex flex-col h-full overflow-hidden p-4 md:p-6 pb-10">
+          <div className="flex-1 flex flex-col h-full overflow-hidden p-4 md:p-6 pb-6">
             <div className="grid grid-cols-2 gap-3 mb-6">
               {(() => {
                 const allFilteredEntries = filterByStartDate(customerEntries, settings.startDate)
@@ -399,7 +398,7 @@ export default function CustomerPage() {
             </div>
 
             <div className="flex-1 overflow-y-auto no-scrollbar smart-scroll">
-              <div className="space-y-3 mb-20">
+              <div className="space-y-3 mb-6">
                 {(() => {
                   const dashboardItems = customers.map(c => {
                     const entries = filterByStartDate(customerEntries, settings.startDate)
@@ -463,7 +462,7 @@ export default function CustomerPage() {
             )}
           </div>
         ) : activeTab === 'database' ? (
-          <div className="flex-1 flex flex-col min-h-0 bg-slate-50 dark:bg-dark-950/20 p-4 pb-20">
+          <div className="flex-1 flex flex-col min-h-0 bg-slate-50 dark:bg-dark-950/20 p-4 pb-6">
             {/* Account Pill Switcher */}
             <div className="flex items-center gap-2 overflow-x-auto no-scrollbar mb-4 pb-2">
                {customers.map(c => (
@@ -512,8 +511,7 @@ export default function CustomerPage() {
               )}
             </div>
 
-            <div className="flex-1 overflow-y-auto no-scrollbar smart-scroll">
-              <div className="flex-1 glass rounded-3xl overflow-hidden border border-slate-200 dark:border-dark-700/50 shadow-xl flex flex-col min-h-0">
+            <div className="flex-1 glass rounded-3xl border border-slate-200 dark:border-dark-700/50 shadow-xl flex flex-col min-h-0 container-scroll">
               <div className="flex-1 overflow-x-auto overflow-y-auto smart-scroll">
                 <table className="table-excel min-w-[1000px] w-full border-collapse">
                   <thead className="sticky top-0 z-10 bg-slate-200 dark:bg-dark-800 shadow-sm">
@@ -549,7 +547,7 @@ export default function CustomerPage() {
                               <button onClick={() => setViewingEntity(e)} className="p-1.5 text-slate-400 hover:text-blue-500 transition-colors" title="View"><Eye className="w-4 h-4" /></button>
                               <button onClick={() => setViewingEntity(e)} className="p-1.5 text-slate-400 hover:text-emerald-600 transition-colors" title="Print Receipt"><Printer className="w-4 h-4" /></button>
                               <button onClick={() => handleEditEntry(e)} className="p-1.5 text-slate-400 hover:text-amber-600 transition-colors" title="Edit"><Edit2 className="w-4 h-4" /></button>
-                              {currentUser?.role === 'Admin' && (
+                              {(currentUser?.role === 'Admin' || currentUser?.role === 'Developer') && (
                                 <button onClick={() => { if(confirm('Delete entry?')) deleteCustomerEntry(e.id); }} className="p-1.5 text-slate-400 hover:text-red-500 transition-colors" title="Delete"><Trash2 className="w-4 h-4" /></button>
                               )}
                             </div>
@@ -578,9 +576,8 @@ export default function CustomerPage() {
                 </table>
               </div>
             </div>
-              <div className="mt-4">
-                <Pagination page={page} total={withBalance.length} perPage={perPage} onChange={setPage} />
-              </div>
+            <div className="mt-4">
+              <Pagination page={page} total={withBalance.length} perPage={perPage} onChange={setPage} />
             </div>
           </div>
         ) : activeTab === 'register' ? (
@@ -701,7 +698,7 @@ export default function CustomerPage() {
                             <td className="table-cell text-right">
                               <div className="flex items-center gap-2 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
                                 <button onClick={(e) => { e.stopPropagation(); handleStartEdit(c); }} className="p-2 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-xl"><Edit2 className="w-4 h-4" /></button>
-                                {currentUser?.role === 'Admin' && (
+                                {(currentUser?.role === 'Admin' || currentUser?.role === 'Developer') && (
                                   <button
                                     onClick={(e) => { e.stopPropagation(); if (confirm('Delete customer and all history?')) deleteCustomer(c.id); }}
                                     className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl"
@@ -721,7 +718,7 @@ export default function CustomerPage() {
             </div>
           </div>
         )}
-      </div>
+
 
       {showEntryForm && (
         <Modal 
@@ -769,7 +766,7 @@ export default function CustomerPage() {
                 disabled={isSaving}
               >
                 {isSaving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Save className="w-5 h-5" />}
-                <span>{editingEntity ? 'Update Entry' : 'Confirm Ledger'}</span>
+                <span>{editingEntity ? 'Update Entry' : 'Confirm Entry'}</span>
               </button>
             </div>
           </form>
@@ -781,12 +778,16 @@ export default function CustomerPage() {
         <FAB 
           icon={Plus} 
           onClick={() => {
-            if (!selectedCust && customers.length > 0) setSelectedCust(customers[0].id);
-            if (customers.length === 0) {
+            if (activeTab === 'dashboard') {
               setActiveTab('register');
-              toast('Please register a customer first', 'info');
             } else {
-              setShowEntryForm(true);
+              if (!selectedCust && customers.length > 0) setSelectedCust(customers[0].id);
+              if (customers.length === 0) {
+                setActiveTab('register');
+                toast('Please register a customer first', 'info');
+              } else {
+                setShowEntryForm(true);
+              }
             }
           }} 
           label="NEW"

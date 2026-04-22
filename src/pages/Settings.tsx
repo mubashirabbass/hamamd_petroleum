@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import {
-  Settings, ShieldCheck, AlertCircle, Calendar, UserCog,
+  Settings, ShieldCheck, AlertCircle, Calendar,
   Cloud, RefreshCcw, Save, HardDrive, CloudOff, CheckCircle2,
-  Download, Upload, Trash2, Eye, EyeOff, ArrowRight, Undo2
+  Download, Upload, Trash2, Eye, EyeOff, ArrowRight, Undo2,
+  FileJson, FileSpreadsheet, FolderOpen, Zap, User
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import ManageUsersModal from '../components/modals/ManageUsersModal';
@@ -46,6 +47,28 @@ function BackupPanel() {
   const [driveName,      setDriveName]      = useState('');
   const [connecting,     setConnecting]     = useState(false);
   const [checkingStatus, setCheckingStatus] = useState(true);
+
+  // ── Export / Snapshot ───────────────────────────────────────────────────
+  const [exporting,   setExporting]   = useState(false);
+  const [lastExport,  setLastExport]  = useState('');
+  const [exportPath,  setExportPath]  = useState('');
+
+  const handleExportData = async () => {
+    setExporting(true);
+    setProgress({ msg: 'Exporting all data to CSV + JSON…', active: true });
+    try {
+      const path = await invoke<string>('create_full_export_zip');
+      const ts = new Date().toLocaleString();
+      setLastExport(ts);
+      setExportPath(path);
+      toast(`✅ Full export saved!`, 'success');
+    } catch (err: any) {
+      toast(`Export failed: ${err?.message ?? err}`, 'error');
+    } finally {
+      setExporting(false);
+      setProgress({ msg: '', active: false });
+    }
+  };
 
   // ── Manual PIN Fallback ────────────────────────────────────────────────────
   const [showManualPin,  setShowManualPin]  = useState(false);
@@ -355,7 +378,7 @@ function BackupPanel() {
                 </div>
                 {driveName && (
                   <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] pl-4 flex items-center gap-2 opacity-70">
-                    <UserCog className="w-3 h-3" /> {driveName}
+                    <User className="w-3 h-3" /> {driveName}
                   </p>
                 )}
               </div>
@@ -648,7 +671,78 @@ function BackupPanel() {
         </div>
       </div>
 
-      {/* ── Premium Processing Overlay ────────────────────────────────────────── */}
+      {/* ── Excel / JSON Data Export ─────────────────────────────────────────── */}
+      <div className="glass rounded-2xl border border-slate-200/50 dark:border-dark-700/50 overflow-hidden">
+        <div className="px-5 py-4 border-b border-slate-200 dark:border-dark-700/50 bg-emerald-500/5 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl flex items-center justify-center">
+              <FileSpreadsheet className="w-5 h-5 text-emerald-600" />
+            </div>
+            <div>
+              <h4 className="font-black text-slate-900 dark:text-white text-sm">Export Data to Excel / JSON</h4>
+              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Crash-safe portable backup</p>
+            </div>
+          </div>
+          {lastExport && (
+            <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest bg-emerald-50 dark:bg-emerald-900/20 px-2 py-1 rounded-lg">
+              Last: {lastExport}
+            </span>
+          )}
+        </div>
+        <div className="p-5 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-[10px] font-black uppercase tracking-widest">
+            <div className="flex items-center gap-2 p-3 bg-emerald-50 dark:bg-emerald-900/10 rounded-xl border border-emerald-100 dark:border-emerald-900/20">
+              <FileSpreadsheet className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+              <span className="text-emerald-700 dark:text-emerald-300">6 CSV files — opens directly in Excel</span>
+            </div>
+            <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/10 rounded-xl border border-blue-100 dark:border-blue-900/20">
+              <FileJson className="w-4 h-4 text-blue-600 flex-shrink-0" />
+              <span className="text-blue-700 dark:text-blue-300">JSON snapshot — migrate to any future app</span>
+            </div>
+            <div className="flex items-center gap-2 p-3 bg-slate-50 dark:bg-dark-800 rounded-xl border border-slate-100 dark:border-dark-700/50">
+              <HardDrive className="w-4 h-4 text-slate-500 flex-shrink-0" />
+              <span className="text-slate-600 dark:text-dark-300">Raw SQLite DB — open with DB Browser</span>
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              onClick={handleExportData}
+              disabled={exporting || progress.active}
+              className="flex-1 flex items-center justify-center gap-2 px-5 py-3 bg-emerald-600 text-white rounded-xl text-sm font-black hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-500/20 active:scale-95 disabled:opacity-40"
+            >
+              {exporting
+                ? <RefreshCcw className="w-4 h-4 animate-spin" />
+                : <Zap className="w-4 h-4" />}
+              {exporting ? 'Exporting…' : 'Export All Data Now'}
+            </button>
+            {exportPath && (
+              <button
+                onClick={async () => {
+                  try {
+                    const { revealItemInDir } = await import('@tauri-apps/plugin-opener');
+                    await revealItemInDir(exportPath);
+                  } catch { toast('Could not open folder', 'error'); }
+                }}
+                className="flex items-center gap-2 px-4 py-3 bg-slate-100 dark:bg-dark-800 text-slate-600 dark:text-dark-300 rounded-xl text-xs font-black hover:bg-slate-200 dark:hover:bg-dark-700 transition-all"
+              >
+                <FolderOpen className="w-4 h-4" /> Open Folder
+              </button>
+            )}
+          </div>
+
+          <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-900/20">
+            <p className="text-[10px] text-amber-800 dark:text-amber-200 font-medium leading-relaxed">
+              <strong>📌 How it works:</strong> Clicking "Export All Data Now" creates a ZIP file containing:
+              6 ready-to-open <strong>Excel CSV files</strong> (one per module) +
+              a <strong>JSON snapshot</strong> of everything +
+              the raw <strong>SQLite database</strong>.
+              If the app ever crashes or you switch to a new system, all your data is in readable form.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {progress.active && (
         <div className="fixed inset-0 z-[10000] flex flex-col items-center justify-center p-6 bg-slate-950/80 backdrop-blur-xl animate-in fade-in duration-500">
            <div className="relative mb-8">
@@ -743,7 +837,6 @@ export default function SettingsPage() {
   const { settings, updateSettings, currentUser, resetAllData } = useStore();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<'general' | 'users' | 'backup' | 'developer' | 'danger' | 'shortcuts'>('general');
-  const [showManageUsers, setShowManageUsers] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
 
@@ -899,31 +992,17 @@ export default function SettingsPage() {
           {/* Shortcuts Management */}
           {activeTab === 'shortcuts' && <KeyboardShortcutsPanel />}
 
-          {/* User Management */}
+          {/* User Management — Inline Panel */}
           {activeTab === 'users' && (
-            <div className="glass rounded-2xl overflow-hidden border border-slate-200/50 dark:border-dark-700/50 h-full flex flex-col items-center justify-center p-12 text-center">
-              <div className="w-20 h-20 rounded-3xl bg-emerald-600/10 flex items-center justify-center mb-6">
-                <ShieldCheck className="w-10 h-10 text-emerald-600" />
+            <div className="glass rounded-2xl overflow-hidden border border-slate-200/50 dark:border-dark-700/50 h-full flex flex-col">
+              <div className="p-4 border-b border-slate-200 dark:border-dark-700/50 bg-emerald-500/5 flex-shrink-0">
+                <div className="flex items-center gap-3">
+                  <ShieldCheck className="w-5 h-5 text-emerald-600" />
+                  <h2 className="font-black text-slate-900 dark:text-white text-sm uppercase tracking-widest">Login Management</h2>
+                </div>
               </div>
-              <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-2">Login Access Control</h2>
-              <p className="text-slate-500 dark:text-dark-400 max-w-md mx-auto mb-8 font-medium">
-                Manage who has access to your business data. Create new staff accounts,
-                update passwords, or modify administrative privileges.
-              </p>
-              <button onClick={() => setShowManageUsers(true)}
-                className="btn-primary flex items-center gap-2 !px-12 !py-4 text-base font-black shadow-2xl shadow-emerald-600/20">
-                <UserCog className="w-5 h-5" /> Manage System Users
-              </button>
-              <div className="mt-12 flex gap-8">
-                <div className="text-center">
-                  <p className="text-2xl font-black text-slate-900 dark:text-white">{settings.users.length}</p>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Total Users</p>
-                </div>
-                <div className="w-px h-10 bg-slate-200 dark:bg-dark-700" />
-                <div className="text-center">
-                  <p className="text-2xl font-black text-emerald-600 uppercase">Active</p>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">System Status</p>
-                </div>
+              <div className="flex-1 overflow-y-auto no-scrollbar p-4">
+                <ManageUsersModal />
               </div>
             </div>
           )}
@@ -977,7 +1056,7 @@ export default function SettingsPage() {
       </div>
     </div>
 
-      <ManageUsersModal isOpen={showManageUsers} onClose={() => setShowManageUsers(false)} />
+
 
       {/* Reset Confirmation */}
       {showResetConfirm && (

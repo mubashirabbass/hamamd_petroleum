@@ -136,9 +136,19 @@ async function initSchema(db: Database): Promise<void> {
       email      TEXT NOT NULL UNIQUE,
       password   TEXT NOT NULL,
       role       TEXT NOT NULL DEFAULT 'Staff',
-      created_at TEXT NOT NULL
+      created_at TEXT NOT NULL,
+      cnic       TEXT DEFAULT '',
+      dob        TEXT DEFAULT ''
     )
   `);
+
+  // Migrations for users table
+  try {
+    await db.execute(`ALTER TABLE users ADD COLUMN cnic TEXT DEFAULT ''`);
+  } catch (e) {}
+  try {
+    await db.execute(`ALTER TABLE users ADD COLUMN dob TEXT DEFAULT ''`);
+  } catch (e) {}
 
   // ── Counters (auto-incrementing bill numbers) ─────────────────────────────
   await db.execute(`

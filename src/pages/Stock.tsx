@@ -3,7 +3,7 @@ import {
   BarChart3, TrendingUp, TrendingDown, ArrowLeft,
   Package, LayoutList, Fuel, Zap, Clock, Download,
   ChevronRight, Calendar, Printer, ArrowUpDown, Pin, PinOff,
-  ShoppingCart, XCircle
+  ShoppingCart, XCircle, Trash2
 } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useStore, FuelType } from '../store/useStore';
@@ -29,6 +29,7 @@ export default function StockPage() {
   const dbReady = useStore((s) => s.dbReady);
   const { type } = useParams<{ type: string }>();
   const navigate = useNavigate();
+  const { currentUser, deleteSale, deletePurchase } = useStore();
 
   // ── View State ──
   const [view, setView] = useState<'overview' | 'manage'>('overview');
@@ -481,7 +482,7 @@ export default function StockPage() {
         scrollId="stock-manage-scroll"
         className="h-full w-full"
       >
-        <div className="animate-fade-in flex flex-col w-full h-full pb-32">
+        <div className="animate-fade-in flex flex-col w-full h-full pb-20">
           <ModuleHeader 
             title={selectedType} 
             icon={selectedType === 'HSD' ? Fuel : Zap} 
@@ -541,12 +542,12 @@ export default function StockPage() {
             </div>
 
             {showHistory && (
-              <div className="glass rounded-3xl overflow-hidden shadow-lg border border-slate-200 dark:border-dark-800 animate-slide-up">
+              <div className="glass rounded-3xl shadow-lg border border-slate-200 dark:border-dark-800 animate-slide-up container-scroll flex-1 flex flex-col min-h-0">
                 <div className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 dark:border-dark-800">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <Clock className="w-4 h-4 text-slate-400" />
-                      <h3 className="text-sm font-black uppercase tracking-widest text-slate-900 dark:text-white leading-none">History</h3>
+                      <h3 className="text-sm font-black uppercase tracking-widest text-slate-900 dark:text-white leading-none">Stock Entries</h3>
                     </div>
                     <button 
                       onClick={() => setShowReport(true)}
@@ -583,8 +584,8 @@ export default function StockPage() {
                       </button>
                     </div>
                 </div>
-                <div className="overflow-auto smart-scroll max-h-[60vh]">
-                  <table className="w-full">
+                <div className="overflow-x-auto overflow-y-auto smart-scroll flex-1">
+                  <table className="w-full min-w-[1000px]">
                     <thead className="sticky top-0 z-10 bg-slate-200 dark:bg-dark-800">
                       <tr className="table-header text-[10px]">
                         <th className="table-cell text-left whitespace-nowrap">Date</th>
@@ -592,6 +593,7 @@ export default function StockPage() {
                         <th className="table-cell text-right whitespace-nowrap">In (L)</th>
                         <th className="table-cell text-right whitespace-nowrap">Out (L)</th>
                         <th className="table-cell text-right whitespace-nowrap">Balance</th>
+                        <th className="table-cell text-center whitespace-nowrap">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50 dark:divide-dark-800/50">
@@ -604,6 +606,23 @@ export default function StockPage() {
                           <td className="table-cell text-right whitespace-nowrap text-emerald-600 font-mono font-bold">{h.qtyIn ? `+${h.qtyIn.toLocaleString()}` : '—'}</td>
                           <td className="table-cell text-right whitespace-nowrap text-red-600 font-mono font-bold">{h.qtyOut ? `-${h.qtyOut.toLocaleString()}` : '—'}</td>
                           <td className="table-cell text-right whitespace-nowrap font-black text-slate-900 dark:text-white tabular-nums">{h.balance.toLocaleString()} L</td>
+                          <td className="table-cell text-center whitespace-nowrap">
+                            {(currentUser?.role === 'Admin' || currentUser?.role === 'Developer') && (
+                              <button
+                                onClick={() => {
+                                  if (confirm(`Delete this ${h.type.toLowerCase()}?`)) {
+                                    if (h.type === 'Sale') deleteSale(h.id);
+                                    else deletePurchase(h.id);
+                                    toast('Entry deleted successfully', 'success');
+                                  }
+                                }}
+                                className="p-1.5 text-slate-400 hover:text-red-500 transition-colors"
+                                title="Delete"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -613,11 +632,13 @@ export default function StockPage() {
                         <td className="table-cell text-right font-black font-mono whitespace-nowrap">+{pageTotals.qtyIn.toLocaleString()} L</td>
                         <td className="table-cell text-right font-black font-mono whitespace-nowrap">-{pageTotals.qtyOut.toLocaleString()} L</td>
                         <td className="table-cell"></td>
+                        <td className="table-cell"></td>
                       </tr>
                       <tr className="font-black text-black dark:text-white bg-slate-200/50 dark:bg-dark-700/50 border-t border-slate-300 dark:border-dark-600">
                         <td colSpan={2} className="table-cell text-right text-xs uppercase tracking-widest text-slate-600 dark:text-slate-300 font-black">Grand Total</td>
                         <td className="table-cell text-right font-black font-mono whitespace-nowrap">+{detailTotals.in.toLocaleString()} L</td>
                         <td className="table-cell text-right font-black font-mono whitespace-nowrap">-{detailTotals.out.toLocaleString()} L</td>
+                        <td className="table-cell"></td>
                         <td className="table-cell"></td>
                       </tr>
                     </tfoot>
@@ -658,11 +679,11 @@ export default function StockPage() {
       <PullToRefresh 
         onRefresh={handleRefresh} 
         scrollId="stock-main-scroll"
-        className="h-full w-full p-4 pb-32 pt-4"
+        className="h-full w-full p-4 pb-20 pt-4"
       >
         <div className="animate-fade-in space-y-10">
           <ModuleHeader 
-            title="Stock" 
+            title="Stock Entries" 
             icon={BarChart3} 
             iconClassName="!bg-cyan-100 !text-cyan-600"
           >
