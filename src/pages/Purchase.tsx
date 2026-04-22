@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { 
   Plus, Trash2, Eye, Edit2, Printer, BarChart3, ArrowRight, History, Zap, Fuel, 
-  LayoutGrid, Database, ShoppingCart, Save, Pin, PinOff, XCircle, ArrowUpDown 
+  LayoutGrid, Database, Save, Pin, PinOff, ArrowUpDown, XCircle, ShoppingCart
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { formatCurrency, formatDate, today, paginate, filterByStartDate, startOfMonth, startOfYear, getErrorMessage, cn } from '../lib/utils';
@@ -12,9 +12,6 @@ import Pagination from '../components/ui/Pagination';
 import Modal from '../components/ui/Modal';
 import TransactionReceiptModal from '../components/modals/TransactionReceiptModal';
 import PrintReportModal from '../components/modals/PrintReportModal';
-import FAB from '../components/ui/FAB';
-import MobileActivityCard from '../components/ui/MobileActivityCard';
-import ModuleHeader from '../components/ui/ModuleHeader';
 import type { FuelType } from '../store/useStore';
 
 export default function PurchasePage() {
@@ -27,6 +24,9 @@ export default function PurchasePage() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'database'>('dashboard');
   const [fuelType, setFuelType] = useState<FuelType>('HSD');
   const [showForm, setShowForm] = useState(false);
+  const [isSidebarPinned, setIsSidebarPinned] = useState(false);
+  const [isSidebarHovered, setIsSidebarHovered] = useState(false);
+  const isExpanded = isSidebarPinned || isSidebarHovered;
 
   useEffect(() => {
     const tab = searchParams.get('tab');
@@ -47,13 +47,14 @@ export default function PurchasePage() {
   const [editingEntity, setEditingEntity] = useState<any>(null);
   const [viewingEntity, setViewingEntity] = useState<any>(null);
   const [showReport, setShowReport] = useState(false);
-  const [entrySort, setEntrySort] = useState('date_desc');
   const [isSaving, setIsSaving] = useState(false);
+  const [entrySort, setEntrySort] = useState('date_desc');
   const [form, setForm] = useState({
     date: today(),
     description: '',
     invoiceNo: '',
     vehicleNo: '',
+    details: '',
     rate: '',
     quantity: '',
     carriage: '',
@@ -68,25 +69,21 @@ export default function PurchasePage() {
   };
 
   const filtered = useMemo(() => {
-    const f = filterByStartDate(purchases, settings.startDate)
+    let list = filterByStartDate(purchases, settings.startDate)
       .filter((p) => p.type === fuelType)
       .filter((p) => {
-        const matchesSearch = !search || p.date.includes(search) || (p.invoiceNo && p.invoiceNo.toLowerCase().includes(search.toLowerCase()));
+        const matchesSearch = !search || p.date.includes(search) || (p.invoiceNo && p.invoiceNo.toLowerCase().includes(search.toLowerCase())) || (p.vehicleNo && p.vehicleNo.toLowerCase().includes(search.toLowerCase()));
         const matchesFrom = !fromDate || p.date >= fromDate;
         const matchesTo = !toDate || p.date <= toDate;
         return matchesSearch && matchesFrom && matchesTo;
       });
 
-    return [...f].sort((a, b) => {
-      switch (entrySort) {
-        case 'date_desc':        return b.date.localeCompare(a.date);
-        case 'date_asc':         return a.date.localeCompare(b.date);
-        case 'totalAmount_desc': return b.totalAmount - a.totalAmount;
-        case 'totalAmount_asc':  return a.totalAmount - b.totalAmount;
-        case 'quantity_desc':    return b.quantity - a.quantity;
-        default:                 return b.date.localeCompare(a.date);
-      }
-    });
+    if (entrySort === 'date_desc') list.sort((a,b) => b.date.localeCompare(a.date));
+    if (entrySort === 'date_asc')  list.sort((a,b) => a.date.localeCompare(b.date));
+    if (entrySort === 'qty_desc')   list.sort((a,b) => b.quantity - a.quantity);
+    if (entrySort === 'amt_desc')   list.sort((a,b) => b.totalAmount - a.totalAmount);
+    
+    return list;
   }, [purchases, settings.startDate, fuelType, search, fromDate, toDate, entrySort]);
 
   const paged = paginate(filtered, page, perPage);
@@ -118,6 +115,7 @@ export default function PurchasePage() {
       description: form.description,
       invoiceNo: form.invoiceNo,
       vehicleNo: form.vehicleNo,
+      details: form.details,
       rate: parseFloat(form.rate),
       quantity: parseFloat(form.quantity),
       carriage: parseFloat(form.carriage) || 0,
@@ -152,6 +150,7 @@ export default function PurchasePage() {
       description: '',
       invoiceNo: '',
       vehicleNo: '',
+      details: '',
       rate: '',
       quantity: '',
       carriage: '',
@@ -163,7 +162,7 @@ export default function PurchasePage() {
   const closeForm = () => {
     setShowForm(false);
     setEditingEntity(null);
-    setForm({ date: today(), description: '', invoiceNo: '', vehicleNo: '', rate: '', quantity: '', carriage: '', amount: '', totalAmount: '' });
+    setForm({ date: today(), description: '', invoiceNo: '', vehicleNo: '', details: '', rate: '', quantity: '', carriage: '', amount: '', totalAmount: '' });
   };
 
   const handleEdit = (p: any) => {
@@ -173,6 +172,7 @@ export default function PurchasePage() {
       description: p.description || '',
       invoiceNo: p.invoiceNo || '',
       vehicleNo: p.vehicleNo || '',
+      details: p.details || '',
       rate: p.rate.toString(),
       quantity: p.quantity.toString(),
       carriage: p.carriage.toString(),
@@ -223,317 +223,481 @@ export default function PurchasePage() {
     return {
       HSD: getStats('HSD'),
       PMG: getStats('PMG'),
-      recent: [...periodPurchases].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5)
+      recent: [...periodPurchases].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 10)
     };
   }, [purchases, settings.startDate, fromDate, toDate]);
 
   return (
     <div className="animate-fade-in flex flex-col h-full w-full overflow-hidden">
-      <ModuleHeader 
-        title="Purchase Entries" 
-        icon={ShoppingCart} 
-        iconClassName="!bg-blue-100 !text-blue-600"
-      >
-        <div className="segmented-control !bg-blue-50/50 dark:!bg-blue-900/10 !p-0.5 shrink-0 !w-auto">
-          {(['HSD', 'PMG'] as FuelType[]).map((t) => (
-            <button
-              key={t}
-              onClick={() => handleFuelSelect(t)}
-              className={cn(
-                "segmented-item !py-1.5 !px-3 !text-[10px]",
-                fuelType === t ? "!bg-blue-600 !text-white !shadow-md" : "!text-blue-600/60"
-              )}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
-      </ModuleHeader>
-
-      <div className="flex flex-col gap-3 p-4 bg-white dark:bg-dark-900/50 border-b border-slate-200 dark:border-dark-800 flex-shrink-0">
-        <div className="segmented-control overflow-x-auto no-scrollbar">
+      {/* View Switcher Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 pb-0 w-full">
+        <div className="flex items-center gap-2 bg-slate-100 dark:bg-dark-800 p-1.5 rounded-2xl border border-slate-200 dark:border-dark-700 w-fit">
           <button
             onClick={() => setActiveTab('dashboard')}
-            className={cn("segmented-item", activeTab === 'dashboard' ? "segmented-item-active" : "segmented-item-inactive")}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all",
+              activeTab === 'dashboard' 
+                ? "bg-white dark:bg-dark-900 text-blue-600 shadow-sm border border-slate-200 dark:border-dark-700" 
+                : "text-slate-500 hover:text-slate-700 dark:hover:text-dark-200"
+            )}
           >
-            Analytics
+            <LayoutGrid className="w-4 h-4" /> Dashboard
           </button>
           <button
             onClick={() => setActiveTab('database')}
-            className={cn("segmented-item", activeTab === 'database' ? "segmented-item-active" : "segmented-item-inactive")}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all",
+              activeTab === 'database' 
+                ? "bg-white dark:bg-dark-900 text-blue-600 shadow-sm border border-slate-200 dark:border-dark-700" 
+                : "text-slate-500 hover:text-slate-700 dark:hover:text-dark-200"
+            )}
           >
-            Entries
+            <Database className="w-4 h-4" /> Show Entries
           </button>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div className="flex items-center bg-slate-100 dark:bg-dark-800 p-1 rounded-xl border border-slate-200 dark:border-dark-700/50">
+            <button onClick={() => { setFromDate(today()); setToDate(today()); setPage(1); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-dark-400 hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all">Today</button>
+            <button onClick={() => { setFromDate(startOfMonth()); setToDate(today()); setPage(1); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-dark-400 hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all border-l border-slate-200 dark:border-dark-700/50">This Month</button>
+            <button onClick={() => { setFromDate(startOfYear()); setToDate(today()); setPage(1); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-dark-400 hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all border-l border-slate-200 dark:border-dark-700/50">This Year</button>
+          </div>
+          <div className="flex items-center gap-2">
+            <input type="date" className="input !py-1 !px-2 !w-32 !text-xs" value={fromDate} onChange={(e) => { setFromDate(e.target.value); setPage(1); }} />
+            <span className="text-[10px] font-bold text-slate-400 uppercase">To</span>
+            <input type="date" className="input !py-1 !px-2 !w-32 !text-xs" value={toDate} onChange={(e) => { setToDate(e.target.value); setPage(1); }} />
+          </div>
         </div>
       </div>
 
       {activeTab === 'dashboard' ? (
-        <div className="flex-1 flex flex-col h-full w-full overflow-y-auto smart-scroll p-4 md:p-6 pb-6">
-          {/* Compact Stats Grid — Support horizontal scroll if cards are too wide */}
-          <div className="flex gap-4 overflow-x-auto no-scrollbar smart-scroll mb-6 pb-2">
-            {[
-              { id: 'HSD', label: 'HSD Purchase', stats: dashStats.HSD, icon: Fuel },
-              { id: 'PMG', label: 'PMG Purchase', stats: dashStats.PMG, icon: Zap }
-            ].map(fuel => (
-              <div key={fuel.id} className="flex-shrink-0 w-[85%] xs:w-[70%] md:w-[calc(50%-0.5rem)] glass p-4 rounded-3xl border-l-4 border-blue-500 shadow-xl relative overflow-hidden transition-transform active:scale-95">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className={cn("w-7 h-7 rounded-lg flex items-center justify-center", fuel.id === 'HSD' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600' : 'bg-blue-100 dark:bg-blue-900/30 text-blue-600')}>
-                    <fuel.icon className="w-4 h-4" />
+        <div className="flex-1 flex flex-col h-full w-full overflow-hidden p-4 md:p-6 pb-10">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-blue-600/10 dark:bg-blue-600/20 flex items-center justify-center">
+                <BarChart3 className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Purchase Analysis</h1>
+                <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">Global Procurement Dashboard</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
+                <div className="glass px-4 py-2 rounded-2xl border border-amber-200 dark:border-amber-800/30 flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600">
+                    <Fuel className="w-4 h-4" />
                   </div>
-                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">{fuel.label}</span>
+                  <div className="min-w-0">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">HSD Avg / L</p>
+                    <p className="text-lg font-black text-amber-600 dark:text-amber-400 tabular-nums leading-none font-mono tracking-tighter">
+                      ₨ {formatCurrency(dashStats.HSD.qty > 0 ? dashStats.HSD.total / dashStats.HSD.qty : 0)}
+                    </p>
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <p className="text-xl md:text-2xl font-black text-slate-900 dark:text-white tabular-nums leading-none truncate">
-                    {fuel.stats.qty.toLocaleString()}<span className="text-[10px] ml-1 opacity-50 italic">L</span>
-                  </p>
-                  <div className="flex flex-col gap-0.5 border-t border-slate-100 dark:border-dark-700/50 pt-2 mt-2">
-                    <p className="text-[10px] font-black text-blue-600 dark:text-blue-400 truncate break-all">Total: ₨ {formatCurrency(fuel.stats.amt)}</p>
-                    <p className="text-[9px] font-bold text-slate-500 truncate break-all">Avg: ₨ {formatCurrency(fuel.stats.avgPrice)} /L</p>
+                <div className="glass px-4 py-2 rounded-2xl border border-blue-200 dark:border-blue-800/30 flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600">
+                    <Zap className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">PMG Avg / L</p>
+                    <p className="text-lg font-black text-blue-600 dark:text-blue-400 tabular-nums leading-none font-mono tracking-tighter">
+                      ₨ {formatCurrency(dashStats.PMG.qty > 0 ? dashStats.PMG.total / dashStats.PMG.qty : 0)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <button onClick={() => setShowReport(true)} className="btn-secondary flex items-center gap-2"><Printer className="w-4 h-4" /> Reports</button>
+                <button onClick={() => setShowForm(true)} className="btn-primary !bg-blue-600 flex items-center gap-2"><Plus className="w-4 h-4" /> New Entry</button>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            {[
+              { id: 'HSD', label: 'High Speed Diesel', stats: dashStats.HSD, icon: Fuel, color: 'emerald' },
+              { id: 'PMG', label: 'Premium Motor Gasoline', stats: dashStats.PMG, icon: Zap, color: 'blue' }
+            ].map(fuel => (
+              <div key={fuel.id} className="glass rounded-[2rem] p-6 border border-slate-200 dark:border-dark-700/50 relative overflow-hidden group hover:scale-[1.01] transition-transform shadow-xl">
+                <div className={cn("absolute top-0 right-0 w-32 h-32 rounded-bl-full -mr-16 -mt-16 opacity-10", fuel.id === 'HSD' ? 'bg-amber-500' : 'bg-blue-500')} />
+                
+                <div className="flex items-center gap-4 mb-6">
+                  <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center", fuel.id === 'HSD' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600' : 'bg-blue-100 dark:bg-blue-900/30 text-blue-600')}>
+                    <fuel.icon className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">{fuel.id} Procurement</h3>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{fuel.label}</p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-dark-800/50 pb-4">
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Volume</p>
+                      <p className="text-xl font-black text-slate-900 dark:text-white tabular-nums">{fuel.stats.qty.toLocaleString()} <span className="text-xs text-slate-400 font-normal">Liters</span></p>
+                    </div>
+                    <div className="space-y-1 sm:text-right flex-1">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Avg Price / L</p>
+                      <p className="text-xl font-black text-slate-900 dark:text-white tabular-nums">₨ {formatCurrency(fuel.stats.avgPrice)}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-dark-800/50 pb-4">
+                      <div className="space-y-1">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Net Expenditure</p>
+                        <p className="text-sm font-black text-slate-500 tabular-nums">₨ {formatCurrency(fuel.stats.amt)}</p>
+                      </div>
+                      <div className="space-y-1 sm:text-right">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Carriage</p>
+                        <p className="text-sm font-black text-slate-500 tabular-nums">₨ {formatCurrency(fuel.stats.carriage)}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="p-4 bg-blue-600 dark:bg-blue-600/10 rounded-2xl border border-blue-100/50 dark:border-blue-800/20">
+                      <p className="text-[10px] font-black text-white dark:text-blue-400 uppercase tracking-widest mb-1">Total Procurement Cost</p>
+                      <p className={cn(
+                        "font-black tabular-nums break-words leading-tight text-white dark:text-blue-400",
+                        formatCurrency(fuel.stats.total).length > 15 ? "text-xl lg:text-2xl" : "text-2xl lg:text-4xl"
+                      )}>
+                        <span className="text-lg mr-1 opacity-70">₨</span>
+                        {formatCurrency(fuel.stats.total)}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
             ))}
           </div>
 
-          <div className="flex items-center gap-2 mb-6">
-             <button onClick={() => setShowReport(true)} className="flex-1 btn-secondary !py-2.5 !text-[10px] uppercase tracking-widest flex items-center justify-center gap-2"><Printer className="w-3.5 h-3.5" /> Print Reports</button>
-          </div>
-
-          {/* Recent Purchases Mini List */}
-          <div className="flex-1 flex flex-col min-h-0">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Activity Entries</h3>
+          <div className="glass rounded-[2rem] overflow-hidden border border-slate-200 dark:border-dark-700/50 shadow-xl">
+            <div className="p-6 border-b border-slate-100 dark:border-dark-800 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <History className="w-5 h-5 text-slate-400" />
+                <h3 className="text-sm font-black uppercase tracking-widest text-slate-900 dark:text-white">Recent Purchases</h3>
+              </div>
               <button 
                 onClick={() => setActiveTab('database')}
-                className="text-[10px] font-black uppercase tracking-widest text-blue-600"
+                className="text-[10px] font-black uppercase tracking-widest text-blue-600 hover:text-blue-500 transition-colors flex items-center gap-1.5"
               >
-                View Entries
+                Show All Entries <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto no-scrollbar smart-scroll">
-              {dashStats.recent.map(p => (
-                <MobileActivityCard
-                  key={p.id}
-                  title={p.description || `Purchase ${p.invoiceNo || ''}`}
-                  subtitle={`${p.quantity.toLocaleString()} L @ ₨ ${formatCurrency(p.rate)}`}
-                  amount={`₨ ${formatCurrency(p.totalAmount)}`}
-                  date={formatDate(p.date)}
-                  icon={p.type === 'HSD' ? Fuel : Zap}
-                  iconColor={p.type === 'HSD' ? 'text-amber-500' : 'text-blue-500'}
-                  onClick={() => setViewingEntity(p)}
-                />
-              ))}
-              {dashStats.recent.length === 0 && (
-                <div className="py-12 text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest">No Recent Purchases</div>
-              )}
+            <div className="overflow-auto max-h-[500px] smart-scroll">
+              <table className="w-full">
+                <thead className="bg-slate-50 dark:bg-dark-900/50">
+                  <tr className="text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100 dark:border-dark-800">
+                    <th className="px-6 py-4 text-left">Date</th>
+                    <th className="px-6 py-4 text-left">Invoice No</th>
+                    <th className="px-6 py-4 text-left">Description</th>
+                    <th className="px-6 py-4 text-right">Qty (L)</th>
+                    <th className="px-6 py-4 text-right">Total Amount</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50 dark:divide-dark-800/50">
+                  {dashStats.recent.map(p => (
+                    <tr key={p.id} className="text-[11px] group hover:bg-slate-50/50 dark:hover:bg-dark-800/30 transition-all">
+                      <td className="px-6 py-4 font-bold text-slate-600 dark:text-dark-300">{formatDate(p.date)}</td>
+                      <td className="px-6 py-4 font-black text-blue-600">{p.invoiceNo || '—'}</td>
+                      <td className="px-6 py-4 font-bold text-slate-900 dark:text-white truncate max-w-[150px]">{p.description || 'Direct Purchase'}</td>
+                      <td className="px-6 py-4 text-right font-black tabular-nums">{p.quantity.toLocaleString()}</td>
+                      <td className="px-6 py-4 text-right font-black text-blue-600 tabular-nums">₨ {formatCurrency(p.totalAmount)}</td>
+                    </tr>
+                  ))}
+                  {dashStats.recent.length === 0 && (
+                    <tr><td colSpan={5} className="py-12 text-center text-xs text-slate-400 italic">No recent purchases found</td></tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
       ) : (
-        <div className="flex-1 flex flex-col min-h-0 bg-slate-50 dark:bg-dark-950/20 p-4 pb-48">
-            <div className="flex items-center gap-2 bg-white dark:bg-dark-900 p-2 rounded-2xl border border-slate-200 dark:border-dark-700 shadow-sm overflow-x-auto no-scrollbar smart-scroll mb-6">
-              <div className="flex-1 min-w-[120px]">
-                <SearchBar 
-                  value={search} 
-                  onChange={setSearch} 
-                  placeholder="Search..." 
-                  fullWidth={true}
-                  className="!py-1.5 !text-[11px]"
-                />
-              </div>
-
-              <button 
-                onClick={() => setShowReport(true)}
-                className="btn-secondary !py-2 !px-3 !bg-blue-50 dark:!bg-blue-900/10 !text-blue-600 !border-blue-200 dark:!border-blue-800 shrink-0 flex items-center gap-2 text-[10px] uppercase font-black tracking-widest shadow-sm"
-              >
-                <Printer className="w-3.5 h-3.5" /> Print All
-              </button>
-              
-              <div className="relative group shrink-0">
-                <ArrowUpDown className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 group-hover:text-blue-600 transition-colors pointer-events-none" />
-                <select
-                  value={entrySort}
-                  onChange={(e) => setEntrySort(e.target.value)}
-                  className="appearance-none pl-7 pr-8 py-2 bg-slate-50 dark:bg-dark-800 border border-slate-200 dark:border-dark-700 rounded-xl text-[9px] font-black uppercase tracking-wider text-slate-700 dark:text-dark-200 focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all cursor-pointer outline-none shadow-sm"
-                >
-                  <option value="date_desc">Newest</option>
-                  <option value="date_asc">Oldest</option>
-                  <option value="totalAmount_desc">High Amt</option>
-                  <option value="totalAmount_asc">Low Amt</option>
-                </select>
-                <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                  <div className="w-1 h-1 border-r border-b border-current rotate-45" />
-                </div>
-              </div>
-
-              <div className="flex items-center bg-slate-100 dark:bg-dark-800 p-1 rounded-xl border border-slate-200 dark:border-dark-700/50 shrink-0">
-                <button 
-                  onClick={() => { setFromDate(today()); setToDate(today()); setPage(1); }} 
-                  className={cn("px-3 py-1 text-[10px] font-black uppercase tracking-wider transition-all rounded-lg", (fromDate === today() && toDate === today()) ? "bg-white dark:bg-dark-900 text-blue-600 shadow-sm" : "text-slate-500")}
-                >
-                  Today
-                </button>
-                <button 
-                  onClick={() => { setFromDate(startOfMonth()); setToDate(today()); setPage(1); }} 
-                  className={cn("px-3 py-1 text-[10px] font-black uppercase tracking-wider transition-all rounded-lg border-l border-slate-200 dark:border-dark-700/50", (fromDate === startOfMonth() && toDate === today()) ? "bg-white dark:bg-dark-900 text-blue-600 shadow-sm" : "text-slate-500")}
-                >
-                  Month
-                </button>
-              </div>
-
-              {(fromDate || toDate) && (
-                <button onClick={() => { setFromDate(''); setToDate(''); setPage(1); }} className="p-2 text-red-600 shrink-0"><XCircle className="w-4 h-4" /></button>
+        <div className="flex-1 flex gap-4 h-full w-full min-h-0 overflow-hidden p-4">
+          {/* Sidebar selection */}
+          <div 
+            onMouseEnter={() => setIsSidebarHovered(true)}
+            onMouseLeave={() => setIsSidebarHovered(false)}
+            className={cn(
+              "flex-shrink-0 flex flex-col gap-3 h-full transition-all duration-300 ease-in-out border border-slate-200 dark:border-dark-700/50 bg-white/50 dark:bg-dark-900/50 rounded-2xl backdrop-blur-md",
+              isExpanded ? "w-64" : "w-16"
+            )}
+          >
+            <div className="flex items-center justify-between px-3 py-3 border-b border-slate-100 dark:border-dark-800/50">
+              {isExpanded && (
+                <h2 className="text-[10px] font-extrabold text-slate-600 dark:text-dark-200 uppercase tracking-[0.2em] animate-in fade-in slide-in-from-left-2">Fuel Types</h2>
               )}
+              <button 
+                onClick={() => setIsSidebarPinned(!isSidebarPinned)}
+                className={cn(
+                  "p-1.5 rounded-lg transition-colors ml-auto",
+                  isSidebarPinned ? "text-blue-600 bg-blue-50 dark:bg-blue-900/20" : "text-slate-400 hover:bg-slate-100 dark:hover:bg-dark-800"
+                )}
+                title={isSidebarPinned ? "Unpin Sidebar" : "Pin Sidebar"}
+              >
+                {isSidebarPinned ? <PinOff className="w-3.5 h-3.5" /> : <Pin className="w-3.5 h-3.5" />}
+              </button>
             </div>
 
-          <div className="flex-1 glass rounded-3xl border border-slate-200 dark:border-dark-700/50 shadow-xl flex flex-col min-h-0 container-scroll">
-            <div className="flex-1 overflow-x-auto overflow-y-auto smart-scroll">
-              <table className="table-excel min-w-[1000px] w-full border-collapse">
-                <thead className="sticky top-0 z-10 bg-slate-200 dark:bg-dark-800 shadow-sm">
-                  <tr className="table-header text-[10px]">
-                    <th className="table-cell text-left px-4">Date</th>
-                    <th className="table-cell text-left px-4">Invoice No</th>
-                    <th className="table-cell text-left px-4">Vehicle No</th>
-                    <th className="table-cell text-right px-4">Liters (Qty)</th>
-                    <th className="table-cell text-right px-4">Rate</th>
-                    <th className="table-cell text-right px-4">Total Amount</th>
-                    <th className="table-cell text-center px-4">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-dark-800/50">
-                  {paged.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="px-6 py-20 text-center">
-                         <p className="text-xs font-black text-slate-400 uppercase tracking-widest">No entries found for this period</p>
-                      </td>
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-2">
+              {(['HSD', 'PMG'] as FuelType[]).map((t) => {
+                const Icon = t === 'HSD' ? Fuel : Zap;
+                const active = fuelType === t;
+                return (
+                  <div
+                    key={t}
+                    onClick={() => handleFuelSelect(t)}
+                    className={cn(
+                      "flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200",
+                      active 
+                        ? "bg-blue-600 text-white shadow-lg scale-105" 
+                        : "hover:bg-slate-100 dark:hover:bg-dark-800 text-slate-500",
+                      !isExpanded && "justify-center"
+                    )}
+                    title={!isExpanded ? `${t} Purchases` : ''}
+                  >
+                    <Icon className={cn("w-5 h-5 flex-shrink-0", active ? "text-white" : t === 'HSD' ? "text-amber-500" : "text-emerald-500")} />
+                    {isExpanded && (
+                      <span className="font-black text-xs uppercase tracking-widest truncate animate-in fade-in slide-in-from-left-2">
+                        {t} Purchases
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="flex-1 min-w-0 flex flex-col h-full pr-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
+              <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase flex items-center gap-2">
+                <Database className="w-5 h-5 text-blue-600" />
+                {fuelType} Records
+              </h2>
+              <div className="flex items-center flex-wrap gap-3">
+                  <div className="glass px-4 py-2 rounded-xl border border-blue-200 dark:border-dark-700 flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                      <History className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">{fuelType} Records Avg</p>
+                      <p className="text-lg font-black text-blue-600 dark:text-blue-400 tabular-nums leading-none font-mono tracking-tighter">
+                        ₨ {formatCurrency(grandTotals.qty > 0 ? grandTotals.total / grandTotals.qty : 0)}
+                      </p>
+                    </div>
+                  </div>
+                <button onClick={() => setShowReport(true)} className="btn-secondary !py-2.5 flex items-center gap-2"><Printer className="w-4 h-4" /> Reports</button>
+                <button onClick={() => { closeForm(); setShowForm(true); }} className="btn-primary !bg-blue-600 flex items-center gap-2"><Plus className="w-4 h-4" /> New Entry</button>
+              </div>
+            </div>
+
+            <div className="glass rounded-xl overflow-hidden flex-1 flex flex-col mb-0">
+              <div className="flex flex-col md:flex-row md:items-center justify-between p-4 gap-4 border-b border-slate-200 dark:border-dark-700/50">
+                <div className="flex-1 min-w-0 flex items-center gap-2">
+                  <SearchBar value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search transactions..." />
+                  <div className="relative group shrink-0">
+                    <ArrowUpDown className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 group-hover:text-emerald-600 transition-colors pointer-events-none" />
+                    <select
+                      value={entrySort}
+                      onChange={(e) => setEntrySort(e.target.value)}
+                      className="appearance-none pl-7 pr-8 py-1.5 bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700/50 rounded-xl text-[9px] font-black uppercase tracking-wider text-slate-700 dark:text-dark-200 focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all cursor-pointer outline-none shadow-sm"
+                    >
+                      <option value="date_desc">Newest</option>
+                      <option value="date_asc">Oldest</option>
+                      <option value="qty_desc">High Qty</option>
+                      <option value="amt_desc">High Amt</option>
+                    </select>
+                  </div>
+                </div>
+                { (fromDate || toDate) && (
+                    <button onClick={() => { setFromDate(''); setToDate(''); setPage(1); }} className="px-3 py-1.5 text-[10px] font-black uppercase tracking-tighter text-red-600 bg-red-50 dark:bg-red-900/20 rounded-lg hover:bg-red-100 transition-all border border-red-200 dark:border-red-800/30 flex items-center gap-1.5"><XCircle className="w-3 h-3" /> Clear</button>
+                )}
+              </div>
+
+              {/* Table */}
+              <div className="flex-1 overflow-auto smart-scroll">
+                <table className="w-full">
+                  <thead className="sticky top-0 z-10 bg-slate-200 dark:bg-dark-800">
+                    <tr className="table-header text-[9px]">
+                      <th className="table-cell text-left min-w-[100px]">Date</th>
+                      <th className="table-cell text-left min-w-[120px]">Invoice No</th>
+                      <th className="table-cell text-left min-w-[400px]">Description</th>
+                      <th className="table-cell text-left min-w-[120px]">Vehicle No</th>
+                      <th className="table-cell text-right min-w-[100px]">Rate</th>
+                      <th className="table-cell text-right min-w-[120px]">Qty (L)</th>
+                      <th className="table-cell text-right min-w-[140px]">Carriage</th>
+                      <th className="table-cell text-right min-w-[160px]">Amount</th>
+                      <th className="table-cell text-right font-black min-w-[180px]">Total</th>
+                      <th className="table-cell w-20 text-center">Actions</th>
                     </tr>
-                  ) : (
-                    paged.map((p) => (
-                      <tr key={p.id} className="table-row text-[11px] hover:bg-slate-50 dark:hover:bg-dark-800/50 transition-all group">
-                        <td className="table-cell whitespace-nowrap font-bold text-slate-600 dark:text-dark-300">{formatDate(p.date)}</td>
-                        <td className="table-cell font-medium text-slate-900 dark:text-white">{p.invoiceNo || '---'}</td>
-                        <td className="table-cell font-medium text-slate-900 dark:text-white uppercase">{p.vehicleNo || '---'}</td>
-                        <td className="table-cell text-right tabular-nums font-black text-blue-600">{p.quantity.toLocaleString()}</td>
-                        <td className="table-cell text-right tabular-nums text-slate-600 dark:text-dark-400">₨ {formatCurrency(p.rate)}</td>
-                        <td className="table-cell text-right tabular-nums font-black text-slate-900 dark:text-white">₨ {formatCurrency(p.totalAmount)}</td>
-                        <td className="table-cell text-center">
-                          <div className="flex items-center justify-center gap-1">
-                            <button onClick={() => setViewingEntity(p)} className="p-1.5 text-slate-400 hover:text-blue-500 transition-colors" title="View"><Eye className="w-4 h-4" /></button>
-                            <button onClick={() => setViewingEntity(p)} className="p-1.5 text-slate-400 hover:text-emerald-600 transition-colors" title="Print Receipt"><Printer className="w-4 h-4" /></button>
-                            <button onClick={() => handleEdit(p)} className="p-1.5 text-slate-400 hover:text-amber-600 transition-colors" title="Edit"><Edit2 className="w-4 h-4" /></button>
-                            {(currentUser?.role === 'Admin' || currentUser?.role === 'Developer') && (
-                              <button onClick={() => { if(confirm('Delete purchase?')) deletePurchase(p.id); }} className="p-1.5 text-slate-400 hover:text-red-600 transition-colors" title="Delete"><Trash2 className="w-4 h-4" /></button>
+                  </thead>
+                  <tbody>
+                    {paged.length === 0 ? (
+                      <tr><td colSpan={10} className="table-cell text-center text-slate-400 dark:text-dark-500 py-12 italic">No {fuelType} purchases found</td></tr>
+                    ) : paged.map((p) => (
+                      <tr key={p.id} className="table-row group hover:bg-slate-50 dark:hover:bg-dark-800/50 text-[9px]">
+                        <td className="table-cell whitespace-nowrap">{formatDate(p.date)}</td>
+                        <td className="table-cell font-medium text-emerald-600 whitespace-nowrap truncate max-w-[7rem]">{p.invoiceNo || '—'}</td>
+                        <td className="table-cell whitespace-normal break-words leading-4 truncate">{p.description || '—'}</td>
+                        <td className="table-cell text-slate-500 uppercase tracking-wider whitespace-nowrap truncate max-w-[7rem]">{p.vehicleNo || '—'}</td>
+                        <td className="table-cell text-right whitespace-nowrap tabular-nums">₨{formatCurrency(p.rate)}</td>
+                        <td className="table-cell text-right whitespace-nowrap tabular-nums">{p.quantity.toLocaleString()}</td>
+                        <td className="table-cell text-right whitespace-nowrap tabular-nums">₨{formatCurrency(p.carriage)}</td>
+                        <td className="table-cell text-right whitespace-nowrap tabular-nums">₨{formatCurrency(p.amount)}</td>
+                        <td className="table-cell text-right font-semibold text-slate-900 dark:text-white whitespace-nowrap tabular-nums">₨{formatCurrency(p.totalAmount)}</td>
+                        <td className="table-cell text-right">
+                          <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={() => setViewingEntity(p)} className="flex items-center gap-1.5 px-2 py-0.5 text-[9px] font-black uppercase tracking-tighter text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/20 border border-blue-200/50 dark:border-emerald-800/30 rounded hover:bg-blue-100 dark:hover:bg-blue-800/40 transition-all"><Printer className="w-3 h-3" /><span>PRINT</span></button>
+                            <button onClick={() => setViewingEntity(p)} className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg transition-colors" title="View Details"><Eye className="w-4 h-4" /></button>
+                            {currentUser?.role === 'Admin' && (
+                              <>
+                                <button onClick={() => handleEdit(p)} className="p-1.5 text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-lg transition-colors" title="Edit Entry"><Edit2 className="w-4 h-4" /></button>
+                                <button onClick={() => { deletePurchase(p.id); toast('Purchase deleted', 'warning'); }} className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors" title="Delete Entry"><Trash2 className="w-4 h-4" /></button>
+                              </>
                             )}
                           </div>
                         </td>
                       </tr>
-                    ))
+                    ))}
+                  </tbody>
+                  {paged.length > 0 && (
+                    <tfoot className="bg-slate-50/50 dark:bg-dark-800/50 border-t-[3px] border-double border-slate-300 dark:border-dark-600">
+                      {/* Page Total Row */}
+                      <tr className="bg-slate-100/50 dark:bg-dark-800/30">
+                        <td colSpan={5} className="px-4 py-2 text-right">
+                          <span className="text-[10px] font-black text-slate-500 dark:text-dark-400 uppercase tracking-widest italic">Page Total</span>
+                        </td>
+                        <td className="px-2 py-2 text-right whitespace-nowrap">
+                          <span className="text-xs font-bold text-slate-600 dark:text-dark-400 tabular-nums">{pageTotals.qty.toLocaleString()} L</span>
+                        </td>
+                        <td className="px-2 py-2 text-right whitespace-nowrap">
+                          <span className="text-xs font-bold text-slate-600 dark:text-dark-400 tabular-nums">₨ {formatCurrency(pageTotals.carriage)}</span>
+                        </td>
+                        <td className="px-2 py-2 text-right whitespace-nowrap">
+                          <span className="text-xs font-bold text-slate-600 dark:text-dark-400 tabular-nums">₨ {formatCurrency(pageTotals.amount)}</span>
+                        </td>
+                        <td className="px-4 py-2 text-right whitespace-nowrap">
+                           <span className="text-[14px] font-black text-slate-700 dark:text-dark-300">₨ {formatCurrency(pageTotals.total)}</span>
+                        </td>
+                        <td className="table-cell"></td>
+                      </tr>
+                      {/* Grand Total Row */}
+                      <tr className="bg-slate-200 dark:bg-dark-800 border-t-2 border-slate-400">
+                        <td colSpan={5} className="px-4 py-3 text-right">
+                          <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tighter">Grand Total Analysis</span>
+                        </td>
+                        <td className="px-2 py-3 text-right whitespace-nowrap">
+                          <span className="text-sm font-black text-slate-900 dark:text-white">{grandTotals.qty.toLocaleString()} L</span>
+                        </td>
+                        <td className="px-2 py-3 text-right whitespace-nowrap text-xs font-bold text-slate-500">
+                          ₨{formatCurrency(grandTotals.carriage)}
+                        </td>
+                        <td className="px-2 py-3 text-right whitespace-nowrap text-xs font-bold text-slate-500">
+                          ₨{formatCurrency(grandTotals.amount)}
+                        </td>
+                        <td className="px-4 py-3 text-right whitespace-nowrap">
+                          <div className="flex flex-col items-end border-l border-slate-300 dark:border-dark-700 pl-4">
+                            <span className="text-lg font-black text-primary-600 dark:text-primary-400 leading-none">₨{formatCurrency(grandTotals.total)}</span>
+                            <span className="text-[10px] font-black text-blue-600 dark:text-blue-400 mt-0.5 italic tracking-wider font-black">₨ {formatCurrency(grandTotals.qty > 0 ? grandTotals.total / grandTotals.qty : 0)} / L</span>
+                          </div>
+                        </td>
+                        <td className="table-cell"></td>
+                      </tr>
+                    </tfoot>
                   )}
-                </tbody>
-                <tfoot className="sticky bottom-0 bg-slate-100 dark:bg-dark-900 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] text-[11px] font-black uppercase tracking-wider">
-                  <tr className="border-t-2 border-slate-300 dark:border-dark-700">
-                    <td colSpan={3} className="px-4 py-3 text-right text-slate-500">Page Total:</td>
-                    <td className="px-4 py-3 text-right text-blue-600 tabular-nums">{pageTotals.qty.toLocaleString()} L</td>
-                    <td></td>
-                    <td className="px-4 py-3 text-right text-slate-900 dark:text-white tabular-nums border-r border-slate-200 dark:border-dark-800">₨ {formatCurrency(pageTotals.total)}</td>
-                    <td></td>
-                  </tr>
-                  <tr className="bg-blue-600 text-white border-t border-white/10">
-                    <td colSpan={3} className="px-4 py-3 text-right opacity-80">Filters Grand Total:</td>
-                    <td className="px-4 py-3 text-right tabular-nums">{grandTotals.qty.toLocaleString()} L</td>
-                    <td></td>
-                    <td className="px-4 py-3 text-right tabular-nums">₨ {formatCurrency(grandTotals.total)}</td>
-                    <td></td>
-                  </tr>
-                </tfoot>
-              </table>
+                </table>
+              </div>
+              <Pagination page={page} total={filtered.length} perPage={perPage} onChange={setPage} onPerPageChange={(v) => { setPerPage(v); setPage(1); }} />
             </div>
           </div>
-            <div className="mt-4">
-              <Pagination page={page} total={filtered.length} perPage={perPage} onChange={setPage} />
-            </div>
-          </div>
-        )}
-
-      {/* Primary Action FAB */}
-      <FAB 
-        icon={Plus} 
-        label={editingEntity ? "Update" : "Add Purchase"}
-        onClick={() => setShowForm(true)}
-        className="!bg-blue-600"
-      />
+        </div>
+      )}
 
       {showForm && (
         <Modal 
           title={editingEntity ? `Edit ${fuelType} Purchase` : `Add ${fuelType} Purchase`} 
           onClose={closeForm} 
-          variant="bottom-sheet"
+          isDesktop 
+          icon={ShoppingCart}
         >
-          <form onSubmit={handleSubmit} className="flex flex-col h-full bg-slate-50 dark:bg-dark-950/20 -m-6 p-6">
-            <div className="flex-1 space-y-4 mb-6 overflow-y-auto smart-scroll no-scrollbar">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-dark-500 px-1">Entry Date</label>
-                  <input type="date" className="input w-full !h-12 !bg-white dark:!bg-dark-800 shadow-sm" value={form.date} onChange={(e) => set('date', e.target.value)} required />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-dark-500 px-1">Invoice No</label>
-                  <input className="input w-full !h-12 !bg-white dark:!bg-dark-800 shadow-sm" value={form.invoiceNo} onChange={(e) => set('invoiceNo', e.target.value)} placeholder="Inv-000" dir="auto" />
+          <form onSubmit={handleSubmit} className="flex flex-col gap-1">
+            {/* Header / Info Section */}
+            <div className="bg-slate-50 dark:bg-dark-800/50 rounded-2xl p-4 mb-4 border border-slate-200 dark:border-dark-700/50">
+              <div className="desktop-form-row">
+                <label className="desktop-form-label">Date *</label>
+                <div className="desktop-form-field">
+                  <input type="date" className="input !py-1.5" value={form.date} onChange={(e) => set('date', e.target.value)} required />
                 </div>
               </div>
-
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-dark-500 px-1">Vehicle / Bowzer No</label>
-                <input className="input w-full !h-12 !bg-white dark:!bg-dark-800 shadow-sm" value={form.vehicleNo} onChange={(e) => set('vehicleNo', e.target.value)} placeholder="e.g. K-9988" dir="auto" />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-dark-500 px-1">Transaction Description</label>
-                <input className="input w-full !h-12 !bg-white dark:!bg-dark-800 shadow-sm" value={form.description} onChange={(e) => set('description', e.target.value)} placeholder="Details of this purchase" dir="auto" />
-              </div>
-
-              <div className="flex gap-4">
-                <div className="flex-1 space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-blue-600 px-1">Rate (Per Liter)</label>
-                  <input type="number" step="any" className="input w-full !h-12 !bg-white dark:!bg-dark-800 !text-xl shadow-sm" value={form.rate} onChange={(e) => set('rate', e.target.value)} placeholder="0.00" required />
-                </div>
-                <div className="flex-1 space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-emerald-600 px-1">Liters (Qty)</label>
-                  <input type="number" step="any" className="input w-full !h-12 !bg-white dark:!bg-dark-800 !text-xl shadow-sm" value={form.quantity} onChange={(e) => set('quantity', e.target.value)} placeholder="0" required />
+              <div className="desktop-form-row">
+                <label className="desktop-form-label">Invoice No</label>
+                <div className="desktop-form-field">
+                  <input className="input !py-1.5" value={form.invoiceNo} onChange={(e) => set('invoiceNo', e.target.value)} placeholder="e.g. INV-202611" dir="auto" />
                 </div>
               </div>
-
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase tracking-widest text-amber-600 px-1">Carriage / Freight (PKR)</label>
-                <input type="number" step="any" className="input w-full !h-12 !bg-white dark:!bg-dark-800 !text-xl shadow-sm" value={form.carriage} onChange={(e) => set('carriage', e.target.value)} placeholder="0" />
+              <div className="desktop-form-row">
+                <label className="desktop-form-label">Vehicle No</label>
+                <div className="desktop-form-field">
+                  <input className="input !py-1.5" value={form.vehicleNo} onChange={(e) => set('vehicleNo', e.target.value)} placeholder="e.g. LHR-4567" dir="auto" />
+                </div>
               </div>
-
-              <div className="bg-blue-600/5 dark:bg-blue-600/10 p-5 rounded-3xl border border-blue-600/20 shadow-xl shadow-blue-500/5">
-                 <div className="flex justify-between items-center mb-2">
-                    <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Fuel Net Amount</p>
-                    <p className="text-sm font-black text-slate-500 tabular-nums">₨ {formatCurrency(Number(form.amount))}</p>
-                 </div>
-                 <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1">Total Payable Amount</p>
-                 <p className="text-3xl md:text-4xl font-black text-blue-600 dark:text-blue-400 tabular-nums leading-none truncate max-w-full tracking-tighter">
-                    ₨ {formatCurrency(Number(form.totalAmount))}
-                 </p>
+              <div className="desktop-form-row">
+                <label className="desktop-form-label">Description</label>
+                <div className="desktop-form-field">
+                  <input className="input !py-1.5" value={form.description} onChange={(e) => set('description', e.target.value)} placeholder="Purchase order note" dir="auto" />
+                </div>
               </div>
             </div>
 
-            <div className="sticky-bottom-actions !bg-white/80 dark:!bg-dark-900/80 backdrop-blur-xl border-t border-slate-100 dark:border-dark-800 -mx-6 px-6 pt-4 pb-8">
-              <button type="button" onClick={closeForm} className="flex-1 py-4 text-xs font-black uppercase tracking-[0.2em] text-slate-400 dark:text-dark-500" disabled={isSaving}>Cancel</button>
-              <button 
-                type="submit" 
-                className="flex-[2] py-4 bg-blue-600 text-white font-black text-xs uppercase tracking-[0.2em] rounded-2xl shadow-xl shadow-blue-500/30 active:scale-95 transition-all flex items-center justify-center gap-3 border border-white/20" 
-                disabled={isSaving}
-              >
-                {isSaving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Save className="w-5 h-5" />}
-                <span>{editingEntity ? 'Update Entry' : 'Confirm Purchase'}</span>
-              </button>
+            {/* Financials Section */}
+            <div className="px-2 space-y-1">
+              <div className="desktop-form-row">
+                <label className="desktop-form-label text-blue-600 dark:text-blue-400">Rate (₨) *</label>
+                <div className="desktop-form-field">
+                  <input type="number" step="any" className="input !py-1.5 !bg-blue-50/30 dark:!bg-blue-900/10 focus:ring-blue-500/20" value={form.rate} onChange={(e) => set('rate', e.target.value)} required />
+                </div>
+              </div>
+              <div className="desktop-form-row">
+                <label className="desktop-form-label text-emerald-600 dark:text-emerald-400">Quantity (L) *</label>
+                <div className="desktop-form-field">
+                  <input type="number" step="any" className="input !py-1.5 !bg-emerald-50/30 dark:!bg-emerald-900/10 focus:ring-emerald-500/20" value={form.quantity} onChange={(e) => set('quantity', e.target.value)} required />
+                </div>
+              </div>
+              <div className="desktop-form-row">
+                <label className="desktop-form-label text-amber-600 dark:text-amber-400">Carriage (Rs)</label>
+                <div className="desktop-form-field">
+                  <input type="number" step="any" className="input !py-1.5 !bg-amber-50/30 dark:!bg-amber-900/10 focus:ring-amber-500/20" value={form.carriage} onChange={(e) => set('carriage', e.target.value)} />
+                </div>
+              </div>
+            </div>
+
+            {/* Footer Summary Strip */}
+            <div className="desktop-form-footer">
+              <div className="desktop-summary-strip flex-1 mr-4">
+                <div className="flex flex-col">
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Gross Amount</span>
+                  <span className="text-sm font-black text-slate-900 dark:text-white font-mono">Rs {formatCurrency(Number(form.amount))}</span>
+                </div>
+                <div className="h-8 w-px bg-slate-200 dark:bg-dark-700" />
+                <div className="flex flex-col">
+                  <span className="text-[9px] font-black text-primary-600 uppercase tracking-tighter">Total Payable</span>
+                  <span className="text-lg font-black text-primary-600 dark:text-primary-400 font-mono tracking-tighter">Rs {formatCurrency(Number(form.totalAmount))}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={closeForm} className="btn-secondary !py-2 !px-4" disabled={isSaving}>Cancel</button>
+                <button type="submit" className="btn-primary !py-2 !px-6" disabled={isSaving}>
+                  {isSaving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Save className="w-4 h-4" />}
+                  {editingEntity ? 'Update' : 'Confirm [F10]'}
+                </button>
+              </div>
             </div>
           </form>
         </Modal>
-      )}
+      ) /* End showForm */}
 
       {viewingEntity && <TransactionReceiptModal entity={viewingEntity} type="purchase" onClose={() => setViewingEntity(null)} />}
       {showReport && <PrintReportModal data={filtered} type="purchase" onClose={() => setShowReport(false)} />}
