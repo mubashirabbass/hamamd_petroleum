@@ -39,6 +39,7 @@ export function totalPages(total: number, perPage: number): number {
 }
 
 export function filterByStartDate<T extends { date: string }>(items: T[], startDate: string): T[] {
+  if (!items) return [];
   if (!startDate) return items;
   return items.filter(item => item.date >= startDate);
 }

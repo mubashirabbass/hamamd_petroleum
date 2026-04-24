@@ -40,6 +40,7 @@ export default function SalePage() {
 
     if (action === 'add') setShowForm(true);
   }, [searchParams]);
+
   const [search, setSearch] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
@@ -52,7 +53,9 @@ export default function SalePage() {
   const [entrySort, setEntrySort] = useState('date_desc');
 
   const handleFuelSelect = (type: FuelType) => {
-    setFuelType(type); setSearch(''); setPage(1);
+    setFuelType(type); 
+    setSearch(''); 
+    setPage(1);
   };
 
   const set = (k: string, v: string) => {
@@ -66,7 +69,7 @@ export default function SalePage() {
     let list = filterByStartDate(sales, settings.startDate)
       .filter((s) => s.type === fuelType)
       .filter((s) => {
-        const matchesSearch = !search || s.date.includes(search);
+        const matchesSearch = !search || s.date.includes(search) || (s.description && s.description.toLowerCase().includes(search.toLowerCase()));
         const matchesFrom = !fromDate || s.date >= fromDate;
         const matchesTo = !toDate || s.date <= toDate;
         return matchesSearch && matchesFrom && matchesTo;
@@ -81,6 +84,7 @@ export default function SalePage() {
   }, [sales, settings.startDate, fuelType, search, fromDate, toDate, entrySort]);
 
   const paged = paginate(filtered, page, perPage);
+  
   const pageTotals = useMemo(() => ({
     qty: paged.reduce((s, x) => s + x.quantity, 0),
     amount: paged.reduce((s, x) => s + x.amount, 0),
@@ -136,15 +140,14 @@ export default function SalePage() {
       if (editingEntity) {
         await useStore.getState().updateSale(editingEntity.id, payload);
         toast('Sale updated successfully', 'success');
-        closeForm(); // Close after edit
+        closeForm();
       } else {
         await addSale(payload);
         toast(`${fuelType} sale added`, 'success');
-        resetFormForNext(); // Stay open after add
+        resetFormForNext();
       }
     } catch (err: unknown) {
       const errorMessage = getErrorMessage(err);
-      console.error('Save error:', err);
       toast(`Failed to save: ${errorMessage}`, 'error');
     } finally {
       setIsSaving(false);
@@ -178,105 +181,147 @@ export default function SalePage() {
     <div className="animate-fade-in flex flex-col h-full w-full overflow-hidden">
       {/* View Switcher Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 pb-0 w-full">
-        <div className="flex items-center flex-1 bg-slate-100 dark:bg-dark-800 p-1 rounded-2xl border border-slate-200 dark:border-dark-700">
+        <div className="flex items-center gap-2 bg-slate-100 dark:bg-dark-800 p-1.5 rounded-2xl border border-slate-200 dark:border-dark-700 w-fit">
           <button
             onClick={() => setActiveTab('dashboard')}
             className={cn(
-              "flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-[0.2em] transition-all",
+              "flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all",
               activeTab === 'dashboard' 
                 ? "bg-white dark:bg-dark-900 text-emerald-600 shadow-sm border border-slate-200 dark:border-dark-700" 
                 : "text-slate-500 hover:text-slate-700 dark:hover:text-dark-200"
             )}
           >
-            ANALYTICS
+            <TrendingUp className="w-4 h-4" /> Dashboard
           </button>
           <button
             onClick={() => setActiveTab('database')}
             className={cn(
-              "flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-[0.2em] transition-all",
+              "flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all",
               activeTab === 'database' 
                 ? "bg-white dark:bg-dark-900 text-emerald-600 shadow-sm border border-slate-200 dark:border-dark-700" 
                 : "text-slate-500 hover:text-slate-700 dark:hover:text-dark-200"
             )}
           >
-            ENTRIES
+            <Database className="w-4 h-4" /> Show Entries
           </button>
         </div>
 
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar w-full md:w-auto">
-          <div className="flex items-center bg-slate-100 dark:bg-dark-800 p-1 rounded-xl border border-slate-200 dark:border-dark-700/50 flex-shrink-0">
-            <button 
-              onClick={() => handleFuelSelect('HSD')} 
-              className={cn("px-4 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all", fuelType === 'HSD' ? "bg-emerald-600 text-white shadow-md" : "text-slate-500 hover:bg-white dark:hover:bg-dark-900")}
-            >
-              HSD
-            </button>
-            <button 
-              onClick={() => handleFuelSelect('PMG')} 
-              className={cn("px-4 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all", fuelType === 'PMG' ? "bg-emerald-600 text-white shadow-md" : "text-slate-500 hover:bg-white dark:hover:bg-dark-900")}
-            >
-              PMG
-            </button>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center bg-slate-100 dark:bg-dark-800 p-1 rounded-xl border border-slate-200 dark:border-dark-700/50">
+            <button onClick={() => { setFromDate(today()); setToDate(today()); setPage(1); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-dark-400 hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all">Today</button>
+            <button onClick={() => { setFromDate(startOfMonth()); setToDate(today()); setPage(1); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-dark-400 hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all border-l border-slate-200 dark:border-dark-700/50">This Month</button>
+            <button onClick={() => { setFromDate(startOfYear()); setToDate(today()); setPage(1); }} className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-dark-400 hover:bg-white dark:hover:bg-dark-900 rounded-lg transition-all border-l border-slate-200 dark:border-dark-700/50">This Year</button>
           </div>
-          <div className="flex items-center gap-1.5 flex-1 min-w-[200px]">
-            <input type="date" className="input !py-1.5 !px-2 flex-1 !text-[10px] md:!text-xs" value={fromDate} onChange={(e) => { setFromDate(e.target.value); setPage(1); }} />
-            <span className="text-[10px] font-bold text-slate-400">/</span>
-            <input type="date" className="input !py-1.5 !px-2 flex-1 !text-[10px] md:!text-xs" value={toDate} onChange={(e) => { setToDate(e.target.value); setPage(1); }} />
+          <div className="flex items-center gap-2">
+            <input type="date" className="input !py-1 !px-2 !w-32 !text-xs" value={fromDate} onChange={(e) => { setFromDate(e.target.value); setPage(1); }} />
+            <span className="text-[10px] font-bold text-slate-400 uppercase">To</span>
+            <input type="date" className="input !py-1 !px-2 !w-32 !text-xs" value={toDate} onChange={(e) => { setToDate(e.target.value); setPage(1); }} />
           </div>
         </div>
       </div>
 
       {activeTab === 'dashboard' ? (
         <div className="flex-1 flex flex-col h-full w-full overflow-hidden p-4 md:p-6 pb-10">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-6">
+          {/* Header matching Purchase design */}
+          <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-emerald-600/10 dark:bg-emerald-600/20 flex items-center justify-center">
-                <BarChart3 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+              <div className="w-14 h-14 rounded-2xl bg-emerald-600/10 dark:bg-emerald-600/20 flex items-center justify-center">
+                <BarChart3 className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
               </div>
               <div>
-                <h1 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Analytics</h1>
+                <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Sales Analysis</h1>
+                <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">Sales & Liters Dashboard</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <button onClick={() => setShowForm(true)} className="w-10 h-10 flex items-center justify-center rounded-xl bg-emerald-600 text-white shadow-lg active:scale-95 transition-transform"><Plus className="w-5 h-5" /></button>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
+                <div className="glass px-4 py-2 rounded-2xl border border-emerald-200 dark:border-emerald-800/30 flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600">
+                    <Fuel className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">HSD Sale Avg</p>
+                    <p className="text-lg font-black text-emerald-600 dark:text-emerald-400 tabular-nums leading-none font-mono tracking-tighter">
+                      ₨ {formatCurrency(dashStats.HSD.avgRate)}
+                    </p>
+                  </div>
+                </div>
+                <div className="glass px-4 py-2 rounded-2xl border border-blue-200 dark:border-blue-800/30 flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600">
+                    <Zap className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">PMG Sale Avg</p>
+                    <p className="text-lg font-black text-blue-600 dark:text-blue-400 tabular-nums leading-none font-mono tracking-tighter">
+                      ₨ {formatCurrency(dashStats.PMG.avgRate)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <button onClick={() => setShowReport(true)} className="btn-secondary flex items-center gap-2"><Printer className="w-4 h-4" /> Reports</button>
+                <button onClick={() => setShowForm(true)} className="btn-primary !bg-emerald-600 flex items-center gap-2"><Plus className="w-4 h-4" /> New Entry</button>
+              </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 lg:grid-cols-2 gap-3 md:gap-6 mb-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
             {[
-              { id: 'HSD', label: 'HSD', fullLabel: 'High Speed Diesel', stats: dashStats.HSD, icon: Fuel, border: 'border-emerald-200 dark:border-emerald-900/30' },
-              { id: 'PMG', label: 'PMG', fullLabel: 'Premium Motor Gasoline', stats: dashStats.PMG, icon: Zap, border: 'border-emerald-200 dark:border-emerald-900/30' }
+              { id: 'HSD', label: 'High Speed Diesel', stats: dashStats.HSD, icon: Fuel, color: 'emerald' },
+              { id: 'PMG', label: 'Premium Motor Gasoline', stats: dashStats.PMG, icon: Zap, color: 'blue' }
             ].map(fuel => (
-              <div key={fuel.id} className={cn("glass rounded-[1.5rem] md:rounded-[2rem] p-3 md:p-6 shadow-lg border relative overflow-hidden", fuel.border)}>
-                <div className="flex items-center gap-2 md:gap-4 mb-3 md:mb-6">
-                  <div className="w-8 h-8 md:w-12 md:h-12 rounded-lg md:rounded-2xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600">
-                    <fuel.icon className="w-4 h-4 md:w-6 md:h-6" />
-                  </div>
-                  <p className="text-[10px] md:text-xs font-black text-slate-400 uppercase tracking-widest">{fuel.label}</p>
-                </div>
+              <div key={fuel.id} className="glass rounded-[2rem] p-6 border border-slate-200 dark:border-dark-700/50 relative overflow-hidden group hover:scale-[1.01] transition-transform shadow-xl">
+                <div className={cn("absolute top-0 right-0 w-32 h-32 rounded-bl-full -mr-16 -mt-16 opacity-10", fuel.color === 'emerald' ? 'bg-emerald-500' : 'bg-blue-500')} />
                 
-                <div className="space-y-4 md:space-y-6">
-                  <div className="space-y-0.5 md:space-y-1">
-                    <p className="text-base md:text-3xl font-black text-slate-900 dark:text-white tabular-nums leading-none">{fuel.stats.qty.toLocaleString()} <span className="text-[8px] md:text-sm text-slate-400 font-bold ml-0.5">L</span></p>
+                <div className="flex items-center gap-4 mb-6">
+                  <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center", fuel.color === 'emerald' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600' : 'bg-blue-100 dark:bg-blue-900/30 text-blue-600')}>
+                    <fuel.icon className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">{fuel.id} Sales</h3>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{fuel.label}</p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-dark-800/50 pb-4">
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sales Liters</p>
+                      <p className="text-xl font-black text-slate-900 dark:text-white tabular-nums">{fuel.stats.qty.toLocaleString()} <span className="text-xs text-slate-400 font-normal">L</span></p>
+                    </div>
+                    <div className="space-y-1 sm:text-right flex-1">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Avg Sale Rate</p>
+                      <p className="text-xl font-black text-slate-900 dark:text-white tabular-nums">₨ {formatCurrency(fuel.stats.avgRate)}</p>
+                    </div>
                   </div>
 
-                  <div className="space-y-0.5 md:space-y-2">
-                    <p className="text-[8px] md:text-xs font-black text-emerald-600 uppercase tracking-widest leading-none">Total: <span className="text-[10px] md:text-lg tabular-nums">₨ {formatCurrency(fuel.stats.amt)}</span></p>
-                    <p className="text-[8px] md:text-xs font-black text-slate-400 uppercase tracking-widest leading-none">Avg: Rs {formatCurrency(fuel.stats.avgRate)}/L</p>
+                  <div className="flex flex-col gap-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-dark-800/50 pb-4">
+                      <div className="space-y-1">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Transactions</p>
+                        <p className="text-sm font-black text-slate-500 tabular-nums">{fuel.stats.count} Entries</p>
+                      </div>
+                      <div className="space-y-1 sm:text-right">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Target Met</p>
+                        <p className="text-sm font-black text-emerald-600 tabular-nums">Active</p>
+                      </div>
+                    </div>
+                    
+                    <div className="p-4 bg-emerald-600 dark:bg-emerald-600/10 rounded-2xl border border-emerald-100/50 dark:border-emerald-800/20">
+                      <p className="text-[10px] font-black text-white dark:text-emerald-400 uppercase tracking-widest mb-1">Total Sales Amount</p>
+                      <p className={cn(
+                        "font-black tabular-nums break-words leading-tight text-white dark:text-emerald-400",
+                        formatCurrency(fuel.stats.amt).length > 15 ? "text-xl lg:text-2xl" : "text-2xl lg:text-4xl"
+                      )}>
+                        <span className="text-lg mr-1 opacity-70">₨</span>
+                        {formatCurrency(fuel.stats.amt)}
+                      </p>
+                    </div>
                   </div>
-
-                  <button onClick={() => { setFuelType(fuel.id as any); setShowForm(true); }} className="w-full py-2 md:py-3 rounded-xl bg-emerald-600 text-white text-[10px] md:text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-transform shadow-md">
-                    <Plus className="w-3 h-3 md:w-4 md:h-4" /> ADD
-                  </button>
                 </div>
               </div>
             ))}
           </div>
-
-          <button onClick={() => setShowReport(true)} className="w-full py-4 mb-8 rounded-2xl bg-slate-100 dark:bg-dark-800 border border-slate-200 dark:border-dark-700 flex items-center justify-center gap-3 text-xs font-black uppercase tracking-[0.2em] text-slate-600 dark:text-white hover:bg-slate-200 active:scale-[0.98] transition-all">
-            <Printer className="w-4 h-4" /> PRINT REPORTS
-          </button>
 
           <div className="glass rounded-[2rem] overflow-hidden border border-slate-200 dark:border-dark-700/50 shadow-xl">
             <div className="p-6 border-b border-slate-100 dark:border-dark-800 flex items-center justify-between">
@@ -377,7 +422,6 @@ export default function SalePage() {
           </div>
 
           <div className="flex-1 min-w-0 flex flex-col h-full pr-4">
-            {/* Header / Toolbar Moved to top for consistency, simplified here */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
               <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase flex items-center gap-2">
                 <Database className="w-5 h-5 text-emerald-600" />
@@ -503,10 +547,8 @@ export default function SalePage() {
 
       {showForm && (
         <Modal 
-          title={editingEntity ? `Edit ${fuelType} Sale` : `Add ${fuelType} Sale`} 
-          onClose={closeForm} 
-          isDesktop 
-          icon={TrendingUp}
+          title={editingEntity ? 'Edit Sale Entry' : 'Add Sale Entry'} 
+          onClose={closeForm}
         >
           <form onSubmit={handleSubmit} className="flex flex-col gap-1">
             {/* Date & Description */}
@@ -562,7 +604,7 @@ export default function SalePage() {
       )}
 
       {viewingEntity && <TransactionReceiptModal entity={viewingEntity} type="sale" onClose={() => setViewingEntity(null)} />}
-      {showReport && <PrintReportModal data={filtered} type="sale" onClose={() => setShowReport(false)} />}
+      {showReport && <PrintReportModal data={filtered} type="sale" fromDate={fromDate} toDate={toDate} onClose={() => setShowReport(false)} />}
     </div>
   );
 }

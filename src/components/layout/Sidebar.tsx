@@ -37,7 +37,7 @@ type SidebarProps = {
 
 export default function Sidebar({ className = '', isCollapsed = false, onNavigate, onCloseMobile }: SidebarProps) {
   const location = useLocation();
-  const { logout, settings, updateSettings, triggerSplash } = useStore();
+  const { logout, settings, updateSettings } = useStore();
 
   const handleZoom = async (delta: number) => {
     const newZoom = Math.min(Math.max(settings.zoomLevel + delta, 0.5), 2.0);
@@ -98,7 +98,6 @@ export default function Sidebar({ className = '', isCollapsed = false, onNavigat
                   to={path}
                   end={path === '/stock'}
                   onClick={() => {
-                    triggerSplash();
                     if (onNavigate) onNavigate();
                   }}
                   className={cn(
@@ -126,7 +125,6 @@ export default function Sidebar({ className = '', isCollapsed = false, onNavigat
                           key={child.path}
                           to={child.path}
                           onClick={() => {
-                            triggerSplash();
                             if (onNavigate) onNavigate();
                           }}
                           className={cn(

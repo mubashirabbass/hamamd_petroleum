@@ -1,16 +1,25 @@
-import { useRef, useState } from 'react';
-import { X, Printer, FileText, Download, Loader2 } from 'lucide-react';
+import React, { useState, useRef, useMemo } from 'react';
+import { X, Printer, FileText, Download, Loader2, Table } from 'lucide-react';
 import { formatCurrency, formatDate } from '../../lib/utils';
 import PrintHeader from '../printing/PrintHeader';
-import html2canvas from 'html2canvas';
+import { toPng } from 'html-to-image';
 import jsPDF from 'jspdf';
+import ExcelJS from 'exceljs';
+import { writeFile } from '@tauri-apps/plugin-fs';
+import { message, save as saveDialog } from '@tauri-apps/plugin-dialog';
 
 interface Props {
-  data: any[];
-  type: 'sale' | 'purchase' | 'expense' | 'asset' | 'liability' | 'customer' | 'stock';
+  isOpen: boolean;
   onClose: () => void;
+  data: any[];
+  type?: 'sale' | 'purchase' | 'expense' | 'asset' | 'liability' | 'customer' | 'stock' | 'customer_summary';
   title?: string;
   customerPhone?: string;
+  fromDate?: string;
+  toDate?: string;
+  dateRange?: { from: string; to: string } | string;
+  columns?: { header: string; accessor: string; align?: 'left' | 'right' | 'center'; isCurrency?: boolean }[];
+  totals?: Record<string, number>;
 }
 
 const ROWS_PER_PAGE = 22;
@@ -33,167 +42,87 @@ function toWords(n: number): string {
   return i === 0 ? 'PKR Zero Only' : 'PKR ' + conv(i).trim() + ' Only';
 }
 
-export default function PrintReportModal({ data, type, onClose, title: customTitle, customerPhone }: Props) {
+export default function PrintReportModal({ 
+  isOpen, onClose, data = [], type, title: customTitle, 
+  customerPhone, fromDate, toDate, dateRange: customDateRange, 
+  columns: dynamicColumns, totals: dynamicTotals 
+}: Props) {
   const contentRef = useRef<HTMLDivElement>(null);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
-  const handlePrint = () => {
-    const fc = (n: number) => formatCurrency(n);
-    const fd = (d: string) => formatDate(d);
-    const sum = (arr: any[], k: string) => arr.reduce((s, x) => s + (x[k] || 0), 0);
-
-    const isLedger = type === 'asset' || type === 'liability' || type === 'customer';
-    const isSale = type === 'sale';
-    const isPurchase = type === 'purchase';
-    const isStock = type === 'stock';
-
-    let grandTotal = 0;
-    let totalQty = 0;
-    let totalDebit = 0;
-    let totalCredit = 0;
-
-    if (isSale) {
-      grandTotal = sum(data, 'amount');
-      totalQty = sum(data, 'quantity');
-    } else if (isPurchase) {
-      grandTotal = sum(data, 'totalAmount');
-      totalQty = sum(data, 'quantity');
-    } else if (isLedger) {
-      totalDebit = sum(data, 'debit');
-      totalCredit = sum(data, 'credit');
-      grandTotal = totalDebit - totalCredit;
-    } else if (isStock) {
-      grandTotal = data[data.length - 1]?.balance || 0;
-    } else {
-      grandTotal = sum(data, 'amount');
+  const dates = useMemo(() => (data || []).map(x => x.date).filter(Boolean).sort(), [data]);
+  const dateRangeStr = useMemo(() => {
+    if (customDateRange) {
+      if (typeof customDateRange === 'string') return customDateRange;
+      return `${formatDate(customDateRange.from)} — ${formatDate(customDateRange.to)}`;
     }
+    if (fromDate && toDate) return `${formatDate(fromDate)} — ${formatDate(toDate)}`;
+    if (fromDate) return `From ${formatDate(fromDate)}`;
+    if (toDate) return `Up to ${formatDate(toDate)}`;
+    if (dates.length) return `${formatDate(dates[0])} — ${formatDate(dates[dates.length - 1])}`;
+    return 'Full History';
+  }, [dates, fromDate, toDate, customDateRange]);
 
-    const HEADER = `
-      <div style="border:4px double #111;padding:2px;margin-bottom:10px;">
-        <div style="border:1.2px solid #111;padding:10px 15px;">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
-            <img src="/assets/logo-hr.png" style="width:80px;height:80px;object-fit:contain;" />
-            <div style="text-align:center;flex:1;">
-              <div style="font-size:26px;font-weight:900;text-transform:uppercase;letter-spacing:1px;">Hammad Rahim Filling Station</div>
-              <div style="font-size:10px;font-weight:700;font-style:italic;text-transform:uppercase;color:#444;margin-top:3px;">Muzafar Garh Road, Ada Ghyl Pur, District Jhang</div>
-              <div style="display:flex;justify-content:center;gap:15px;font-size:9px;font-weight:900;text-transform:uppercase;margin-top:8px;">
-                <span>&#128222; +92-301-7221831</span><span>|</span><span>&#128222; +92-300-0989192</span>
-              </div>
-            </div>
-            <img src="/assets/logo-go.png" style="width:80px;height:80px;object-fit:contain;" />
-          </div>
-        </div>
-      </div>`;
+  const printedAt = useMemo(() => {
+    const now = new Date();
+    return now.toLocaleString('en-PK', { 
+      day: '2-digit', month: 'short', year: 'numeric', 
+      hour: '2-digit', minute: '2-digit', hour12: true 
+    });
+  }, []);
 
-    const colCount = isPurchase ? 9 : (isSale || isLedger || isStock) ? 5 : 3;
-    const TH = (txt: string, w = '', align = 'left', last = false) =>
-      `<th style="padding:6px ${isPurchase ? '2px' : '8px'};border-right:${last ? 'none' : '1px solid #111'};text-align:${align};${w ? `width:${w};` : ''}">${txt}</th>`;
+  const chunks = useMemo(() => {
+    const arr: any[][] = [];
+    for (let i = 0; i < data.length; i += ROWS_PER_PAGE) arr.push(data.slice(i, i + ROWS_PER_PAGE));
+    if (arr.length === 0) arr.push([]);
+    return arr;
+  }, [data]);
 
-    let thead = '';
-    if (isPurchase) thead = [TH('Date','60px'),TH('Inv. No','65px'),TH('Description'),TH('Vehicle','65px'),TH('Rate','55px','right'),TH('Qty (L)','55px','right'),TH('Carriage','65px','right'),TH('Amount','85px','right'),TH('Total','95px','right',true)].join('');
-    else if (isSale) thead = [TH('Date'),TH('Description'),TH('Rate','','right'),TH('Qty (L)','','right'),TH('Amount','','right',true)].join('');
-    else if (isLedger) thead = [TH('Date'),TH('Description'),(type==='asset'?TH('Debit (In)','130px','right'):type==='liability'?TH('Debit (Paid)','130px','right'):TH('Debit','130px','right')),(type==='asset'?TH('Credit (Out)','130px','right'):type==='liability'?TH('Credit (Owed)','130px','right'):TH('Credit','130px','right')),(type==='asset'?TH('Valuation','140px','right',true):TH('Balance','140px','right',true))].join('');
-    else if (isStock) thead = [TH('Date'),TH('Details'),TH('In (L)','','right'),TH('Out (L)','','right'),TH('Balance','','right',true)].join('');
-    else thead = [TH('Date'),TH('Description'),TH('Amount','','right',true)].join('');
+  const colCount = useMemo(() => {
+     if (dynamicColumns) return dynamicColumns.length;
+     if (type === 'purchase') return 9;
+     if (type === 'sale' || type === 'asset' || type === 'liability' || type === 'customer' || type === 'stock' || type === 'customer_summary') return 5;
+     return 3;
+  }, [type, dynamicColumns]);
 
-    const TD = (txt: string|number, style = '') => `<td style="padding:${isPurchase?'5px 2px':'7px 8px'};border-right:1px solid #f0f0f0;${style}">${txt ?? '—'}</td>`;
-    const TDL = (txt: string|number, style = '') => `<td style="padding:${isPurchase?'5px 2px':'7px 8px'};${style}">${txt ?? '—'}</td>`;
+  if (isOpen === false) return null;
 
-    const buildRow = (row: any) => {
-      const bv = row.balance ?? 0;
-      const bt = type==='customer' ? `${fc(Math.abs(bv))} ${bv>=0?'(Dr)':'(Cr)'}` : `₨ ${fc(bv)}`;
-      if (isPurchase) return [TD(fd(row.date)),TD(row.invoiceNo||'—','font-weight:bold;'),TD(row.description||'—','font-size:9px;'),TD(row.vehicleNo||'—'),TD(fc(row.rate),'text-align:right;'),TD(row.quantity?.toLocaleString(),'text-align:right;font-weight:bold;'),TD(fc(row.carriage),'text-align:right;'),TD(fc(row.amount),'text-align:right;'),TDL(fc(row.totalAmount),'text-align:right;font-weight:bold;')].join('');
-      if (isSale) return [TD(fd(row.date)),TD(row.description||'—'),TD(fc(row.rate),'text-align:right;'),TD(row.quantity?.toLocaleString(),'text-align:right;font-weight:bold;'),TDL(fc(row.amount),'text-align:right;font-weight:bold;')].join('');
-      if (isLedger) return [TD(fd(row.date)),TD(row.description||row.details||row.type||'—'),TD(row.debit?fc(row.debit):'—','text-align:right;color:#dc2626;'),TD(row.credit?fc(row.credit):'—','text-align:right;color:#059669;'),TDL(type==='customer'?bt:fc(row.balance),'text-align:right;font-weight:bold;')].join('');
-      if (isStock) return [TD(fd(row.date)),TD(row.description||row.details||row.type||'—'),TD(row.qtyIn?`+${row.qtyIn.toLocaleString()}`:'—','text-align:right;color:#059669;'),TD(row.qtyOut?`-${row.qtyOut.toLocaleString()}`:'—','text-align:right;color:#dc2626;'),TDL(`${row.balance?.toLocaleString()} L`,'text-align:right;font-weight:bold;')].join('');
-      return [TD(fd(row.date)),TD(row.description||row.details||row.type||'—'),TDL(fc(row.amount),'text-align:right;font-weight:bold;')].join('');
-    };
-
-    const buildPageTotal = (chunk: any[]) => {
-      const pageQty = sum(chunk, 'quantity');
-      const pageAmt = sum(chunk, 'amount');
-      const pageDebit = sum(chunk, 'debit');
-      const pageCredit = sum(chunk, 'credit');
-      const pageTotalAmt = sum(chunk, 'totalAmount');
-      const pageCarriage = sum(chunk, 'carriage');
-      const pageIn = sum(chunk, 'qtyIn');
-      const pageOut = sum(chunk, 'qtyOut');
-
-      const rowStyle = 'background:#f9f9f9;font-weight:900;border-top:2px solid #111;';
-      const grandStyle = 'background:#f0f0f0;font-weight:900;border-top:1px solid #111;';
-
-      if (isPurchase) {
-        return `
-          <tr style="${rowStyle}"><td colspan="5" style="padding:5px 2px;text-align:right;">PAGE TOTAL:</td><td style="padding:5px 2px;text-align:right;">${pageQty.toLocaleString()} L</td><td style="padding:5px 2px;text-align:right;">₨ ${fc(pageCarriage)}</td><td style="padding:5px 2px;text-align:right;">₨ ${fc(pageAmt)}</td><td style="padding:5px 2px;text-align:right;">₨ ${fc(pageTotalAmt)}</td></tr>
-          <tr style="${grandStyle}"><td colspan="5" style="padding:5px 2px;text-align:right;color:#000;">GRAND TOTAL:</td><td style="padding:5px 2px;text-align:right;">${totalQty.toLocaleString()} L</td><td style="padding:5px 2px;text-align:right;">—</td><td style="padding:5px 2px;text-align:right;">—</td><td style="padding:5px 2px;text-align:right;font-size:14px;background:#eee;">₨ ${fc(grandTotal)}</td></tr>`;
+  const handleGeneratePDF = async () => {
+    if (!contentRef.current) return;
+    setIsGeneratingPDF(true);
+    try {
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pages = contentRef.current.querySelectorAll('.report-page');
+      
+      for (let i = 0; i < pages.length; i++) {
+        const dataUrl = await toPng(pages[i] as HTMLElement, {
+          quality: 0.95,
+          pixelRatio: 2,
+        });
+        if (i > 0) pdf.addPage();
+        pdf.addImage(dataUrl, 'PNG', 0, 0, 210, 297);
       }
-      if (isSale) {
-        return `
-          <tr style="${rowStyle}"><td colspan="2" style="padding:8px;text-align:right;">PAGE TOTAL:</td><td></td><td style="padding:8px;text-align:right;">${pageQty.toLocaleString()} L</td><td style="padding:8px;text-align:right;">₨ ${fc(pageAmt)}</td></tr>
-          <tr style="${grandStyle}"><td colspan="2" style="padding:8px;text-align:right;color:#000;">GRAND TOTAL:</td><td></td><td style="padding:8px;text-align:right;">${totalQty.toLocaleString()} L</td><td style="padding:8px;text-align:right;font-size:14px;background:#eee;">₨ ${fc(grandTotal)}</td></tr>`;
+      
+      const pdfData = pdf.output('arraybuffer');
+      const filename = `Report_${type || 'Summary'}_${new Date().getTime()}.pdf`;
+      const path = await saveDialog({
+        defaultPath: filename,
+        filters: [{ name: 'PDF', extensions: ['pdf'] }]
+      });
+      
+      if (path) {
+        await writeFile(path, new Uint8Array(pdfData));
+        await message('PDF Report has been saved successfully!', { title: 'Success', kind: 'info' });
       }
-      if (isLedger) {
-        const bv = grandTotal;
-        const bt = type === 'customer' ? `${fc(Math.abs(bv))} ${bv >= 0 ? '(Dr)' : '(Cr)'}` : `₨ ${fc(bv)}`;
-        return `
-          <tr style="${rowStyle}"><td colspan="2" style="padding:8px;text-align:right;">PAGE TOTAL:</td><td style="padding:8px;text-align:right;color:#dc2626;">₨ ${fc(pageDebit)}</td><td style="padding:8px;text-align:right;color:#059669;">₨ ${fc(pageCredit)}</td><td></td></tr>
-          <tr style="${grandStyle}"><td colspan="2" style="padding:8px;text-align:right;color:#000;">GRAND TOTAL:</td><td style="padding:8px;text-align:right;color:#dc2626;">₨ ${fc(totalDebit)}</td><td style="padding:8px;text-align:right;color:#059669;">₨ ${fc(totalCredit)}</td><td style="padding:8px;text-align:right;font-size:14px;background:#eee;">${bt}</td></tr>`;
-      }
-      if (isStock) {
-        return `
-          <tr style="${rowStyle}"><td colspan="2" style="padding:8px;text-align:right;">PAGE TOTAL:</td><td style="padding:8px;text-align:right;color:#059669;">+${pageIn.toLocaleString()} L</td><td style="padding:8px;text-align:right;color:#dc2626;">-${pageOut.toLocaleString()} L</td><td style="padding:8px;text-align:right;">${chunk[chunk.length - 1]?.balance?.toLocaleString()} L</td></tr>
-          <tr style="${grandStyle}"><td colspan="2" style="padding:8px;text-align:right;color:#000;">GRAND TOTAL:</td><td style="padding:8px;text-align:right;color:#059669;">—</td><td style="padding:8px;text-align:right;color:#dc2626;">—</td><td style="padding:8px;text-align:right;font-size:14px;background:#eee;">${chunk[chunk.length - 1]?.balance?.toLocaleString()} L</td></tr>`;
-      }
-      return `
-        <tr style="${rowStyle}"><td colspan="2" style="padding:8px;text-align:right;">PAGE TOTAL:</td><td style="padding:8px;text-align:right;">₨ ${fc(pageAmt)}</td></tr>
-        <tr style="${grandStyle}"><td colspan="2" style="padding:8px;text-align:right;color:#000;">GRAND TOTAL:</td><td style="padding:8px;text-align:right;font-size:14px;background:#eee;">₨ ${fc(grandTotal)}</td></tr>`;
-    };
+    } catch (error) {
+      console.error('PDF Generation Error:', error);
+      await message('Failed to generate PDF. Please try again.', { title: 'Error', kind: 'error' });
+    } finally {
+      setIsGeneratingPDF(false);
+    }
+  };
 
-    const pagesHTML = chunks.map((chunk, pi) => {
-      const isLast = pi === chunks.length - 1;
-      const fillers = Array.from({length: Math.max(0, ROWS_PER_PAGE - chunk.length)})
-        .map(() => `<tr>${Array.from({length:colCount}).map((_,i)=>`<td style="height:22px;border-right:${i<colCount-1?'1px solid #f0f0f0':'none'};"></td>`).join('')}</tr>`).join('');
-
-      const customerBox = (type==='customer'&&pi===0) ? `<div style="margin-bottom:12px;border:1px solid #eee;padding:10px;background:#fafafa;"><div style="font-size:12px;font-weight:900;border-bottom:1px solid #111;padding-bottom:4px;margin-bottom:6px;">CLIENT DETAILS:</div><div style="display:flex;gap:24px;"><span><b style="color:#666;">NAME:</b> ${customTitle?.split('—')[1]?.trim()||'N/A'}</span><span><b style="color:#666;">PHONE:</b> ${customerPhone||'—'}</span></div></div>` : '';
-
-      const grandTotal_section = `
-        <div style="padding-top:12px;">
-          <div style="border:2px solid #000;display:grid;grid-template-columns:${isLedger ? '1fr 1fr 1fr' : '1fr 1fr'};background:#f8f8f8;overflow:hidden;">
-            ${isSale || isPurchase ? `<div style="padding:10px 15px;border-right:2px solid #000;"><div style="font-size:9px;font-weight:900;text-transform:uppercase;">Total Volume</div><div style="font-size:18px;font-weight:900;">${totalQty.toLocaleString()} L</div></div>` : ''}
-            ${isLedger ? `<div style="padding:10px 15px;border-right:2px solid #000;"><div style="font-size:9px;font-weight:900;text-transform:uppercase;">Total Debit</div><div style="font-size:16px;font-weight:900;">₨ ${fc(totalDebit)}</div></div><div style="padding:10px 15px;border-right:2px solid #000;"><div style="font-size:9px;font-weight:900;text-transform:uppercase;">Total Credit</div><div style="font-size:16px;font-weight:900;">₨ ${fc(totalCredit)}</div></div>` : ''}
-            ${!isSale && !isPurchase && !isLedger ? `<div style="padding:10px 15px;border-right:2px solid #000;"><div style="font-size:9px;font-weight:900;text-transform:uppercase;">Count</div><div style="font-size:18px;font-weight:900;">${data.length} Records</div></div>` : ''}
-            <div style="padding:10px 15px;background:#fff;"><div style="font-size:9px;font-weight:900;text-transform:uppercase;">Grand Total</div><div style="font-size:22px;font-weight:900;border-bottom:3px solid #000;display:inline-block;line-height:1;">₨ ${formatCurrency(grandTotal)}${type === 'customer' ? ' ' + (totalDebit >= totalCredit ? '(Dr)' : '(Cr)') : ''}</div></div>
-          </div>
-          ${!isStock ? `<div style="padding:8px 12px;font-style:italic;font-size:11px;font-weight:900;border:2px solid #111;border-top:none;">Amount in words: <span style="text-transform:uppercase;">${toWords(grandTotal)}</span></div>` : ''}
-        </div>
-        <div style="margin-top:auto;display:flex;justify-content:space-between;align-items:flex-end;padding-top:16px;">
-          <div><div style="font-size:10px;font-weight:700;font-style:italic;color:#555;">This is a computer generated bill.<br/>Errors and omissions are accepted.</div><div style="margin-top:10px;font-size:10px;color:#777;font-style:italic;text-align:center;font-weight:900;">Software Solution by Mb Soft and Tech — 0304-1654629</div></div>
-          <div style="text-align:center;width:280px;"><div style="height:60px;border-bottom:2px solid #000;margin-bottom:5px;position:relative;"><img src="/assets/imtiaz-sign.png" style="position:absolute;bottom:-5px;left:50%;transform:translateX(-50%);height:75px;object-fit:contain;" /></div><div style="font-size:12px;font-weight:900;text-transform:uppercase;">Muhammad Imtiaz ul Hassan</div><div style="font-size:9px;font-weight:800;color:#444;">(Chief Executive Officer)</div></div>
-        </div>`;
-
-      return `<div class="page">
-        ${HEADER}
-        <div style="display:flex;justify-content:space-between;border:2px solid #111;padding:10px 15px;margin-bottom:10px;font-size:13px;font-weight:900;text-transform:uppercase;background:#f9f9f9;">
-          <span>${customTitle||type.toUpperCase()+' REPORT'}</span><span>Period: ${dateRange}</span><span>Page ${pi+1} / ${chunks.length}</span>
-        </div>
-        ${customerBox}
-        <table style="width:100%;border-collapse:collapse;font-size:${isPurchase?'9px':'12px'};border-left:2px solid #111;border-right:2px solid #111;border-bottom:2px solid #111;table-layout:${isPurchase?'fixed':'auto'};">
-          <thead style="background:#f0f0f0;border-top:2px solid #111;border-bottom:2px solid #111;"><tr>${thead}</tr></thead>
-          <tbody>${chunk.map(buildRow).map(r=>`<tr style="border-bottom:1px solid #eee;">${r}</tr>`).join('')}${fillers}</tbody>
-          <tfoot style="background:#f9f9f9;font-weight:900;border-top:2px solid #111;">${buildPageTotal(chunk)}</tfoot>
-        </table>
-        ${grandTotal_section}
-      </div>`;
-    }).join('');
-
-    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Report</title><style>
-      @page{size:A4 portrait;margin:0;}
-      *,*::before,*::after{box-sizing:border-box;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
-      html,body{margin:0;padding:0;background:#fff;font-family:'Times New Roman',serif;}
-      .page{width:210mm;height:297mm;padding:12mm 10mm;display:flex;flex-direction:column;page-break-after:always;overflow:hidden;}
-      .page:last-child{page-break-after:avoid;}
-    </style></head><body>${pagesHTML}</body></html>`;
-
+  const handlePrint = () => {
     let iframe = document.getElementById('print-iframe') as HTMLIFrameElement;
     if (!iframe) {
       iframe = document.createElement('iframe');
@@ -211,7 +140,12 @@ export default function PrintReportModal({ data, type, onClose, title: customTit
     if (!doc) return;
 
     doc.open();
-    doc.write(html);
+    doc.write(`<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Report</title><style>
+      @page{size:A4 portrait;margin:0;}
+      *,*::before,*::after{box-sizing:border-box;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
+      html,body{margin:0;padding:0;background:#fff;font-family:'Times New Roman',serif;}
+      .page{width:210mm;height:297mm;padding:12mm 10mm;display:flex;flex-direction:column;page-break-after:always;overflow:hidden;position:relative;background:#fff;}
+    </style></head><body>${contentRef.current?.innerHTML}</body></html>`);
     doc.close();
 
     setTimeout(() => {
@@ -222,54 +156,57 @@ export default function PrintReportModal({ data, type, onClose, title: customTit
     }, 800);
   };
 
-  const handleGeneratePDF = async () => {
-    if (!contentRef.current || isGeneratingPDF) return;
-    setIsGeneratingPDF(true);
+  const handleExportExcel = async () => {
     try {
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const container = contentRef.current;
-      const pages = container.getElementsByClassName('report-page');
-      
-      // A4 at 96 CSS DPI = 794 x 1123px
-      const A4_PX_WIDTH = 794;
-      const A4_PX_HEIGHT = 1123;
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Report');
 
-      for (let i = 0; i < pages.length; i++) {
-        const el = pages[i] as HTMLElement;
-        const canvas = await html2canvas(el, {
-          scale: 2,
-          useCORS: true,
-          logging: false,
-          backgroundColor: '#ffffff',
-          width: el.offsetWidth,
-          height: el.offsetHeight,
-          windowWidth: A4_PX_WIDTH,
-          windowHeight: A4_PX_HEIGHT,
-          scrollX: 0,
-          scrollY: -window.scrollY,
-        });
-        
-        const imgData = canvas.toDataURL('image/jpeg', 0.98);
-        if (i > 0) pdf.addPage();
-        pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297);
+      let cols: any[] = [];
+      if (dynamicColumns) {
+        cols = dynamicColumns.map(c => ({ header: c.header, key: c.accessor, width: 20 }));
+      } else if (type === 'customer_summary') {
+        cols = [
+          { header: 'Customer Name', key: 'name', width: 30 },
+          { header: 'Debit (DR)', key: 'totalDebit', width: 15 },
+          { header: 'Credit (CR)', key: 'totalCredit', width: 15 },
+          { header: 'Balance', key: 'balance', width: 20 }
+        ];
+      } else if (type === 'purchase') {
+        cols = [
+          { header: 'Date', key: 'date', width: 15 },
+          { header: 'Invoice', key: 'invoiceNo', width: 15 },
+          { header: 'Description', key: 'description', width: 30 },
+          { header: 'Qty', key: 'quantity', width: 10 },
+          { header: 'Total', key: 'totalAmount', width: 15 }
+        ];
+      } else {
+        cols = [
+          { header: 'Date', key: 'date', width: 15 },
+          { header: 'Description', key: 'description', width: 35 },
+          { header: 'Amount', key: 'amount', width: 15 }
+        ];
       }
+
+      worksheet.columns = cols;
+      data.forEach(item => worksheet.addRow(item));
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      const filename = `Report_${type || 'Summary'}_${new Date().getTime()}.xlsx`;
       
-      pdf.save(`${type.toUpperCase()}_REPORT_${new Date().getTime()}.pdf`);
+      const path = await saveDialog({
+        defaultPath: filename,
+        filters: [{ name: 'Excel', extensions: ['xlsx'] }]
+      });
+      
+      if (path) {
+        await writeFile(path, new Uint8Array(buffer));
+        await message('Excel file has been saved successfully!', { title: 'Success', kind: 'info' });
+      }
     } catch (error) {
-      console.error('PDF Generation Error:', error);
-    } finally {
-      setIsGeneratingPDF(false);
+      console.error('Excel Export Error:', error);
+      await message('Failed to export Excel. Please try again.', { title: 'Error', kind: 'error' });
     }
   };
-
-  const dates = data.map(x => x.date).sort();
-  const dateRange = dates.length
-    ? `${formatDate(dates[0])} — ${formatDate(dates[dates.length - 1])}`
-    : 'All Period';
-
-  const chunks: any[][] = [];
-  for (let i = 0; i < data.length; i += ROWS_PER_PAGE) chunks.push(data.slice(i, i + ROWS_PER_PAGE));
-  if (chunks.length === 0) chunks.push([]);
 
   return (
     <div style={{
@@ -279,7 +216,7 @@ export default function PrintReportModal({ data, type, onClose, title: customTit
       fontFamily: "'Times New Roman', serif",
       overflowY: 'auto', paddingBottom: 100,
     }}>
-      {/* Mobile-Friendly Control Bar */}
+      {/* Control Bar */}
       <div style={{
         position: 'sticky', top: 0, zIndex: 100, width: '100%',
         display: 'flex', flexDirection: 'column',
@@ -313,7 +250,18 @@ export default function PrintReportModal({ data, type, onClose, title: customTit
             }}
           >
             {isGeneratingPDF ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-            Generate PDF Report
+            Generate PDF
+          </button>
+          <button 
+            onClick={handleExportExcel} 
+            style={{ 
+              flex: 1, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, 
+              borderRadius: 12, background: 'linear-gradient(135deg, #2563eb, #1d4ed8)', color: '#fff', 
+              fontWeight: 900, fontSize: 12, border: 'none', cursor: 'pointer', textTransform: 'uppercase'
+            }}
+          >
+            <Table style={{ width: 18, height: 18 }} />
+            Export Excel
           </button>
           <button 
             onClick={handlePrint} 
@@ -330,34 +278,8 @@ export default function PrintReportModal({ data, type, onClose, title: customTit
       </div>
 
       <style>{`
-        @page { size: A4 portrait; margin: 0; }
-        @media print {
-          * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; box-sizing: border-box !important; }
-          html { 
-            margin: 0 !important; padding: 0 !important; 
-            background: #fff !important; 
-            width: 210mm !important; 
-            font-size: 16px !important;
-          }
-          body { 
-            margin: 0 !important; padding: 0 !important; 
-            background: #fff !important; 
-            width: 210mm !important;
-            overflow: visible !important;
-          }
-          .no-print { display: none !important; }
-          .page-print-container { margin: 0 !important; padding: 0 !important; width: 210mm !important; }
-          .report-page { 
-            width: 210mm !important; height: 297mm !important; padding: 12mm 10mm !important;
-            margin: 0 !important; box-sizing: border-box !important; position: relative;
-            page-break-after: always; background: #fff !important; color: #000 !important;
-            overflow: hidden !important; display: flex !important; flex-direction: column !important;
-          }
-          .report-page:last-child { page-break-after: avoid !important; }
-        }
         @media (max-width: 768px) {
           .md-only { display: none !important; }
-          .report-page { transform: scale(0.45); transform-origin: top center; margin-bottom: -160mm !important; }
         }
       `}</style>
 
@@ -369,43 +291,67 @@ export default function PrintReportModal({ data, type, onClose, title: customTit
             const isPurchase = type === 'purchase';
             const isExpense = type === 'expense';
             const isStock = type === 'stock';
+            const isCustSum = type === 'customer_summary';
 
             let grandTotal = 0;
             let totalQty = 0;
             let totalDebit = 0;
             let totalCredit = 0;
 
-            if (isSale) {
-              grandTotal = data.reduce((s, x) => s + (x.amount ?? 0), 0);
-              totalQty = data.reduce((s, x) => s + (x.quantity || 0), 0);
-            } else if (isPurchase) {
-              grandTotal = data.reduce((s, x) => s + (x.totalAmount ?? 0), 0);
-              totalQty = data.reduce((s, x) => s + (x.quantity || 0), 0);
-            } else if (isExpense) {
-              grandTotal = data.reduce((s, x) => s + (x.amount || 0), 0);
-            } else if (isLedger) {
-              totalDebit = data.reduce((s, x) => s + (x.debit || 0), 0);
-              totalCredit = data.reduce((s, x) => s + (x.credit || 0), 0);
-              grandTotal = Math.abs(totalDebit - totalCredit);
-            } else if (isStock) {
-              grandTotal = data.reduce((s, x) => s + (x.qtyIn || 0), 0);
+            // Prioritize dynamic totals if provided
+            if (dynamicTotals) {
+              if (dynamicTotals.total !== undefined) grandTotal = dynamicTotals.total;
+              else if (dynamicTotals.amount !== undefined) grandTotal = dynamicTotals.amount;
+              else if (dynamicTotals.balance !== undefined) grandTotal = dynamicTotals.balance;
+              
+              if (dynamicTotals.debit !== undefined) totalDebit = dynamicTotals.debit;
+              if (dynamicTotals.credit !== undefined) totalCredit = dynamicTotals.credit;
+              if (dynamicTotals.quantity !== undefined) totalQty = dynamicTotals.quantity;
+            }
+
+            // Fallback to type-based calculation if grandTotal is still 0 and not explicitly provided
+            if (grandTotal === 0 && !dynamicTotals) {
+              if (isSale) {
+                grandTotal = data.reduce((s, x) => s + (x.amount ?? 0), 0);
+                totalQty = data.reduce((s, x) => s + (x.quantity || 0), 0);
+              } else if (isPurchase) {
+                grandTotal = data.reduce((s, x) => s + (x.totalAmount ?? 0), 0);
+                totalQty = data.reduce((s, x) => s + (x.quantity || 0), 0);
+              } else if (isExpense) {
+                grandTotal = data.reduce((s, x) => s + (x.amount || 0), 0);
+              } else if (isLedger) {
+                totalDebit = data.reduce((s, x) => s + (x.debit || 0), 0);
+                totalCredit = data.reduce((s, x) => s + (x.credit || 0), 0);
+                grandTotal = totalDebit - totalCredit;
+              } else if (isStock) {
+                grandTotal = data[data.length-1]?.balance || 0;
+              } else if (isCustSum) {
+                totalDebit = data.reduce((s, x) => s + (x.totalDebit || 0), 0);
+                totalCredit = data.reduce((s, x) => s + (x.totalCredit || 0), 0);
+                grandTotal = totalDebit - totalCredit;
+              }
             }
 
             return (
-              <div key={pi} className="report-page" style={{ position: 'relative', width: '210mm', height: '297mm', background: '#fff', color: '#000', padding: '12mm 10mm', margin: '0 auto 20px auto', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', boxShadow: '0 20px 50px rgba(0,0,0,0.5)', borderRadius: '2px' }}>
+              <div key={pi} className="report-page" style={{ position: 'relative', width: '210mm', minHeight: '297mm', background: '#fff', color: '#000', padding: '12mm 10mm', margin: '0 auto 20px auto', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', boxShadow: '0 20px 50px rgba(0,0,0,0.5)', borderRadius: '2px', pageBreakAfter: 'always' }}>
                 <PrintHeader />
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', border: '2px solid #111', padding: '12px 15px', marginBottom: '10px', fontSize: '14px', fontWeight: 1000, textTransform: 'uppercase', background: '#f9f9f9' }}>
-                  <span>{customTitle || type.toUpperCase() + ' REPORT'}</span>
-                  <span>Period: {dateRange}</span>
-                  <span>Page {pi + 1} / {chunks.length}</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <span>{customTitle || (type ? type.toUpperCase() + ' REPORT' : 'REPORT')}</span>
+                    <span style={{ fontSize: '10px', color: '#555', textTransform: 'none', fontStyle: 'italic', fontWeight: 700 }}>Printed on: {printedAt}</span>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <span>Period: {dateRangeStr}</span>
+                    <div style={{ fontSize: '10px', color: '#555', textTransform: 'none', fontStyle: 'italic', fontWeight: 700 }}>Page {pi + 1} / {chunks.length}</div>
+                  </div>
                 </div>
 
                 {type === 'customer' && pi === 0 && (
                    <div style={{ marginBottom: 15, border: '1px solid #eee', padding: 10, background: '#fafafa' }}>
                       <div style={{ fontSize: 13, fontWeight: 1000, borderBottom: '1px solid #111', paddingBottom: 4, marginBottom: 6 }}>CLIENT DETAILS:</div>
                       <div style={{ display: 'flex', gap: 30 }}>
-                         <div><span style={{ fontSize: 10, fontWeight: 900, color: '#666' }}>NAME:</span> <span style={{ fontWeight: 1000 }}>{customTitle?.split('—')[1]?.trim() || 'N/A'}</span></div>
+                         <div><span style={{ fontSize: 10, fontWeight: 900, color: '#666' }}>NAME:</span> <span style={{ fontWeight: 1000 }}>{customTitle?.includes('—') ? customTitle.split('—')[1]?.trim() : 'N/A'}</span></div>
                          <div><span style={{ fontSize: 10, fontWeight: 900, color: '#666' }}>PHONE:</span> <span style={{ fontWeight: 1000 }}>{customerPhone || '—'}</span></div>
                       </div>
                    </div>
@@ -415,11 +361,20 @@ export default function PrintReportModal({ data, type, onClose, title: customTit
                 <table style={{ 
                   width: '100%', borderCollapse: 'collapse', fontSize: isPurchase ? '9px' : '12px', 
                   borderLeft: '2px solid #111', borderRight: '2px solid #111', borderBottom: '2px solid #111',
-                  tableLayout: isPurchase ? 'fixed' : 'auto'
+                  tableLayout: (isPurchase || dynamicColumns) ? 'fixed' : 'auto'
                 }}>
                   <thead style={{ background: '#f0f0f0', borderTop: '2px solid #111', borderBottom: '2px solid #111' }}>
                     <tr>
-                      {isPurchase ? (
+                      {dynamicColumns ? (
+                        dynamicColumns.map((col, ci) => (
+                          <th key={ci} style={{ 
+                            padding: '10px 8px', borderRight: ci < dynamicColumns.length - 1 ? '1px solid #111' : 'none', 
+                            textAlign: col.align || 'left', fontSize: '14px' 
+                          }}>
+                            {col.header}
+                          </th>
+                        ))
+                      ) : isPurchase ? (
                         <>
                           <th style={{ width: '60px', padding: '6px 2px', borderRight: '1px solid #111', textAlign: 'left' }}>Date</th>
                           <th style={{ width: '65px', padding: '6px 2px', borderRight: '1px solid #111', textAlign: 'left' }}>Inv. No</th>
@@ -433,19 +388,19 @@ export default function PrintReportModal({ data, type, onClose, title: customTit
                         </>
                       ) : (
                         <>
-                          <th style={{ padding: '10px 8px', borderRight: '1px solid #111', textAlign: 'left', fontSize: '14px' }}>Date</th>
-                          <th style={{ padding: '10px 8px', borderRight: '1px solid #111', textAlign: 'left', fontSize: '14px' }}>{(isStock) ? 'Details' : 'Description'}</th>
+                          {isCustSum ? <th style={{ width: '50px', padding: '10px 8px', borderRight: '1px solid #111', textAlign: 'left' }}>S.No</th> : <th style={{ padding: '10px 8px', borderRight: '1px solid #111', textAlign: 'left', fontSize: '14px' }}>Date</th>}
+                          <th style={{ padding: '10px 8px', borderRight: '1px solid #111', textAlign: 'left', fontSize: '14px' }}>{(isStock) ? 'Details' : isCustSum ? 'Customer Name' : 'Description'}</th>
                           {isSale ? (
                             <>
                               <th style={{ padding: '8px', borderRight: '1px solid #111', textAlign: 'right' }}>Rate</th>
                               <th style={{ padding: '8px', borderRight: '1px solid #111', textAlign: 'right' }}>Qty (L)</th>
                               <th style={{ padding: '8px', textAlign: 'right' }}>Amount</th>
                             </>
-                          ) : isLedger ? (
+                          ) : (isLedger || isCustSum) ? (
                             <>
-                              <th style={{ width: '130px', padding: '8px', borderRight: '1px solid #111', textAlign: 'right' }}>{type === 'asset' ? 'Debit (In)' : type === 'liability' ? 'Debit (Paid)' : 'Debit'}</th>
-                              <th style={{ width: '130px', padding: '8px', borderRight: '1px solid #111', textAlign: 'right' }}>{type === 'asset' ? 'Credit (Out)' : type === 'liability' ? 'Credit (Owed)' : 'Credit'}</th>
-                              <th style={{ width: '140px', padding: '8px', textAlign: 'right' }}>{type === 'asset' ? 'Valuation' : 'Balance'}</th>
+                              <th style={{ width: '130px', padding: '8px', borderRight: '1px solid #111', textAlign: 'right' }}>Debit</th>
+                              <th style={{ width: '130px', padding: '8px', borderRight: '1px solid #111', textAlign: 'right' }}>Credit</th>
+                              <th style={{ width: '140px', padding: '8px', textAlign: 'right' }}>Balance</th>
                             </>
                           ) : isStock ? (
                             <>
@@ -462,8 +417,22 @@ export default function PrintReportModal({ data, type, onClose, title: customTit
                   </thead>
                   <tbody>
                     {chunk.map((row: any, idx: number) => {
+                      if (dynamicColumns) {
+                        return (
+                          <tr key={idx} style={{ borderBottom: '1px solid #eee' }}>
+                            {dynamicColumns.map((col, ci) => (
+                              <td key={ci} style={{ 
+                                padding: '8px', borderRight: ci < dynamicColumns.length - 1 ? '1px solid #f0f0f0' : 'none', 
+                                textAlign: col.align || 'left', fontWeight: (ci === 0 || col.isCurrency) ? 'bold' : 'normal'
+                              }}>
+                                {col.isCurrency ? formatCurrency(row[col.accessor]) : row[col.accessor]}
+                              </td>
+                            ))}
+                          </tr>
+                        );
+                      }
                       const balVal = row.balance ?? 0;
-                      const balText = type === 'customer'
+                      const balText = (type === 'customer' || type === 'customer_summary')
                         ? `${formatCurrency(Math.abs(balVal))} ${balVal >= 0 ? '(Dr)' : '(Cr)'}`
                         : `₨ ${formatCurrency(balVal)}`;
                       return (
@@ -479,6 +448,14 @@ export default function PrintReportModal({ data, type, onClose, title: customTit
                               <td style={{ padding: '6px 2px', borderRight: '1px solid #f0f0f0', textAlign: 'right' }}>{formatCurrency(row.carriage)}</td>
                               <td style={{ padding: '6px 2px', borderRight: '1px solid #f0f0f0', textAlign: 'right' }}>{formatCurrency(row.amount)}</td>
                               <td style={{ padding: '6px 2px', textAlign: 'right', fontWeight: 'bold' }}>{formatCurrency(row.totalAmount)}</td>
+                            </>
+                          ) : isCustSum ? (
+                            <>
+                              <td style={{ padding: '8px', borderRight: '1px solid #f0f0f0' }}>{(pi * ROWS_PER_PAGE) + idx + 1}</td>
+                              <td style={{ padding: '8px', borderRight: '1px solid #f0f0f0', fontWeight: 'bold' }}>{row.name}</td>
+                              <td style={{ padding: '8px', borderRight: '1px solid #f0f0f0', textAlign: 'right', color: '#dc2626' }}>{formatCurrency(row.totalDebit)}</td>
+                              <td style={{ padding: '8px', borderRight: '1px solid #f0f0f0', textAlign: 'right', color: '#059669' }}>{formatCurrency(row.totalCredit)}</td>
+                              <td style={{ padding: '8px', textAlign: 'right', fontWeight: 'bold' }}>{balText}</td>
                             </>
                           ) : (
                             <>
@@ -512,16 +489,28 @@ export default function PrintReportModal({ data, type, onClose, title: customTit
                     })}
                     {Array.from({ length: Math.max(0, ROWS_PER_PAGE - chunk.length) }).map((_, fi) => (
                       <tr key={`filler-${fi}`} style={{ height: '22px', borderBottom: '1px solid #eee' }}>
-                        {Array.from({ length: isPurchase ? 9 : isSale || isLedger || isStock ? 5 : 3 }).map((__, tdidx) => (
-                          <td key={tdidx} style={{ borderRight: tdidx === (isPurchase ? 8 : isSale || isLedger || isStock ? 4 : 2) ? 'none' : '1px solid #f0f0f0' }}></td>
+                        {Array.from({ length: colCount }).map((__, tdidx) => (
+                          <td key={tdidx} style={{ borderRight: tdidx === (colCount - 1) ? '1px solid #f0f0f0' : 'none' }}></td>
                         ))}
                       </tr>
                     ))}
                   </tbody>
                   <tfoot style={{ background: '#f9f9f9', fontWeight: 1000, borderTop: '2px solid #111' }}>
-                    <tr>
-                      <td colSpan={isPurchase ? 5 : 2} style={{ padding: '10px', textAlign: 'right' }}>PAGE TOTAL:</td>
-                      {isPurchase ? (
+                    <tr style={{ borderBottom: '1px solid #ddd' }}>
+                      <td colSpan={isLedger || isCustSum ? 2 : (dynamicColumns ? dynamicColumns.length - 1 : (isPurchase ? 5 : 2))} style={{ padding: '10px', textAlign: 'right' }}>PAGE TOTAL:</td>
+                      {isLedger || isCustSum ? (
+                        <>
+                          <td style={{ padding: '10px', textAlign: 'right', color: '#dc2626' }}>₨ {formatCurrency(chunk.reduce((s, x) => s + (x.debit || x.totalDebit || 0), 0))}</td>
+                          <td style={{ padding: '10px', textAlign: 'right', color: '#059669' }}>₨ {formatCurrency(chunk.reduce((s, x) => s + (x.credit || x.totalCredit || 0), 0))}</td>
+                          <td style={{ padding: '10px', textAlign: 'right' }}>
+                            {dynamicColumns ? formatCurrency(chunk.reduce((s, x) => s + (x[dynamicColumns[dynamicColumns.length-1].accessor] || 0), 0)) : '—'}
+                          </td>
+                        </>
+                      ) : dynamicColumns ? (
+                         <td style={{ padding: '10px', textAlign: dynamicColumns[dynamicColumns.length-1].align || 'right' }}>
+                           {dynamicColumns[dynamicColumns.length-1].isCurrency ? formatCurrency(chunk.reduce((s, x) => s + (x[dynamicColumns[dynamicColumns.length-1].accessor] || 0), 0)) : '—'}
+                         </td>
+                      ) : isPurchase ? (
                         <>
                           <td style={{ padding: '6px 2px', textAlign: 'right' }}>{chunk.reduce((s, x) => s + (x.quantity || 0), 0).toLocaleString()} L</td>
                           <td style={{ padding: '6px 2px', textAlign: 'right' }}>₨ {formatCurrency(chunk.reduce((s, x) => s + (x.carriage || 0), 0))}</td>
@@ -534,12 +523,6 @@ export default function PrintReportModal({ data, type, onClose, title: customTit
                           <td style={{ padding: '10px', textAlign: 'right' }}>{chunk.reduce((s, x) => s + (x.quantity || 0), 0).toLocaleString()} L</td>
                           <td style={{ padding: '10px', textAlign: 'right' }}>₨ {formatCurrency(chunk.reduce((s, x) => s + (x.amount || 0), 0))}</td>
                         </>
-                      ) : isLedger ? (
-                        <>
-                          <td style={{ padding: '10px', textAlign: 'right', color: '#dc2626' }}>₨ {formatCurrency(chunk.reduce((s, x) => s + (x.debit || 0), 0))}</td>
-                          <td style={{ padding: '10px', textAlign: 'right', color: '#059669' }}>₨ {formatCurrency(chunk.reduce((s, x) => s + (x.credit || 0), 0))}</td>
-                          <td></td>
-                        </>
                       ) : isStock ? (
                         <>
                           <td style={{ padding: '10px', textAlign: 'right', color: '#059669' }}>+{chunk.reduce((s, x) => s + (x.qtyIn || 0), 0).toLocaleString()} L</td>
@@ -550,9 +533,21 @@ export default function PrintReportModal({ data, type, onClose, title: customTit
                         <td style={{ padding: '10px', textAlign: 'right' }}>₨ {formatCurrency(chunk.reduce((s, x) => s + (x.amount || 0), 0))}</td>
                       )}
                     </tr>
-                    <tr style={{ background: '#f1f5f9', borderTop: '1px solid #111' }}>
-                      <td colSpan={isPurchase ? 5 : 2} style={{ padding: '8px', textAlign: 'right' }}>GRAND TOTAL:</td>
-                      {isPurchase ? (
+                    <tr style={{ background: '#f1f5f9' }}>
+                      <td colSpan={isLedger || isCustSum ? 2 : (dynamicColumns ? dynamicColumns.length - 1 : (isPurchase ? 5 : 2))} style={{ padding: '8px', textAlign: 'right' }}>GRAND TOTAL:</td>
+                      {isLedger || isCustSum ? (
+                        <>
+                          <td style={{ padding: '8px', textAlign: 'right', color: '#dc2626' }}>₨ {formatCurrency(totalDebit)}</td>
+                          <td style={{ padding: '8px', textAlign: 'right', color: '#059669' }}>₨ {formatCurrency(totalCredit)}</td>
+                          <td style={{ padding: '8px', textAlign: 'right', background: '#e2e8f0' }}>
+                            {(type === 'customer' || isCustSum) ? `${formatCurrency(Math.abs(grandTotal))} ${grandTotal >= 0 ? '(Dr)' : '(Cr)'}` : `₨ ${formatCurrency(grandTotal)}`}
+                          </td>
+                        </>
+                      ) : dynamicColumns ? (
+                         <td style={{ padding: '8px', textAlign: dynamicColumns[dynamicColumns.length-1].align || 'right', background: '#e2e8f0' }}>
+                           ₨ {formatCurrency(grandTotal)}
+                         </td>
+                      ) : isPurchase ? (
                         <>
                           <td style={{ padding: '6px 2px', textAlign: 'right' }}>{totalQty.toLocaleString()} L</td>
                           <td style={{ padding: '6px 2px', textAlign: 'right' }}>—</td>
@@ -564,14 +559,6 @@ export default function PrintReportModal({ data, type, onClose, title: customTit
                           <td></td>
                           <td style={{ padding: '8px', textAlign: 'right' }}>{totalQty.toLocaleString()} L</td>
                           <td style={{ padding: '8px', textAlign: 'right', background: '#e2e8f0' }}>₨ {formatCurrency(grandTotal)}</td>
-                        </>
-                      ) : isLedger ? (
-                        <>
-                          <td style={{ padding: '8px', textAlign: 'right', color: '#dc2626' }}>₨ {formatCurrency(totalDebit)}</td>
-                          <td style={{ padding: '8px', textAlign: 'right', color: '#059669' }}>₨ {formatCurrency(totalCredit)}</td>
-                          <td style={{ padding: '8px', textAlign: 'right', background: '#e2e8f0' }}>
-                            {type === 'customer' ? `${formatCurrency(Math.abs(grandTotal))} ${grandTotal >= 0 ? '(Dr)' : '(Cr)'}` : `₨ ${formatCurrency(grandTotal)}`}
-                          </td>
                         </>
                       ) : isStock ? (
                         <>
@@ -586,15 +573,15 @@ export default function PrintReportModal({ data, type, onClose, title: customTit
                 </table>
 
                 {isLast && (
-                  <>
-                    <div style={{ paddingTop: '12px' }}>
-                      <div style={{ border: '2px solid #000', display: 'grid', gridTemplateColumns: `repeat(${isLedger ? 3 : 2}, minmax(0, 1fr))`, background: '#f8f8f8', overflow: 'hidden' }}>
+                  <div style={{ marginTop: 'auto' }}>
+                    <div style={{ marginTop: '12px' }}>
+                      <div style={{ border: '2px solid #000', display: 'grid', gridTemplateColumns: `repeat(${(isLedger || isCustSum) ? 3 : 2}, minmax(0, 1fr))`, background: '#f8f8f8', overflow: 'hidden' }}>
                         {isSale || isPurchase ? (
                           <div style={{ padding: '10px 15px', borderRight: '2px solid #000' }}>
                             <div style={{ fontSize: '9px', fontWeight: 900, textTransform: 'uppercase' }}>Total Volume</div>
                             <div style={{ fontSize: '18px', fontWeight: 900 }}>{totalQty.toLocaleString()} L</div>
                           </div>
-                        ) : isLedger ? (
+                        ) : (isLedger || isCustSum) ? (
                           <>
                             <div style={{ padding: '10px 15px', borderRight: '2px solid #000' }}>
                               <div style={{ fontSize: '9px', fontWeight: 900, textTransform: 'uppercase' }}>Total Debit</div>
@@ -614,7 +601,7 @@ export default function PrintReportModal({ data, type, onClose, title: customTit
                         <div style={{ padding: '10px 15px', background: '#fff' }}>
                           <div style={{ fontSize: '9px', fontWeight: 1000, textTransform: 'uppercase' }}>Grand Total</div>
                           <div style={{ fontSize: '22px', fontWeight: 1000, borderBottom: '3px solid #000', display: 'inline-block', lineHeight: 1 }}>
-                            ₨ {formatCurrency(grandTotal)} {type === 'customer' ? (totalDebit >= totalCredit ? '(Dr)' : '(Cr)') : ''}
+                            ₨ {formatCurrency(Math.abs(grandTotal))} {(type === 'customer' || isCustSum) ? (grandTotal >= 0 ? '(Dr)' : '(Cr)') : ''}
                           </div>
                         </div>
                       </div>
@@ -625,14 +612,9 @@ export default function PrintReportModal({ data, type, onClose, title: customTit
                       )}
                     </div>
 
-                    <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', paddingTop: 16 }}>
-                      <div style={{ textAlign: 'left' }}>
-                        <div style={{ fontSize: '10px', fontWeight: 700, fontStyle: 'italic', color: '#555' }}>
-                          This is a computer generated bill.<br />Errors and omissions are accepted.
-                        </div>
-                        <div style={{ marginTop: '10px', fontSize: '10px', color: '#777', fontStyle: 'italic', textAlign: 'center', fontWeight: 900 }}>
-                          Software Solution by Mb Soft and Tech — 0304-1654629
-                        </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', paddingTop: 16 }}>
+                      <div style={{ fontSize: '10px', fontWeight: 700, fontStyle: 'italic', color: '#555', textAlign: 'left' }}>
+                        This is a computer generated bill.<br />Errors and omissions are accepted.
                       </div>
                       <div style={{ textAlign: 'center', width: '280px' }}>
                         <div style={{ width: '100%', height: '60px', borderBottom: '2px solid #000', marginBottom: 5, position: 'relative' }}>
@@ -642,7 +624,10 @@ export default function PrintReportModal({ data, type, onClose, title: customTit
                         <div style={{ fontSize: '9px', fontWeight: 800, color: '#444' }}>(Chief Executive Officer)</div>
                       </div>
                     </div>
-                  </>
+                    <div style={{ marginTop: '10px', textAlign: 'center', fontSize: '10px', color: '#000', fontStyle: 'italic', fontWeight: 1000 }}>
+                      Software Solution by Mb Soft and Tech — 0304-1654629
+                    </div>
+                  </div>
                 )}
                 </div>
               </div>

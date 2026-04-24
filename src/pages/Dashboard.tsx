@@ -4,8 +4,9 @@ import {
   ShoppingCart, TrendingUp, DollarSign,
   Package, BarChart3, Users, ArrowRight,
   Fuel, Zap, Calendar, XCircle, Keyboard, Sun, Moon,
-  Mail, Shield, Clock, X, LogOut, Landmark
+  Mail, Shield, Clock, X, LogOut, Landmark, Printer
 } from 'lucide-react';
+import PrintReportModal from '../components/modals/PrintReportModal';
 import { useStore } from '../store/useStore';
 import { useTheme } from '../contexts/ThemeContext';
 import { formatCurrency, today, cn } from '../lib/utils';
@@ -138,6 +139,7 @@ export default function Dashboard() {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate]     = useState('');
   const [showKeys, setShowKeys] = useState(false);
+  const [showSummaryReport, setShowSummaryReport] = useState(false);
 
   // ─── Data Memo ──────────────────────────────────────────────────────────────
   const dashboardStats = useMemo(() => {
@@ -280,6 +282,14 @@ export default function Dashboard() {
               <XCircle className="w-3 h-3" /> Clear
             </button>
           )}
+          <div className="ml-auto flex items-center gap-2 shrink-0">
+            <button 
+              onClick={() => setShowSummaryReport(true)} 
+              className="flex items-center gap-2 px-4 py-1.5 bg-primary-600 text-white rounded-xl text-[9px] font-black uppercase tracking-wider hover:bg-primary-700 transition-all shadow-md shadow-primary-600/20"
+            >
+              <Printer className="w-3 h-3" /> Summary Report
+            </button>
+          </div>
         </div>
         {showKeys && (
           <div className="mt-4 pt-4 border-t border-slate-200 dark:border-dark-700/50 flex flex-wrap gap-3 animate-in slide-in-from-top duration-200">
@@ -346,6 +356,34 @@ export default function Dashboard() {
           </Link>
         ))}
       </div>
+
+      {showSummaryReport && (
+        <PrintReportModal
+          isOpen={showSummaryReport}
+          onClose={() => setShowSummaryReport(false)}
+          title="Executive Summary Report"
+          columns={[
+            { header: 'Metric', accessor: 'label' },
+            { header: 'Value', accessor: 'value', align: 'right' },
+          ]}
+          data={[
+            { label: 'Total Sales Revenue', value: `₨ ${formatCurrency(dashboardStats.totalSales)}` },
+            { label: 'Total Operating Expenses', value: `₨ ${formatCurrency(dashboardStats.totalExpense)}` },
+            { label: 'Gross Profit Margin', value: `₨ ${formatCurrency(dashboardStats.grossProfit)}` },
+            { label: 'Net Business Profit', value: `₨ ${formatCurrency(dashboardStats.netProfit)}` },
+            { label: '---', value: '---' },
+            { label: 'HSD Current Stock', value: `${dashboardStats.hsdStock.toLocaleString()} L` },
+            { label: 'PMG Current Stock', value: `${dashboardStats.pmgStock.toLocaleString()} L` },
+            { label: '---', value: '---' },
+            { label: 'HSD Period Sales', value: `${dashboardStats.hsdSoldQty.toLocaleString()} L` },
+            { label: 'PMG Period Sales', value: `${dashboardStats.pmgSoldQty.toLocaleString()} L` },
+          ]}
+          dateRange={filter !== 'overall' ? { 
+            from: filter === 'today' ? today() : filter === 'month' ? today().substring(0, 7) + '-01' : fromDate, 
+            to: filter === 'custom' ? toDate : today() 
+          } : undefined}
+        />
+      )}
     </div>
   );
 }

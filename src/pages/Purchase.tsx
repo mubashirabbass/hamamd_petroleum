@@ -280,7 +280,7 @@ export default function PurchasePage() {
               </div>
               <div>
                 <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Purchase Analysis</h1>
-                <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">Global Procurement Dashboard</p>
+                <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">Global Purchase Dashboard</p>
               </div>
             </div>
             <div className="flex items-center gap-4">
@@ -290,7 +290,7 @@ export default function PurchasePage() {
                     <Fuel className="w-4 h-4" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">HSD Avg / L</p>
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">HSD Avg Rate</p>
                     <p className="text-lg font-black text-amber-600 dark:text-amber-400 tabular-nums leading-none font-mono tracking-tighter">
                       ₨ {formatCurrency(dashStats.HSD.qty > 0 ? dashStats.HSD.total / dashStats.HSD.qty : 0)}
                     </p>
@@ -301,7 +301,7 @@ export default function PurchasePage() {
                     <Zap className="w-4 h-4" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">PMG Avg / L</p>
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">PMG Avg Rate</p>
                     <p className="text-lg font-black text-blue-600 dark:text-blue-400 tabular-nums leading-none font-mono tracking-tighter">
                       ₨ {formatCurrency(dashStats.PMG.qty > 0 ? dashStats.PMG.total / dashStats.PMG.qty : 0)}
                     </p>
@@ -328,7 +328,7 @@ export default function PurchasePage() {
                     <fuel.icon className="w-6 h-6" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">{fuel.id} Procurement</h3>
+                    <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">{fuel.id} Purchase</h3>
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{fuel.label}</p>
                   </div>
                 </div>
@@ -336,11 +336,11 @@ export default function PurchasePage() {
                 <div className="flex flex-col gap-5">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-dark-800/50 pb-4">
                     <div className="space-y-1">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Volume</p>
-                      <p className="text-xl font-black text-slate-900 dark:text-white tabular-nums">{fuel.stats.qty.toLocaleString()} <span className="text-xs text-slate-400 font-normal">Liters</span></p>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Liters</p>
+                      <p className="text-xl font-black text-slate-900 dark:text-white tabular-nums">{fuel.stats.qty.toLocaleString()} <span className="text-xs text-slate-400 font-normal">L</span></p>
                     </div>
                     <div className="space-y-1 sm:text-right flex-1">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Avg Price / L</p>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Avg Rate</p>
                       <p className="text-xl font-black text-slate-900 dark:text-white tabular-nums">₨ {formatCurrency(fuel.stats.avgPrice)}</p>
                     </div>
                   </div>
@@ -348,17 +348,17 @@ export default function PurchasePage() {
                   <div className="flex flex-col gap-4">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-dark-800/50 pb-4">
                       <div className="space-y-1">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Net Expenditure</p>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Product Cost</p>
                         <p className="text-sm font-black text-slate-500 tabular-nums">₨ {formatCurrency(fuel.stats.amt)}</p>
                       </div>
                       <div className="space-y-1 sm:text-right">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Carriage</p>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Freight / Rent</p>
                         <p className="text-sm font-black text-slate-500 tabular-nums">₨ {formatCurrency(fuel.stats.carriage)}</p>
                       </div>
                     </div>
                     
                     <div className="p-4 bg-blue-600 dark:bg-blue-600/10 rounded-2xl border border-blue-100/50 dark:border-blue-800/20">
-                      <p className="text-[10px] font-black text-white dark:text-blue-400 uppercase tracking-widest mb-1">Total Procurement Cost</p>
+                      <p className="text-[10px] font-black text-white dark:text-blue-400 uppercase tracking-widest mb-1">Total Purchase Cost</p>
                       <p className={cn(
                         "font-black tabular-nums break-words leading-tight text-white dark:text-blue-400",
                         formatCurrency(fuel.stats.total).length > 15 ? "text-xl lg:text-2xl" : "text-2xl lg:text-4xl"
@@ -528,7 +528,7 @@ export default function PurchasePage() {
                       <th className="table-cell text-left min-w-[120px]">Vehicle No</th>
                       <th className="table-cell text-right min-w-[100px]">Rate</th>
                       <th className="table-cell text-right min-w-[120px]">Qty (L)</th>
-                      <th className="table-cell text-right min-w-[140px]">Carriage</th>
+                      <th className="table-cell text-right min-w-[140px]">Freight</th>
                       <th className="table-cell text-right min-w-[160px]">Amount</th>
                       <th className="table-cell text-right font-black min-w-[180px]">Total</th>
                       <th className="table-cell w-20 text-center">Actions</th>
@@ -619,9 +619,8 @@ export default function PurchasePage() {
       {showForm && (
         <Modal 
           title={editingEntity ? `Edit ${fuelType} Purchase` : `Add ${fuelType} Purchase`} 
-          onClose={closeForm} 
-          isDesktop 
-          icon={ShoppingCart}
+          onClose={closeForm}
+          wide
         >
           <form onSubmit={handleSubmit} className="flex flex-col gap-1">
             {/* Header / Info Section */}
@@ -666,8 +665,8 @@ export default function PurchasePage() {
                   <input type="number" step="any" className="input !py-1.5 !bg-emerald-50/30 dark:!bg-emerald-900/10 focus:ring-emerald-500/20" value={form.quantity} onChange={(e) => set('quantity', e.target.value)} required />
                 </div>
               </div>
-              <div className="desktop-form-row">
-                <label className="desktop-form-label text-amber-600 dark:text-amber-400">Carriage (Rs)</label>
+               <div className="desktop-form-row">
+                <label className="desktop-form-label text-amber-600 dark:text-amber-400">Freight (Rent)</label>
                 <div className="desktop-form-field">
                   <input type="number" step="any" className="input !py-1.5 !bg-amber-50/30 dark:!bg-amber-900/10 focus:ring-amber-500/20" value={form.carriage} onChange={(e) => set('carriage', e.target.value)} />
                 </div>
@@ -700,7 +699,7 @@ export default function PurchasePage() {
       ) /* End showForm */}
 
       {viewingEntity && <TransactionReceiptModal entity={viewingEntity} type="purchase" onClose={() => setViewingEntity(null)} />}
-      {showReport && <PrintReportModal data={filtered} type="purchase" onClose={() => setShowReport(false)} />}
+      {showReport && <PrintReportModal data={filtered} type="purchase" fromDate={fromDate} toDate={toDate} onClose={() => setShowReport(false)} />}
     </div>
   );
 }

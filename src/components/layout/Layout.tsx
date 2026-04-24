@@ -20,12 +20,7 @@ import Customer from '../../pages/Customer';
 import Settings from '../../pages/Settings';
 
 export default function Layout() {
-  const { triggerSplash } = useStore();
   const location = useLocation();
-
-  useEffect(() => {
-    triggerSplash();
-  }, [location.pathname]);
 
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [touchStart, setTouchStart] = useState<number | null>(null);
@@ -118,7 +113,7 @@ export default function Layout() {
         </div>
 
         {/* Mobile Bottom Navigation */}
-        <BottomNav />
+        <BottomNav onMore={() => {}} />
       </main>
     </div>
   );
