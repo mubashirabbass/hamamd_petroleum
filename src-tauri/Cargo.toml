@@ -30,3 +30,4 @@ zip                = "2"
 chrono             = { version = "0.4", features = ["serde"] }
 urlencoding        = "2"
 tauri-plugin-dialog = "2.7.0"
+rusqlite            = { version = "0.31", features = ["bundled"] }

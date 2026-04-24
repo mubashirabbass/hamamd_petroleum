@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Layout     from './components/layout/Layout';
 import { ToastProvider } from './components/ui/Toast';
@@ -16,7 +16,8 @@ import Login      from './pages/Login';
 import LoadingSplash from './components/layout/LoadingSplash';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { useStore } from './store/useStore';
-import loginBg from '../WhatsApp Image 2026-04-08 at 5.20.06 PM.jpeg';
+import loginBg from './assets/login-bg.jpg';
+import { invoke } from '@tauri-apps/api/core';
 
 function DBSplash({ error }: { error: string | null }) {
   // ... (keeping existing DBSplash code)
@@ -94,7 +95,7 @@ function SystemLocked({ reason }: { reason: 'HARDWARE' | 'LICENSE' }) {
     e.preventDefault();
     const user = settings.users.find(u => u.email === email && u.password === password);
     if (user && user.role === 'Developer') {
-      // FORCE AUTHORIZATION: If the current machine mismatch occurs (e.g. after a mobile restore), 
+      // FORCE AUTHORIZATION: If the current machine mismatch occurs (e.g. after a desktop restore), 
       // let the developer "re-pin" the app to this hardware.
       const localId = useStore.getState().localActivationId;
       if (currentMachineId && (!localId || localId !== currentMachineId)) {
@@ -209,32 +210,49 @@ function SystemLocked({ reason }: { reason: 'HARDWARE' | 'LICENSE' }) {
 // ─── App Root ─────────────────────────────────────────────────────────────────
 
 export default function App() {
-  const { currentUser, dbReady, dbError, initializeFromDB, settings, updateSettings, localActivationId } = useStore();
+  const { currentUser, dbReady, dbError, initializeFromDB, settings, updateSettings, logout, localActivationId } = useStore();
   const [booting, setBooting] = useState(true);
 
-  // Zoom management
+  // ── Zoom — CSS zoom on <html>; Chromium/WebView on all Tauri targets supports it ──
+  const applyZoom = (zoom: number) => {
+    document.documentElement.style.zoom = String(zoom);
+    // Secondary: Tauri native zoom for desktop window
+    try {
+      import('@tauri-apps/api/webviewWindow').then(({ getCurrentWebviewWindow }) => {
+        const appWindow = getCurrentWebviewWindow();
+        if ((appWindow as any).setZoom) {
+          (appWindow as any).setZoom(zoom).catch(() => {});
+        }
+      });
+    } catch(e) {}
+  };
+
+  // Zoom management — runs on load + whenever zoomLevel changes
   useEffect(() => {
     if (!dbReady) return;
 
+    // Apply saved zoom level immediately (persisted from last session)
+    applyZoom(settings.zoomLevel);
+
+    // Desktop: Ctrl+scroll wheel zoom
     const handleWheel = (e: WheelEvent) => {
       if (e.ctrlKey) {
         e.preventDefault();
         const delta = e.deltaY < 0 ? 0.1 : -0.1;
         const newZoom = Math.min(Math.max(settings.zoomLevel + delta, 0.5), 2.0);
-        updateSettings({ zoomLevel: newZoom });
+        updateSettings({ zoomLevel: newZoom }); // triggers effect re-run → applyZoom
       }
     };
 
+    // Desktop: Ctrl+= / Ctrl+- / Ctrl+0 zoom
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey) {
         if (e.key === '=' || e.key === '+') {
           e.preventDefault();
-          const newZoom = Math.min(Math.max(settings.zoomLevel + 0.1, 0.5), 2.0);
-          updateSettings({ zoomLevel: newZoom });
+          updateSettings({ zoomLevel: Math.min(settings.zoomLevel + 0.1, 2.0) });
         } else if (e.key === '-' || e.key === '_') {
           e.preventDefault();
-          const newZoom = Math.min(Math.max(settings.zoomLevel - 0.1, 0.5), 2.0);
-          updateSettings({ zoomLevel: newZoom });
+          updateSettings({ zoomLevel: Math.max(settings.zoomLevel - 0.1, 0.5) });
         } else if (e.key === '0') {
           e.preventDefault();
           updateSettings({ zoomLevel: 1.0 });
@@ -244,17 +262,6 @@ export default function App() {
 
     window.addEventListener('wheel', handleWheel, { passive: false });
     window.addEventListener('keydown', handleKeyDown);
-
-    // Apply zoom on change natively
-    try {
-      import('@tauri-apps/api/webviewWindow').then(({ getCurrentWebviewWindow }) => {
-        const appWindow = getCurrentWebviewWindow();
-        if ((appWindow as any).setZoom) {
-          (appWindow as any).setZoom(settings.zoomLevel).catch(() => {});
-        }
-      });
-    } catch(e) {}
-
     return () => {
       window.removeEventListener('wheel', handleWheel);
       window.removeEventListener('keydown', handleKeyDown);
@@ -264,6 +271,35 @@ export default function App() {
   useEffect(() => {
     initializeFromDB().finally(() => setBooting(false));
   }, []);
+
+  // ── Auto Data Snapshot (every 30 min + on app background/suspend) ────────────
+  const snapTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const triggerSnapshot = () => {
+    invoke('export_data_snapshot').catch(() => {
+      // Silently fail — data is still safe in SQLite
+    });
+  };
+  useEffect(() => {
+    if (!dbReady) return;
+    // Run once on DB ready
+    setTimeout(triggerSnapshot, 3000);
+    // Then every 30 minutes
+    snapTimerRef.current = setInterval(triggerSnapshot, 30 * 60 * 1000);
+    // On Android: fires when user presses home or switches app
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') triggerSnapshot();
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener('beforeunload', triggerSnapshot);
+    return () => {
+      if (snapTimerRef.current) clearInterval(snapTimerRef.current);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('beforeunload', triggerSnapshot);
+    };
+  }, [dbReady]);
+
+  // Session persistence is now handled by Zustand's persist middleware in useStore.ts.
+  // The following effect was removed to prevent auto-logout when the app is minimized.
 
   // Security Checks
   // We prefer the locally activated ID (ebs_activation.key) if it exists.

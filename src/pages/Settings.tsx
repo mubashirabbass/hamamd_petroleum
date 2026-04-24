@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import {
-  Settings, ShieldCheck, AlertCircle, Calendar, UserCog,
-  Cloud, RefreshCcw, Save, HardDrive, CloudOff,
-  Download, Upload, Trash2, Eye, EyeOff,
+  Settings, ShieldCheck, AlertCircle, Calendar,
+  Cloud, RefreshCcw, Save, HardDrive, CloudOff, CheckCircle2,
+  Download, Upload, Trash2, Eye, EyeOff, ArrowRight, Undo2,
+  FileJson, FileSpreadsheet, FolderOpen, Zap, User
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import ManageUsersModal from '../components/modals/ManageUsersModal';
@@ -20,6 +21,8 @@ import {
   listBackups,
   restoreFromDrive,
   downloadLocalBackup,
+  openLocalBackupPicker,
+  restoreFromFilePath,
   type DriveFile,
 } from '../lib/driveAPI';
 import { invoke } from '@tauri-apps/api/core';
@@ -45,13 +48,39 @@ function BackupPanel() {
   const [connecting,     setConnecting]     = useState(false);
   const [checkingStatus, setCheckingStatus] = useState(true);
 
+  // ── Export / Snapshot ───────────────────────────────────────────────────
+  const [exporting,   setExporting]   = useState(false);
+  const [lastExport,  setLastExport]  = useState('');
+  const [exportPath,  setExportPath]  = useState('');
+
+  const handleExportData = async () => {
+    setExporting(true);
+    setProgress({ msg: 'Exporting all data to CSV + JSON…', active: true });
+    try {
+      const path = await invoke<string>('create_full_export_zip');
+      const ts = new Date().toLocaleString();
+      setLastExport(ts);
+      setExportPath(path);
+      toast(`✅ Full export saved!`, 'success');
+    } catch (err: any) {
+      toast(`Export failed: ${err?.message ?? err}`, 'error');
+    } finally {
+      setExporting(false);
+      setProgress({ msg: '', active: false });
+    }
+  };
+
+  // ── Manual PIN Fallback ────────────────────────────────────────────────────
+  const [showManualPin,  setShowManualPin]  = useState(false);
+  const [manualPin,      setManualPin]      = useState('');
+
   // ── Backup / Restore ───────────────────────────────────────────────────────
   const [backupList,    setBackupList]    = useState<DriveFile[]>([]);
   const [loadingList,   setLoadingList]   = useState(false);
   const [progress,      setProgress]      = useState<{ msg: string; active: boolean }>({ msg: '', active: false });
   const _driveName = driveName; void _driveName; // suppress unused warning — reserved for future UI
   const [confirmRestore, setConfirmRestore] = useState<DriveFile | null>(null);
-  const [confirmLocalRestore, setConfirmLocalRestore] = useState<File | null>(null);
+  const [confirmLocalRestore, setConfirmLocalRestore] = useState<{ name: string; path?: string; file?: File } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ── Load saved credentials & check connection ──────────────────────────────
@@ -122,6 +151,23 @@ function BackupPanel() {
     setBackupList([]);
   };
 
+  const handleConnect = async () => {
+    setConnecting(true);
+    try {
+      const info = await connectGoogleDrive(manualPin.trim() || undefined);
+      setConnected(true);
+      setDriveEmail(info.email);
+      setDriveName(info.name);
+      toast(`✅ Connected as ${info.name || info.email}`, 'success');
+      await fetchList();
+      setShowManualPin(false);
+      setManualPin('');
+    } catch (err: any) {
+      toast(String(err?.message ?? err), 'error');
+    } finally {
+      setConnecting(false);
+    }
+  };
 
   const handleDisconnect = async () => {
     await disconnect();
@@ -152,6 +198,7 @@ function BackupPanel() {
   const handleBackupNow = async () => {
     setProgress({ msg: 'Starting backup…', active: true });
     try {
+      // Append device type to filename for cross-app sync visibility
       const name = await backupNow((msg) => setProgress({ msg, active: true }));
       toast(`✅ Cloud Sync Complete: ${name}`, 'success');
       await fetchList();
@@ -207,7 +254,37 @@ function BackupPanel() {
 
   // ── Local Restore (file upload) ────────────────────────────────────────────
   const handleLocalFile = async (file: File) => {
-    setConfirmLocalRestore(file);
+    setConfirmLocalRestore({ name: file.name, file });
+  };
+
+  const handleNativePicker = async () => {
+    try {
+      const path = await openLocalBackupPicker();
+      if (path) {
+        setConfirmLocalRestore({ name: path.split('\\').pop() ?? 'Backup File', path });
+      }
+    } catch (err: any) {
+      toast(`Picker failed: ${err?.message ?? err}`, 'error');
+    }
+  };
+
+  const handleLocalRestoreAction = async () => {
+    const item = confirmLocalRestore;
+    if (!item) return;
+    setConfirmLocalRestore(null);
+    setProgress({ msg: 'Restoring database…', active: true });
+    try {
+      if (item.path) {
+        await restoreFromFilePath(item.path);
+      } else if (item.file) {
+        await handleLocalRestore(item.file);
+      }
+      toast('Restore complete! Reloading app…', 'success');
+      setTimeout(() => window.location.reload(), 1200);
+    } catch (err: any) {
+      toast(`Restore failed: ${err?.message ?? err}`, 'error');
+      setProgress({ msg: '', active: false });
+    }
   };
 
   const handleLocalRestore = async (file: File) => {
@@ -218,7 +295,7 @@ function BackupPanel() {
       const uint8 = Array.from(new Uint8Array(arrayBuffer));
       // Write file via Tauri then restore
       const appDir = await invoke<string>('get_app_data_path');
-      const tempPath = `${appDir}\\local_restore_temp.zip`;
+      const tempPath = `${appDir}/local_restore_temp.zip`;
       // Use tauri-plugin-fs to write the binary
       const { writeFile } = await import('@tauri-apps/plugin-fs');
       await writeFile(tempPath, new Uint8Array(uint8));
@@ -236,6 +313,19 @@ function BackupPanel() {
     }
   };
 
+  // ─────────────────────────────────────────────────────────────────────────
+  const step = connected ? 3 : credsSaved ? 2 : 1;
+
+  const StepDot = ({ n, done }: { n: number; done: boolean }) => (
+    <div className={cn(
+      'w-8 h-8 rounded-full flex items-center justify-center text-sm font-black shrink-0 transition-all',
+      done              ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30'
+        : n === step    ? 'bg-primary-600 text-white shadow-lg shadow-primary-500/30'
+        :                 'bg-slate-800 text-slate-500'
+    )}>
+      {done ? '✓' : n}
+    </div>
+  );
 
   return (
     <div className="space-y-6 h-full overflow-auto pb-6">
@@ -264,7 +354,7 @@ function BackupPanel() {
         </div>
       )}
 
-      {/* ── Connection Status Banner ────────────────────────────────────────── */}
+      {/* ── Connection Status Banner ──────────────────────────────────────────── */}
       <div className={cn(
         'rounded-2xl border p-5 flex items-center justify-between gap-4',
         connected ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-primary-500/5 border-primary-500/10'
@@ -288,14 +378,14 @@ function BackupPanel() {
                 </div>
                 {driveName && (
                   <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] pl-4 flex items-center gap-2 opacity-70">
-                    <UserCog className="w-3 h-3" /> {driveName}
+                    <User className="w-3 h-3" /> {driveName}
                   </p>
                 )}
               </div>
             ) : checkingStatus ? (
               <p className="text-sm text-slate-500 mt-0.5 animate-pulse">Checking connection…</p>
             ) : (
-              <p className="text-sm text-slate-500 mt-0.5">Enter your credentials below to connect Google Drive.</p>
+              <p className="text-sm text-slate-500 mt-0.5">Sign in to enable automatic Google Drive backups.</p>
             )}
           </div>
         </div>
@@ -320,25 +410,23 @@ function BackupPanel() {
         </div>
       </div>
 
-      {/* ── Credential Entry + Connect (hidden when connected) ────────────────── */}
+      {/* ── Simple Sign-In Panel (hidden when connected or loading) ───────────── */}
       {!connected && !checkingStatus && (
         <div className="glass rounded-2xl border border-slate-200/50 dark:border-dark-700/50 overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-200 dark:border-dark-700/50 flex items-center justify-between">
-            <h4 className="font-black text-slate-900 dark:text-white text-sm">Connect Google Drive Backup</h4>
-            <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noreferrer"
-              className="text-[11px] text-primary-400 font-bold underline hover:text-primary-300">
-              Get Credentials ↗
-            </a>
-          </div>
-          <div className="p-6 space-y-4">
-            <p className="text-xs text-slate-500 dark:text-dark-400">
-              Enter your Google OAuth 2.0 credentials. The app will automatically sign in and fetch your account name.
-              Set the redirect URI to{' '}
-              <code className="px-1.5 py-0.5 bg-slate-100 dark:bg-dark-800 rounded text-primary-400 font-mono text-[11px]">
-                http://localhost:3001/oauth/callback
-              </code>
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="p-8 flex flex-col items-center text-center gap-6">
+            <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-blue-500 to-primary-600 flex items-center justify-center shadow-2xl shadow-primary-500/30">
+              <Cloud className="w-10 h-10 text-white" />
+            </div>
+            <div>
+              <h4 className="font-black text-slate-900 dark:text-white text-lg mb-1">
+                Connect Google Drive
+              </h4>
+              <p className="text-sm text-slate-500 dark:text-dark-400">
+                Enter your Google API credentials to enable cloud backup. Your account name will be auto-fetched after sign-in.
+              </p>
+            </div>
+
+            <div className="w-full space-y-3 text-left">
               <div>
                 <label className="block text-xs font-bold text-slate-500 dark:text-dark-400 mb-1 uppercase tracking-wider">Client ID</label>
                 <input type="text" value={clientId} onChange={e => setClientId(e.target.value)}
@@ -352,33 +440,64 @@ function BackupPanel() {
                     onChange={e => setClientSecret(e.target.value)} placeholder="GOCSPX-…"
                     className="input w-full !font-mono !text-xs pr-9" />
                   <button type="button" onClick={() => setShowSecret(!showSecret)}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300">
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400">
                     {showSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
-            </div>
-            <button
-              onClick={handleConnectWithCreds}
-              disabled={savingCreds || connecting || !clientId.trim() || !clientSecret.trim()}
-              className="flex items-center gap-2 px-6 py-3 bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700 text-slate-800 dark:text-white rounded-xl text-sm font-black hover:bg-slate-50 dark:hover:bg-dark-700 transition-all shadow-md active:scale-95 disabled:opacity-40"
-            >
-              <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
-                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
-                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
-                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
-              </svg>
-              {connecting ? 'Opening Google Sign-In…' : savingCreds ? 'Saving…' : 'Sign in with Google'}
-            </button>
-            {credsSaved && !connected && (
-              <button onClick={handleChangeCreds} className="text-xs text-red-400 hover:text-red-500 font-bold transition-colors">
-                Clear saved credentials
+              <button
+                onClick={handleConnectWithCreds}
+                disabled={savingCreds || connecting || !clientId.trim() || !clientSecret.trim()}
+                className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700 text-slate-800 dark:text-white rounded-2xl text-base font-black hover:bg-slate-50 dark:hover:bg-dark-700 transition-all shadow-lg active:scale-95 disabled:opacity-60"
+              >
+                <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
+                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+                </svg>
+                {connecting ? 'Connecting…' : savingCreds ? 'Saving…' : 'Sign in with Google'}
               </button>
-            )}
+              
+              <div className="w-full text-center mt-2">
+                <button
+                  onClick={() => setShowManualPin(!showManualPin)}
+                  className="text-[10px] text-slate-400 font-bold hover:text-primary-500 uppercase tracking-widest transition-colors py-2"
+                >
+                  {showManualPin ? 'Hide Manual PIN' : 'Use Manual OAuth PIN'}
+                </button>
+              </div>
+
+              {showManualPin && (
+                <div className="p-4 bg-slate-50 dark:bg-dark-900/50 rounded-2xl border border-slate-200 dark:border-dark-700/50 space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <p className="text-[10px] text-slate-500 leading-relaxed font-medium">
+                    If the browser fails to automatically sign you in, copy the full URL (or PIN code) from the browser address bar that says <code className="text-primary-500 text-[9px] bg-primary-500/10 px-1 py-0.5 rounded">localhost:3001</code> and paste it here:
+                  </p>
+                  <input type="text" value={manualPin} onChange={e => setManualPin(e.target.value)}
+                    placeholder="Paste URL or OAuth PIN Code..."
+                    className="input w-full !text-xs !py-2.5" />
+                  <button onClick={handleConnect} disabled={!manualPin.trim() || connecting}
+                    className="w-full py-2 bg-slate-900 dark:bg-dark-700 text-white text-xs font-black rounded-xl hover:bg-black transition-all active:scale-95 disabled:opacity-40">
+                    Connect with PIN
+                  </button>
+                </div>
+              )}
+
+              {credsSaved && !connected && (
+                <button onClick={handleChangeCreds} className="w-full text-xs text-red-400 hover:text-red-500 font-bold transition-colors py-1 text-center">
+                  Clear saved credentials
+                </button>
+              )}
+              <button onClick={handleCheckStatus} disabled={checkingStatus}
+                className="w-full flex items-center justify-center gap-2 text-xs font-bold text-slate-400 hover:text-primary-500 transition-colors py-1">
+                <RefreshCcw className={cn('w-3 h-3', checkingStatus && 'animate-spin')} />
+                Already signed in? Check status
+              </button>
+            </div>
           </div>
         </div>
       )}
+
 
       {/* ── Backup Engine (shown when connected) ─────────────────────────────── */}
       {connected && (
@@ -410,8 +529,8 @@ function BackupPanel() {
                    const { revealItemInDir } = await import('@tauri-apps/plugin-opener');
                    // Create folder if missing before opening
                    const { mkdir } = await import('@tauri-apps/plugin-fs');
-                   try { await mkdir(`${appDir}\\backups`, { recursive: true }); } catch(_) {}
-                   await revealItemInDir(`${appDir}\\backups`);
+                   try { await mkdir(`${appDir}/backups`, { recursive: true }); } catch(_) {}
+                   await revealItemInDir(`${appDir}/backups`);
                  } catch (err: any) {
                    toast('Could not open folder', 'error');
                  }
@@ -465,8 +584,8 @@ function BackupPanel() {
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                       <p className="text-sm font-black text-slate-900 dark:text-white">{bk.name}</p>
-                       {bk.name.includes('_Desktop') && (
+                      <p className="text-sm font-black text-slate-900 dark:text-white">{bk.name}</p>
+                      {bk.name.includes('_Desktop') && (
                         <span className="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[9px] font-black rounded uppercase">Desktop</span>
                       )}
                       {bk.name.includes('_Mobile') && (
@@ -535,18 +654,95 @@ function BackupPanel() {
               <p className="text-xs text-slate-500 dark:text-dark-400 mt-0.5">Restore from a local backup ZIP file.</p>
             </div>
           </div>
-          <label className={cn(
-            'flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-black transition-colors shadow-sm cursor-pointer text-center',
-            progress.active ? 'bg-amber-200 text-amber-400 cursor-not-allowed' : 'bg-amber-600 text-white hover:bg-amber-700'
-          )}>
-            <input ref={fileInputRef} type="file" accept=".zip" className="hidden" disabled={progress.active}
-              onChange={e => { const f = e.target.files?.[0]; if (f) { handleLocalFile(f); e.target.value = ''; } }} />
-            <Upload className="w-4 h-4" /> Select ZIP & Restore
-          </label>
+          <div className="flex flex-col gap-2">
+            <button onClick={handleNativePicker} disabled={progress.active}
+              className="flex items-center justify-center gap-2 px-5 py-2.5 bg-amber-600 text-white rounded-xl text-sm font-black hover:bg-amber-700 transition-colors shadow-sm disabled:opacity-40">
+              <Upload className="w-4 h-4" /> Import from Device
+            </button>
+            <label className={cn(
+              'flex items-center justify-center gap-2 px-5 py-2 text-xs font-bold transition-colors cursor-pointer text-center text-slate-500 hover:text-amber-600 dark:text-dark-400',
+              progress.active ? 'opacity-40 cursor-not-allowed' : ''
+            )}>
+              <input ref={fileInputRef} type="file" accept=".zip" className="hidden" disabled={progress.active}
+                onChange={e => { const f = e.target.files?.[0]; if (f) { handleLocalFile(f); e.target.value = ''; } }} />
+              <span className="underline">Or select file manually</span>
+            </label>
+          </div>
         </div>
       </div>
 
-      {/* ── Premium Processing Overlay ────────────────────────────────────────── */}
+      {/* ── Excel / JSON Data Export ─────────────────────────────────────────── */}
+      <div className="glass rounded-2xl border border-slate-200/50 dark:border-dark-700/50 overflow-hidden">
+        <div className="px-5 py-4 border-b border-slate-200 dark:border-dark-700/50 bg-emerald-500/5 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl flex items-center justify-center">
+              <FileSpreadsheet className="w-5 h-5 text-emerald-600" />
+            </div>
+            <div>
+              <h4 className="font-black text-slate-900 dark:text-white text-sm">Export Data to Excel / JSON</h4>
+              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Crash-safe portable backup</p>
+            </div>
+          </div>
+          {lastExport && (
+            <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest bg-emerald-50 dark:bg-emerald-900/20 px-2 py-1 rounded-lg">
+              Last: {lastExport}
+            </span>
+          )}
+        </div>
+        <div className="p-5 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-[10px] font-black uppercase tracking-widest">
+            <div className="flex items-center gap-2 p-3 bg-emerald-50 dark:bg-emerald-900/10 rounded-xl border border-emerald-100 dark:border-emerald-900/20">
+              <FileSpreadsheet className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+              <span className="text-emerald-700 dark:text-emerald-300">6 CSV files — opens directly in Excel</span>
+            </div>
+            <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/10 rounded-xl border border-blue-100 dark:border-blue-900/20">
+              <FileJson className="w-4 h-4 text-blue-600 flex-shrink-0" />
+              <span className="text-blue-700 dark:text-blue-300">JSON snapshot — migrate to any future app</span>
+            </div>
+            <div className="flex items-center gap-2 p-3 bg-slate-50 dark:bg-dark-800 rounded-xl border border-slate-100 dark:border-dark-700/50">
+              <HardDrive className="w-4 h-4 text-slate-500 flex-shrink-0" />
+              <span className="text-slate-600 dark:text-dark-300">Raw SQLite DB — open with DB Browser</span>
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              onClick={handleExportData}
+              disabled={exporting || progress.active}
+              className="flex-1 flex items-center justify-center gap-2 px-5 py-3 bg-emerald-600 text-white rounded-xl text-sm font-black hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-500/20 active:scale-95 disabled:opacity-40"
+            >
+              {exporting
+                ? <RefreshCcw className="w-4 h-4 animate-spin" />
+                : <Zap className="w-4 h-4" />}
+              {exporting ? 'Exporting…' : 'Export All Data Now'}
+            </button>
+            {exportPath && (
+              <button
+                onClick={async () => {
+                  try {
+                    const { revealItemInDir } = await import('@tauri-apps/plugin-opener');
+                    await revealItemInDir(exportPath);
+                  } catch { toast('Could not open folder', 'error'); }
+                }}
+                className="flex items-center gap-2 px-4 py-3 bg-slate-100 dark:bg-dark-800 text-slate-600 dark:text-dark-300 rounded-xl text-xs font-black hover:bg-slate-200 dark:hover:bg-dark-700 transition-all"
+              >
+                <FolderOpen className="w-4 h-4" /> Open Folder
+              </button>
+            )}
+          </div>
+
+          <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-900/20">
+            <p className="text-[10px] text-amber-800 dark:text-amber-200 font-medium leading-relaxed">
+              <strong>📌 How it works:</strong> Clicking "Export All Data Now" creates a ZIP file containing:
+              6 ready-to-open <strong>Excel CSV files</strong> (one per module) +
+              a <strong>JSON snapshot</strong> of everything +
+              the raw <strong>SQLite database</strong>.
+              If the app ever crashes or you switch to a new system, all your data is in readable form.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {progress.active && (
         <div className="fixed inset-0 z-[10000] flex flex-col items-center justify-center p-6 bg-slate-950/80 backdrop-blur-xl animate-in fade-in duration-500">
            <div className="relative mb-8">
@@ -622,7 +818,7 @@ function BackupPanel() {
                 className="flex-1 px-4 py-2.5 border border-slate-200 dark:border-dark-700 rounded-xl text-sm font-bold text-slate-700 dark:text-dark-200 hover:bg-slate-50 dark:hover:bg-dark-800 transition-colors">
                 Cancel
               </button>
-              <button onClick={() => handleLocalRestore(confirmLocalRestore)}
+              <button onClick={() => handleLocalRestoreAction()}
                 className="flex-1 px-4 py-2.5 bg-amber-600 text-white rounded-xl text-sm font-black hover:bg-amber-700 transition-colors">
                 Yes, Restore
               </button>
@@ -633,7 +829,6 @@ function BackupPanel() {
     </div>
   );
 }
-
 // ─────────────────────────────────────────────────────────────────────────────
 // SETTINGS PAGE
 // ─────────────────────────────────────────────────────────────────────────────
@@ -642,8 +837,8 @@ export default function SettingsPage() {
   const { settings, updateSettings, currentUser, resetAllData } = useStore();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<'general' | 'users' | 'backup' | 'developer' | 'danger' | 'shortcuts'>('general');
-  const [showManageUsers, setShowManageUsers] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
 
   // Staff can now access Settings but with restricted tabs
   const isStaff = currentUser?.role === 'Staff';
@@ -683,42 +878,77 @@ export default function SettingsPage() {
   }, [isStaff]);
 
   return (
-    <div className="animate-fade-in space-y-6 h-full">
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-8">
-        <div className="w-10 h-10 rounded-xl bg-slate-600/10 dark:bg-slate-600/20 flex items-center justify-center">
-          <Settings className="w-6 h-6 text-slate-600 dark:text-slate-400" />
+    <div className="animate-fade-in flex flex-col h-full overflow-hidden">
+      {/* Header — only show if not in mobile detail view */}
+      {!mobileDetailOpen && (
+        <div className="flex items-center gap-3 mb-8 shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-primary-600/10 dark:bg-primary-600/20 flex items-center justify-center">
+            <Settings className="w-6 h-6 text-primary-600" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Settings</h1>
+            <p className="text-sm text-slate-500 dark:text-dark-400">System configuration and management</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Settings</h1>
-          <p className="text-sm text-slate-500 dark:text-dark-400">System configuration and management</p>
-        </div>
-      </div>
+      )}
 
-      <div className="flex flex-col md:flex-row gap-6 items-start h-[calc(100vh-220px)]">
-        {/* Sidebar */}
-        <div className="w-full md:w-64 flex-shrink-0 space-y-1.5 font-bold">
+      <div className="flex flex-1 gap-6 items-start overflow-hidden relative">
+        {/* Sidebar / List Pane */}
+        <div className={cn(
+          "w-full md:w-72 flex-shrink-0 space-y-2 h-full overflow-y-auto no-scrollbar",
+          mobileDetailOpen ? "hidden md:block" : "block"
+        )}>
           {tabs.map((tab) => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id as any)}
+            <button 
+              key={tab.id} 
+              onClick={() => {
+                setActiveTab(tab.id as any);
+                setMobileDetailOpen(true);
+              }}
               className={cn(
-                'w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-all duration-200 border',
+                'w-full flex items-center justify-between px-5 py-4 rounded-2xl text-sm transition-all duration-300 group',
                 activeTab === tab.id
-                  ? 'bg-white dark:bg-dark-900 shadow-sm text-slate-900 dark:text-white border-slate-200 dark:border-dark-700/50'
-                  : 'text-slate-500 dark:text-dark-500 hover:text-slate-700 dark:hover:text-dark-300 hover:bg-slate-50 dark:hover:bg-dark-800/30 border-transparent'
-              )}>
-              <div className={cn(
-                'w-8 h-8 rounded-lg flex items-center justify-center',
-                activeTab === tab.id ? `${tab.color} text-white shadow-lg` : 'bg-slate-100 dark:bg-dark-810'
-              )}>
-                <tab.icon className="w-4 h-4" />
+                  ? 'bg-white dark:bg-dark-900 shadow-xl border-l-4 border-l-primary-600 scale-[1.02] z-10'
+                  : 'bg-white/50 dark:bg-dark-900/40 hover:bg-white dark:hover:bg-dark-800 border-transparent hover:scale-[1.01]'
+              )}
+            >
+              <div className="flex items-center gap-4">
+                <div className={cn(
+                  'w-11 h-11 rounded-2xl flex items-center justify-center transition-all duration-500',
+                  activeTab === tab.id ? `${tab.color} text-white rotate-[360deg] shadow-[0_8px_16px_rgba(0,0,0,0.2)]` : 'bg-slate-100 dark:bg-dark-800 text-slate-500'
+                )}>
+                  <tab.icon className="w-5 h-5" />
+                </div>
+                <div className="text-left">
+                  <p className={cn("font-black uppercase tracking-widest text-[11px]", activeTab === tab.id ? "text-primary-600 dark:text-primary-400" : "text-slate-400")}>
+                    Menu Option
+                  </p>
+                  <p className={cn("font-black text-sm", activeTab === tab.id ? "text-slate-900 dark:text-white" : "text-slate-500 dark:text-dark-500")}>
+                    {tab.label}
+                  </p>
+                </div>
               </div>
-              {tab.label}
+              <ArrowRight className={cn("w-4 h-4 transition-transform", activeTab === tab.id ? "text-primary-600 translate-x-1" : "text-slate-300 opacity-0 group-hover:opacity-100")} />
             </button>
           ))}
         </div>
 
-        {/* Content */}
-        <div className="flex-1 min-w-0 w-full animate-slide-up h-full overflow-auto">
+        {/* Content Pane */}
+        <div className={cn(
+          "flex-1 h-full min-w-0 flex flex-col transition-all duration-500 animate-slide-in",
+          mobileDetailOpen ? "block fixed inset-0 z-[150] bg-slate-50 dark:bg-dark-950 p-4 md:relative md:inset-auto md:p-0" : "hidden md:flex"
+        )}>
+          {/* Mobile Back Button */}
+          {mobileDetailOpen && (
+            <button 
+              onClick={() => setMobileDetailOpen(false)}
+              className="md:hidden flex items-center gap-2 mb-4 px-4 py-3 bg-white dark:bg-dark-900 rounded-xl shadow-sm border border-slate-200 dark:border-dark-800 font-black text-xs uppercase tracking-widest text-slate-500 active:scale-95 transition-all"
+            >
+              <Undo2 className="w-4 h-4" /> Back to List
+            </button>
+          )}
+
+          <div className="flex-1 overflow-y-auto no-scrollbar smart-scroll">
 
           {/* General */}
           {activeTab === 'general' && (
@@ -762,31 +992,17 @@ export default function SettingsPage() {
           {/* Shortcuts Management */}
           {activeTab === 'shortcuts' && <KeyboardShortcutsPanel />}
 
-          {/* User Management */}
+          {/* User Management — Inline Panel */}
           {activeTab === 'users' && (
-            <div className="glass rounded-2xl overflow-hidden border border-slate-200/50 dark:border-dark-700/50 h-full flex flex-col items-center justify-center p-12 text-center">
-              <div className="w-20 h-20 rounded-3xl bg-emerald-600/10 flex items-center justify-center mb-6">
-                <ShieldCheck className="w-10 h-10 text-emerald-600" />
+            <div className="glass rounded-2xl overflow-hidden border border-slate-200/50 dark:border-dark-700/50 h-full flex flex-col">
+              <div className="p-4 border-b border-slate-200 dark:border-dark-700/50 bg-emerald-500/5 flex-shrink-0">
+                <div className="flex items-center gap-3">
+                  <ShieldCheck className="w-5 h-5 text-emerald-600" />
+                  <h2 className="font-black text-slate-900 dark:text-white text-sm uppercase tracking-widest">Login Management</h2>
+                </div>
               </div>
-              <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-2">Login Access Control</h2>
-              <p className="text-slate-500 dark:text-dark-400 max-w-md mx-auto mb-8 font-medium">
-                Manage who has access to your business data. Create new staff accounts,
-                update passwords, or modify administrative privileges.
-              </p>
-              <button onClick={() => setShowManageUsers(true)}
-                className="btn-primary flex items-center gap-2 !px-12 !py-4 text-base font-black shadow-2xl shadow-emerald-600/20">
-                <UserCog className="w-5 h-5" /> Manage System Users
-              </button>
-              <div className="mt-12 flex gap-8">
-                <div className="text-center">
-                  <p className="text-2xl font-black text-slate-900 dark:text-white">{settings.users.length}</p>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Total Users</p>
-                </div>
-                <div className="w-px h-10 bg-slate-200 dark:bg-dark-700" />
-                <div className="text-center">
-                  <p className="text-2xl font-black text-emerald-600 uppercase">Active</p>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">System Status</p>
-                </div>
+              <div className="flex-1 overflow-y-auto no-scrollbar p-4">
+                <ManageUsersModal />
               </div>
             </div>
           )}
@@ -838,8 +1054,9 @@ export default function SettingsPage() {
           )}
         </div>
       </div>
+    </div>
 
-      <ManageUsersModal isOpen={showManageUsers} onClose={() => setShowManageUsers(false)} />
+
 
       {/* Reset Confirmation */}
       {showResetConfirm && (

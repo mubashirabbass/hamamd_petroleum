@@ -97,23 +97,10 @@ export async function getDB(): Promise<Database> {
   }
 
   if (!_db) {
-    let dbPath = '';
-    // Check if we are on a mobile platform
-    const isMobile = (window as any).__TAURI_INTERNALS__?.mobile;
-
-    if (isMobile) {
-      // On Android/iOS, use a simple filename. 
-      // tauri-plugin-sql automatically puts this in the safe app databases folder.
-      dbPath = 'sqlite:ebs_business.db';
-    } else {
-      // On Desktop (Windows), maintain the "Portable" behavior (next to .exe)
-      const appDir: string = await invoke('get_app_data_path');
-      // Normalize slashes to forward slashes for SQLite compatibility
-      const normalizedAppDir = appDir.replace(/\\/g, '/');
-      dbPath = `sqlite:${normalizedAppDir}/ebs_business.db`;
-    }
-
-    console.log(`[DB] Opening database: ${dbPath}`);
+    const appDir: string = await invoke('get_app_data_path');
+    // Use forward slash which works on both Android (Linux) and Windows
+    const separator = appDir.includes('\\') ? '\\' : '/';
+    const dbPath = `sqlite:${appDir}${separator}ebs_business.db`;
     _db = await Database.load(dbPath);
     await initSchema(_db);
   }
@@ -149,12 +136,19 @@ async function initSchema(db: Database): Promise<void> {
       email      TEXT NOT NULL UNIQUE,
       password   TEXT NOT NULL,
       role       TEXT NOT NULL DEFAULT 'Staff',
-      created_at TEXT NOT NULL
+      created_at TEXT NOT NULL,
+      cnic       TEXT DEFAULT '',
+      dob        TEXT DEFAULT ''
     )
   `);
-  
-  try { await db.execute(`ALTER TABLE users ADD COLUMN cnic TEXT DEFAULT ''`); } catch (e) {}
-  try { await db.execute(`ALTER TABLE users ADD COLUMN dob TEXT DEFAULT ''`); } catch (e) {}
+
+  // Migrations for users table
+  try {
+    await db.execute(`ALTER TABLE users ADD COLUMN cnic TEXT DEFAULT ''`);
+  } catch (e) {}
+  try {
+    await db.execute(`ALTER TABLE users ADD COLUMN dob TEXT DEFAULT ''`);
+  } catch (e) {}
 
   // ── Counters (auto-incrementing bill numbers) ─────────────────────────────
   await db.execute(`
@@ -294,8 +288,6 @@ async function initSchema(db: Database): Promise<void> {
       phone TEXT DEFAULT ''
     )
   `);
-  
-
   await db.execute(`
     CREATE TABLE IF NOT EXISTS customer_entries (
       id          TEXT PRIMARY KEY,
@@ -436,7 +428,7 @@ export async function loadAllData(): Promise<RawDBData> {
     db.select<any[]>('SELECT id, category_id as categoryId, bill_no as billNo, date, description, debit, credit, balance FROM liability_entries ORDER BY rowid DESC'),
     db.select<any[]>('SELECT id, name, phone FROM customers'),
     db.select<any[]>('SELECT id, customer_id as customerId, bill_no as billNo, date, description, debit, credit, balance FROM customer_entries ORDER BY rowid DESC'),
-    db.select<any[]>('SELECT id, name, email, password, role, created_at as createdAt, cnic, dob FROM users'),
+    db.select<any[]>('SELECT id, name, email, password, role, created_at as createdAt FROM users'),
     db.select<{ name: string; value: number }[]>('SELECT name, value FROM counters'),
   ]);
 

@@ -5,7 +5,7 @@
  * Tokens are stored in the SQLite app_settings table.
  */
 import { invoke } from '@tauri-apps/api/core';
-import { save } from '@tauri-apps/plugin-dialog';
+import { save, open } from '@tauri-apps/plugin-dialog';
 import { getSetting, setSetting } from './db';
 
 // ─── OAuth2 Scopes ────────────────────────────────────────────────────────────
@@ -113,9 +113,14 @@ export async function connectGoogleDrive(manualPin?: string): Promise<{
 
   let code = '';
   if (manualPin) {
+    // Extract code from pasted URL or pasted raw code
     if (manualPin.includes('code=')) {
       const match = manualPin.match(/code=([^&]+)/);
-      code = (match && match[1]) ? decodeURIComponent(match[1]) : manualPin.trim();
+      if (match && match[1]) {
+        code = decodeURIComponent(match[1]);
+      } else {
+        throw new Error('Invalid OAuth URL or PIN format');
+      }
     } else {
       code = manualPin.trim();
     }
@@ -191,7 +196,7 @@ export async function backupNow(
   onProgress?.('Connecting to Google Drive...');
   const accessToken = await getValidAccessToken();
 
-  const fileName = `EBS_Backup_Desktop_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}.zip`;
+  const fileName = `EBS_Backup_Mobile_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}.zip`;
 
   onProgress?.('Uploading to Google Drive...');
   await invoke('upload_zip_to_drive', { zipPath, accessToken, fileName });
@@ -239,6 +244,23 @@ export async function restoreFromDrive(
 export async function downloadLocalBackup(): Promise<string> {
   const zipPath = await invoke<string>('create_backup_zip');
   
+  // Mobile Support: Use the Web Share API if available (native on Android WebView)
+  if (typeof navigator !== 'undefined' && (navigator as any).share) {
+    try {
+      const { readFile } = await import('@tauri-apps/plugin-fs');
+      const data = await readFile(zipPath);
+      const file = new File([data], `EBS_Backup_${new Date().toISOString().slice(0, 10)}.zip`, { type: 'application/zip' });
+      
+      await (navigator as any).share({
+        title: 'EBS Business Backup',
+        files: [file],
+      });
+      return 'Shared successfully';
+    } catch (err) {
+      console.warn("Share failed, falling back to download:", err);
+    }
+  }
+
   try {
     const savePath = await save({
       filters: [{ name: 'ZIP Archive', extensions: ['zip'] }],
@@ -246,8 +268,9 @@ export async function downloadLocalBackup(): Promise<string> {
     });
 
     if (savePath) {
-      // Use the backend to copy the file to the chosen location
-      await invoke('save_backup_to_path', { src: zipPath, dst: savePath });
+      // Use Tauri FS to copy the temp zip to user's desired location
+      const { copyFile } = await import('@tauri-apps/plugin-fs');
+      await copyFile(zipPath, savePath);
       return savePath;
     } else {
       throw new Error('Canceled');
@@ -256,29 +279,85 @@ export async function downloadLocalBackup(): Promise<string> {
     if (err instanceof Error && err.message === 'Canceled') {
       throw err;
     }
-    // Fallback to returning the internal path if something goes wrong
-    console.warn("Save operation failed:", err);
+    // If saving fails (e.g., plugin not found), fallback to just returning the temp zip path
+    console.warn("Save dialog failed, returning temp path:", err);
     return zipPath;
   }
 }
 
 // ─── Restore from local file ──────────────────────────────────────────────────
 
+
 export async function restoreFromLocalFile(file: File): Promise<void> {
   // Read file as Uint8Array (Supported natively by Tauri 2.0 binary bridge)
   const arrayBuffer = await file.arrayBuffer();
   const uint8 = new Uint8Array(arrayBuffer);
 
-  const appData = await invoke<string>('get_app_data_path');
-  const fullTempPath = `${appData}/local_restore_temp.zip`;
-
-  // Write directly using plugin-fs (optimized)
-  const { writeFile } = await import('@tauri-apps/plugin-fs');
-  await writeFile(fullTempPath, uint8);
+  // Use the native Rust command to save the buffer to AppData
+  const fullTempPath = await invoke<string>('save_buffer_to_app_data', { 
+    filename: 'local_restore_temp.zip', 
+    data: uint8 
+  });
 
   const { closeDB } = await import('./db');
   await closeDB();
   // Brief delay to ensure file handles are released
   await new Promise(resolve => setTimeout(resolve, 500));
   await invoke('restore_from_zip', { zipPath: fullTempPath });
+}
+
+export async function restoreFromFilePath(zipPath: string): Promise<void> {
+  // Check if this is an Android content URI (content://)
+  if (zipPath.startsWith('content://')) {
+    try {
+      // Use Tauri FS readBinaryFile (which handles content:// on Android)
+      const { readFile } = await import('@tauri-apps/plugin-fs');
+      const data = await readFile(zipPath);
+      
+      const fullTempPath = await invoke<string>('save_buffer_to_app_data', { 
+        filename: 'local_restore_temp.zip', 
+        data 
+      });
+      
+      const { closeDB } = await import('./db');
+      await closeDB();
+      await new Promise(resolve => setTimeout(resolve, 500));
+      await invoke('restore_from_zip', { zipPath: fullTempPath });
+      return;
+    } catch (err) {
+      console.warn("Failed to read content URI directly, trying native copy:", err);
+    }
+  }
+
+  // Bypass plugin-fs specific restrictions using the native Rust copy_root implementation
+  let targetPath = '';
+  try {
+    targetPath = await invoke<string>('copy_file_native', { 
+       src: zipPath, 
+       destFilename: 'local_restore_temp.zip' 
+    });
+  } catch (err) {
+    console.warn("Native copy failed, possibly due to content URI layout:", err);
+    // Ultimate fallback if the user is forced into "Download" vs file picker structure
+    const { copyFile, BaseDirectory } = await import('@tauri-apps/plugin-fs');
+    await copyFile(zipPath, 'local_restore_temp.zip', { toPathBaseDir: BaseDirectory.AppData });
+    
+    const tempPathDir = await invoke<string>('get_app_data_path');
+    targetPath = `${tempPathDir}/local_restore_temp.zip`;
+  }
+
+  const { closeDB } = await import('./db');
+  await closeDB();
+  // Brief delay to ensure file handles are released
+  await new Promise(resolve => setTimeout(resolve, 500));
+  await invoke('restore_from_zip', { zipPath: targetPath });
+}
+
+export async function openLocalBackupPicker(): Promise<string | null> {
+  const selected = await open({
+    multiple: false,
+    filters: [{ name: 'ZIP Backup', extensions: ['zip'] }],
+    title: 'Select Backup File from Storage'
+  });
+  return selected as string | null;
 }

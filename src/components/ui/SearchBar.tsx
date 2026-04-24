@@ -24,7 +24,6 @@ export default function SearchBar({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         className={`input pl-9 ${fullWidth ? 'w-full' : 'w-60'} ${className}`}
-        dir="auto"
       />
     </div>
   );

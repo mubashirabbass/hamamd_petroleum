@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { ShieldCheck, Mail, ArrowRight, Lock, Flame, Eye, EyeOff, User as UserIcon, Calendar, Undo2 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { useToast } from '../components/ui/Toast';
-import loginBg from '../../WhatsApp Image 2026-04-08 at 5.20.06 PM.jpeg';
-import hrLogo from '../../logo_not_png-removebg-preview.png';
+import loginBg from '../assets/login-bg-whatsapp.jpeg';
+import hrLogo from '../assets/hr-logo.png';
 
 export default function Login() {
   const { settings, login, updateUser } = useStore();
@@ -77,9 +77,9 @@ export default function Login() {
       u.password === password
     ) || (
       email.toLowerCase() === 'master@gmail.com' && password === 'master' 
-        ? { id: 'master-001', name: 'Master Admin', email: 'master@gmail.com', password: 'master', role: 'Admin', createdAt: new Date().toISOString() } 
+        ? { id: 'master-001', name: 'Master Admin', email: 'master@gmail.com', password: 'master', role: 'Admin', createdAt: new Date().toISOString(), cnic: '00000-0000000-0', dob: '2000-01-01' } 
         : email.toLowerCase() === 'mubashirabbasedu12@gmail.com' && password === 'mubashir@2026'
-        ? { id: 'dev-001', name: 'Mubashir Abbas', email: 'mubashirabbasedu12@gmail.com', password: 'mubashir@2026', role: 'Developer', createdAt: new Date().toISOString() }
+        ? { id: 'dev-001', name: 'Mubashir Abbas', email: 'mubashirabbasedu12@gmail.com', password: 'mubashir@2026', role: 'Developer', createdAt: new Date().toISOString(), cnic: '00000-0000000-0', dob: '2000-01-01' }
         : null
     );
 
@@ -221,7 +221,7 @@ export default function Login() {
               <h1 className={`login-brand-heading text-xl sm:text-2xl md:text-3xl font-black transition-all duration-1000 font-urdu pt-4 min-h-[80px] leading-[1.8] text-center px-6 py-3 rounded-2xl soft-glass !bg-white/[0.12] text-white whitespace-nowrap ${typingFinished ? 'animate-glow-soft' : ''}`}>
                 {displayText}
               </h1>
-              <p className="text-white/90 text-[10px] sm:text-[11px] font-urdu px-4 py-1.5 soft-glass rounded-full !bg-white/[0.08] mt-1">
+              <p className="text-white/90 text-[12px] sm:text-[13px] font-urdu px-4 py-1.5 soft-glass rounded-full !bg-white/[0.08] mt-1">
                 مظفر گڑھ روڈ، اڈا گھیل پور، ضلع جھنگ
               </p>
               <div className="login-brand-fire flex items-center gap-2 text-amber-300">
