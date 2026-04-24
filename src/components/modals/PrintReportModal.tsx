@@ -12,7 +12,7 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   data: any[];
-  type?: 'sale' | 'purchase' | 'expense' | 'asset' | 'liability' | 'customer' | 'stock' | 'customer_summary' | 'pls';
+  type?: 'sale' | 'purchase' | 'expense' | 'asset' | 'liability' | 'customer' | 'stock' | 'customer_summary' | 'pls' | 'balancesheet';
   title?: string;
   customerPhone?: string;
   fromDate?: string;
@@ -72,11 +72,12 @@ export default function PrintReportModal({
   }, []);
 
   const chunks = useMemo(() => {
+    if (type === 'pls') return [data];
     const arr: any[][] = [];
     for (let i = 0; i < data.length; i += ROWS_PER_PAGE) arr.push(data.slice(i, i + ROWS_PER_PAGE));
     if (arr.length === 0) arr.push([]);
     return arr;
-  }, [data]);
+  }, [data, type]);
 
   const colCount = useMemo(() => {
     if (dynamicColumns) return dynamicColumns.length;
@@ -366,7 +367,7 @@ export default function PrintReportModal({
               )}
 
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-                {type !== 'pls' && (
+                {type !== 'pls' && type !== 'balancesheet' && (
                   <table style={{
                     width: '100%', borderCollapse: 'collapse', fontSize: isPurchase ? '9px' : '12px',
                     borderLeft: '2px solid #111', borderRight: '2px solid #111', borderBottom: '2px solid #111',
@@ -700,12 +701,121 @@ export default function PrintReportModal({
                         </div>
                       </div>
                     </div>
+                  </div>
+                )}
+
+                {type === 'balancesheet' && chunk[0] && (
+                  <div style={{ padding: '0px' }}>
+                    {/* SECTION 1: CURRENT OPERATING POSITION */}
+                    <div style={{ marginBottom: 20 }}>
+                      <div style={{ background: '#eee', padding: '6px 10px', fontSize: 12, fontWeight: 1000, border: '2px solid #111', borderBottom: 'none' }}>
+                        CURRENT OPERATING POSITION (STOCK & CUSTOMERS)
+                      </div>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', border: '2px solid #111' }}>
+                        <thead style={{ background: '#f5f5f5', borderBottom: '1px solid #111' }}>
+                          <tr style={{ fontSize: 10 }}>
+                            <th style={{ padding: 6, borderRight: '1px solid #ddd', textAlign: 'left' }}>Particulars</th>
+                            <th style={{ padding: 6, borderRight: '1px solid #ddd', textAlign: 'right' }}>Qty (L)</th>
+                            <th style={{ padding: 6, borderRight: '1px solid #ddd', textAlign: 'right' }}>Avg Price</th>
+                            <th style={{ padding: 6, textAlign: 'right' }}>Amount (₨)</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {[
+                            { label: 'Stock — PMG', qty: chunk[0].pmg.qty, avg: chunk[0].pmg.avg, val: chunk[0].pmg.val },
+                            { label: 'Stock — HSD', qty: chunk[0].hsd.qty, avg: chunk[0].hsd.avg, val: chunk[0].hsd.val },
+                            { label: 'Accounts Receivable', qty: null, avg: null, val: chunk[0].totalReceivables },
+                            { label: 'Accounts Payable (Cr)', qty: null, avg: null, val: chunk[0].totalPayables, isLiab: true },
+                          ].map((r, i) => (
+                            <tr key={i} style={{ borderBottom: '1px solid #eee', fontSize: 11, background: r.isLiab ? '#fff7ed' : '#f0f9ff' }}>
+                              <td style={{ padding: '8px 10px', borderRight: '1px solid #ddd', fontWeight: 'bold' }}>{r.label}</td>
+                              <td style={{ padding: '8px 10px', borderRight: '1px solid #ddd', textAlign: 'right' }}>{r.qty ? r.qty.toLocaleString() : '—'}</td>
+                              <td style={{ padding: '8px 10px', borderRight: '1px solid #ddd', textAlign: 'right' }}>{r.avg ? formatCurrency(r.avg) : '—'}</td>
+                              <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 'bold', color: r.isLiab ? '#dc2626' : '#1d4ed8' }}>
+                                {r.isLiab ? `(Cr) ` : ''}₨ {formatCurrency(r.val)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                        <tfoot style={{ borderTop: '2px solid #111', background: '#f5f5f5', fontWeight: 1000 }}>
+                          <tr style={{ fontSize: 11 }}>
+                            <td colSpan={3} style={{ padding: '8px 10px', borderRight: '1px solid #ddd' }}>TOTAL OPERATING POSITION (NET)</td>
+                            <td style={{ padding: '8px 10px', textAlign: 'right' }}>
+                              ₨ {formatCurrency((chunk[0].pmg.val + chunk[0].hsd.val + chunk[0].totalReceivables) - chunk[0].totalPayables)}
+                            </td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+
+                    {/* SECTION 2: ASSETS vs LIABILITIES */}
+                    <div style={{ background: '#eee', padding: '6px 10px', fontSize: 12, fontWeight: 1000, border: '2px solid #111', borderBottom: 'none' }}>
+                      NON-CURRENT ASSETS & CAPITAL
+                    </div>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', border: '2px solid #111', marginBottom: 25 }}>
+                      <thead style={{ background: '#f5f5f5', borderBottom: '2px solid #111' }}>
+                        <tr style={{ background: '#eee', fontSize: 10 }}>
+                          <th style={{ padding: 6, borderRight: '1px solid #ddd', textAlign: 'left' }}>Fixed Asset Name</th>
+                          <th style={{ padding: 6, borderRight: '2px solid #111', textAlign: 'right' }}>Amount (₨)</th>
+                          <th style={{ padding: 6, borderRight: '1px solid #ddd', textAlign: 'left' }}>Capital & Other Liab.</th>
+                          <th style={{ padding: 6, textAlign: 'right' }}>Amount (₨)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(() => {
+                          const d = chunk[0];
+                          const leftRows = [
+                            ...d.allAssets.map((a: any) => ({ label: a.name, val: a.bal })),
+                          ];
+                          const rightRows = [
+                            ...d.liabilities.map((l: any) => ({ label: l.name, val: l.bal })),
+                            ...d.capital.map((c: any) => ({ label: c.name, val: c.bal })),
+                          ];
+                          
+                          const maxRows = Math.max(leftRows.length, rightRows.length);
+                          return Array.from({ length: maxRows }).map((_, i) => (
+                            <tr key={i} style={{ borderBottom: '1px solid #eee', fontSize: 11 }}>
+                              <td style={{ padding: '8px 10px', borderRight: '1px solid #ddd' }}>{leftRows[i]?.label || ''}</td>
+                              <td style={{ padding: '8px 10px', borderRight: '2px solid #111', textAlign: 'right' }}>{leftRows[i] ? formatCurrency(leftRows[i].val) : ''}</td>
+                              <td style={{ padding: '8px 10px', borderRight: '1px solid #ddd' }}>{rightRows[i]?.label || ''}</td>
+                              <td style={{ padding: '8px 10px', textAlign: 'right' }}>{rightRows[i] ? formatCurrency(rightRows[i].val) : ''}</td>
+                            </tr>
+                          ));
+                        })()}
+                      </tbody>
+                      <tfoot style={{ borderTop: '2px solid #111', background: '#f5f5f5', fontWeight: 1000 }}>
+                        <tr style={{ fontSize: 11 }}>
+                          <td style={{ padding: '8px 10px', borderRight: '1px solid #ddd' }}>SUB-TOTAL</td>
+                          <td style={{ padding: '8px 10px', borderRight: '2px solid #111', textAlign: 'right' }}>₨ {formatCurrency(chunk[0].totalAssets)}</td>
+                          <td style={{ padding: '8px 10px', borderRight: '1px solid #ddd' }}>SUB-TOTAL</td>
+                          <td style={{ padding: '8px 10px', textAlign: 'right' }}>
+                            ₨ {formatCurrency(chunk[0].totalEquity)}
+                          </td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
                 )}
 
                     {isLast && (
                       <div style={{ marginTop: 'auto' }}>
                         <div style={{ marginTop: '12px' }}>
-                          {type !== 'pls' && (
+                          {type === 'balancesheet' && (
+                            <div style={{ border: '2px solid #000', display: 'grid', gridTemplateColumns: '1fr 1fr', background: '#f8f8f8', overflow: 'hidden' }}>
+                              <div style={{ padding: '10px 15px', borderRight: '2px solid #000' }}>
+                                <div style={{ fontSize: '9px', fontWeight: 900, textTransform: 'uppercase' }}>Report Count</div>
+                                <div style={{ fontSize: '18px', fontWeight: 900 }}>1 Records</div>
+                              </div>
+                              <div style={{ padding: '10px 15px', background: '#fff' }}>
+                                <div style={{ fontSize: '9px', fontWeight: 1000, textTransform: 'uppercase' }}>Grand Total (Assets)</div>
+                                <div style={{ fontSize: '22px', fontWeight: 1000, borderBottom: '3px solid #000', display: 'inline-block', lineHeight: 1 }}>
+                                  ₨ {formatCurrency(chunk[0].totalAssets)}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {type !== 'pls' && type !== 'balancesheet' && (
                             <>
                               <div style={{ border: '2px solid #000', display: 'grid', gridTemplateColumns: `repeat(${(isLedger || isCustSum) ? 3 : 2}, minmax(0, 1fr))`, background: '#f8f8f8', overflow: 'hidden' }}>
                                 {isSale || isPurchase ? (
@@ -764,10 +874,10 @@ export default function PrintReportModal({
                       </div>
                     )}
                   </div>
-              </div>
+                </div>
               );
-          })}
-            </div>
-    </div>
-      );
+            })}
+        </div>
+      </div>
+    );
 }
