@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Wallet, Plus, Trash2, Eye, Edit2, Search, Check, X, FileText, Settings, UserPlus, Printer, BarChart3, ArrowRight, ArrowUpDown, Save, Pin, PinOff, Package } from 'lucide-react';
+import { Wallet, Plus, Trash2, Eye, Edit2, Search, Check, X, FileText, Settings, UserPlus, Printer, BarChart3, ArrowRight, ArrowUpDown, Save, Pin, PinOff, Package, PlusCircle } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { formatCurrency, formatDate, today, paginate, filterByStartDate, cn, startOfMonth, startOfYear } from '../lib/utils';
 import { useToast } from '../components/ui/Toast';
@@ -33,7 +33,6 @@ export default function CapitalPage() {
   const [isSidebarHovered, setIsSidebarHovered] = useState(false);
   const isExpanded = isSidebarPinned || isSidebarHovered;
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
-  const [showEntryForm, setShowEntryForm] = useState(false);
   const [showReport, setShowReport] = useState(false);
   const [showSummaryReport, setShowSummaryReport] = useState(false);
   
@@ -53,15 +52,17 @@ export default function CapitalPage() {
   const [toDate, setToDate] = useState('');
   const [page, setPage] = useState(1);
   const [dashPage, setDashPage] = useState(1);
-  const [editingEntity, setEditingEntity] = useState<any>(null);
-  const [viewingEntity, setViewingEntity] = useState<any>(null);
+  const [editingEntityId, setEditingEntityId] = useState<string | null>(null);
   const [perPage, setPerPage] = useState(40);
-  const [form, setForm] = useState({ date: today(), description: '', debit: '', credit: '' });
   const [isSaving, setIsSaving] = useState(false);
   const [dashSort, setDashSort] = useState('name_asc');
   const [entrySort, setEntrySort] = useState('date_desc');
   const [sidebarSort, setSidebarSort] = useState('name_asc');
-  
+
+  // Inline Entry State
+  const [isInlineAdding, setIsInlineAdding] = useState(false);
+  const [inlineForm, setInlineForm] = useState({ date: today(), description: '', debit: '', credit: '' });
+
   useEffect(() => {
     if (!selectedCat && capitalCategories.length > 0) {
       setSelectedCat(capitalCategories[0].id);
@@ -135,57 +136,41 @@ export default function CapitalPage() {
 
   const paged = paginate(withBalance, page, perPage);
 
-  const pageTotals = useMemo(() => ({
-    debit: paged.reduce((s, e) => s + (e.debit || 0), 0),
-    credit: paged.reduce((s, e) => s + (e.credit || 0), 0),
-  }), [paged]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedCat || !form.date) { toast('Fill required fields', 'error'); return; }
+  const handleSaveInline = async () => {
+    if (!selectedCat || !inlineForm.date) { toast('Fill required fields', 'error'); return; }
     
-    const debit = parseFloat(form.debit) || 0;
-    const credit = parseFloat(form.credit) || 0;
-    const payload = { categoryId: selectedCat, date: form.date, description: form.description, debit, credit, balance: 0 };
+    const debit = parseFloat(inlineForm.debit) || 0;
+    const credit = parseFloat(inlineForm.credit) || 0;
+    const payload = { categoryId: selectedCat, date: inlineForm.date, description: inlineForm.description, debit, credit, balance: 0 };
     
     setIsSaving(true);
     try {
-      if (editingEntity) {
-        await updateCapitalEntry(editingEntity.id, payload);
+      if (editingEntityId) {
+        await updateCapitalEntry(editingEntityId, payload);
         toast('Entry updated', 'success');
-        closeForm();
+        setEditingEntityId(null);
       } else {
         await addCapitalEntry(payload);
         toast('Entry added', 'success');
-        resetFormForNext();
       }
+      setIsInlineAdding(false);
+      setInlineForm({ date: today(), description: '', debit: '', credit: '' });
     } catch (err: any) {
-      toast(`Failed to save: ${err.message || 'Unknown error'}`, 'error');
+      toast(`Failed to save: ${err.message}`, 'error');
     } finally {
       setIsSaving(false);
     }
   };
 
-  const resetFormForNext = () => {
-    setEditingEntity(null);
-    setForm(prev => ({ ...prev, description: '', debit: '', credit: '' }));
-  };
-
-  const closeForm = () => {
-    setShowEntryForm(false);
-    setEditingEntity(null);
-    setForm({ date: today(), description: '', debit: '', credit: '' });
-  };
-
-  const handleEdit = (e: any) => {
-    setEditingEntity(e);
-    setForm({
+  const handleEditInline = (e: any) => {
+    setEditingEntityId(e.id);
+    setInlineForm({
       date: e.date,
       description: e.description || '',
       debit: e.debit ? e.debit.toString() : '',
       credit: e.credit ? e.credit.toString() : '',
     });
-    setShowEntryForm(true);
+    setIsInlineAdding(true);
   };
 
   const totals = useMemo(() => ({
@@ -225,7 +210,7 @@ export default function CapitalPage() {
   };
 
   return (
-    <div className="animate-fade-in flex flex-col h-full w-full overflow-hidden">
+    <div className="animate-fade-in flex flex-col h-full w-full overflow-hidden font-sans">
       {/* Parallel Horizontal Tabs */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 pb-0 w-full">
         <div className="flex bg-slate-100 dark:bg-dark-800 p-1 rounded-2xl border border-slate-200 dark:border-dark-700/50 w-full md:w-auto">
@@ -258,9 +243,6 @@ export default function CapitalPage() {
           <div className="flex gap-2">
             <button onClick={() => setShowReport(true)} className="px-4 py-2 bg-slate-100 dark:bg-dark-700 text-slate-700 dark:text-dark-200 rounded-lg hover:bg-slate-200 transition-colors font-bold text-sm flex items-center gap-2 border border-slate-200 dark:border-dark-700">
               <Printer className="w-4 h-4" /> Print Report
-            </button>
-            <button onClick={() => { closeForm(); setShowEntryForm(true); }} className="btn-primary flex items-center gap-2">
-              <Plus className="w-4 h-4" /> New Entry
             </button>
           </div>
         )}
@@ -300,10 +282,10 @@ export default function CapitalPage() {
               <div className="flex-1 flex items-center gap-3 max-w-2xl">
                 <SearchBar value={dashboardSearch} onChange={setDashboardSearch} placeholder="Search accounts..." fullWidth={true} />
                 <select value={dashSort} onChange={(e) => setDashSort(e.target.value)} className="input !py-2.5 !w-48 text-xs font-black uppercase tracking-wider">
-                  <option value="name_asc">A to Z</option>
-                  <option value="name_desc">Z to A</option>
-                  <option value="val_desc">Highest Valuation</option>
-                  <option value="val_asc">Lowest Valuation</option>
+                   <option value="name_asc">A to Z</option>
+                   <option value="name_desc">Z to A</option>
+                   <option value="val_desc">Highest Valuation</option>
+                   <option value="val_asc">Lowest Valuation</option>
                 </select>
               </div>
             </div>
@@ -360,16 +342,15 @@ export default function CapitalPage() {
           </div>
         ) : activeTab === 'database' ? (
           <div className="flex-1 flex gap-4 h-full w-full p-4 overflow-hidden">
-             {/* Sidebar List (Similar to Asset) */}
+             {/* Sidebar List */}
              <div className={cn("flex-shrink-0 flex flex-col gap-3 h-full transition-all border border-slate-200 dark:border-dark-700/50 bg-white/50 dark:bg-dark-900/50 rounded-2xl", isExpanded ? "w-64" : "w-16")}>
-               {/* Sidebar content simplified for brevity, following Asset.tsx pattern */}
                <div className="p-3 border-b border-slate-100 flex items-center justify-between">
                  {isExpanded && <h2 className="text-[10px] font-black uppercase tracking-widest">Accounts</h2>}
                  <button onClick={() => setIsSidebarPinned(!isSidebarPinned)} className="p-1">{isSidebarPinned ? <PinOff className="w-3.5 h-3.5" /> : <Pin className="w-3.5 h-3.5" />}</button>
                </div>
                <div className="overflow-y-auto p-2 space-y-1">
                  {filteredSidebar.map(c => (
-                   <div key={c.id} onClick={() => { setSelectedCat(c.id); setPage(1); }} className={cn("flex items-center gap-3 px-3 py-3 rounded-xl cursor-pointer transition-all", selectedCat === c.id ? "bg-primary-600 text-white" : "hover:bg-slate-100")}>
+                   <div key={c.id} onClick={() => { setSelectedCat(c.id); setPage(1); }} className={cn("flex items-center gap-3 px-3 py-3 rounded-xl cursor-pointer transition-all", selectedCat === c.id ? "bg-primary-600 text-white shadow-lg" : "hover:bg-slate-100")}>
                      <Wallet className="w-4 h-4 flex-shrink-0" />
                      {isExpanded && <p className="truncate text-xs font-black uppercase">{c.name}</p>}
                    </div>
@@ -381,42 +362,69 @@ export default function CapitalPage() {
              <div className="flex-1 min-w-0 flex flex-col h-full">
                {cat ? (
                  <>
-                   <div className="flex items-center gap-4 mb-6">
-                     <div className="w-14 h-14 rounded-2xl bg-primary-600/10 flex items-center justify-center"><Wallet className="w-8 h-8 text-primary-600" /></div>
-                     <h1 className="text-3xl font-black">{cat.name} Ledger</h1>
+                   <div className="flex items-center justify-between mb-6">
+                      <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 rounded-2xl bg-primary-600/10 flex items-center justify-center"><Wallet className="w-8 h-8 text-primary-600" /></div>
+                        <div>
+                          <h1 className="text-3xl font-black tracking-tighter uppercase">{cat.name} Ledger</h1>
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Transaction History</p>
+                        </div>
+                      </div>
+                      <button onClick={() => { setEditingEntityId(null); setInlineForm({ date: today(), description: '', debit: '', credit: '' }); setIsInlineAdding(true); }} className="btn-primary flex items-center gap-2 !rounded-2xl">
+                        <Plus className="w-5 h-5" /> New Entry
+                      </button>
                    </div>
-                   <div className="flex-1 glass rounded-2xl overflow-hidden border border-slate-200 dark:border-dark-700/50 flex flex-col">
+
+                   <div className="flex-1 glass rounded-[2rem] overflow-hidden border border-slate-200 dark:border-dark-700/50 flex flex-col shadow-2xl bg-white dark:bg-dark-900">
                      <div className="p-4 border-b flex items-center justify-between bg-slate-50/50">
                         <SearchBar value={search} onChange={setSearch} placeholder="Search ledger..." />
                         <div className="flex items-center gap-2">
-                           <input type="date" className="input !py-1 !text-xs" value={fromDate} onChange={e => setFromDate(e.target.value)} />
-                           <input type="date" className="input !py-1 !text-xs" value={toDate} onChange={e => setToDate(e.target.value)} />
+                           <input type="date" className="input !py-1 !text-xs !rounded-lg" value={fromDate} onChange={e => setFromDate(e.target.value)} />
+                           <span className="text-slate-300 font-black">TO</span>
+                           <input type="date" className="input !py-1 !text-xs !rounded-lg" value={toDate} onChange={e => setToDate(e.target.value)} />
                         </div>
                      </div>
-                     <div className="flex-1 overflow-auto">
-                        <table className="table-excel">
-                           <thead className="sticky top-0 z-10 bg-slate-200">
-                             <tr className="table-header">
-                               <th className="px-4 py-3 text-left">Date</th>
-                               <th className="px-4 py-3 text-left">Description</th>
-                               <th className="px-4 py-3 text-right">Debit (In)</th>
-                               <th className="px-4 py-3 text-right">Credit (Out)</th>
-                               <th className="px-4 py-3 text-right">Balance</th>
-                               <th className="px-4 py-3 text-center">Actions</th>
+                     <div className="flex-1 overflow-auto smart-scroll">
+                        <table className="w-full border-collapse">
+                           <thead className="sticky top-0 z-10 bg-slate-900 text-white font-mono">
+                             <tr className="text-[10px] uppercase tracking-widest">
+                               <th className="px-6 py-4 text-left border-r border-slate-700">Date</th>
+                               <th className="px-6 py-4 text-left border-r border-slate-700">Description</th>
+                               <th className="px-6 py-4 text-right border-r border-slate-700">Debit (In)</th>
+                               <th className="px-6 py-4 text-right border-r border-slate-700">Credit (Out)</th>
+                               <th className="px-6 py-4 text-right border-r border-slate-700">Balance</th>
+                               <th className="px-6 py-4 text-center">Actions</th>
                              </tr>
                            </thead>
-                           <tbody>
+                           <tbody className="divide-y divide-slate-100 dark:divide-dark-800">
+                             {/* Inline Add Row */}
+                             {isInlineAdding && (
+                               <tr className="bg-primary-50/50 dark:bg-primary-900/10 animate-slide-down border-b-2 border-primary-500">
+                                 <td className="px-4 py-3"><input type="date" className="w-full bg-white dark:bg-dark-800 border border-primary-300 rounded px-2 py-1 outline-none text-xs" value={inlineForm.date} onChange={e => setInlineForm({...inlineForm, date: e.target.value})} /></td>
+                                 <td className="px-4 py-3"><input type="text" className="w-full bg-white dark:bg-dark-800 border border-primary-300 rounded px-2 py-1 outline-none text-xs" placeholder="Description..." value={inlineForm.description} onChange={e => setInlineForm({...inlineForm, description: e.target.value})} /></td>
+                                 <td className="px-4 py-3"><input type="number" className="w-full bg-white dark:bg-dark-800 border border-primary-300 rounded px-2 py-1 outline-none text-xs text-right" placeholder="0.00" value={inlineForm.debit} onChange={e => setInlineForm({...inlineForm, debit: e.target.value})} /></td>
+                                 <td className="px-4 py-3"><input type="number" className="w-full bg-white dark:bg-dark-800 border border-primary-300 rounded px-2 py-1 outline-none text-xs text-right" placeholder="0.00" value={inlineForm.credit} onChange={e => setInlineForm({...inlineForm, credit: e.target.value})} /></td>
+                                 <td className="px-4 py-3 text-right text-slate-400 font-bold italic">Draft</td>
+                                 <td className="px-4 py-3 text-center">
+                                   <div className="flex justify-center gap-2">
+                                     <button onClick={handleSaveInline} className="p-1.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 shadow-sm" disabled={isSaving}><Save className="w-4 h-4" /></button>
+                                     <button onClick={() => { setIsInlineAdding(false); setEditingEntityId(null); }} className="p-1.5 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300"><X className="w-4 h-4" /></button>
+                                   </div>
+                                 </td>
+                               </tr>
+                             )}
+
                              {paged.map(e => (
-                               <tr key={e.id} className="group">
-                                 <td className="text-[11px] font-medium">{formatDate(e.date)}</td>
-                                 <td className="text-[13px]">{e.description || '—'}</td>
-                                 <td className="amount !text-emerald-600">{e.debit ? formatCurrency(e.debit) : '—'}</td>
-                                 <td className="amount !text-orange-600">{e.credit ? formatCurrency(e.credit) : '—'}</td>
-                                 <td className="amount font-black">₨ {formatCurrency(e.balance)}</td>
-                                 <td className="text-center">
-                                   <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100">
-                                     <button onClick={() => handleEdit(e)} className="p-1 text-primary-600 hover:bg-primary-50 rounded"><Edit2 className="w-3.5 h-3.5" /></button>
-                                     <button onClick={() => { if(confirm('Delete?')) deleteCapitalEntry(e.id); }} className="p-1 text-red-600 hover:bg-red-50 rounded"><Trash2 className="w-3.5 h-3.5" /></button>
+                               <tr key={e.id} className="group hover:bg-slate-50 transition-colors border-b border-slate-50 font-mono text-[11px]">
+                                 <td className="px-6 py-4 font-bold text-slate-500 border-r border-slate-100">{formatDate(e.date)}</td>
+                                 <td className="px-6 py-4 text-slate-800 font-medium border-r border-slate-100">{e.description || '—'}</td>
+                                 <td className="px-6 py-4 text-right text-emerald-600 font-black border-r border-slate-100">{e.debit ? formatCurrency(e.debit) : '—'}</td>
+                                 <td className="px-6 py-4 text-right text-orange-600 font-black border-r border-slate-100">{e.credit ? formatCurrency(e.credit) : '—'}</td>
+                                 <td className="px-6 py-4 text-right font-black text-slate-900 border-r border-slate-100 bg-slate-50/30 whitespace-nowrap">₨ {formatCurrency(e.balance)}</td>
+                                 <td className="px-6 py-4 text-center">
+                                   <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                     <button onClick={() => handleEditInline(e)} className="p-1.5 text-primary-600 hover:bg-primary-50 rounded-lg"><Edit2 className="w-3.5 h-3.5" /></button>
+                                     <button onClick={() => { if(confirm('Delete?')) deleteCapitalEntry(e.id); }} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg"><Trash2 className="w-3.5 h-3.5" /></button>
                                    </div>
                                  </td>
                                </tr>
@@ -425,48 +433,48 @@ export default function CapitalPage() {
                         </table>
                      </div>
                      <Pagination page={page} total={withBalance.length} perPage={perPage} onChange={setPage} onPerPageChange={setPerPage} />
-                   </div>
+                  </div>
                  </>
                ) : (
-                 <div className="flex flex-col items-center justify-center h-full opacity-40"><Wallet className="w-16 h-16 mb-4" /><p>Select a capital account</p></div>
+                 <div className="flex flex-col items-center justify-center h-full opacity-40"><Wallet className="w-16 h-16 mb-4 text-primary-600" /><p className="font-black uppercase tracking-widest text-xs">Select a capital account to view ledger</p></div>
                )}
              </div>
           </div>
         ) : activeTab === 'register' ? (
           <div className="flex-1 p-8">
-            <div className="max-w-2xl mx-auto glass p-8 rounded-3xl shadow-2xl">
+            <div className="max-w-2xl mx-auto glass p-8 rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-dark-700/50">
               <div className="flex items-center gap-4 mb-8">
-                <div className="w-14 h-14 rounded-2xl bg-primary-600/10 flex items-center justify-center"><Plus className="w-7 h-7 text-primary-600" /></div>
+                <div className="w-14 h-14 rounded-2xl bg-primary-600/10 flex items-center justify-center"><UserPlus className="w-7 h-7 text-primary-600" /></div>
                 <h2 className="text-2xl font-black uppercase tracking-tighter">New Capital Registration</h2>
               </div>
               <form onSubmit={handleAddCategory} className="space-y-6">
                 <div>
                   <label className="label text-[10px] font-black uppercase tracking-widest mb-2 block">Account Name *</label>
-                  <input className="input !py-4 !font-bold" placeholder="e.g. Owner Capital, Partner Share, etc." value={newName} onChange={e => setNewName(e.target.value)} required />
+                  <input className="input !py-4 !font-bold !rounded-2xl" placeholder="e.g. Owner Capital, Partner Share, etc." value={newName} onChange={e => setNewName(e.target.value)} required />
                 </div>
-                <button type="submit" className="btn-primary !w-full !py-4 font-black text-lg">Complete Registration</button>
+                <button type="submit" className="btn-primary !w-full !py-4 font-black text-lg !rounded-2xl shadow-xl shadow-primary-600/20">Complete Registration</button>
               </form>
             </div>
           </div>
         ) : (
           <div className="flex-1 p-8">
-            <div className="max-w-4xl mx-auto glass rounded-3xl overflow-hidden border">
+            <div className="max-w-4xl mx-auto glass rounded-[2.5rem] overflow-hidden border border-slate-100 shadow-2xl">
               <div className="p-6 border-b bg-slate-50/50 flex items-center justify-between">
                 <h2 className="text-sm font-black uppercase tracking-widest">Manage Accounts</h2>
                 <SearchBar value={manageSearch} onChange={setManageSearch} placeholder="Filter accounts..." />
               </div>
-              <div className="divide-y">
+              <div className="divide-y overflow-y-auto smart-scroll max-h-[60vh]">
                 {filteredManage.map(cat => (
                   <div key={cat.id} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
                     {editingId === cat.id ? (
                       <div className="flex-1 flex gap-2">
-                        <input className="input !py-1" value={editForm.name} onChange={e => setEditForm({ name: e.target.value })} autoFocus />
+                        <input className="input !py-1 !rounded-lg" value={editForm.name} onChange={e => setEditForm({ name: e.target.value })} autoFocus />
                         <button onClick={() => handleSaveEdit(cat.id)} className="p-2 bg-emerald-600 text-white rounded-lg"><Check className="w-4 h-4" /></button>
                         <button onClick={() => setEditingId(null)} className="p-2 bg-slate-200 rounded-lg"><X className="w-4 h-4" /></button>
                       </div>
                     ) : (
                       <>
-                        <span className="font-bold text-slate-700">{cat.name}</span>
+                        <span className="font-bold text-slate-700 dark:text-slate-200 uppercase tracking-tight">{cat.name}</span>
                         <div className="flex items-center gap-2">
                           <button onClick={() => handleStartEdit(cat)} className="p-2 text-primary-600 hover:bg-primary-50 rounded-lg"><Edit2 className="w-4 h-4" /></button>
                           <button onClick={() => { if(confirm('Delete account and all its entries?')) deleteCapitalCategory(cat.id); }} className="p-2 text-red-600 hover:bg-red-50 rounded-lg"><Trash2 className="w-4 h-4" /></button>
@@ -480,21 +488,6 @@ export default function CapitalPage() {
           </div>
         )}
       </div>
-
-      {/* Entry Modal */}
-      {showEntryForm && selectedCat && (
-        <Modal isOpen={showEntryForm} onClose={closeForm} title={editingEntity ? 'Edit Capital Entry' : 'New Capital Entry'} size="lg">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div><label className="label">Date</label><input type="date" className="input" value={form.date} onChange={e => setForm({...form, date: e.target.value})} required /></div>
-              <div><label className="label">Description</label><input className="input" value={form.description} onChange={e => setForm({...form, description: e.target.value})} placeholder="Investment, Withdrawal, etc." /></div>
-              <div><label className="label">Debit (Addition)</label><input type="number" step="0.01" className="input" value={form.debit} onChange={e => setForm({...form, debit: e.target.value})} /></div>
-              <div><label className="label">Credit (Withdrawal)</label><input type="number" step="0.01" className="input" value={form.credit} onChange={e => setForm({...form, credit: e.target.value})} /></div>
-            </div>
-            <div className="flex justify-end gap-3 pt-4"><button type="button" onClick={closeForm} className="px-6 py-2 border rounded-xl">Cancel</button><button type="submit" className="btn-primary !px-8" disabled={isSaving}>{isSaving ? 'Saving...' : 'Save Entry'}</button></div>
-          </form>
-        </Modal>
-      )}
 
       {/* Report Modals */}
       {showReport && cat && (

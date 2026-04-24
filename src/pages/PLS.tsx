@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { 
-  Calculator, ShoppingCart, DollarSign, Layers, Activity, FileText
+  Calculator, ShoppingCart, DollarSign, Layers, Activity, FileText, TrendingUp, ArrowDownCircle, PieChart, ArrowRightCircle, Target
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { formatCurrency, cn } from '../lib/utils';
@@ -39,7 +39,7 @@ export default function PLS() {
       const detailedExpenses = expenseEntries.map(e => {
         const cat = expenseCategories.find(c => c.id === e.categoryId);
         return { ...e, categoryName: cat?.name || 'Unknown' };
-      }).sort((a, b) => new Date(a.date).getTime() - new Date(a.date).getTime());
+      }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
       const totalExpenses = detailedExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
 
@@ -58,202 +58,210 @@ export default function PLS() {
   const grossProfit = sum2 - sum1;
   const netProfit = grossProfit - (data.totalExpenses || 0);
 
+  // Helper for massive numbers to avoid layout break
+  const smartFormat = (val: number) => {
+    const formatted = formatCurrency(val);
+    if (val > 1000000) return formatted.replace('.00', '');
+    return formatted;
+  };
+
   return (
-    <div className="flex flex-col h-full w-full bg-white dark:bg-dark-950 font-mono text-[11px]">
+    <div className="flex flex-col h-full w-full bg-white dark:bg-dark-950 font-mono text-[11px] overflow-hidden">
       {/* Excel Header */}
-      <div className="bg-slate-100 dark:bg-dark-900 border-b border-slate-300 dark:border-dark-800 p-4 flex items-center justify-between">
+      <div className="bg-slate-100 dark:bg-dark-900 border-b border-slate-300 dark:border-dark-800 p-4 flex items-center justify-between shadow-sm shrink-0">
         <div className="flex items-center gap-3">
           <FileText className="w-5 h-5 text-slate-500" />
           <h1 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-tighter">Profit & Loss Statement (Excel View)</h1>
         </div>
         <div className="flex gap-4">
           <div className="bg-white dark:bg-dark-800 border border-slate-300 dark:border-dark-700 px-3 py-1 rounded shadow-sm">
-             <span className="text-slate-400 mr-2">NET PROFIT:</span>
-             <span className={cn("font-bold", netProfit >= 0 ? "text-emerald-600" : "text-red-600")}>₨ {formatCurrency(netProfit)}</span>
+             <span className="text-slate-400 mr-2 uppercase text-[9px] font-black">Net Profit:</span>
+             <span className={cn("font-bold text-sm", netProfit >= 0 ? "text-emerald-600" : "text-red-600")}>₨ {smartFormat(netProfit)}</span>
           </div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto p-4 lg:p-8">
-        <div className="max-w-[1400px] mx-auto space-y-8">
+      <div className="flex-1 overflow-auto smart-scroll p-4 lg:p-8 space-y-8 pb-20">
+        <div className="max-w-[1400px] mx-auto space-y-10 pb-20">
           
           {/* 1. TRADING ACCOUNT TABLE */}
-          <div className="border border-slate-300 dark:border-dark-700 rounded-lg overflow-hidden shadow-sm">
-            <div className="bg-slate-800 text-white px-4 py-2 font-bold text-xs uppercase text-center tracking-widest border-b border-slate-300">
-              Trading Account (Gross Profit Calculation)
+          <div className="border border-slate-300 dark:border-dark-700 rounded overflow-hidden shadow-sm bg-white dark:bg-dark-900">
+            <div className="bg-slate-800 text-white px-4 py-2 font-bold text-[10px] uppercase text-center tracking-widest border-b border-slate-300">
+              Part 1: Trading Account (Gross Profit)
             </div>
             <div className="grid grid-cols-2 divide-x divide-slate-300 dark:divide-dark-700">
-              
-              {/* DEBIT SIDE (PURCHASES) */}
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="bg-slate-50 dark:bg-dark-900 border-b border-slate-300 dark:border-dark-700">
-                    <th className="px-4 py-2 text-left border-r border-slate-200 dark:border-dark-800 w-2/5">Particulars (Debit)</th>
-                    <th className="px-3 py-2 text-right border-r border-slate-200 dark:border-dark-800">Liters</th>
-                    <th className="px-3 py-2 text-right border-r border-slate-200 dark:border-dark-800">Rate</th>
-                    <th className="px-4 py-2 text-right bg-slate-100/50 dark:bg-dark-800">Amount</th>
+                    <th className="px-4 py-2 text-left border-r border-slate-200 dark:border-dark-800 w-2/5 uppercase tracking-widest text-[9px] text-slate-500">Particulars (Debit)</th>
+                    <th className="px-3 py-2 text-right border-r border-slate-200 dark:border-dark-800 uppercase tracking-widest text-[9px] text-slate-500">Liters</th>
+                    <th className="px-3 py-2 text-right border-r border-slate-200 dark:border-dark-800 uppercase tracking-widest text-[9px] text-slate-500">Rate</th>
+                    <th className="px-4 py-2 text-right bg-slate-100/50 dark:bg-dark-800 uppercase tracking-widest text-[9px] text-slate-500">Amount</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 dark:divide-dark-800">
-                  <tr className="hover:bg-slate-50 dark:hover:bg-dark-800/50">
-                    <td className="px-4 py-3 font-bold text-slate-700 dark:text-dark-200 border-r border-slate-200 dark:border-dark-800">Purchase (PMG)</td>
-                    <td className="px-3 py-3 text-right tabular-nums border-r border-slate-200 dark:border-dark-800">{data.pmg?.purchase.qty.toLocaleString()}</td>
-                    <td className="px-3 py-3 text-right tabular-nums border-r border-slate-200 dark:border-dark-800">{formatCurrency(data.pmg?.purchase.avg)}</td>
-                    <td className="px-4 py-3 text-right font-bold tabular-nums text-indigo-600 bg-slate-100/30 dark:bg-dark-800/20">{formatCurrency(data.pmg?.purchase.amt)}</td>
+                  <tr className="hover:bg-slate-50">
+                    <td className="px-4 py-3 font-bold text-slate-700 dark:text-dark-200 border-r border-slate-200 uppercase">Purchase (PMG)</td>
+                    <td className="px-3 py-3 text-right tabular-nums border-r border-slate-200">{data.pmg?.purchase.qty.toLocaleString()}</td>
+                    <td className="px-3 py-3 text-right tabular-nums border-r border-slate-200">{formatCurrency(data.pmg?.purchase.avg || 0)}</td>
+                    <td className="px-4 py-3 text-right tabular-nums font-black text-slate-900 dark:text-white bg-slate-50/30">₨ {smartFormat(data.pmg?.purchase.amt || 0)}</td>
                   </tr>
-                  <tr className="hover:bg-slate-50 dark:hover:bg-dark-800/50">
-                    <td className="px-4 py-3 font-bold text-slate-700 dark:text-dark-200 border-r border-slate-200 dark:border-dark-800">Purchase (HSD)</td>
-                    <td className="px-3 py-3 text-right tabular-nums border-r border-slate-200 dark:border-dark-800">{data.hsd?.purchase.qty.toLocaleString()}</td>
-                    <td className="px-3 py-3 text-right tabular-nums border-r border-slate-200 dark:border-dark-800">{formatCurrency(data.hsd?.purchase.avg)}</td>
-                    <td className="px-4 py-3 text-right font-bold tabular-nums text-indigo-600 bg-slate-100/30 dark:bg-dark-800/20">{formatCurrency(data.hsd?.purchase.amt)}</td>
+                  <tr className="hover:bg-slate-50">
+                    <td className="px-4 py-3 font-bold text-slate-700 dark:text-dark-200 border-r border-slate-200 uppercase">Purchase (HSD)</td>
+                    <td className="px-3 py-3 text-right tabular-nums border-r border-slate-200">{data.hsd?.purchase.qty.toLocaleString()}</td>
+                    <td className="px-3 py-3 text-right tabular-nums border-r border-slate-200">{formatCurrency(data.hsd?.purchase.avg || 0)}</td>
+                    <td className="px-4 py-3 text-right tabular-nums font-black text-slate-900 dark:text-white bg-slate-50/30">₨ {smartFormat(data.hsd?.purchase.amt || 0)}</td>
                   </tr>
                 </tbody>
-                <tfoot className="bg-slate-200 dark:bg-dark-800 text-slate-900 dark:text-white font-bold border-t-2 border-slate-400">
+                <tfoot className="bg-slate-200 dark:bg-dark-800 text-slate-900 dark:text-white font-black border-t-2 border-slate-400">
                   <tr>
-                    <td className="px-4 py-3 border-r border-slate-300 uppercase tracking-widest text-[9px]">Sum 1 (Total)</td>
-                    <td colSpan={2} className="border-r border-slate-300"></td>
-                    <td className="px-4 py-3 text-right tabular-nums">₨ {formatCurrency(sum1)}</td>
+                    <td className="px-4 py-3 border-r border-slate-300 uppercase tracking-widest text-[9px]" colSpan={3}>Debit Total</td>
+                    <td className="px-4 py-3 text-right tabular-nums text-xs">₨ {smartFormat(sum1)}</td>
                   </tr>
                 </tfoot>
               </table>
-
-              {/* CREDIT SIDE (SALES & STOCK) */}
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="bg-slate-50 dark:bg-dark-900 border-b border-slate-300 dark:border-dark-700">
-                    <th className="px-4 py-2 text-left border-r border-slate-200 dark:border-dark-800 w-2/5">Particulars (Credit)</th>
-                    <th className="px-3 py-2 text-right border-r border-slate-200 dark:border-dark-800">Liters</th>
-                    <th className="px-3 py-2 text-right border-r border-slate-200 dark:border-dark-800">Rate</th>
-                    <th className="px-4 py-2 text-right bg-slate-100/50 dark:bg-dark-800">Amount</th>
+                    <th className="px-4 py-2 text-left border-r border-slate-200 dark:border-dark-800 w-2/5 uppercase tracking-widest text-[9px] text-slate-500">Particulars (Credit)</th>
+                    <th className="px-3 py-2 text-right border-r border-slate-200 dark:border-dark-800 uppercase tracking-widest text-[9px] text-slate-500">Liters</th>
+                    <th className="px-3 py-2 text-right border-r border-slate-200 dark:border-dark-800 uppercase tracking-widest text-[9px] text-slate-500">Rate</th>
+                    <th className="px-4 py-2 text-right bg-slate-100/50 dark:bg-dark-800 uppercase tracking-widest text-[9px] text-slate-500">Amount</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 dark:divide-dark-800">
-                  <tr className="hover:bg-slate-50 dark:hover:bg-dark-800/50">
-                    <td className="px-4 py-3 font-bold text-slate-700 dark:text-dark-200 border-r border-slate-200 dark:border-dark-800">Sales (PMG)</td>
-                    <td className="px-3 py-3 text-right tabular-nums border-r border-slate-200 dark:border-dark-800">{data.pmg?.sale.qty.toLocaleString()}</td>
-                    <td className="px-3 py-3 text-right tabular-nums border-r border-slate-200 dark:border-dark-800">{formatCurrency(data.pmg?.sale.avg)}</td>
-                    <td className="px-4 py-3 text-right font-bold tabular-nums text-emerald-600 bg-slate-100/30 dark:bg-dark-800/20">{formatCurrency(data.pmg?.sale.amt)}</td>
+                  <tr className="hover:bg-slate-50">
+                    <td className="px-4 py-2.5 font-bold text-slate-700 dark:text-dark-200 border-r border-slate-200 uppercase">Sales (PMG)</td>
+                    <td className="px-3 py-2.5 text-right tabular-nums border-r border-slate-200">{data.pmg?.sale.qty.toLocaleString()}</td>
+                    <td className="px-3 py-2.5 text-right tabular-nums border-r border-slate-200">{formatCurrency(data.pmg?.sale.avg || 0)}</td>
+                    <td className="px-4 py-2.5 text-right tabular-nums font-black text-slate-900 dark:text-white bg-slate-50/30">₨ {smartFormat(data.pmg?.sale.amt || 0)}</td>
                   </tr>
-                  <tr className="hover:bg-slate-50 dark:hover:bg-dark-800/50">
-                    <td className="px-4 py-3 font-bold text-slate-700 dark:text-dark-200 border-r border-slate-200 dark:border-dark-800">Sales (HSD)</td>
-                    <td className="px-3 py-3 text-right tabular-nums border-r border-slate-200 dark:border-dark-800">{data.hsd?.sale.qty.toLocaleString()}</td>
-                    <td className="px-3 py-3 text-right tabular-nums border-r border-slate-200 dark:border-dark-800">{formatCurrency(data.hsd?.sale.avg)}</td>
-                    <td className="px-4 py-3 text-right font-bold tabular-nums text-emerald-600 bg-slate-100/30 dark:bg-dark-800/20">{formatCurrency(data.hsd?.sale.amt)}</td>
+                  <tr className="hover:bg-slate-50">
+                    <td className="px-4 py-2.5 font-bold text-slate-700 dark:text-dark-200 border-r border-slate-200 uppercase">Sales (HSD)</td>
+                    <td className="px-3 py-2.5 text-right tabular-nums border-r border-slate-200">{data.hsd?.sale.qty.toLocaleString()}</td>
+                    <td className="px-3 py-2.5 text-right tabular-nums border-r border-slate-200">{formatCurrency(data.hsd?.sale.avg || 0)}</td>
+                    <td className="px-4 py-2.5 text-right tabular-nums font-black text-slate-900 dark:text-white bg-slate-50/30">₨ {smartFormat(data.hsd?.sale.amt || 0)}</td>
                   </tr>
-                  <tr className="hover:bg-slate-50 dark:hover:bg-dark-800/50">
-                    <td className="px-4 py-3 font-bold text-slate-700 dark:text-dark-200 border-r border-slate-200 dark:border-dark-800">Closing Stock (PMG)</td>
-                    <td className="px-3 py-3 text-right tabular-nums border-r border-slate-200 dark:border-dark-800">{data.pmg?.stock.qty.toLocaleString()}</td>
-                    <td className="px-3 py-3 text-right tabular-nums border-r border-slate-200 dark:border-dark-800">{formatCurrency(data.pmg?.stock.avg)}</td>
-                    <td className="px-4 py-3 text-right font-bold tabular-nums text-blue-600 bg-slate-100/30 dark:bg-dark-800/20">{formatCurrency(data.pmg?.stock.amt)}</td>
+                  <tr className="hover:bg-slate-50">
+                    <td className="px-4 py-2.5 font-bold text-slate-700 dark:text-dark-200 border-r border-slate-200 uppercase pl-8 italic">Stock PMG</td>
+                    <td className="px-3 py-2.5 text-right tabular-nums border-r border-slate-200">{data.pmg?.stock.qty.toLocaleString()}</td>
+                    <td className="px-3 py-2.5 text-right tabular-nums border-r border-slate-200">{formatCurrency(data.pmg?.stock.avg || 0)}</td>
+                    <td className="px-4 py-2.5 text-right tabular-nums font-black text-slate-900 dark:text-white bg-slate-50/30">₨ {smartFormat(data.pmg?.stock.amt || 0)}</td>
                   </tr>
-                  <tr className="hover:bg-slate-50 dark:hover:bg-dark-800/50">
-                    <td className="px-4 py-3 font-bold text-slate-700 dark:text-dark-200 border-r border-slate-200 dark:border-dark-800">Closing Stock (HSD)</td>
-                    <td className="px-3 py-3 text-right tabular-nums border-r border-slate-200 dark:border-dark-800">{data.hsd?.stock.qty.toLocaleString()}</td>
-                    <td className="px-3 py-3 text-right tabular-nums border-r border-slate-200 dark:border-dark-800">{formatCurrency(data.hsd?.stock.avg)}</td>
-                    <td className="px-4 py-3 text-right font-bold tabular-nums text-blue-600 bg-slate-100/30 dark:bg-dark-800/20">{formatCurrency(data.hsd?.stock.amt)}</td>
+                  <tr className="hover:bg-slate-50">
+                    <td className="px-4 py-2.5 font-bold text-slate-700 dark:text-dark-200 border-r border-slate-200 uppercase pl-8 italic">Stock HSD</td>
+                    <td className="px-3 py-2.5 text-right tabular-nums border-r border-slate-200">{data.hsd?.stock.qty.toLocaleString()}</td>
+                    <td className="px-3 py-2.5 text-right tabular-nums border-r border-slate-200">{formatCurrency(data.hsd?.stock.avg || 0)}</td>
+                    <td className="px-4 py-2.5 text-right tabular-nums font-black text-slate-900 dark:text-white bg-slate-50/30">₨ {smartFormat(data.hsd?.stock.amt || 0)}</td>
                   </tr>
                 </tbody>
-                <tfoot className="bg-slate-200 dark:bg-dark-800 text-slate-900 dark:text-white font-bold border-t-2 border-slate-400">
+                <tfoot className="bg-slate-200 dark:bg-dark-800 text-slate-900 dark:text-white font-black border-t-2 border-slate-400">
                   <tr>
-                    <td className="px-4 py-3 border-r border-slate-300 uppercase tracking-widest text-[9px]">Sum 2 (Total)</td>
-                    <td colSpan={2} className="border-r border-slate-300"></td>
-                    <td className="px-4 py-3 text-right tabular-nums">₨ {formatCurrency(sum2)}</td>
+                    <td className="px-4 py-3 border-r border-slate-300 uppercase tracking-widest text-[9px]" colSpan={3}>Credit Total</td>
+                    <td className="px-4 py-3 text-right tabular-nums text-xs">₨ {smartFormat(sum2)}</td>
                   </tr>
                 </tfoot>
               </table>
             </div>
           </div>
 
-          {/* 2. PROFIT & LOSS ACCOUNT TABLE (NET PROFIT) */}
-          <div className="border border-slate-300 dark:border-dark-700 rounded-lg overflow-hidden shadow-sm">
-            <div className="bg-slate-700 text-white px-4 py-2 font-bold text-xs uppercase text-center tracking-widest border-b border-slate-300">
-              Profit & Loss Account (Net Profit Calculation)
+          {/* 2. PROFIT & LOSS ACCOUNT TABLE */}
+          <div className="border border-slate-300 dark:border-dark-700 rounded overflow-hidden shadow-sm bg-white dark:bg-dark-900">
+            <div className="bg-slate-700 text-white px-4 py-2 font-bold text-[10px] uppercase text-center tracking-widest border-b border-slate-300">
+              Part 2: Operating Expenses & Other Income
             </div>
             <div className="grid grid-cols-2 divide-x divide-slate-300 dark:divide-dark-700">
-              
-              {/* DEBIT SIDE (EXPENSES) */}
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="bg-slate-50 dark:bg-dark-900 border-b border-slate-300 dark:border-dark-700">
-                    <th className="px-4 py-2 text-left border-r border-slate-200 dark:border-dark-800 w-3/5">Operating Expenses (Debit)</th>
-                    <th className="px-4 py-2 text-right bg-slate-100/50 dark:bg-dark-800">Amount</th>
+                    <th className="px-4 py-2 text-left border-r border-slate-200 dark:border-dark-800 w-3/5 uppercase tracking-widest text-[9px] text-slate-500">Particulars (Debit)</th>
+                    <th className="px-4 py-2 text-right bg-slate-100/50 dark:bg-dark-800 uppercase tracking-widest text-[9px] text-slate-500">Amount</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 dark:divide-dark-800">
-                  {data.detailedExpenses?.map(exp => (
-                    <tr key={exp.id} className="hover:bg-slate-50 dark:hover:bg-dark-800/50">
-                      <td className="px-4 py-2 border-r border-slate-200 dark:border-dark-800">
-                        <div className="flex flex-col">
-                          <span className="font-bold text-slate-700 dark:text-dark-200">{exp.categoryName}</span>
-                          <span className="text-[9px] text-slate-400 uppercase">{exp.date} — {exp.details}</span>
-                        </div>
+                  {data.detailedExpenses.map((e, idx) => (
+                    <tr key={idx} className="hover:bg-slate-50">
+                      <td className="px-4 py-2.5 font-bold text-slate-700 dark:text-dark-200 border-r border-slate-200 uppercase">{e.categoryName} ({e.description || 'General'})</td>
+                      <td className="px-4 py-2.5 text-right tabular-nums font-black text-red-600 bg-slate-50/30">₨ {smartFormat(e.amount)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot className="bg-slate-200 dark:bg-dark-800 text-slate-900 dark:text-white font-black border-t-2 border-slate-400">
+                  <tr>
+                    <td className="px-4 py-3 border-r border-slate-300 uppercase tracking-widest text-[9px]">Total Expenses Total</td>
+                    <td className="px-4 py-3 text-right tabular-nums text-xs">₨ {smartFormat(data.totalExpenses)}</td>
+                  </tr>
+                </tfoot>
+              </table>
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 dark:bg-dark-900 border-b border-slate-300 dark:border-dark-700">
+                    <th className="px-4 py-2 text-left border-r border-slate-200 dark:border-dark-800 w-3/5 uppercase tracking-widest text-[9px] text-slate-500">Particulars (Credit)</th>
+                    <th className="px-4 py-2 text-right bg-slate-100/50 dark:bg-dark-800 uppercase tracking-widest text-[9px] text-slate-500">Amount</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 dark:divide-dark-800">
+                  <tr className="hover:bg-slate-50">
+                    <td className="px-4 py-2.5 font-bold text-emerald-600 border-r border-slate-200 uppercase italic">Gross Profit b/d</td>
+                    <td className="px-4 py-2.5 text-right tabular-nums font-black text-slate-900 dark:text-white bg-slate-50/30">₨ {smartFormat(grossProfit)}</td>
+                  </tr>
+                </tbody>
+                <tfoot className="bg-slate-200 dark:bg-dark-800 text-slate-900 dark:text-white font-black border-t-2 border-slate-400">
+                  <tr>
+                    <td className="px-4 py-3 border-r border-slate-300 uppercase tracking-widest text-[9px]">Gross Profit Total</td>
+                    <td className="px-4 py-3 text-right tabular-nums text-xs">₨ {smartFormat(grossProfit)}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+
+          {/* 3. FINAL SUMMARY ACCOUNT (Standard Table Layout) */}
+          <div className="max-w-[800px] mx-auto border-2 border-slate-900 dark:border-dark-700 rounded-xl overflow-hidden shadow-2xl bg-white dark:bg-dark-900">
+             <div className="bg-slate-900 text-white px-4 py-3 font-black text-[11px] uppercase text-center tracking-[0.4em] border-b border-slate-700">
+                Part 3: Profit & Loss Final Summary
+             </div>
+             <table className="w-full border-collapse">
+                <tbody className="divide-y divide-slate-200 dark:divide-dark-800">
+                   <tr className="group hover:bg-slate-50">
+                      <td className="px-6 py-4 border-r border-slate-200 w-1/2">
+                         <div className="flex items-center gap-3">
+                            <TrendingUp className="w-4 h-4 text-emerald-600" />
+                            <span className="font-black text-slate-700 dark:text-dark-100 uppercase tracking-widest text-[10px]">Total Gross Profit Sum</span>
+                         </div>
                       </td>
-                      <td className="px-4 py-2 text-right tabular-nums text-orange-600 bg-slate-100/30 dark:bg-dark-800/20 font-bold">{formatCurrency(exp.amount)}</td>
-                    </tr>
-                  ))}
-                  {netProfit >= 0 && (
-                    <tr className="bg-emerald-50 dark:bg-emerald-900/20">
-                      <td className="px-4 py-4 font-black text-emerald-600 border-r border-slate-200 dark:border-dark-800 uppercase text-[12px]">Net Profit c/d</td>
-                      <td className="px-4 py-4 text-right font-black tabular-nums text-emerald-700 bg-emerald-100/30 dark:bg-emerald-900/40 text-[12px]">{formatCurrency(netProfit)}</td>
-                    </tr>
-                  )}
-                  {data.detailedExpenses?.length === 0 && <tr className="h-20"><td></td><td className="bg-slate-100/30"></td></tr>}
+                      <td className="px-6 py-4 text-right font-black text-emerald-700 tabular-nums text-lg break-all">
+                         ₨ {smartFormat(grossProfit)}
+                      </td>
+                   </tr>
+                   <tr className="group hover:bg-slate-50">
+                      <td className="px-6 py-4 border-r border-slate-200">
+                         <div className="flex items-center gap-3">
+                            <ArrowDownCircle className="w-4 h-4 text-red-600" />
+                            <span className="font-black text-slate-700 dark:text-dark-100 uppercase tracking-widest text-[10px]">Total Operating Expenses</span>
+                         </div>
+                      </td>
+                      <td className="px-6 py-4 text-right font-black text-red-700 tabular-nums text-lg break-all">
+                         ₨ {smartFormat(data.totalExpenses)}
+                      </td>
+                   </tr>
+                   <tr className={cn("text-white", netProfit >= 0 ? "bg-emerald-600" : "bg-red-600")}>
+                      <td className="px-6 py-6 border-r border-white/20">
+                         <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center">
+                               <PieChart className="w-6 h-6" />
+                            </div>
+                            <span className="font-black uppercase tracking-[0.3em] text-[13px] italic">Net Profit / Loss</span>
+                         </div>
+                      </td>
+                      <td className="px-6 py-6 text-right font-black tabular-nums text-3xl break-all">
+                         ₨ {smartFormat(netProfit)}
+                      </td>
+                   </tr>
                 </tbody>
-                <tfoot className="bg-slate-200 dark:bg-dark-800 text-slate-900 dark:text-white font-bold border-t-2 border-slate-400">
-                  <tr>
-                    <td className="px-4 py-3 border-r border-slate-300 uppercase tracking-widest text-[9px]">P&L Debit Total</td>
-                    <td className="px-4 py-3 text-right tabular-nums">₨ {formatCurrency(Math.max(grossProfit, 0) + (data.totalExpenses || 0))}</td>
-                  </tr>
-                </tfoot>
-              </table>
-
-              {/* CREDIT SIDE (GROSS PROFIT BROUGHT DOWN) */}
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="bg-slate-50 dark:bg-dark-900 border-b border-slate-300 dark:border-dark-700">
-                    <th className="px-4 py-2 text-left border-r border-slate-200 dark:border-dark-800 w-3/5">Income (Credit)</th>
-                    <th className="px-4 py-2 text-right bg-slate-100/50 dark:bg-dark-800">Amount</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200 dark:divide-dark-800">
-                  {grossProfit >= 0 ? (
-                    <tr className="bg-indigo-50/50 dark:bg-indigo-900/10">
-                      <td className="px-4 py-3 font-bold text-indigo-600 border-r border-slate-200 dark:border-dark-800">Gross Profit b/d</td>
-                      <td className="px-4 py-3 text-right font-bold tabular-nums text-indigo-600 bg-slate-100/30 dark:bg-dark-800/20">{formatCurrency(grossProfit)}</td>
-                    </tr>
-                  ) : (
-                    <tr><td className="border-r border-slate-200 dark:border-dark-800"></td><td className="bg-slate-100/30"></td></tr>
-                  )}
-                  {netProfit < 0 && (
-                    <tr className="bg-red-50 dark:bg-red-900/20">
-                      <td className="px-4 py-4 font-black text-red-600 border-r border-slate-200 dark:border-dark-800 uppercase text-[12px]">Net Loss c/d</td>
-                      <td className="px-4 py-4 text-right font-black tabular-nums text-red-700 bg-red-100/30 dark:bg-red-900/40 text-[12px]">{formatCurrency(Math.abs(netProfit))}</td>
-                    </tr>
-                  )}
-                  {/* Empty rows to balance height roughly */}
-                  {Array.from({ length: Math.max(0, (data.detailedExpenses?.length || 0) - 1) }).map((_, i) => (
-                    <tr key={i} className="h-10">
-                      <td className="border-r border-slate-200 dark:border-dark-800"></td><td className="bg-slate-100/30"></td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot className="bg-slate-200 dark:bg-dark-800 text-slate-900 dark:text-white font-bold border-t-2 border-slate-400">
-                  <tr>
-                    <td className="px-4 py-3 border-r border-slate-300 uppercase tracking-widest text-[9px]">P&L Credit Total</td>
-                    <td className="px-4 py-3 text-right tabular-nums">₨ {formatCurrency(Math.max(grossProfit, 0))}</td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
+             </table>
           </div>
 
-        </div>
-        
-        {/* EXCEL FOOTER */}
-        <div className="max-w-[1400px] mx-auto mt-10 p-4 border-t border-slate-200 dark:border-dark-800 text-slate-400 text-[10px] flex justify-between uppercase font-bold tracking-widest">
-           <span>Report Generated: {new Date().toLocaleString()}</span>
-           <span>Sheet: P&L Statement</span>
-           <span>Software: HR Petroleum Business Suite</span>
         </div>
       </div>
     </div>

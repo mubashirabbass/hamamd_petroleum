@@ -2,7 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { 
   Briefcase, Users, Package, Database, BarChart3, LayoutDashboard,
   FileText, TrendingUp, Wallet, ArrowRight, Table as TableIcon,
-  AlertTriangle, Landmark, Plus, Check, X, Edit3, Trash2
+  AlertTriangle, Landmark, Plus, Check, X, Edit3, Trash2, Calculator,
+  PlusCircle, Save
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { formatCurrency, cn, filterByStartDate, today } from '../lib/utils';
@@ -22,82 +23,74 @@ export default function BalanceSheet() {
   const customerEntries = store.customerEntries || [];
   const purchases = store.purchases || [];
   const sales = store.sales || [];
-  const settings = store.settings || { startDate: '' };
   
+  const settings = store.settings || {};
   const startDate = settings.startDate || '';
+
+  // Data Entry State
+  const [newCapName, setNewCapName] = useState('');
+  const [newCapAmount, setNewCapAmount] = useState('');
+  const [showCapEntry, setShowCapEntry] = useState(false);
+  
+  const [newAssetName, setNewAssetName] = useState('');
+  const [newAssetAmount, setNewAssetAmount] = useState('');
+  const [showAssetEntry, setShowAssetEntry] = useState(false);
+
+  const [isSaving, setIsSaving] = useState(false);
 
   const data = useMemo(() => {
     try {
-      // 1. Asset Balances
-      const assets = assetCategories.map(cat => {
+      // 1. Assets
+      const allAssets = assetCategories.map(cat => {
         const entries = assetEntries.filter(e => e.categoryId === cat.id);
         const balance = entries.reduce((sum, e) => sum + ((e.debit || 0) - (e.credit || 0)), 0);
         return { id: cat.id, name: cat.name, balance };
-      }).filter(a => Math.abs(a.balance) > 0.01).sort((a, b) => b.balance - a.balance);
+      });
+      const totalRegisteredAssets = allAssets.reduce((sum, a) => sum + a.balance, 0);
 
-      const totalAssets = assets.reduce((sum, a) => sum + a.balance, 0);
+      // User Logic: "in reciveabel fethc ll sum up of all customers credits"
+      const totalReceivables = customerEntries.reduce((sum, e) => sum + (e.credit || 0), 0);
 
-      // 2. Customer Receivables & Payables (Detailed)
-      const customerBalances = customers.map(cust => {
-        const entries = customerEntries.filter(e => e.customerId === cust.id);
-        const balance = entries.reduce((sum, e) => sum + ((e.debit || 0) - (e.credit || 0)), 0);
-        return { id: cust.id, name: cust.name, balance };
-      }).filter(c => Math.abs(c.balance) > 0.01);
-
-      const receivables = customerBalances.filter(c => c.balance > 0);
-      const payables = customerBalances.filter(c => c.balance < 0).map(c => ({ ...c, balance: Math.abs(c.balance) }));
-
-      const totalReceivables = receivables.reduce((sum, r) => sum + r.balance, 0);
-      const totalPayables = payables.reduce((sum, p) => sum + p.balance, 0);
-
-      // 3. Stock Valuation
       const getStockStats = (type: 'HSD' | 'PMG') => {
         const p = purchases.filter(x => x.type === type);
         const s = sales.filter(x => x.type === type);
         const pQty = p.reduce((sum, x) => sum + (x.quantity || 0), 0);
         const sQty = s.reduce((sum, x) => sum + (x.quantity || 0), 0);
         const stockQty = pQty - sQty;
-
         const totalCost = p.reduce((sum, x) => sum + (x.totalAmount || 0), 0);
         const totalQty = p.reduce((sum, x) => sum + (x.quantity || 0), 0);
         const avgPrice = totalQty > 0 ? totalCost / totalQty : 0;
-        
         return { qty: stockQty, avgPrice, value: stockQty * avgPrice };
       };
-
       const hsdStock = getStockStats('HSD');
       const pmgStock = getStockStats('PMG');
 
-      // 4. Liabilities
+      // 2. Liabilities
+      // User Logic: "in payable fetch the amount sum up of all teh customers debit"
+      const totalPayables = customerEntries.reduce((sum, e) => sum + (e.debit || 0), 0);
+
       const liabilities = liabilityCategories.map(cat => {
         const entries = liabilityEntries.filter(e => e.categoryId === cat.id);
         const balance = entries.reduce((sum, e) => sum + ((e.credit || 0) - (e.debit || 0)), 0); 
         return { id: cat.id, name: cat.name, balance };
-      }).filter(l => Math.abs(l.balance) > 0.01).sort((a, b) => b.balance - a.balance);
+      });
+      const totalOtherLiabilities = liabilities.reduce((sum, l) => sum + l.balance, 0);
 
-      const totalLiabilities = liabilities.reduce((sum, l) => sum + l.balance, 0);
-
-      // 5. Capital / Equity
+      // 3. Capital
       const capital = capitalCategories.map(cat => {
         const entries = capitalEntries.filter(e => e.categoryId === cat.id);
         const balance = entries.reduce((sum, e) => sum + ((e.debit || 0) - (e.credit || 0)), 0);
         return { id: cat.id, name: cat.name, balance };
-      }).filter(c => Math.abs(c.balance) > 0.01);
-
+      });
       const totalCapital = capital.reduce((sum, c) => sum + c.balance, 0);
 
-      const finalTotalAssets = totalAssets + totalReceivables + hsdStock.value + pmgStock.value;
-      const finalTotalLiabilities = totalLiabilities + totalPayables + totalCapital;
-
       return {
-        assets, totalAssets,
-        receivables, totalReceivables,
+        allAssets, totalRegisteredAssets,
+        totalReceivables,
         hsdStock, pmgStock, totalStockValue: hsdStock.value + pmgStock.value,
-        liabilities, totalLiabilities,
-        payables, totalPayables,
+        totalPayables,
+        liabilities, totalOtherLiabilities,
         capital, totalCapital,
-        finalTotalAssets,
-        finalTotalLiabilities,
         error: null
       };
     } catch (err: any) {
@@ -105,200 +98,296 @@ export default function BalanceSheet() {
     }
   }, [assetCategories, assetEntries, liabilityCategories, liabilityEntries, capitalCategories, capitalEntries, customers, customerEntries, purchases, sales, startDate]);
 
-  const handleDelete = async (id: string, type: 'asset' | 'liability' | 'capital') => {
-    if (!window.confirm(`Are you sure you want to delete this ${type} category?`)) return;
+  const handleQuickAsset = async () => {
+    if (!newAssetName || !newAssetAmount) {
+      toast.error('Enter name and amount');
+      return;
+    }
+    setIsSaving(true);
     try {
-      if (type === 'asset') await store.deleteAssetCategory(id);
-      else if (type === 'liability') await store.deleteLiabilityCategory(id);
-      else if (type === 'capital') await store.deleteCapitalCategory(id);
-      toast.success(`${type} category deleted`);
+      let catId = assetCategories.find(c => c.name.toLowerCase() === newAssetName.toLowerCase())?.id;
+      if (!catId) {
+        catId = await store.addAssetCategory(newAssetName) as any;
+      }
+      await store.addAssetEntry({
+        categoryId: catId!,
+        date: today(),
+        description: 'Balance Sheet Entry',
+        debit: parseFloat(newAssetAmount) || 0,
+        credit: 0,
+        balance: 0
+      });
+      setNewAssetName('');
+      setNewAssetAmount('');
+      setShowAssetEntry(false);
+      toast.success('Asset added');
     } catch (err) {
-      toast.error('Failed to delete');
+      toast.error('Failed to add asset');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleQuickCapital = async () => {
+    if (!newCapName || !newCapAmount) {
+      toast.error('Enter name and amount');
+      return;
+    }
+    setIsSaving(true);
+    try {
+      let catId = capitalCategories.find(c => c.name.toLowerCase() === newCapName.toLowerCase())?.id;
+      if (!catId) {
+        catId = await store.addCapitalCategory(newCapName) as any;
+      }
+      await store.addCapitalEntry({
+        categoryId: catId!,
+        date: today(),
+        description: 'Balance Sheet Entry',
+        debit: parseFloat(newCapAmount) || 0,
+        credit: 0,
+        balance: 0
+      });
+      setNewCapName('');
+      setNewCapAmount('');
+      setShowCapEntry(false);
+      toast.success('Capital updated');
+    } catch (err) {
+      toast.error('Failed to add capital');
+    } finally {
+      setIsSaving(false);
     }
   };
 
   if (data.error) {
-    return <div className="p-10 text-red-500">Error: {data.error}</div>;
+    return <div className="p-10 text-red-500 font-mono">Error: {data.error}</div>;
   }
 
-  const { finalTotalAssets, finalTotalLiabilities } = data;
+  const finalTotalAssets = data.totalRegisteredAssets + data.totalReceivables + data.totalStockValue;
+  const finalTotalEquity = data.totalPayables + data.totalOtherLiabilities + data.totalCapital;
 
   return (
-    <div className="p-6 lg:p-8 space-y-8 bg-slate-50 dark:bg-dark-950 min-h-full overflow-y-auto smart-scroll">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Balance Sheet</h1>
-          <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mt-1">Snapshot as of {today()}</p>
+    <div className="flex flex-col h-full w-full bg-white dark:bg-dark-950 font-mono text-[11px] overflow-hidden">
+      {/* Excel Header */}
+      <div className="bg-slate-100 dark:bg-dark-900 border-b border-slate-300 dark:border-dark-800 p-4 flex items-center justify-between shadow-sm shrink-0">
+        <div className="flex items-center gap-3">
+          <FileText className="w-5 h-5 text-slate-500" />
+          <h1 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-tighter">Balance Sheet (Financial Position)</h1>
         </div>
-        
-        <div className="flex items-center gap-4">
-          <div className={cn(
-            "px-6 py-3 rounded-2xl border-2 flex items-center gap-3 transition-all",
-            Math.abs(finalTotalAssets - finalTotalLiabilities) < 1 
-              ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-600"
-              : "bg-red-500/10 border-red-500/20 text-red-600"
-          )}>
-            <div className={cn(
-              "w-3 h-3 rounded-full animate-pulse",
-              Math.abs(finalTotalAssets - finalTotalLiabilities) < 1 ? "bg-emerald-500" : "bg-red-500"
-            )} />
-            <span className="font-black uppercase tracking-widest text-xs">
-              {Math.abs(finalTotalAssets - finalTotalLiabilities) < 1 ? "Balanced" : "Unbalanced"}
-            </span>
-          </div>
+        <div className="flex items-center gap-6">
+           <div className="flex items-center gap-2">
+             <span className="text-[9px] font-black text-slate-400 uppercase">Audit:</span>
+             <span className={cn("px-2 py-0.5 rounded text-[10px] font-black uppercase", Math.abs(finalTotalAssets - finalTotalEquity) < 1 ? "bg-emerald-500 text-white" : "bg-red-500 text-white shadow-lg")}>
+               {Math.abs(finalTotalAssets - finalTotalEquity) < 1 ? "Balanced" : "Unbalanced"}
+             </span>
+           </div>
+           <div className="text-right">
+             <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Net Worth</p>
+             <p className="text-base font-black text-slate-900 dark:text-white tabular-nums leading-none mt-1">₨ {formatCurrency(finalTotalAssets)}</p>
+           </div>
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {[
-          { label: 'Total Assets', value: finalTotalAssets, icon: Briefcase, color: 'text-blue-600', bg: 'bg-blue-600/10 border-blue-600/20' },
-          { label: 'Total Liabilities', value: finalTotalLiabilities, icon: Landmark, color: 'text-orange-600', bg: 'bg-orange-600/10 border-orange-600/20' },
-          { label: 'Total Equity', value: data.totalCapital, icon: Wallet, color: 'text-indigo-600', bg: 'bg-indigo-600/10 border-indigo-600/20' },
-          { label: 'Stock Value', value: data.totalStockValue, icon: Package, color: 'text-emerald-600', bg: 'bg-emerald-600/10 border-emerald-600/20' },
-        ].map((card, i) => (
-          <div key={i} className={cn("p-6 rounded-[2rem] border shadow-sm flex items-center justify-between", card.bg)}>
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60 mb-1">{card.label}</p>
-              <p className={cn("text-2xl font-black tabular-nums", card.color)}>₨ {formatCurrency(card.value)}</p>
-            </div>
-            <card.icon className={cn("w-8 h-8 opacity-20", card.color)} />
-          </div>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 pb-10">
-        {/* ASSETS COLUMN */}
-        <div className="space-y-6">
-          <div className="bg-white dark:bg-dark-900 rounded-[2.5rem] border border-slate-200 dark:border-dark-800 shadow-xl overflow-hidden">
-            <div className="p-6 bg-slate-50 dark:bg-dark-800/50 border-b border-slate-100 dark:border-dark-800 flex items-center gap-3">
-              <TrendingUp className="w-5 h-5 text-blue-600" />
-              <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Assets Breakdown</h2>
-            </div>
-            
-            <div className="p-2">
-              <table className="w-full">
-                <thead>
-                  <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 dark:border-dark-800">
-                    <th className="px-6 py-4 text-left">Particulars</th>
-                    <th className="px-6 py-4 text-right">Balance</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-50 dark:divide-dark-800">
-                   {/* Stock Assets */}
-                  <tr className="hover:bg-slate-50 dark:hover:bg-dark-800/50">
-                    <td className="px-6 py-4 font-bold text-slate-700 dark:text-dark-200">Inventory: Stock HSD</td>
-                    <td className="px-6 py-4 text-right font-black text-blue-600 tabular-nums">₨ {formatCurrency(data.hsdStock.value)}</td>
-                  </tr>
-                  <tr className="hover:bg-slate-50 dark:hover:bg-dark-800/50">
-                    <td className="px-6 py-4 font-bold text-slate-700 dark:text-dark-200">Inventory: Stock PMG</td>
-                    <td className="px-6 py-4 text-right font-black text-blue-600 tabular-nums">₨ {formatCurrency(data.pmgStock.value)}</td>
-                  </tr>
-
-                  {/* Customer Receivables */}
-                  <tr className="bg-blue-50/30"><td colSpan={2} className="px-6 py-2 text-[9px] font-black uppercase text-blue-500">Customer Receivables</td></tr>
-                  {data.receivables.map(r => (
-                    <tr key={r.id} className="hover:bg-slate-50 dark:hover:bg-dark-800/50">
-                      <td className="px-6 py-3 text-slate-600 dark:text-dark-300 font-medium pl-10">{r.name}</td>
-                      <td className="px-6 py-3 text-right font-bold text-slate-900 dark:text-white tabular-nums">₨ {formatCurrency(r.balance)}</td>
-                    </tr>
-                  ))}
-
-                  {/* Category Assets */}
-                  <tr className="bg-slate-50/50"><td colSpan={2} className="px-6 py-2 text-[9px] font-black uppercase text-slate-400">Fixed & Other Assets</td></tr>
-                  {data.assets.map(a => (
-                    <tr key={a.id} className="group hover:bg-slate-50 dark:hover:bg-dark-800/50 transition-colors">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center justify-between pl-4">
-                          <span className="font-bold text-slate-700 dark:text-dark-200">{a.name}</span>
-                          <button onClick={() => handleDelete(a.id, 'asset')} className="opacity-0 group-hover:opacity-100 p-1 text-red-500 hover:bg-red-50 rounded transition-all">
-                             <Trash2 className="w-4 h-4" />
-                          </button>
+      <div className="flex-1 overflow-auto smart-scroll p-4 lg:p-8 space-y-12 pb-20">
+        <div className="max-w-[1400px] mx-auto space-y-12">
+          
+          {/* SECTION 1: ASSETS */}
+          <div className="border border-slate-300 dark:border-dark-700 rounded shadow-sm overflow-hidden bg-white dark:bg-dark-900">
+             <div className="bg-slate-800 text-white px-4 py-2 font-bold text-[10px] uppercase text-center tracking-widest border-b border-slate-300 flex items-center justify-center relative">
+               Part 1: Assets Allocation
+             </div>
+             <div className="grid grid-cols-2 divide-x divide-slate-300 dark:divide-dark-700">
+                
+                {/* REGISTERED ASSETS (LEFT) */}
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 dark:bg-dark-900 border-b border-slate-300 dark:border-dark-700">
+                      <th className="px-4 py-2 text-left border-r border-slate-200 dark:border-dark-800 w-3/5 uppercase tracking-widest text-[9px] text-slate-500">
+                        <div className="flex items-center justify-between">
+                           Asset Account Name
+                           <button onClick={() => setShowAssetEntry(true)} className="p-1 hover:bg-slate-200 rounded transition-colors text-blue-600 cursor-pointer">
+                             <PlusCircle className="w-4 h-4" />
+                           </button>
                         </div>
-                      </td>
-                      <td className="px-6 py-4 text-right font-black text-slate-900 dark:text-white tabular-nums">₨ {formatCurrency(a.balance)}</td>
+                      </th>
+                      <th className="px-4 py-2 text-right bg-slate-100/50 dark:bg-dark-800 uppercase tracking-widest text-[9px] text-slate-500">Net Balance</th>
                     </tr>
-                  ))}
-                </tbody>
-                <tfoot className="bg-slate-900 text-white font-black border-t-2 border-slate-200 dark:border-dark-700">
-                  <tr>
-                    <td className="px-6 py-6 uppercase tracking-widest text-xs">Total Assets</td>
-                    <td className="px-6 py-6 text-right text-xl tabular-nums">₨ {formatCurrency(finalTotalAssets)}</td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200 dark:divide-dark-800">
+                    {showAssetEntry && (
+                      <tr className="bg-blue-50 dark:bg-blue-900/20 border-b border-blue-400 animate-slide-down">
+                        <td className="px-4 py-2 border-r border-slate-200">
+                           <input type="text" placeholder="[Enter Asset Name]" className="w-full bg-transparent outline-none font-bold text-blue-600 placeholder:text-slate-300 uppercase" autoFocus value={newAssetName} onChange={(e) => setNewAssetName(e.target.value)} />
+                        </td>
+                        <td className="px-4 py-2 text-right flex items-center justify-end gap-2">
+                           <input type="number" placeholder="0.00" className="w-full bg-transparent outline-none font-black text-slate-900 dark:text-white text-right placeholder:text-slate-300" value={newAssetAmount} onChange={(e) => setNewAssetAmount(e.target.value)} />
+                           <button onClick={handleQuickAsset} className={cn("p-1 rounded transition-colors cursor-pointer", isSaving ? "bg-slate-400" : "bg-blue-600 hover:bg-blue-700 text-white")} disabled={isSaving}>
+                             {isSaving ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Check className="w-3 h-3" />}
+                           </button>
+                           <button onClick={() => setShowAssetEntry(false)} className="p-1 bg-slate-200 text-slate-600 rounded hover:bg-slate-300 cursor-pointer"><X className="w-3 h-3" /></button>
+                        </td>
+                      </tr>
+                    )}
+                    {data.allAssets.map(a => (
+                      <tr key={a.id} className="hover:bg-slate-50 dark:hover:bg-dark-800/50">
+                        <td className="px-4 py-2.5 font-bold text-slate-700 dark:text-dark-200 border-r border-slate-200 dark:border-dark-800 uppercase">{a.name}</td>
+                        <td className="px-4 py-2.5 text-right tabular-nums font-black text-slate-900 dark:text-white bg-slate-50/30">₨ {formatCurrency(a.balance)}</td>
+                      </tr>
+                    ))}
+                    <tr className="h-10"><td colSpan={2} className="border-r border-slate-200"></td></tr>
+                  </tbody>
+                  <tfoot className="bg-slate-200 dark:bg-dark-800 text-slate-900 dark:text-white font-black border-t-2 border-slate-400">
+                    <tr>
+                      <td className="px-4 py-3 border-r border-slate-300 uppercase tracking-widest text-[9px]">Registered Assets Total</td>
+                      <td className="px-4 py-3 text-right tabular-nums text-[12px]">₨ {formatCurrency(data.totalRegisteredAssets)}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+
+                {/* DYNAMIC ASSETS (RIGHT: STOCK & RECEIVABLES) */}
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 dark:bg-dark-900 border-b border-slate-300 dark:border-dark-700">
+                      <th className="px-4 py-2 text-left border-r border-slate-200 dark:border-dark-800 w-2/5 uppercase tracking-widest text-[9px] text-slate-500">Particulars</th>
+                      <th className="px-2 py-2 text-right border-r border-slate-200 dark:border-dark-800 uppercase tracking-widest text-[9px] text-slate-500">Liters</th>
+                      <th className="px-2 py-2 text-right border-r border-slate-200 dark:border-dark-800 uppercase tracking-widest text-[9px] text-slate-500">Rate</th>
+                      <th className="px-4 py-2 text-right bg-slate-100/50 dark:bg-dark-800 uppercase tracking-widest text-[9px] text-slate-500">Valuation</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200 dark:divide-dark-800">
+                    <tr className="hover:bg-slate-50 group transition-colors">
+                      <td className="px-4 py-3 border-r border-slate-200 font-black text-blue-600 uppercase tracking-tighter">Stock PMG</td>
+                      <td className="px-2 py-3 text-right tabular-nums border-r border-slate-200 text-slate-600">{data.pmgStock.qty.toLocaleString()}</td>
+                      <td className="px-2 py-3 text-right tabular-nums border-r border-slate-200 text-slate-600">{formatCurrency(data.pmgStock.avgPrice)}</td>
+                      <td className="px-4 py-3 text-right tabular-nums font-black text-blue-700 bg-slate-50/30">₨ {formatCurrency(data.pmgStock.value)}</td>
+                    </tr>
+                    <tr className="hover:bg-slate-50 group transition-colors">
+                      <td className="px-4 py-3 border-r border-slate-200 font-black text-blue-600 uppercase tracking-tighter">Stock HSD</td>
+                      <td className="px-2 py-3 text-right tabular-nums border-r border-slate-200 text-slate-600">{data.hsdStock.qty.toLocaleString()}</td>
+                      <td className="px-2 py-3 text-right tabular-nums border-r border-slate-200 text-slate-600">{formatCurrency(data.hsdStock.avgPrice)}</td>
+                      <td className="px-4 py-3 text-right tabular-nums font-black text-blue-700 bg-slate-50/30">₨ {formatCurrency(data.hsdStock.value)}</td>
+                    </tr>
+                    {/* CUSTOMER RECEIVABLES (CONSOLIDATED) */}
+                    <tr className="bg-slate-50 dark:bg-dark-800/50"><td colSpan={4} className="px-4 py-1.5 font-black text-[9px] uppercase text-slate-400">Consolidated Receivables</td></tr>
+                    <tr className="hover:bg-slate-50">
+                      <td className="px-4 py-4 border-r border-slate-200 font-black text-slate-700 uppercase tracking-widest">Total Accounts Receivable (Credits Sum)</td>
+                      <td className="px-2 py-4 border-r border-slate-200"></td>
+                      <td className="px-2 py-4 border-r border-slate-200"></td>
+                      <td className="px-4 py-4 text-right tabular-nums font-black text-emerald-600 bg-slate-50/30 text-base">₨ {formatCurrency(data.totalReceivables)}</td>
+                    </tr>
+                    <tr className="h-10"><td colSpan={4} className="border-r border-slate-200"></td></tr>
+                  </tbody>
+                  <tfoot className="bg-slate-200 dark:bg-dark-800 text-slate-900 dark:text-white font-black border-t-2 border-slate-400">
+                    <tr>
+                      <td className="px-4 py-3 border-r border-slate-300 uppercase tracking-widest text-[9px]" colSpan={3}>Current Assets Total</td>
+                      <td className="px-4 py-3 text-right tabular-nums text-[12px]">₨ {formatCurrency(data.totalReceivables + data.totalStockValue)}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+             </div>
           </div>
-        </div>
 
-        {/* LIABILITIES & EQUITY COLUMN */}
-        <div className="space-y-8">
-          <div className="bg-white dark:bg-dark-900 rounded-[2.5rem] border border-slate-200 dark:border-dark-800 shadow-xl overflow-hidden">
-            <div className="p-6 bg-slate-50 dark:bg-dark-800/50 border-b border-slate-100 dark:border-dark-800 flex items-center gap-3">
-              <Landmark className="w-5 h-5 text-orange-600" />
-              <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Liabilities & Equity Breakdown</h2>
-            </div>
-            
-            <div className="p-2">
-              <table className="w-full">
-                <thead>
-                  <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 dark:border-dark-800">
-                    <th className="px-6 py-4 text-left">Particulars</th>
-                    <th className="px-6 py-4 text-right">Balance</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-50 dark:divide-dark-800">
-                  {/* Capital Section */}
-                  <tr className="bg-indigo-50/30"><td colSpan={2} className="px-6 py-2 text-[9px] font-black uppercase text-indigo-500">Capital & Equity</td></tr>
-                  {data.capital.map(c => (
-                    <tr key={c.id} className="group hover:bg-slate-50 dark:hover:bg-dark-800/50 transition-colors">
-                      <td className="px-6 py-4 font-bold text-slate-700 dark:text-dark-200">
-                         <div className="flex items-center justify-between pl-4">
-                            <span>{c.name}</span>
-                            <button onClick={() => handleDelete(c.id, 'capital')} className="opacity-0 group-hover:opacity-100 p-1 text-red-500 hover:bg-red-50 rounded transition-all">
-                               <Trash2 className="w-4 h-4" />
+          {/* SECTION 2: LIABILITIES & CAPITAL */}
+          <div className="border border-slate-300 dark:border-dark-700 rounded shadow-sm overflow-hidden bg-white dark:bg-dark-900">
+             <div className="bg-slate-700 text-white px-4 py-2 font-bold text-[10px] uppercase text-center tracking-widest border-b border-slate-300">
+               Part 2: Liabilities & Capital Matrix
+             </div>
+             <div className="grid grid-cols-2 divide-x divide-slate-300 dark:divide-dark-700">
+                
+                {/* PAYABLES (CONSOLIDATED) */}
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 dark:bg-dark-900 border-b border-slate-300 dark:border-dark-700">
+                      <th className="px-4 py-2 text-left border-r border-slate-200 dark:border-dark-800 w-3/5 uppercase tracking-widest text-[9px] text-slate-500">Liability Account Summary</th>
+                      <th className="px-4 py-2 text-right bg-slate-100/50 dark:bg-dark-800 uppercase tracking-widest text-[9px] text-slate-500">Amount Due</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200 dark:divide-dark-800">
+                    <tr className="bg-orange-50 dark:bg-orange-900/20"><td colSpan={2} className="px-4 py-1.5 font-black text-[9px] uppercase text-orange-500">Customer Payables (Debits Sum)</td></tr>
+                    <tr className="hover:bg-orange-50/30">
+                       <td className="px-4 py-5 font-black text-slate-800 dark:text-white border-r border-slate-200 uppercase tracking-widest">Total Accounts Payable (Debits Sum)</td>
+                       <td className="px-4 py-5 text-right tabular-nums font-black text-red-600 bg-slate-50/30 text-base">₨ {formatCurrency(data.totalPayables)}</td>
+                    </tr>
+                    <tr className="bg-slate-50 dark:bg-dark-800/50"><td colSpan={2} className="px-4 py-1.5 font-black text-[9px] uppercase text-slate-400">Other Registered Liabilities</td></tr>
+                    {data.liabilities.map(l => (
+                      <tr key={l.id} className="hover:bg-slate-50"><td className="px-4 py-2.5 font-bold text-slate-700 dark:text-dark-200 border-r border-slate-200 uppercase">{l.name}</td><td className="px-4 py-2.5 text-right tabular-nums font-black text-slate-900 dark:text-white bg-slate-50/30">₨ {formatCurrency(l.balance)}</td></tr>
+                    ))}
+                  </tbody>
+                  <tfoot className="bg-slate-200 dark:bg-dark-800 text-slate-900 dark:text-white font-black border-t-2 border-slate-400">
+                    <tr>
+                      <td className="px-4 py-3 border-r border-slate-300 uppercase tracking-widest text-[9px]">Total Liabilities Total</td>
+                      <td className="px-4 py-3 text-right tabular-nums text-[12px]">₨ {formatCurrency(data.totalPayables + data.totalOtherLiabilities)}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+
+                {/* CAPITAL (RIGHT) */}
+                <div className="flex flex-col">
+                  <table className="w-full border-collapse flex-1">
+                    <thead>
+                      <tr className="bg-slate-50 dark:bg-dark-900 border-b border-slate-300 dark:border-dark-700">
+                        <th className="px-4 py-2 text-left border-r border-slate-200 dark:border-dark-800 w-3/5 uppercase tracking-widest text-[9px] text-slate-500">
+                          <div className="flex items-center justify-between">
+                            Business Capital Accounts
+                            <button onClick={() => setShowCapEntry(true)} className="p-1 hover:bg-slate-200 rounded transition-colors text-indigo-600 cursor-pointer">
+                              <PlusCircle className="w-4 h-4" />
                             </button>
-                         </div>
-                      </td>
-                      <td className="px-6 py-4 text-right font-black text-slate-900 dark:text-white tabular-nums">₨ {formatCurrency(c.balance)}</td>
-                    </tr>
-                  ))}
-
-                  {/* Customer Payables */}
-                  <tr className="bg-orange-50/30"><td colSpan={2} className="px-6 py-2 text-[9px] font-black uppercase text-orange-500">Customer Payables (Credits)</td></tr>
-                  {data.payables.map(p => (
-                    <tr key={p.id} className="hover:bg-slate-50 dark:hover:bg-dark-800/50">
-                      <td className="px-6 py-3 text-slate-600 dark:text-dark-300 font-medium pl-10">{p.name}</td>
-                      <td className="px-6 py-3 text-right font-bold text-slate-900 dark:text-white tabular-nums">₨ {formatCurrency(p.balance)}</td>
-                    </tr>
-                  ))}
-
-                  {/* Liabilities Section */}
-                  <tr className="bg-slate-50/50"><td colSpan={2} className="px-6 py-2 text-[9px] font-black uppercase text-slate-400">Other Liabilities</td></tr>
-                  {data.liabilities.map(l => (
-                    <tr key={l.id} className="group hover:bg-slate-50 dark:hover:bg-dark-800/50 transition-colors">
-                      <td className="px-6 py-4 font-bold text-slate-700 dark:text-dark-200">
-                         <div className="flex items-center justify-between pl-4">
-                            <span>{l.name}</span>
-                            <button onClick={() => handleDelete(l.id, 'liability')} className="opacity-0 group-hover:opacity-100 p-1 text-red-500 hover:bg-red-50 rounded transition-all">
-                               <Trash2 className="w-4 h-4" />
-                            </button>
-                         </div>
-                      </td>
-                      <td className="px-6 py-4 text-right font-black text-slate-900 dark:text-white tabular-nums">₨ {formatCurrency(l.balance)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot className="bg-slate-900 text-white font-black border-t-2 border-slate-200 dark:border-dark-700">
-                  <tr>
-                    <td className="px-6 py-6 uppercase tracking-widest text-xs">Total Liabilities & Equity</td>
-                    <td className="px-6 py-6 text-right text-xl tabular-nums">₨ {formatCurrency(finalTotalLiabilities)}</td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
+                          </div>
+                        </th>
+                        <th className="px-4 py-2 text-right bg-slate-100/50 dark:bg-dark-800 uppercase tracking-widest text-[9px] text-slate-500">Net Equity</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200 dark:divide-dark-800">
+                      {showCapEntry && (
+                        <tr className="bg-indigo-50 dark:bg-indigo-900/20 border-b border-indigo-400 animate-slide-down">
+                          <td className="px-4 py-2 border-r border-slate-200">
+                             <input type="text" placeholder="[Enter Capital Name]" className="w-full bg-transparent outline-none font-bold text-indigo-600 placeholder:text-slate-300 uppercase" autoFocus value={newCapName} onChange={(e) => setNewCapName(e.target.value)} />
+                          </td>
+                          <td className="px-4 py-2 text-right flex items-center justify-end gap-2">
+                             <input type="number" placeholder="0.00" className="w-full bg-transparent outline-none font-black text-slate-900 dark:text-white text-right placeholder:text-slate-300" value={newCapAmount} onChange={(e) => setNewCapAmount(e.target.value)} />
+                             <button onClick={handleQuickCapital} className={cn("p-1 rounded transition-colors cursor-pointer", isSaving ? "bg-slate-400" : "bg-indigo-600 hover:bg-indigo-700 text-white")} disabled={isSaving}>
+                               {isSaving ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Check className="w-3 h-3" />}
+                             </button>
+                             <button onClick={() => setShowCapEntry(false)} className="p-1 bg-slate-200 text-slate-600 rounded hover:bg-slate-300 cursor-pointer"><X className="w-3 h-3" /></button>
+                          </td>
+                        </tr>
+                      )}
+                      {data.capital.map(c => (
+                        <tr key={c.id} className="hover:bg-indigo-50/30">
+                          <td className="px-4 py-2.5 font-bold text-indigo-700 dark:text-indigo-300 border-r border-slate-200 dark:border-dark-800 uppercase">{c.name}</td>
+                          <td className="px-4 py-2.5 text-right tabular-nums font-black text-slate-900 dark:text-white bg-slate-50/30">₨ {formatCurrency(c.balance)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot className="bg-slate-200 dark:bg-dark-800 text-slate-900 dark:text-white font-black border-t-2 border-slate-400">
+                      <tr>
+                        <td className="px-4 py-3 border-r border-slate-300 uppercase tracking-widest text-[9px]">Total Capital Total</td>
+                        <td className="px-4 py-3 text-right tabular-nums text-[12px]">₨ {formatCurrency(data.totalCapital)}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+             </div>
           </div>
+
+          {/* FOOTER SUMMARY */}
+          <div className="p-8 rounded-xl bg-slate-900 text-white flex items-center justify-between shadow-2xl">
+             <div className="space-y-1">
+               <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400">Financial Integrity Check</p>
+               <p className="text-sm font-bold text-slate-300 uppercase italic tracking-widest">Assets = Liabilities + Equity</p>
+             </div>
+             <div className="flex items-center gap-10">
+                <div className="text-right">
+                  <p className="text-[9px] font-black uppercase text-slate-500 mb-1">Total Assets Sum</p>
+                  <p className="text-3xl font-black tabular-nums tracking-tighter">₨ {formatCurrency(finalTotalAssets)}</p>
+                </div>
+                <div className="w-px h-10 bg-slate-700" />
+                <div className="text-right">
+                  <p className="text-[9px] font-black uppercase text-slate-500 mb-1">Total Equity Sum</p>
+                  <p className="text-3xl font-black tabular-nums tracking-tighter text-emerald-400">₨ {formatCurrency(finalTotalEquity)}</p>
+                </div>
+             </div>
+          </div>
+
         </div>
       </div>
     </div>

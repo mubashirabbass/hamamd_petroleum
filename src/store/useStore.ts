@@ -507,6 +507,7 @@ export const useStore = create<AppState>()(
     const id = uid();
     await db.execute('INSERT INTO asset_categories (id,name) VALUES (?,?)', [id, name]);
     set(s => ({ assetCategories: [...s.assetCategories, { id, name }] }));
+    return id;
   },
   updateAssetCategory: async (id, name) => {
     const db = await getDB();
@@ -692,6 +693,7 @@ export const useStore = create<AppState>()(
     const id = uid();
     await db.execute('INSERT INTO capital_categories (id,name) VALUES (?,?)', [id, name]);
     set(s => ({ capitalCategories: [...s.capitalCategories, { id, name }] }));
+    return id;
   },
   updateCapitalCategory: async (id, name) => {
     const db = await getDB();
