@@ -3,7 +3,7 @@ import { Phone } from 'lucide-react';
 export default function PrintHeader() {
   return (
     <div style={{ border: '4px double #111', padding: '2px', marginBottom: '10px', fontFamily: "'Times New Roman', serif" }}>
-      <div style={{ border: '1.2px solid #111', padding: '12px 15px' }}>
+      <div style={{ border: '1.2px solid #111', padding: '8px 15px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
           {/* HR Logo */}
           <div style={{ width: 85, height: 85, flexShrink: 0 }}>

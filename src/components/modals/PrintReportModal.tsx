@@ -22,7 +22,7 @@ interface Props {
   totals?: Record<string, number>;
 }
 
-const ROWS_PER_PAGE = 25;
+const ROWS_PER_PAGE = 15;
 
 // ── Amount in words ──────────────────────────────────────────────────────────
 const ONES = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine',
@@ -342,10 +342,10 @@ export default function PrintReportModal({
           }
 
           return (
-            <div key={pi} className="report-page" style={{ position: 'relative', width: '210mm', minHeight: '297mm', background: '#fff', color: '#000', padding: '8mm 10mm', margin: '0 auto 20px auto', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', boxShadow: '0 20px 50px rgba(0,0,0,0.5)', borderRadius: '2px', pageBreakAfter: 'always' }}>
+            <div key={pi} className="report-page" style={{ position: 'relative', width: '210mm', minHeight: '297mm', background: '#fff', color: '#000', padding: '5mm 5mm', margin: '0 auto 20px auto', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', boxShadow: '0 20px 50px rgba(0,0,0,0.5)', borderRadius: '2px', pageBreakAfter: 'always' }}>
               <PrintHeader />
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', border: '2px solid #111', padding: '10px 15px', marginBottom: '12px', fontSize: '15px', fontWeight: 1000, textTransform: 'uppercase', background: '#f9f9f9' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', border: '2px solid #111', padding: '6px 12px', marginBottom: '8px', fontSize: '14px', fontWeight: 1000, textTransform: 'uppercase', background: '#f9f9f9' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                   <span>{customTitle || (type ? type.toUpperCase() + ' REPORT' : 'REPORT')}</span>
                   <span style={{ fontSize: '11px', color: '#555', textTransform: 'none', fontStyle: 'italic', fontWeight: 700 }}>Printed on: {printedAt}</span>
@@ -386,15 +386,15 @@ export default function PrintReportModal({
                           ))
                         ) : isPurchase ? (
                           <>
-                            <th style={{ width: '60px', padding: '6px 2px', borderRight: '1px solid #111', textAlign: 'left' }}>Date</th>
-                            <th style={{ width: '65px', padding: '6px 2px', borderRight: '1px solid #111', textAlign: 'left' }}>Inv. No</th>
-                            <th style={{ padding: '6px 2px', borderRight: '1px solid #111', textAlign: 'left' }}>Description</th>
-                            <th style={{ width: '65px', padding: '6px 2px', borderRight: '1px solid #111', textAlign: 'left' }}>Vehicle</th>
-                            <th style={{ width: '55px', padding: '6px 2px', borderRight: '1px solid #111', textAlign: 'right' }}>Rate</th>
-                            <th style={{ width: '55px', padding: '6px 2px', borderRight: '1px solid #111', textAlign: 'right' }}>Qty (L)</th>
-                            <th style={{ width: '65px', padding: '6px 2px', borderRight: '1px solid #111', textAlign: 'right' }}>Carriage</th>
-                            <th style={{ width: '85px', padding: '6px 2px', borderRight: '1px solid #111', textAlign: 'right' }}>Amount</th>
-                            <th style={{ width: '95px', padding: '6px 2px', textAlign: 'right' }}>Total</th>
+                            <th style={{ width: '60px', padding: '6px 2px', borderRight: '1px solid #111', textAlign: 'left', fontSize: '12px' }}>Date</th>
+                            <th style={{ width: '65px', padding: '6px 2px', borderRight: '1px solid #111', textAlign: 'left', fontSize: '12px' }}>Inv. No</th>
+                            <th style={{ padding: '6px 2px', borderRight: '1px solid #111', textAlign: 'left', fontSize: '12px' }}>Description</th>
+                            <th style={{ width: '65px', padding: '6px 2px', borderRight: '1px solid #111', textAlign: 'left', fontSize: '12px' }}>Vehicle</th>
+                            <th style={{ width: '55px', padding: '6px 2px', borderRight: '1px solid #111', textAlign: 'right', fontSize: '12px' }}>Rate</th>
+                            <th style={{ width: '55px', padding: '6px 2px', borderRight: '1px solid #111', textAlign: 'right', fontSize: '12px' }}>Qty (L)</th>
+                            <th style={{ width: '65px', padding: '6px 2px', borderRight: '1px solid #111', textAlign: 'right', fontSize: '12px' }}>Carriage</th>
+                            <th style={{ width: '85px', padding: '6px 2px', borderRight: '1px solid #111', textAlign: 'right', fontSize: '12px' }}>Amount</th>
+                            <th style={{ width: '95px', padding: '6px 2px', textAlign: 'right', fontSize: '12px' }}>Total</th>
                           </>
                         ) : (
                           <>
@@ -449,48 +449,48 @@ export default function PrintReportModal({
                           <tr key={idx} style={{ borderBottom: '1px solid #eee' }}>
                             {isPurchase ? (
                               <>
-                                <td style={{ padding: '6px 2px', borderRight: '1px solid #f0f0f0' }}>{formatDate(row.date)}</td>
-                                <td style={{ padding: '6px 2px', borderRight: '1px solid #f0f0f0', fontWeight: 'bold' }}>{row.invoiceNo || '—'}</td>
-                                <td style={{ padding: '6px 2px', borderRight: '1px solid #f0f0f0', fontSize: '10px' }}>{row.description || '—'}</td>
-                                <td style={{ padding: '6px 2px', borderRight: '1px solid #f0f0f0' }}>{row.vehicleNo || '—'}</td>
-                                <td style={{ padding: '6px 2px', borderRight: '1px solid #f0f0f0', textAlign: 'right' }}>{formatCurrency(row.rate)}</td>
-                                <td style={{ padding: '6px 2px', borderRight: '1px solid #f0f0f0', textAlign: 'right', fontWeight: 'bold' }}>{row.quantity?.toLocaleString()}</td>
-                                <td style={{ padding: '6px 2px', borderRight: '1px solid #f0f0f0', textAlign: 'right' }}>{formatCurrency(row.carriage)}</td>
-                                <td style={{ padding: '6px 2px', borderRight: '1px solid #f0f0f0', textAlign: 'right' }}>{formatCurrency(row.amount)}</td>
-                                <td style={{ padding: '6px 2px', textAlign: 'right', fontWeight: 'bold' }}>{formatCurrency(row.totalAmount)}</td>
+                                <td style={{ padding: '5px 2px', borderRight: '1px solid #f0f0f0', fontSize: '12px' }}>{formatDate(row.date)}</td>
+                                <td style={{ padding: '5px 2px', borderRight: '1px solid #f0f0f0', fontWeight: 'bold', fontSize: '12px' }}>{row.invoiceNo || '—'}</td>
+                                <td style={{ padding: '5px 2px', borderRight: '1px solid #f0f0f0', fontSize: '11px', wordBreak: 'break-word' }}>{row.description || '—'}</td>
+                                <td style={{ padding: '5px 2px', borderRight: '1px solid #f0f0f0', fontSize: '12px' }}>{row.vehicleNo || '—'}</td>
+                                <td style={{ padding: '5px 2px', borderRight: '1px solid #f0f0f0', textAlign: 'right', fontSize: '12px' }}>{formatCurrency(row.rate)}</td>
+                                <td style={{ padding: '5px 2px', borderRight: '1px solid #f0f0f0', textAlign: 'right', fontWeight: 'bold', fontSize: '12px' }}>{row.quantity?.toLocaleString()}</td>
+                                <td style={{ padding: '5px 2px', borderRight: '1px solid #f0f0f0', textAlign: 'right', fontSize: '12px' }}>{formatCurrency(row.carriage)}</td>
+                                <td style={{ padding: '5px 2px', borderRight: '1px solid #f0f0f0', textAlign: 'right', fontSize: '12px' }}>{formatCurrency(row.amount)}</td>
+                                <td style={{ padding: '5px 2px', textAlign: 'right', fontWeight: 'bold', fontSize: '12px' }}>{formatCurrency(row.totalAmount)}</td>
                               </>
                             ) : isCustSum ? (
                               <>
-                                <td style={{ padding: '6px 8px', borderRight: '1px solid #f0f0f0' }}>{(pi * ROWS_PER_PAGE) + idx + 1}</td>
-                                <td style={{ padding: '6px 8px', borderRight: '1px solid #f0f0f0', fontWeight: 'bold' }}>{row.name}</td>
-                                <td style={{ padding: '6px 8px', borderRight: '1px solid #f0f0f0', textAlign: 'right', color: '#dc2626' }}>{formatCurrency(row.totalDebit)}</td>
-                                <td style={{ padding: '6px 8px', borderRight: '1px solid #f0f0f0', textAlign: 'right', color: '#059669' }}>{formatCurrency(row.totalCredit)}</td>
-                                <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 'bold' }}>{balText}</td>
+                                <td style={{ padding: '5px 8px', borderRight: '1px solid #f0f0f0' }}>{(pi * ROWS_PER_PAGE) + idx + 1}</td>
+                                <td style={{ padding: '5px 8px', borderRight: '1px solid #f0f0f0', fontWeight: 'bold' }}>{row.name}</td>
+                                <td style={{ padding: '5px 8px', borderRight: '1px solid #f0f0f0', textAlign: 'right', color: '#dc2626' }}>{formatCurrency(row.totalDebit)}</td>
+                                <td style={{ padding: '5px 8px', borderRight: '1px solid #f0f0f0', textAlign: 'right', color: '#059669' }}>{formatCurrency(row.totalCredit)}</td>
+                                <td style={{ padding: '5px 8px', textAlign: 'right', fontWeight: 'bold' }}>{balText}</td>
                               </>
                             ) : (
                               <>
-                                <td style={{ padding: '6px 8px', borderRight: '1px solid #f0f0f0' }}>{formatDate(row.date)}</td>
-                                <td style={{ padding: '6px 8px', borderRight: '1px solid #f0f0f0', wordBreak: 'break-word', fontSize: '13px' }}>{row.description || row.details || row.type || '—'}</td>
+                                <td style={{ padding: '5px 8px', borderRight: '1px solid #f0f0f0' }}>{formatDate(row.date)}</td>
+                                <td style={{ padding: '5px 8px', borderRight: '1px solid #f0f0f0', wordBreak: 'break-word', fontSize: '13px' }}>{row.description || row.details || row.type || '—'}</td>
                                 {isSale ? (
                                   <>
-                                    <td style={{ padding: '6px 8px', borderRight: '1px solid #f0f0f0', textAlign: 'right' }}>{formatCurrency(row.rate)}</td>
-                                    <td style={{ padding: '6px 8px', borderRight: '1px solid #f0f0f0', textAlign: 'right', fontWeight: 'bold' }}>{row.quantity?.toLocaleString()}</td>
-                                    <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 'bold' }}>{formatCurrency(row.amount)}</td>
+                                    <td style={{ padding: '5px 8px', borderRight: '1px solid #f0f0f0', textAlign: 'right' }}>{formatCurrency(row.rate)}</td>
+                                    <td style={{ padding: '5px 8px', borderRight: '1px solid #f0f0f0', textAlign: 'right', fontWeight: 'bold' }}>{row.quantity?.toLocaleString()}</td>
+                                    <td style={{ padding: '5px 8px', textAlign: 'right', fontWeight: 'bold' }}>{formatCurrency(row.amount)}</td>
                                   </>
                                 ) : isLedger ? (
                                   <>
-                                    <td style={{ padding: '6px 8px', borderRight: '1px solid #f0f0f0', textAlign: 'right', color: '#dc2626' }}>{row.debit ? formatCurrency(row.debit) : '—'}</td>
-                                    <td style={{ padding: '6px 8px', borderRight: '1px solid #f0f0f0', textAlign: 'right', color: '#059669' }}>{row.credit ? formatCurrency(row.credit) : '—'}</td>
-                                    <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 'bold' }}>{type === 'customer' ? balText : formatCurrency(row.balance)}</td>
+                                    <td style={{ padding: '5px 8px', borderRight: '1px solid #f0f0f0', textAlign: 'right', color: '#dc2626' }}>{row.debit ? formatCurrency(row.debit) : '—'}</td>
+                                    <td style={{ padding: '5px 8px', borderRight: '1px solid #f0f0f0', textAlign: 'right', color: '#059669' }}>{row.credit ? formatCurrency(row.credit) : '—'}</td>
+                                    <td style={{ padding: '5px 8px', textAlign: 'right', fontWeight: 'bold' }}>{type === 'customer' ? balText : formatCurrency(row.balance)}</td>
                                   </>
                                 ) : isStock ? (
                                   <>
-                                    <td style={{ padding: '6px 8px', borderRight: '1px solid #f0f0f0', textAlign: 'right', color: '#059669' }}>{row.qtyIn ? `+${row.qtyIn.toLocaleString()}` : '—'}</td>
-                                    <td style={{ padding: '6px 8px', borderRight: '1px solid #f0f0f0', textAlign: 'right', color: '#dc2626' }}>{row.qtyOut ? `-${row.qtyOut.toLocaleString()}` : '—'}</td>
-                                    <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 'bold' }}>{row.balance?.toLocaleString()} L</td>
+                                    <td style={{ padding: '5px 8px', borderRight: '1px solid #f0f0f0', textAlign: 'right', color: '#059669' }}>{row.qtyIn ? `+${row.qtyIn.toLocaleString()}` : '—'}</td>
+                                    <td style={{ padding: '5px 8px', borderRight: '1px solid #f0f0f0', textAlign: 'right', color: '#dc2626' }}>{row.qtyOut ? `-${row.qtyOut.toLocaleString()}` : '—'}</td>
+                                    <td style={{ padding: '5px 8px', textAlign: 'right', fontWeight: 'bold' }}>{row.balance?.toLocaleString()} L</td>
                                   </>
                                 ) : (
-                                  <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 'bold' }}>{formatCurrency(row.amount)}</td>
+                                  <td style={{ padding: '5px 8px', textAlign: 'right', fontWeight: 'bold' }}>{formatCurrency(row.amount)}</td>
                                 )}
                               </>
                             )}
@@ -505,78 +505,78 @@ export default function PrintReportModal({
                         </tr>
                       ))}
                     </tbody>
-                    <tfoot style={{ background: '#f9f9f9', fontWeight: 1000, borderTop: '2px solid #111' }}>
+                    <tfoot style={{ background: '#f9f9f9', fontWeight: 1000, borderTop: '2px solid #111', fontSize: '12px' }}>
                       <tr style={{ borderBottom: '1px solid #ddd' }}>
-                        <td colSpan={isLedger || isCustSum ? 2 : (dynamicColumns ? dynamicColumns.length - 1 : (isPurchase ? 5 : 2))} style={{ padding: '10px', textAlign: 'right' }}>PAGE TOTAL:</td>
+                        <td colSpan={isLedger || isCustSum ? 2 : (dynamicColumns ? dynamicColumns.length - 1 : (isPurchase ? 5 : 2))} style={{ padding: '5px', textAlign: 'right' }}>PAGE TOTAL:</td>
                         {isLedger || isCustSum ? (
                           <>
-                            <td style={{ padding: '10px', textAlign: 'right', color: '#dc2626' }}>₨ {formatCurrency(chunk.reduce((s, x) => s + (x.debit || x.totalDebit || 0), 0))}</td>
-                            <td style={{ padding: '10px', textAlign: 'right', color: '#059669' }}>₨ {formatCurrency(chunk.reduce((s, x) => s + (x.credit || x.totalCredit || 0), 0))}</td>
-                            <td style={{ padding: '10px', textAlign: 'right' }}>
+                            <td style={{ padding: '5px', textAlign: 'right', color: '#dc2626' }}>₨ {formatCurrency(chunk.reduce((s, x) => s + (x.debit || x.totalDebit || 0), 0))}</td>
+                            <td style={{ padding: '5px', textAlign: 'right', color: '#059669' }}>₨ {formatCurrency(chunk.reduce((s, x) => s + (x.credit || x.totalCredit || 0), 0))}</td>
+                            <td style={{ padding: '5px', textAlign: 'right' }}>
                               {dynamicColumns ? formatCurrency(chunk.reduce((s, x) => s + (x[dynamicColumns[dynamicColumns.length - 1].accessor] || 0), 0)) : '—'}
                             </td>
                           </>
                         ) : dynamicColumns ? (
-                          <td style={{ padding: '10px', textAlign: dynamicColumns[dynamicColumns.length - 1].align || 'right' }}>
+                          <td style={{ padding: '5px', textAlign: dynamicColumns[dynamicColumns.length - 1].align || 'right' }}>
                             {dynamicColumns[dynamicColumns.length - 1].isCurrency ? formatCurrency(chunk.reduce((s, x) => s + (x[dynamicColumns[dynamicColumns.length - 1].accessor] || 0), 0)) : '—'}
                           </td>
                         ) : isPurchase ? (
                           <>
-                            <td style={{ padding: '6px 2px', textAlign: 'right' }}>{chunk.reduce((s, x) => s + (x.quantity || 0), 0).toLocaleString()} L</td>
-                            <td style={{ padding: '6px 2px', textAlign: 'right' }}>₨ {formatCurrency(chunk.reduce((s, x) => s + (x.carriage || 0), 0))}</td>
-                            <td style={{ padding: '6px 2px', textAlign: 'right' }}>₨ {formatCurrency(chunk.reduce((s, x) => s + (x.amount || 0), 0))}</td>
-                            <td style={{ padding: '6px 2px', textAlign: 'right' }}>₨ {formatCurrency(chunk.reduce((s, x) => s + (x.totalAmount || 0), 0))}</td>
+                            <td style={{ padding: '5px 2px', textAlign: 'right' }}>{chunk.reduce((s, x) => s + (x.quantity || 0), 0).toLocaleString()} L</td>
+                            <td style={{ padding: '5px 2px', textAlign: 'right' }}>₨ {formatCurrency(chunk.reduce((s, x) => s + (x.carriage || 0), 0))}</td>
+                            <td style={{ padding: '5px 2px', textAlign: 'right' }}>₨ {formatCurrency(chunk.reduce((s, x) => s + (x.amount || 0), 0))}</td>
+                            <td style={{ padding: '5px 2px', textAlign: 'right' }}>₨ {formatCurrency(chunk.reduce((s, x) => s + (x.totalAmount || 0), 0))}</td>
                           </>
                         ) : isSale ? (
                           <>
                             <td></td>
-                            <td style={{ padding: '10px', textAlign: 'right' }}>{chunk.reduce((s, x) => s + (x.quantity || 0), 0).toLocaleString()} L</td>
-                            <td style={{ padding: '10px', textAlign: 'right' }}>₨ {formatCurrency(chunk.reduce((s, x) => s + (x.amount || 0), 0))}</td>
+                            <td style={{ padding: '5px', textAlign: 'right' }}>{chunk.reduce((s, x) => s + (x.quantity || 0), 0).toLocaleString()} L</td>
+                            <td style={{ padding: '5px', textAlign: 'right' }}>₨ {formatCurrency(chunk.reduce((s, x) => s + (x.amount || 0), 0))}</td>
                           </>
                         ) : isStock ? (
                           <>
-                            <td style={{ padding: '10px', textAlign: 'right', color: '#059669' }}>+{chunk.reduce((s, x) => s + (x.qtyIn || 0), 0).toLocaleString()} L</td>
-                            <td style={{ padding: '10px', textAlign: 'right', color: '#dc2626' }}>-{chunk.reduce((s, x) => s + (x.qtyOut || 0), 0).toLocaleString()} L</td>
-                            <td style={{ padding: '10px', textAlign: 'right' }}>{chunk[chunk.length - 1]?.balance?.toLocaleString()} L</td>
+                            <td style={{ padding: '5px', textAlign: 'right', color: '#059669' }}>+{chunk.reduce((s, x) => s + (x.qtyIn || 0), 0).toLocaleString()} L</td>
+                            <td style={{ padding: '5px', textAlign: 'right', color: '#dc2626' }}>-{chunk.reduce((s, x) => s + (x.qtyOut || 0), 0).toLocaleString()} L</td>
+                            <td style={{ padding: '5px', textAlign: 'right' }}>{chunk[chunk.length - 1]?.balance?.toLocaleString()} L</td>
                           </>
                         ) : (
-                          <td style={{ padding: '10px', textAlign: 'right' }}>₨ {formatCurrency(chunk.reduce((s, x) => s + (x.amount || 0), 0))}</td>
+                          <td style={{ padding: '5px', textAlign: 'right' }}>₨ {formatCurrency(chunk.reduce((s, x) => s + (x.amount || 0), 0))}</td>
                         )}
                       </tr>
                       <tr style={{ background: '#f1f5f9' }}>
-                        <td colSpan={isLedger || isCustSum ? 2 : (dynamicColumns ? dynamicColumns.length - 1 : (isPurchase ? 5 : 2))} style={{ padding: '8px', textAlign: 'right' }}>GRAND TOTAL:</td>
+                        <td colSpan={isLedger || isCustSum ? 2 : (dynamicColumns ? dynamicColumns.length - 1 : (isPurchase ? 5 : 2))} style={{ padding: '5px', textAlign: 'right' }}>GRAND TOTAL:</td>
                         {isLedger || isCustSum ? (
                           <>
-                            <td style={{ padding: '8px', textAlign: 'right', color: '#dc2626' }}>₨ {formatCurrency(totalDebit)}</td>
-                            <td style={{ padding: '8px', textAlign: 'right', color: '#059669' }}>₨ {formatCurrency(totalCredit)}</td>
-                            <td style={{ padding: '8px', textAlign: 'right', background: '#e2e8f0' }}>
+                            <td style={{ padding: '5px', textAlign: 'right', color: '#dc2626' }}>₨ {formatCurrency(totalDebit)}</td>
+                            <td style={{ padding: '5px', textAlign: 'right', color: '#059669' }}>₨ {formatCurrency(totalCredit)}</td>
+                            <td style={{ padding: '5px', textAlign: 'right', background: '#e2e8f0' }}>
                               {(type === 'customer' || isCustSum) ? `${formatCurrency(Math.abs(grandTotal))} ${grandTotal >= 0 ? '(Dr)' : '(Cr)'}` : `₨ ${formatCurrency(grandTotal)}`}
                             </td>
                           </>
                         ) : dynamicColumns ? (
-                          <td style={{ padding: '8px', textAlign: dynamicColumns[dynamicColumns.length - 1].align || 'right', background: '#e2e8f0' }}>
+                          <td style={{ padding: '5px', textAlign: dynamicColumns[dynamicColumns.length - 1].align || 'right', background: '#e2e8f0' }}>
                             ₨ {formatCurrency(grandTotal)}
                           </td>
                         ) : isPurchase ? (
                           <>
-                            <td style={{ padding: '6px 2px', textAlign: 'right' }}>{totalQty.toLocaleString()} L</td>
-                            <td style={{ padding: '6px 2px', textAlign: 'right' }}>—</td>
-                            <td style={{ padding: '6px 2px', textAlign: 'right' }}>—</td>
-                            <td style={{ padding: '6px 2px', textAlign: 'right', background: '#e2e8f0' }}>₨ {formatCurrency(grandTotal)}</td>
+                            <td style={{ padding: '5px 2px', textAlign: 'right' }}>{totalQty.toLocaleString()} L</td>
+                            <td style={{ padding: '5px 2px', textAlign: 'right' }}>—</td>
+                            <td style={{ padding: '5px 2px', textAlign: 'right' }}>—</td>
+                            <td style={{ padding: '5px 2px', textAlign: 'right', background: '#e2e8f0' }}>₨ {formatCurrency(grandTotal)}</td>
                           </>
                         ) : isSale ? (
                           <>
                             <td></td>
-                            <td style={{ padding: '8px', textAlign: 'right' }}>{totalQty.toLocaleString()} L</td>
-                            <td style={{ padding: '8px', textAlign: 'right', background: '#e2e8f0' }}>₨ {formatCurrency(grandTotal)}</td>
+                            <td style={{ padding: '5px', textAlign: 'right' }}>{totalQty.toLocaleString()} L</td>
+                            <td style={{ padding: '5px', textAlign: 'right', background: '#e2e8f0' }}>₨ {formatCurrency(grandTotal)}</td>
                           </>
                         ) : isStock ? (
                           <>
                             <td></td><td></td>
-                            <td style={{ padding: '8px', textAlign: 'right', background: '#e2e8f0' }}>{chunk[chunk.length - 1]?.balance?.toLocaleString()} L</td>
+                            <td style={{ padding: '5px', textAlign: 'right', background: '#e2e8f0' }}>{chunk[chunk.length - 1]?.balance?.toLocaleString()} L</td>
                           </>
                         ) : (
-                          <td style={{ padding: '8px', textAlign: 'right', background: '#e2e8f0' }}>₨ {formatCurrency(grandTotal)}</td>
+                          <td style={{ padding: '5px', textAlign: 'right', background: '#e2e8f0' }}>₨ {formatCurrency(grandTotal)}</td>
                         )}
                       </tr>
                     </tfoot>
@@ -798,8 +798,8 @@ export default function PrintReportModal({
                 )}
 
                     {isLast && (
-                      <div style={{ marginTop: 'auto' }}>
-                        <div style={{ marginTop: '12px' }}>
+                      <div style={{ marginTop: '10px', breakInside: 'avoid', pageBreakInside: 'avoid', display: 'block' }}>
+                        <div style={{ marginTop: '5px' }}>
                           {type === 'balancesheet' && (
                             <div style={{ border: '2px solid #000', display: 'grid', gridTemplateColumns: '1fr 1fr', background: '#f8f8f8', overflow: 'hidden' }}>
                               <div style={{ padding: '10px 15px', borderRight: '2px solid #000' }}>

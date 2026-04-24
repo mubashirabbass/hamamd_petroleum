@@ -37,11 +37,11 @@ function DigitalClock() {
     <div className="flex items-center gap-2 md:gap-4">
       <div className="flex flex-col items-start select-none">
         <div className="flex items-baseline leading-none">
-          <span className="text-xl md:text-3xl font-black tracking-tight text-slate-900 dark:text-white">{displayHH}</span>
+          <span className="text-xl md:text-3xl font-black tracking-tight text-slate-900 dark:text-white tabular-nums">{displayHH}</span>
           <span className="text-lg md:text-2xl font-black text-slate-900 dark:text-white mx-0.5">:</span>
-          <span className="text-xl md:text-3xl font-black tracking-tight text-slate-900 dark:text-white">{mm}</span>
+          <span className="text-xl md:text-3xl font-black tracking-tight text-slate-900 dark:text-white tabular-nums">{mm}</span>
           <span className="text-lg md:text-2xl font-black text-slate-900 dark:text-white mx-0.5">:</span>
-          <span className="text-xl md:text-3xl font-black tracking-tight text-slate-900 dark:text-white">{ss}</span>
+          <span className="text-xl md:text-3xl font-black tracking-tight text-slate-900 dark:text-white tabular-nums">{ss}</span>
           <span className="text-[8px] md:text-[9px] font-black text-primary-600 dark:text-primary-400 uppercase tracking-widest ml-1 mb-0.5">{ampm}</span>
         </div>
         <div className="mt-0.5">
@@ -196,10 +196,20 @@ export default function Dashboard() {
       netProfit: grossProfit - totalExp,
       hsdStock, pmgStock,
       hsdSoldQty, pmgSoldQty,
+      hsdSoldAmt, pmgSoldAmt,
       hsdPurchasedQty: periodPurchases.filter((p: any) => p.type === 'HSD').reduce((sum: number, p: any) => sum + (p.quantity || 0), 0),
       pmgPurchasedQty: periodPurchases.filter((p: any) => p.type === 'PMG').reduce((sum: number, p: any) => sum + (p.quantity || 0), 0),
+      hsdPurchasedAmt: periodPurchases.filter((p: any) => p.type === 'HSD').reduce((sum: number, p: any) => sum + (p.totalAmount || 0), 0),
+      pmgPurchasedAmt: periodPurchases.filter((p: any) => p.type === 'PMG').reduce((sum: number, p: any) => sum + (p.totalAmount || 0), 0),
+      hsdStockVal: hsdStock * hsdAvg,
+      pmgStockVal: pmgStock * pmgAvg
     };
   }, [rawPurchases, rawSales, rawExpenses, settings.startDate, filter, fromDate, toDate]);
+
+  const fuelModules = [
+    { type: 'HSD', label: 'High Speed Diesel', stock: dashboardStats.hsdStock, sold: dashboardStats.hsdSoldQty, pQty: dashboardStats.hsdPurchasedQty, stockVal: dashboardStats.hsdStockVal, soldVal: dashboardStats.hsdSoldAmt, pVal: dashboardStats.hsdPurchasedAmt, icon: Fuel, color: 'amber' },
+    { type: 'PMG', label: 'Petrol / PMG', stock: dashboardStats.pmgStock, sold: dashboardStats.pmgSoldQty, pQty: dashboardStats.pmgPurchasedQty, stockVal: dashboardStats.pmgStockVal, soldVal: dashboardStats.pmgSoldAmt, pVal: dashboardStats.pmgPurchasedAmt, icon: Zap, color: 'emerald' },
+  ];
 
   const modules = [
     { label: 'Purchase',  path: '/purchase',  icon: ShoppingCart, color: 'text-primary-600', bg: 'bg-primary-600/10 border-primary-600/20', desc: `${dashboardStats.purchaseCount} records` },
@@ -242,8 +252,8 @@ export default function Dashboard() {
 
         {/* 2. Dashboard Title Block (Center) */}
         <div className="flex-1 flex flex-col items-center justify-center relative z-10 overflow-hidden" dir="rtl">
-          <div className="min-w-[280px] xs:min-w-[320px] md:min-w-[450px] max-w-[90%] mx-auto px-10 py-2.5 bg-white/10 dark:bg-white/5 backdrop-blur-2xl rounded-2xl border border-white/20 shadow-2xl flex items-center justify-center transition-all duration-300">
-            <h1 className="text-[15px] xs:text-[17px] sm:text-[19px] md:text-2xl lg:text-3xl font-black text-white font-urdu leading-[1.8] text-center drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)] whitespace-nowrap">
+          <div className="min-w-[300px] xs:min-w-[350px] md:min-w-[550px] lg:min-w-[650px] max-w-[95%] mx-auto px-14 py-4 bg-white/10 dark:bg-white/5 backdrop-blur-2xl rounded-[1.5rem] border border-white/20 shadow-2xl flex items-center justify-center transition-all duration-300 md:-translate-x-8">
+            <h1 className="text-[13px] xs:text-[15px] sm:text-[17px] md:text-xl lg:text-2xl font-black text-white font-urdu leading-[1.8] text-center drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)] whitespace-nowrap">
               {displayText}
             </h1>
           </div>
@@ -318,28 +328,31 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {[
-          { type: 'HSD', label: 'High Speed Diesel',       stock: dashboardStats.hsdStock, sold: dashboardStats.hsdSoldQty, pQty: dashboardStats.hsdPurchasedQty, icon: Fuel, color: 'amber' },
-          { type: 'PMG', label: 'Petrol / PMG', stock: dashboardStats.pmgStock, sold: dashboardStats.pmgSoldQty, pQty: dashboardStats.pmgPurchasedQty, icon: Zap,  color: 'emerald' },
-        ].map(f => (
+        {fuelModules.map(f => (
           <div key={f.type} className="glass rounded-3xl p-6 md:p-8 border border-slate-200 dark:border-dark-700/50 shadow-2xl relative overflow-hidden min-w-0 group">
             <div className={`absolute top-0 right-0 w-32 h-32 bg-${f.color}-500/5 rounded-bl-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-500`} />
             <div className="flex items-center gap-4 md:gap-5 mb-6 md:mb-8 relative">
               <div className={`w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-${f.color}-500/10 flex items-center justify-center border border-${f.color}-500/20 flex-shrink-0`}><f.icon className={`w-6 h-6 md:w-7 md:h-7 text-${f.color}-500`} /></div>
               <div className="min-w-0"><p className={`text-lg md:text-xl font-black text-${f.color}-600 dark:text-${f.color}-400 tracking-tighter truncate leading-none`}>{f.type}</p><p className="text-[9px] md:text-[10px] text-slate-500 dark:text-dark-400 font-black uppercase tracking-[0.2em] truncate mt-1">{f.label}</p></div>
             </div>
-            <div className="grid grid-cols-3 gap-4 md:gap-6 relative border-t border-slate-100 dark:border-dark-800/60 pt-6 md:pt-8">
+            <div className="flex items-stretch gap-4 md:gap-6 relative border-t border-slate-100 dark:border-dark-800/60 pt-6 md:pt-8">
               {[
-                { label: 'Purchase', qty: f.pQty },
-                { label: 'Sale',     qty: f.sold },
-                { label: 'Stock',    qty: f.stock, highlight: true },
-              ].map(col => (
-                <div key={col.label} className="space-y-1 md:space-y-1.5 min-w-0">
+                { label: 'Purchase', qty: f.pQty, amt: f.pVal },
+                { label: 'Sale',     qty: f.sold, amt: f.soldVal },
+                { label: 'Stock',    qty: f.stock, amt: f.stockVal, highlight: true },
+              ].map((col, idx, arr) => (
+                <div key={col.label} className="flex-1 flex flex-col space-y-1 md:space-y-1.5 min-w-0 relative">
+                  {idx < arr.length - 1 && (
+                    <div className="absolute top-1 right-[-8px] md:right-[-12px] bottom-1 w-[1.5px] bg-slate-900 dark:bg-slate-100 opacity-20" />
+                  )}
                   <p className="text-[8px] md:text-[9px] font-black text-slate-400 uppercase tracking-widest truncate">{col.label}</p>
                   <div className="flex items-baseline gap-1">
                     <span className={cn("font-black tabular-nums tracking-tighter leading-none", col.highlight ? `text-xl md:text-2xl text-${f.color}-600` : 'text-lg md:text-xl text-slate-900 dark:text-white')}>{col.qty.toLocaleString()}</span>
                     <span className="text-[8px] md:text-[9px] font-black text-slate-400 uppercase">L</span>
                   </div>
+                  <p className="text-[10px] md:text-[11px] font-bold text-slate-500 dark:text-dark-400 tracking-tight tabular-nums truncate">
+                    ₨ {formatCurrency(col.amt)}
+                  </p>
                 </div>
               ))}
             </div>

@@ -80,24 +80,24 @@ export default function TransactionReceiptModal({ entity, type, onClose }: Trans
           <table style="width:100%;border-collapse:collapse;border:2px solid #111;">
             <thead>
               <tr style="background:#f0f0f0;border-bottom:2px solid #111;">
-                <th style="padding:8px;border-right:1.5px solid #111;text-align:left;font-size:11px;font-weight:900;text-transform:uppercase;">Description (Bill Details)</th>
-                <th style="padding:8px;border-right:1.5px solid #111;text-align:right;font-size:11px;font-weight:900;text-transform:uppercase;width:90px;">Qty (L)</th>
-                <th style="padding:8px;border-right:1.5px solid #111;text-align:right;font-size:11px;font-weight:900;text-transform:uppercase;width:90px;">Rate (₨)</th>
-                <th style="padding:8px;text-align:right;font-size:11px;font-weight:900;text-transform:uppercase;width:120px;">Amount (₨)</th>
+                <th style="padding:12px;border-right:2px solid #111;text-align:left;font-size:14px;font-weight:900;text-transform:uppercase;">Description (Bill Details)</th>
+                <th style="padding:12px;border-right:2px solid #111;text-align:right;font-size:14px;font-weight:900;text-transform:uppercase;width:110px;">Qty (L)</th>
+                <th style="padding:12px;border-right:2px solid #111;text-align:right;font-size:14px;font-weight:900;text-transform:uppercase;width:110px;">Rate (₨)</th>
+                <th style="padding:12px;text-align:right;font-size:14px;font-weight:900;text-transform:uppercase;width:150px;">Amount (₨)</th>
               </tr>
             </thead>
             <tbody>
               <tr>
-                <td style="padding:15px 12px;border-right:1.5px solid #111;vertical-align:top;">
-                  <div style="font-size:13px;font-weight:900;color:#111;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${entity.details || entity.description || `${invTitle} Entry`}</div>
-                  ${entity.vehicleNo ? `<div style="font-size:10px;font-weight:700;color:#444;">Vehicle No: ${entity.vehicleNo}</div>` : ''}
+                <td style="padding:25px 15px;border-right:2px solid #111;vertical-align:top;">
+                  <div style="font-size:18px;font-weight:900;color:#111;margin-bottom:8px;">${entity.details || entity.description || `${invTitle} Entry`}</div>
+                  ${entity.vehicleNo ? `<div style="font-size:14px;font-weight:700;color:#444;">Vehicle No: ${entity.vehicleNo}</div>` : ''}
                 </td>
-                <td style="padding:15px 8px;border-right:1.5px solid #111;text-align:right;vertical-align:top;font-size:11px;">${(entity.quantity || 0).toLocaleString()} L</td>
-                <td style="padding:15px 8px;border-right:1.5px solid #111;text-align:right;vertical-align:top;font-size:11px;">₨ ${fc(entity.rate)}</td>
-                <td style="padding:15px 8px;text-align:right;vertical-align:top;font-size:14px;font-weight:900;">₨ ${fc(entity.amount)}</td>
+                <td style="padding:25px 10px;border-right:2px solid #111;text-align:right;vertical-align:top;font-size:16px;font-weight:900;">${(entity.quantity || 0).toLocaleString()} L</td>
+                <td style="padding:25px 10px;border-right:2px solid #111;text-align:right;vertical-align:top;font-size:16px;font-weight:900;">₨ ${fc(entity.rate)}</td>
+                <td style="padding:25px 10px;text-align:right;vertical-align:top;font-size:20px;font-weight:900;">₨ ${fc(entity.amount)}</td>
               </tr>
-              <tr style="height:280px;">
-                <td style="border-right:1.5px solid #111;"></td><td style="border-right:1.5px solid #111;"></td><td style="border-right:1.5px solid #111;"></td><td></td>
+              <tr style="height:550px;">
+                <td style="border-right:2px solid #111;"></td><td style="border-right:2px solid #111;"></td><td style="border-right:2px solid #111;"></td><td></td>
               </tr>
             </tbody>
             <tfoot>
@@ -187,8 +187,8 @@ export default function TransactionReceiptModal({ entity, type, onClose }: Trans
                 <div style="font-size:16px;font-weight:900;font-style:italic;">${invNo}</div>
               </div>
               <div style="padding:10px 15px;background:#fff;">
-                <div style="font-size:9px;font-weight:900;text-transform:uppercase;">Grand Total (PKR)</div>
-                <div style="font-size:22px;font-weight:900;border-bottom:3px solid #000;display:inline-block;line-height:1;">₨ ${fc(total)}</div>
+                <div style="font-size:11px;font-weight:900;text-transform:uppercase;">Grand Total (PKR)</div>
+                <div style="font-size:32px;font-weight:900;border-bottom:4px solid #000;display:inline-block;line-height:1;">₨ ${fc(total)}</div>
               </div>
             </div>
             <div style="padding:8px 12px;font-style:italic;font-size:10px;font-weight:900;border:2.5px solid #111;border-top:none;background:#fafafa;">

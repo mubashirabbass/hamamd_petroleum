@@ -352,7 +352,7 @@ export default function PurchasePage() {
                         <p className="text-sm font-black text-slate-500 tabular-nums">₨ {formatCurrency(fuel.stats.amt)}</p>
                       </div>
                       <div className="space-y-1 sm:text-right">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Freight / Rent</p>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Carriage</p>
                         <p className="text-sm font-black text-slate-500 tabular-nums">₨ {formatCurrency(fuel.stats.carriage)}</p>
                       </div>
                     </div>
@@ -528,7 +528,7 @@ export default function PurchasePage() {
                       <th className="table-cell text-left min-w-[120px]">Vehicle No</th>
                       <th className="table-cell text-right min-w-[100px]">Rate</th>
                       <th className="table-cell text-right min-w-[120px]">Qty (L)</th>
-                      <th className="table-cell text-right min-w-[140px]">Freight</th>
+                      <th className="table-cell text-right min-w-[140px]">Carriage</th>
                       <th className="table-cell text-right min-w-[160px]">Amount</th>
                       <th className="table-cell text-right font-black min-w-[180px]">Total</th>
                       <th className="table-cell w-20 text-center">Actions</th>
@@ -538,7 +538,7 @@ export default function PurchasePage() {
                     {paged.length === 0 ? (
                       <tr><td colSpan={10} className="table-cell text-center text-slate-400 dark:text-dark-500 py-12 italic">No {fuelType} purchases found</td></tr>
                     ) : paged.map((p) => (
-                      <tr key={p.id} className="table-row group hover:bg-slate-50 dark:hover:bg-dark-800/50 text-[9px]">
+                      <tr key={p.id} className="table-row group hover:bg-slate-50 dark:hover:bg-dark-800/50 text-[11px]">
                         <td className="table-cell whitespace-nowrap">{formatDate(p.date)}</td>
                         <td className="table-cell font-medium text-emerald-600 whitespace-nowrap truncate max-w-[7rem]">{p.invoiceNo || '—'}</td>
                         <td className="table-cell whitespace-normal break-words leading-4 truncate">{p.description || '—'}</td>
@@ -666,7 +666,7 @@ export default function PurchasePage() {
                 </div>
               </div>
                <div className="desktop-form-row">
-                <label className="desktop-form-label text-amber-600 dark:text-amber-400">Freight (Rent)</label>
+                <label className="desktop-form-label text-amber-600 dark:text-amber-400">Carriage</label>
                 <div className="desktop-form-field">
                   <input type="number" step="any" className="input !py-1.5 !bg-amber-50/30 dark:!bg-amber-900/10 focus:ring-amber-500/20" value={form.carriage} onChange={(e) => set('carriage', e.target.value)} />
                 </div>
