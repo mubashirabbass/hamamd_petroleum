@@ -50,12 +50,12 @@ export default function Sidebar({ className = '', isCollapsed = false, onNavigat
   return (
     <aside className={cn(
       "relative h-screen flex-shrink-0 flex flex-col transition-all duration-300 border-r border-slate-200 dark:border-dark-800 bg-white dark:bg-dark-900 shadow-2xl",
-      isCollapsed ? "w-14" : "w-64",
+      isCollapsed ? "w-14" : "w-60",
       className
     )}>
       <div className="flex-1 flex flex-col h-full overflow-hidden">
         {/* Header */}
-        <div className={cn("h-20 flex items-center border-b border-slate-100 dark:border-dark-800 transition-all", isCollapsed ? "justify-center px-1" : "px-4 gap-3")}>
+        <div className={cn("h-16 flex items-center border-b border-slate-100 dark:border-dark-800 transition-all", isCollapsed ? "justify-center px-1" : "px-3 gap-2")}>
           <div className="w-10 h-10 rounded-2xl bg-white flex-shrink-0 flex items-center justify-center shadow-xl p-1 border border-slate-150">
             <img src="/assets/logo-hr.png" alt="Logo" className="w-full h-full object-contain" />
           </div>
@@ -89,7 +89,7 @@ export default function Sidebar({ className = '', isCollapsed = false, onNavigat
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto no-scrollbar">
+        <nav className="flex-1 py-2 px-2 space-y-0.5 overflow-y-auto no-scrollbar">
           {navItems.map(item => {
             const { label, path, icon: Icon, children } = item as any;
             const active = path === '/' ? location.pathname === '/' : location.pathname.startsWith(path);
@@ -105,9 +105,9 @@ export default function Sidebar({ className = '', isCollapsed = false, onNavigat
                   }}
                   className={cn(
                     'flex items-center rounded-2xl text-sm font-black transition-all duration-300 relative group mb-1',
-                    isCollapsed ? "justify-center px-0 py-3" : "px-4 py-3 gap-4",
+                    isCollapsed ? "justify-center px-0 py-2.5" : "px-3 py-2.5 gap-3",
                     active 
-                      ? 'bg-primary-600 text-white shadow-[0_8px_20px_rgba(37,99,235,0.35)]' 
+                      ? 'bg-primary-600 text-white shadow-[0_4px_12px_rgba(37,99,235,0.25)]' 
                       : 'text-slate-500 dark:text-dark-400 hover:bg-slate-50 dark:hover:bg-dark-800'
                   )}
                   title={isCollapsed ? label : ""}
@@ -152,40 +152,40 @@ export default function Sidebar({ className = '', isCollapsed = false, onNavigat
         {/* Sidebar Footer — Zoom Controls */}
         <div className={cn("border-t border-slate-100 dark:border-dark-800 bg-slate-50/50 dark:bg-dark-900/50 transition-all", isCollapsed ? "p-2 pb-4" : "p-4 pb-4")}>
           {!isCollapsed && (
-            <div className="flex items-center justify-between mb-3 px-1">
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-dark-500">Interface Zoom</span>
-              <span className="text-[10px] font-black text-primary-600 dark:text-primary-400 bg-primary-100 dark:bg-primary-900/30 px-2.5 py-0.5 rounded-full shadow-sm">
+            <div className="flex items-center justify-between mb-2 px-1">
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-dark-500">Zoom</span>
+              <span className="text-[9px] font-black text-primary-600 dark:text-primary-400 bg-primary-100 dark:bg-primary-900/30 px-2 py-0.5 rounded-full shadow-sm">
                 {Math.round(settings.zoomLevel * 100)}%
               </span>
             </div>
           )}
-          <div className={cn("flex items-center bg-white dark:bg-dark-850 rounded-2xl shadow-sm border border-slate-200 dark:border-dark-800 overflow-hidden", isCollapsed ? "flex-col gap-2 p-1" : "gap-2 p-1.5")}>
+          <div className={cn("flex items-center bg-white dark:bg-dark-850 rounded-xl shadow-sm border border-slate-200 dark:border-dark-800 overflow-hidden", isCollapsed ? "flex-col gap-1 p-1" : "gap-1 p-1")}>
             <button 
               onClick={() => handleZoom(-0.1)} 
-              className="flex-1 w-full h-9 flex items-center justify-center rounded-xl bg-slate-50 dark:bg-dark-800 hover:bg-slate-100 dark:hover:bg-dark-750 text-slate-500 dark:text-dark-200 transition-all active:scale-90"
+              className="flex-1 w-full h-8 flex items-center justify-center rounded-lg bg-slate-50 dark:bg-dark-800 hover:bg-slate-100 dark:hover:bg-dark-750 text-slate-500 dark:text-dark-200 transition-all active:scale-90"
               title="Zoom Out"
             >
-              <Minus className="w-4 h-4" />
+              <Minus className="w-3.5 h-3.5" />
             </button>
-            {!isCollapsed && <div className="w-px h-5 bg-slate-200 dark:bg-dark-700" />}
+            {!isCollapsed && <div className="w-px h-4 bg-slate-200 dark:bg-dark-700" />}
             <button 
               onClick={() => handleZoom(0.1)} 
-              className="flex-1 w-full h-9 flex items-center justify-center rounded-xl bg-slate-50 dark:bg-dark-800 hover:bg-slate-100 dark:hover:bg-dark-750 text-slate-500 dark:text-dark-200 transition-all active:scale-90"
+              className="flex-1 w-full h-8 flex items-center justify-center rounded-lg bg-slate-50 dark:bg-dark-800 hover:bg-slate-100 dark:hover:bg-dark-750 text-slate-500 dark:text-dark-200 transition-all active:scale-90"
               title="Zoom In"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
 
         {/* Developer Tag */}
         {!isCollapsed && (
-          <div className="px-4 py-3 pb-12">
-            <div className="flex flex-col items-center justify-center p-3 rounded-2xl bg-slate-50 dark:bg-dark-950/50 border border-slate-200 dark:border-dark-800 shadow-sm">
-              <p className="text-[8px] font-black text-slate-400 dark:text-dark-500 uppercase tracking-[0.2em] mb-1">Software Solution By</p>
-              <p className="text-[11px] font-black text-slate-900 dark:text-white uppercase tracking-tight leading-none">MB Soft and Tech</p>
-              <div className="mt-2 h-px w-8 bg-primary-500/30" />
-              <p className="mt-2 text-[10px] font-bold text-primary-600 dark:text-primary-400 font-mono tracking-wider">0304-1654629</p>
+          <div className="px-3 py-2 pb-6">
+            <div className="flex flex-col items-center justify-center p-2 rounded-xl bg-slate-50 dark:bg-dark-950/50 border border-slate-200 dark:border-dark-800 shadow-sm">
+              <p className="text-[7px] font-black text-slate-400 dark:text-dark-500 uppercase tracking-[0.2em] mb-1">Software Solution By</p>
+              <p className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-tight leading-none">MB Soft and Tech</p>
+              <div className="mt-1.5 h-px w-6 bg-primary-500/30" />
+              <p className="mt-1.5 text-[9px] font-bold text-primary-600 dark:text-primary-400 font-mono tracking-wider">0304-1654629</p>
             </div>
           </div>
         )}

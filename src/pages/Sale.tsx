@@ -679,7 +679,7 @@ export default function SalePage() {
       )}
 
       {viewingEntity && <TransactionReceiptModal entity={viewingEntity} type="sale" onClose={() => setViewingEntity(null)} />}
-      {showReport && <PrintReportModal data={filtered} type="sale" fromDate={fromDate} toDate={toDate} onClose={() => setShowReport(false)} />}
+      {showReport && <PrintReportModal data={filtered} type="sale" title={`${fuelType} Sale Report`} fromDate={fromDate} toDate={toDate} onClose={() => setShowReport(false)} />}
     </div>
   );
 }

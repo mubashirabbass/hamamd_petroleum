@@ -20,7 +20,7 @@ function toWords(n: number): string {
   return i === 0 ? 'PKR Zero Only' : 'PKR ' + conv(i).trim() + ' Only';
 }
 
-type ReceiptType = 'purchase' | 'sale' | 'ledger' | 'expense' | 'asset' | 'liability' | 'customer';
+type ReceiptType = 'purchase' | 'sale' | 'ledger' | 'expense' | 'asset' | 'liability' | 'capital' | 'customer';
 
 interface TransactionReceiptModalProps {
   entity: any;
@@ -41,7 +41,7 @@ export default function TransactionReceiptModal({ entity, type, onClose }: Trans
 
   if (!entity) return null;
 
-  const total = entity.amount || (entity.debit || entity.credit) || 0;
+  const total = entity.totalAmount || entity.amount || (entity.debit || entity.credit) || 0;
 
   const handlePrint = () => {
     try {
@@ -49,7 +49,7 @@ export default function TransactionReceiptModal({ entity, type, onClose }: Trans
       const fd = (d: string) => formatDate(d);
       
       const invNo = entity.billNo || entity.invoiceNo || (entity.id && typeof entity.id === 'string' ? entity.id.slice(0, 8).toUpperCase() : '———');
-      const invTitle = (type || 'Receipt').toUpperCase();
+      const invTitle = (type === 'sale' || type === 'purchase') && entity.type ? `${entity.type} ${type.toUpperCase()}` : (type || 'Receipt').toUpperCase();
       const invDate = fd(entity.date) || '—';
 
       const isSale = type === 'sale';
@@ -63,7 +63,7 @@ export default function TransactionReceiptModal({ entity, type, onClose }: Trans
             <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
               <div style="width:85px;height:85px;"><img src="/assets/logo-hr.png" style="max-width:100%;max-height:100%;object-fit:contain;" onerror="this.style.display='none'"/></div>
               <div style="text-align:center;flex:1;">
-                <div style="font-size:22px;font-weight:900;text-transform:uppercase;letter-spacing:1px;white-space:nowrap;">Hammad Rahim Filling Station</div>
+                <div style="font-size:20px;font-weight:900;text-transform:uppercase;letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Hammad Rahim Filling Station</div>
                 <div style="font-size:10px;font-weight:700;font-style:italic;text-transform:uppercase;color:#444;margin-top:4px;">Muzafar Garh Road, Ada Ghyl Pur, District Jhang</div>
                 <div style="display:flex;justify-content:center;gap:15px;text-transform:uppercase;font-size:9px;font-weight:900;margin-top:10px;">
                   <span>&#128222; +92-301-7221831</span><span>|</span><span>&#128222; +92-300-0989192</span>
@@ -75,7 +75,7 @@ export default function TransactionReceiptModal({ entity, type, onClose }: Trans
         </div>`;
 
       let tableHTML = '';
-      if (isSale || isPurchase) {
+      if (isSale) {
         tableHTML = `
           <table style="width:100%;border-collapse:collapse;border:2px solid #111;">
             <thead>
@@ -88,21 +88,60 @@ export default function TransactionReceiptModal({ entity, type, onClose }: Trans
             </thead>
             <tbody>
               <tr>
-                <td style="padding:25px 15px;border-right:2px solid #111;vertical-align:top;">
-                  <div style="font-size:18px;font-weight:900;color:#111;margin-bottom:8px;">${entity.details || entity.description || `${invTitle} Entry`}</div>
-                  ${entity.vehicleNo ? `<div style="font-size:14px;font-weight:700;color:#444;">Vehicle No: ${entity.vehicleNo}</div>` : ''}
+                <td style="padding:20px 15px;border-right:2px solid #111;vertical-align:middle;">
+                  <div style="font-size:16px;font-weight:900;color:#111;line-height:1.2;">${entity.details || entity.description || `${invTitle} Entry`} ${entity.vehicleNo ? `(${entity.vehicleNo})` : ''}</div>
+                  <div style="font-size:12px;font-weight:700;color:#555;margin-top:2px;">Fuel Type: ${entity.fuelType || '—'}</div>
                 </td>
-                <td style="padding:25px 10px;border-right:2px solid #111;text-align:right;vertical-align:top;font-size:16px;font-weight:900;">${(entity.quantity || 0).toLocaleString()} L</td>
-                <td style="padding:25px 10px;border-right:2px solid #111;text-align:right;vertical-align:top;font-size:16px;font-weight:900;">₨ ${fc(entity.rate)}</td>
-                <td style="padding:25px 10px;text-align:right;vertical-align:top;font-size:20px;font-weight:900;">₨ ${fc(entity.amount)}</td>
+                <td style="padding:20px 10px;border-right:2px solid #111;text-align:right;vertical-align:middle;font-size:16px;font-weight:900;">${(entity.quantity || 0).toLocaleString()} L</td>
+                <td style="padding:20px 10px;border-right:2px solid #111;text-align:right;vertical-align:middle;font-size:16px;font-weight:900;">₨ ${fc(entity.rate)}</td>
+                <td style="padding:20px 10px;text-align:right;vertical-align:middle;font-size:18px;font-weight:900;">₨ ${fc(entity.amount)}</td>
               </tr>
-              <tr style="height:550px;">
-                <td style="border-right:2px solid #111;"></td><td style="border-right:2px solid #111;"></td><td style="border-right:2px solid #111;"></td><td></td>
+              <tr style="height:400px;">
+                <td style="border-right:2px solid #111;vertical-align:middle;"></td><td style="border-right:2px solid #111;vertical-align:middle;"></td><td style="border-right:2px solid #111;vertical-align:middle;"></td><td style="vertical-align:middle;"></td>
               </tr>
             </tbody>
             <tfoot>
               <tr style="background:#f9f9f9;border-top:2.5px solid #111;">
-                <td colspan="3" style="padding:12px 15px;text-align:right;font-size:12px;font-weight:900;text-transform:uppercase;">Page Total</td>
+                <td colspan="3" style="padding:15px;text-align:right;font-size:14px;font-weight:900;text-transform:uppercase;vertical-align:middle;">Page Total (PKR)</td>
+                <td style="padding:15px;text-align:right;font-size:18px;font-weight:900;white-space:nowrap;vertical-align:middle;">₨ ${fc(total)}</td>
+              </tr>
+            </tfoot>
+          </table>`;
+      } else if (isPurchase) {
+        tableHTML = `
+          <table style="width:100%;border-collapse:collapse;border:2px solid #111;font-variant-numeric:tabular-nums;">
+            <thead>
+              <tr style="background:#f0f0f0;border-bottom:2px solid #111;">
+                <th style="padding:10px 5px;border-right:2px solid #111;text-align:left;font-size:11px;font-weight:900;text-transform:uppercase;width:70px;">Date</th>
+                <th style="padding:10px 5px;border-right:2px solid #111;text-align:left;font-size:11px;font-weight:900;text-transform:uppercase;width:70px;">Inv No</th>
+                <th style="padding:10px 5px;border-right:2px solid #111;text-align:left;font-size:11px;font-weight:900;text-transform:uppercase;">Description</th>
+                <th style="padding:10px 5px;border-right:2px solid #111;text-align:left;font-size:11px;font-weight:900;text-transform:uppercase;width:75px;">Vehicle</th>
+                <th style="padding:10px 5px;border-right:2px solid #111;text-align:right;font-size:11px;font-weight:900;text-transform:uppercase;width:80px;">Rate</th>
+                <th style="padding:10px 5px;border-right:2px solid #111;text-align:right;font-size:11px;font-weight:900;text-transform:uppercase;width:70px;">Qty (L)</th>
+                <th style="padding:10px 5px;border-right:2px solid #111;text-align:right;font-size:11px;font-weight:900;text-transform:uppercase;width:100px;">Carriage</th>
+                <th style="padding:10px 5px;border-right:2px solid #111;text-align:right;font-size:11px;font-weight:900;text-transform:uppercase;width:115px;">Amount</th>
+                <th style="padding:10px 5px;text-align:right;font-size:11px;font-weight:900;text-transform:uppercase;width:130px;">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="padding:20px 5px;border-right:2px solid #111;vertical-align:top;font-size:12px;">${fd(entity.date)}</td>
+                <td style="padding:20px 5px;border-right:2px solid #111;vertical-align:top;font-size:12px;font-weight:700;">${entity.invoiceNo || '—'}</td>
+                <td style="padding:20px 5px;border-right:2px solid #111;vertical-align:top;font-size:12px;">${entity.description || 'Purchase Entry'}</td>
+                <td style="padding:20px 5px;border-right:2px solid #111;vertical-align:top;font-size:12px;">${entity.vehicleNo || '—'}</td>
+                <td style="padding:20px 5px;border-right:2px solid #111;text-align:right;vertical-align:top;font-size:12px;white-space:nowrap;">₨ ${fc(entity.rate)}</td>
+                <td style="padding:20px 5px;border-right:2px solid #111;text-align:right;vertical-align:top;font-size:12px;font-weight:700;white-space:nowrap;">${(entity.quantity || 0).toLocaleString()} L</td>
+                <td style="padding:20px 5px;border-right:2px solid #111;text-align:right;vertical-align:top;font-size:12px;white-space:nowrap;">₨ ${fc(entity.carriage)}</td>
+                <td style="padding:20px 5px;border-right:2px solid #111;text-align:right;vertical-align:top;font-size:12px;white-space:nowrap;">₨ ${fc(entity.amount)}</td>
+                <td style="padding:20px 5px;text-align:right;vertical-align:top;font-size:14px;font-weight:900;white-space:nowrap;">₨ ${fc(entity.totalAmount)}</td>
+              </tr>
+              <tr style="height:450px;">
+                <td style="border-right:2px solid #111;"></td><td style="border-right:2px solid #111;"></td><td style="border-right:2px solid #111;"></td><td style="border-right:2px solid #111;"></td><td style="border-right:2px solid #111;"></td><td style="border-right:2px solid #111;"></td><td style="border-right:2px solid #111;"></td><td style="border-right:2px solid #111;"></td><td></td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr style="background:#f9f9f9;border-top:2.5px solid #111;">
+                <td colspan="8" style="padding:12px 15px;text-align:right;font-size:12px;font-weight:900;text-transform:uppercase;">Grand Total</td>
                 <td style="padding:12px 15px;text-align:right;font-size:18px;font-weight:900;white-space:nowrap;">₨ ${fc(total)}</td>
               </tr>
             </tfoot>
@@ -120,21 +159,21 @@ export default function TransactionReceiptModal({ entity, type, onClose }: Trans
             </thead>
             <tbody>
               <tr>
-                <td style="padding:15px 12px;border-right:1.5px solid #111;vertical-align:top;">
+                <td style="padding:15px 12px;border-right:1.5px solid #111;vertical-align:middle;">
                   <div style="font-size:13px;font-weight:900;color:#111;">${entity.description || 'N/A'}</div>
                 </td>
-                <td style="padding:15px 8px;border-right:1.5px solid #111;text-align:right;vertical-align:top;color:#dc2626;font-size:11px;">${entity.debit ? `₨ ${fc(entity.debit)}` : '—'}</td>
-                <td style="padding:15px 8px;border-right:1.5px solid #111;text-align:right;vertical-align:top;color:#059669;font-size:11px;">${entity.credit ? `₨ ${fc(entity.credit)}` : '—'}</td>
-                <td style="padding:15px 8px;text-align:right;vertical-align:top;font-size:14px;font-weight:900;">₨ ${fc(entity.balance)}</td>
+                <td style="padding:15px 8px;border-right:1.5px solid #111;text-align:right;vertical-align:middle;color:#dc2626;font-size:11px;">${entity.debit ? `₨ ${fc(entity.debit)}` : '—'}</td>
+                <td style="padding:15px 8px;border-right:1.5px solid #111;text-align:right;vertical-align:middle;color:#059669;font-size:11px;">${entity.credit ? `₨ ${fc(entity.credit)}` : '—'}</td>
+                <td style="padding:15px 8px;text-align:right;vertical-align:middle;font-size:14px;font-weight:900;">₨ ${fc(entity.balance)}</td>
               </tr>
-              <tr style="height:280px;">
+              <tr style="height:400px;">
                 <td style="border-right:1.5px solid #111;"></td><td style="border-right:1.5px solid #111;"></td><td style="border-right:1.5px solid #111;"></td><td></td>
               </tr>
             </tbody>
             <tfoot>
               <tr style="background:#f9f9f9;border-top:2.5px solid #111;">
-                <td colspan="3" style="padding:12px 15px;text-align:right;font-size:12px;font-weight:900;text-transform:uppercase;">Page Total</td>
-                <td style="padding:12px 15px;text-align:right;font-size:18px;font-weight:900;white-space:nowrap;">₨ ${fc(total)}</td>
+                <td colspan="3" style="padding:12px 15px;text-align:right;font-size:14px;font-weight:900;text-transform:uppercase;vertical-align:middle;">Grand Total Analysis (PKR)</td>
+                <td style="padding:12px 15px;text-align:right;font-size:18px;font-weight:900;white-space:nowrap;vertical-align:middle;">₨ ${fc(total)}</td>
               </tr>
             </tfoot>
           </table>`;
@@ -175,32 +214,33 @@ export default function TransactionReceiptModal({ entity, type, onClose }: Trans
       </style></head><body>
         <div class="page">
           ${HEADER}
-          <div style="display:flex;justify-content:space-between;border:2.5px solid #111;padding:8px 15px;margin-bottom:15px;font-size:11px;font-weight:900;text-transform:uppercase;background:#f5f5f5;">
+          <div style="display:flex;justify-content:space-between;border:1.2px solid #111;padding:8px 15px;margin-bottom:15px;font-size:11px;font-weight:900;text-transform:uppercase;background:#f5f5f5;">
             <span>Invoice No: ${invNo}</span><span>Bill Title: ${invTitle}</span><span>Dated: ${invDate}</span>
           </div>
           ${tableHTML}
           <div style="flex:1;"></div>
-          <div style="padding-top:20px;margin-bottom:10mm;">
-            <div style="border:2.5px solid #111;display:grid;grid-template-columns:1fr 1fr;background:#fdfdfd;">
-              <div style="padding:10px 15px;border-right:2.5px solid #111;">
+          <div style="padding-top:10px;margin-bottom:5mm;">
+            <div style="border:1.2px solid #111;display:grid;grid-template-columns:1fr 1fr;background:#fdfdfd;">
+              <div style="padding:10px 15px;border-right:1.2px solid #111;">
                 <div style="font-size:9px;font-weight:900;text-transform:uppercase;">Reference/Invoice ID</div>
                 <div style="font-size:16px;font-weight:900;font-style:italic;">${invNo}</div>
               </div>
               <div style="padding:10px 15px;background:#fff;">
                 <div style="font-size:11px;font-weight:900;text-transform:uppercase;">Grand Total (PKR)</div>
-                <div style="font-size:32px;font-weight:900;border-bottom:4px solid #000;display:inline-block;line-height:1;">₨ ${fc(total)}</div>
+                <div style="font-size:32px;font-weight:900;border-bottom:3px solid #000;display:inline-block;line-height:1;">₨ ${fc(total)}</div>
               </div>
             </div>
-            <div style="padding:8px 12px;font-style:italic;font-size:10px;font-weight:900;border:2.5px solid #111;border-top:none;background:#fafafa;">
+            <div style="padding:8px 12px;font-style:italic;font-size:10px;font-weight:900;border:1.2px solid #111;border-top:none;background:#fafafa;">
               Amount in words: <span style="text-transform:uppercase;">${toWords(total)}</span>
             </div>
-            <div style="display:flex;justify-content:space-between;align-items:flex-end;padding-top:30px;">
-              <div>
-                <div style="font-size:10px;font-weight:700;font-style:italic;color:#555;">This is a computer generated entry.<br/>Errors and omissions are accepted.</div>
-                <div style="margin-top:12px;font-size:10px;color:#777;font-style:italic;text-align:center;font-weight:900;">Software Solution by Mb Soft and Tech — 0304-1654629</div>
+            <div style="display:flex;justify-content:space-between;align-items:flex-end;padding-top:15px;">
+              <div style="text-align:left;">
+                <div style="font-size:10px;font-weight:900;font-style:italic;color:#111;text-transform:uppercase;">This is a computer generated entry.</div>
+                <div style="font-size:10px;font-weight:900;font-style:italic;color:#111;text-transform:uppercase;">Errors and omissions are accepted.</div>
+                <div style="margin-top:10px;font-size:10px;color:#111;font-style:italic;font-weight:900;">Software Solution by Mb Soft and Tech — 0304-1654629</div>
               </div>
               <div style="text-align:center;width:280px;">
-                <div style="width:100%;height:60px;border-bottom:2.5px solid #111;margin-bottom:5px;position:relative;">
+                <div style="width:100%;height:60px;border-bottom:1.2px solid #111;margin-bottom:5px;position:relative;">
                   <img src="/assets/imtiaz-sign.png" style="position:absolute;bottom:-5px;left:50%;transform:translateX(-50%);height:75px;object-fit:contain;" onerror="this.style.display='none'"/>
                 </div>
                 <div style="font-size:14px;font-weight:900;text-transform:uppercase;">Muhammad Imtiaz ul Hassan</div>
@@ -240,7 +280,7 @@ export default function TransactionReceiptModal({ entity, type, onClose }: Trans
   };
 
   const getHeaders = () => {
-    if (type === 'sale' || type === 'purchase') {
+    if (type === 'sale') {
       return [
         { label: 'Description (Bill Details)', width: 'auto', align: 'left' },
         { label: 'Qty (L)', width: '90px', align: 'right' },
@@ -248,7 +288,20 @@ export default function TransactionReceiptModal({ entity, type, onClose }: Trans
         { label: 'Amount (₨)', width: '120px', align: 'right' }
       ];
     }
-    if (type === 'asset' || type === 'liability' || type === 'customer') {
+    if (type === 'purchase') {
+      return [
+        { label: 'Date', width: '70px', align: 'left' },
+        { label: 'Inv No', width: '70px', align: 'left' },
+        { label: 'Description', width: 'auto', align: 'left' },
+        { label: 'Vehicle', width: '75px', align: 'left' },
+        { label: 'Rate', width: '90px', align: 'right' },
+        { label: 'Qty (L)', width: '70px', align: 'right' },
+        { label: 'Carriage', width: '110px', align: 'right' },
+        { label: 'Amount', width: '120px', align: 'right' },
+        { label: 'Total', width: '140px', align: 'right' }
+      ];
+    }
+    if (type === 'asset' || type === 'liability' || type === 'capital' || type === 'customer') {
       return [
         { label: 'Description (Particulars)', width: 'auto', align: 'left' },
         { label: 'Debit (₨)', width: '120px', align: 'right' },
@@ -309,7 +362,7 @@ export default function TransactionReceiptModal({ entity, type, onClose }: Trans
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20 }}>
               <img src="/assets/logo-hr.png" style={{ width: 85, height: 85, objectFit: 'contain' }} alt="Logo" onError={(e) => (e.currentTarget.style.display = 'none')} />
               <div style={{ textAlign: 'center', flex: 1 }}>
-                <h1 style={{ fontSize: 26, fontWeight: 900, color: '#000', margin: 0, textTransform: 'uppercase', letterSpacing: 1, whiteSpace: 'nowrap' }}>Hammad Rahim Filling Station</h1>
+                <h1 style={{ fontSize: 20, fontWeight: 900, color: '#000', margin: 0, textTransform: 'uppercase', letterSpacing: 1, whiteSpace: 'nowrap' }}>Hammad Rahim Filling Station</h1>
                 <p style={{ fontSize: 11, fontWeight: 700, fontStyle: 'italic', color: '#444', margin: '4px 0', textTransform: 'uppercase' }}>Muzafar Garh Road, Ada Ghyl Pur, District Jhang</p>
                 <div style={{ display: 'flex', justifyContent: 'center', gap: 20, fontSize: 10, fontWeight: 900, marginTop: 10, color: '#000' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -329,45 +382,57 @@ export default function TransactionReceiptModal({ entity, type, onClose }: Trans
         </div>
 
         {/* Invoice Info Bar */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', border: '2.5px solid #111', padding: '10px 20px', marginBottom: 20, background: '#f8fafc', fontSize: 12, fontWeight: 1000, textTransform: 'uppercase' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', border: '1.2px solid #111', padding: '10px 20px', marginBottom: 20, background: '#f8fafc', fontSize: 12, fontWeight: 1000, textTransform: 'uppercase' }}>
           <span>Invoice No: {entity.billNo || entity.invoiceNo || entity.id?.slice(0, 8).toUpperCase() || '———'}</span>
-          <span>Bill Title: {type.toUpperCase()}</span>
+          <span>Bill Title: {(type === 'sale' || type === 'purchase') && entity.type ? `${entity.type} ${type.toUpperCase()}` : type.toUpperCase()}</span>
           <span>Dated: {formatDate(entity.date)}</span>
         </div>
 
         {/* Table */}
-        <table style={{ width: '100%', borderCollapse: 'collapse', border: '2.5px solid #111' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', border: '1.2px solid #111' }}>
           <thead>
-            <tr style={{ background: '#f1f5f9', borderBottom: '2.5px solid #111' }}>
+            <tr style={{ background: '#f1f5f9', borderBottom: '1.2px solid #111' }}>
               {headers.map((h, i) => (
-                <th key={i} style={{ padding: 12, textAlign: h.align as any, fontSize: 11, fontWeight: 1000, textTransform: 'uppercase', borderRight: i < headers.length - 1 ? '1.5px solid #111' : 'none', width: h.width }}>{h.label}</th>
+                <th key={i} style={{ padding: 10, textAlign: h.align as any, fontSize: 10, fontWeight: 1000, textTransform: 'uppercase', borderRight: i < headers.length - 1 ? '1.2px solid #111' : 'none', width: h.width }}>{h.label}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             <tr>
-              {type === 'sale' || type === 'purchase' ? (
+              {type === 'sale' ? (
                 <>
-                  <td style={{ padding: '20px 15px', borderRight: '1.5px solid #111', verticalAlign: 'top' }}>
-                    <div style={{ fontSize: 14, fontWeight: 900, color: '#111', marginBottom: 6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{entity.details || entity.description || 'Description N/A'}</div>
+                  <td style={{ padding: '15px', borderRight: '1.2px solid #111', verticalAlign: 'middle' }}>
+                    <div style={{ fontSize: 14, fontWeight: 900, color: '#111', lineHeight: 1.2 }}>{entity.details || entity.description || 'Description N/A'}</div>
                     {entity.vehicleNo && <div style={{ fontSize: 11, fontWeight: 700, color: '#444' }}>Vehicle No: {entity.vehicleNo}</div>}
                   </td>
-                  <td style={{ padding: '20px 10px', borderRight: '1.5px solid #111', textAlign: 'right', verticalAlign: 'top', fontSize: 12 }}>{entity.quantity?.toLocaleString()} L</td>
-                  <td style={{ padding: '20px 10px', borderRight: '1.5px solid #111', textAlign: 'right', verticalAlign: 'top', fontSize: 12 }}>₨ {formatCurrency(entity.rate)}</td>
-                  <td style={{ padding: '20px 15px', textAlign: 'right', verticalAlign: 'top', fontSize: 15, fontWeight: 1000 }}>₨ {formatCurrency(entity.amount)}</td>
+                  <td style={{ padding: '15px 10px', borderRight: '1.2px solid #111', textAlign: 'right', verticalAlign: 'middle', fontSize: 13 }}>{entity.quantity?.toLocaleString()} L</td>
+                  <td style={{ padding: '15px 10px', borderRight: '1.2px solid #111', textAlign: 'right', verticalAlign: 'middle', fontSize: 13 }}>₨ {formatCurrency(entity.rate)}</td>
+                  <td style={{ padding: '15px', textAlign: 'right', verticalAlign: 'middle', fontSize: 16, fontWeight: 1000 }}>₨ {formatCurrency(entity.amount)}</td>
                 </>
-              ) : type === 'asset' || type === 'liability' || type === 'customer' ? (
+              ) : type === 'purchase' ? (
                 <>
-                  <td style={{ padding: '20px 15px', borderRight: '1.5px solid #111', verticalAlign: 'top' }}>
+                  <td style={{ padding: '15px 5px', borderRight: '1.2px solid #111', verticalAlign: 'top', fontSize: 11 }}>{formatDate(entity.date)}</td>
+                  <td style={{ padding: '15px 5px', borderRight: '1.2px solid #111', verticalAlign: 'top', fontSize: 11, fontWeight: 700 }}>{entity.invoiceNo || '—'}</td>
+                  <td style={{ padding: '15px 5px', borderRight: '1.2px solid #111', verticalAlign: 'top', fontSize: 11 }}>{entity.description || '—'}</td>
+                  <td style={{ padding: '15px 5px', borderRight: '1.2px solid #111', verticalAlign: 'top', fontSize: 11 }}>{entity.vehicleNo || '—'}</td>
+                  <td style={{ padding: '15px 5px', borderRight: '1.2px solid #111', textAlign: 'right', verticalAlign: 'top', fontSize: 11, whiteSpace: 'nowrap' }}>₨ {formatCurrency(entity.rate)}</td>
+                  <td style={{ padding: '15px 5px', borderRight: '1.2px solid #111', textAlign: 'right', verticalAlign: 'top', fontSize: 11, whiteSpace: 'nowrap' }}>{entity.quantity?.toLocaleString()} L</td>
+                  <td style={{ padding: '15px 5px', borderRight: '1.2px solid #111', textAlign: 'right', verticalAlign: 'top', fontSize: 11, whiteSpace: 'nowrap' }}>₨ {formatCurrency(entity.carriage)}</td>
+                  <td style={{ padding: '15px 5px', borderRight: '1.2px solid #111', textAlign: 'right', verticalAlign: 'top', fontSize: 11, whiteSpace: 'nowrap' }}>₨ {formatCurrency(entity.amount)}</td>
+                  <td style={{ padding: '15px 5px', textAlign: 'right', verticalAlign: 'top', fontSize: 13, fontWeight: 900, whiteSpace: 'nowrap' }}>₨ {formatCurrency(entity.totalAmount)}</td>
+                </>
+              ) : type === 'asset' || type === 'liability' || type === 'capital' || type === 'customer' ? (
+                <>
+                  <td style={{ padding: '20px 15px', borderRight: '1.2px solid #111', verticalAlign: 'top' }}>
                     <div style={{ fontSize: 14, fontWeight: 900, color: '#111' }}>{entity.description || 'N/A'}</div>
                   </td>
-                  <td style={{ padding: '20px 10px', borderRight: '1.5px solid #111', textAlign: 'right', verticalAlign: 'top', color: '#dc2626', fontSize: 12 }}>{entity.debit ? `₨ ${formatCurrency(entity.debit)}` : '—'}</td>
-                  <td style={{ padding: '20px 10px', borderRight: '1.5px solid #111', textAlign: 'right', verticalAlign: 'top', color: '#059669', fontSize: 12 }}>{entity.credit ? `₨ ${formatCurrency(entity.credit)}` : '—'}</td>
+                  <td style={{ padding: '20px 10px', borderRight: '1.2px solid #111', textAlign: 'right', verticalAlign: 'top', color: '#dc2626', fontSize: 12 }}>{entity.debit ? `₨ ${formatCurrency(entity.debit)}` : '—'}</td>
+                  <td style={{ padding: '20px 10px', borderRight: '1.2px solid #111', textAlign: 'right', verticalAlign: 'top', color: '#059669', fontSize: 12 }}>{entity.credit ? `₨ ${formatCurrency(entity.credit)}` : '—'}</td>
                   <td style={{ padding: '20px 15px', textAlign: 'right', verticalAlign: 'top', fontSize: 15, fontWeight: 1000 }}>₨ {formatCurrency(entity.balance)}</td>
                 </>
               ) : (
                 <>
-                  <td style={{ padding: '20px 15px', borderRight: '1.5px solid #111', verticalAlign: 'top' }}>
+                  <td style={{ padding: '20px 15px', borderRight: '1.2px solid #111', verticalAlign: 'top' }}>
                     <div style={{ fontSize: 14, fontWeight: 900, color: '#111' }}>{entity.details || entity.description || 'N/A'}</div>
                   </td>
                   <td style={{ padding: '20px 15px', textAlign: 'right', verticalAlign: 'top', fontSize: 15, fontWeight: 1000 }}>₨ {formatCurrency(entity.amount)}</td>
@@ -375,24 +440,24 @@ export default function TransactionReceiptModal({ entity, type, onClose }: Trans
               )}
             </tr>
             {/* Fillers */}
-            <tr style={{ height: 350 }}>
+            <tr style={{ height: 300 }}>
               {headers.map((_, i) => (
-                <td key={i} style={{ borderRight: i < headers.length - 1 ? '1.5px solid #111' : 'none' }}></td>
+                <td key={i} style={{ borderRight: i < headers.length - 1 ? '1.2px solid #111' : 'none' }}></td>
               ))}
             </tr>
           </tbody>
           <tfoot>
-            <tr style={{ background: '#f8fafc', borderTop: '2.5px solid #111' }}>
-              <td colSpan={headers.length - 1} style={{ padding: '15px 20px', textAlign: 'right', fontSize: 13, fontWeight: 1000, textTransform: 'uppercase' }}>Page Total</td>
-              <td style={{ padding: '15px 20px', textAlign: 'right', fontSize: 20, fontWeight: 1000, whiteSpace: 'nowrap' }}>₨ {formatCurrency(total)}</td>
+            <tr style={{ background: '#f8fafc', borderTop: '1.2px solid #111' }}>
+              <td colSpan={headers.length - 1} style={{ padding: '15px', textAlign: 'right', fontSize: 13, fontWeight: 1000, textTransform: 'uppercase', verticalAlign: 'middle' }}>Grand Total Analysis (PKR)</td>
+              <td style={{ padding: '15px', textAlign: 'right', fontSize: 18, fontWeight: 1000, whiteSpace: 'nowrap', verticalAlign: 'middle' }}>₨ {formatCurrency(total)}</td>
             </tr>
           </tfoot>
         </table>
 
         {/* Footer info */}
-        <div style={{ marginTop: 'auto', paddingTop: 30 }}>
-          <div style={{ border: '2.5px solid #111', display: 'grid', gridTemplateColumns: '1fr 1fr', background: '#fdfdfd' }}>
-            <div style={{ padding: '12px 20px', borderRight: '2.5px solid #111' }}>
+        <div style={{ marginTop: 'auto', paddingTop: 15 }}>
+          <div style={{ border: '1.2px solid #111', display: 'grid', gridTemplateColumns: '1fr 1fr', background: '#fdfdfd' }}>
+            <div style={{ padding: '12px 20px', borderRight: '1.2px solid #111' }}>
               <div style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', color: '#64748b' }}>Reference ID</div>
               <div style={{ fontSize: 18, fontWeight: 900, fontStyle: 'italic', color: '#1e293b' }}>{entity.id?.slice(0, 12).toUpperCase()}</div>
             </div>
@@ -401,21 +466,24 @@ export default function TransactionReceiptModal({ entity, type, onClose }: Trans
               <div style={{ fontSize: 24, fontWeight: 1000, color: '#000', borderBottom: '3px solid #000', display: 'inline-block' }}>₨ {formatCurrency(total)}</div>
             </div>
           </div>
-          <div style={{ padding: '10px 15px', fontSize: 11, fontWeight: 1000, border: '2.5px solid #111', borderTop: 'none', background: '#f8fafc', fontStyle: 'italic' }}>
+          <div style={{ padding: '10px 15px', fontSize: 11, fontWeight: 1000, border: '1.2px solid #111', borderTop: 'none', background: '#f8fafc', fontStyle: 'italic' }}>
             Amount in words: <span style={{ textTransform: 'uppercase' }}>{toWords(total)}</span>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 40, paddingBottom: 20 }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '10px', fontWeight: 700, fontStyle: 'italic', color: '#555' }}>
-                This is a computer generated entry.<br />Errors and omissions are accepted.
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 20, paddingBottom: 10 }}>
+            <div style={{ flex: 1, textAlign: 'left' }}>
+              <div style={{ fontSize: '10px', fontWeight: 900, fontStyle: 'italic', color: '#111', textTransform: 'uppercase' }}>
+                This is a computer generated entry.
               </div>
-              <div style={{ marginTop: 12, fontSize: '10px', color: '#777', fontStyle: 'italic', textAlign: 'center', fontWeight: 900 }}>
+              <div style={{ fontSize: '10px', fontWeight: 900, fontStyle: 'italic', color: '#111', textTransform: 'uppercase' }}>
+                Errors and omissions are accepted.
+              </div>
+              <div style={{ marginTop: 10, fontSize: '10px', color: '#111', fontStyle: 'italic', fontWeight: 900 }}>
                 Software Solution by Mb Soft and Tech — 0304-1654629
               </div>
             </div>
             <div style={{ textAlign: 'center', width: '280px' }}>
-              <div style={{ width: '100%', height: '60px', borderBottom: '2.5px solid #111', marginBottom: 5, position: 'relative' }}>
+              <div style={{ width: '100%', height: '60px', borderBottom: '1.2px solid #111', marginBottom: 5, position: 'relative' }}>
                 <img src="/assets/imtiaz-sign.png" style={{ position: 'absolute', bottom: -5, left: '50%', transform: 'translateX(-50%)', height: '75px', objectFit: 'contain' }} />
               </div>
               <div style={{ fontSize: '14px', fontWeight: 1000, textTransform: 'uppercase' }}>Muhammad Imtiaz ul Hassan</div>

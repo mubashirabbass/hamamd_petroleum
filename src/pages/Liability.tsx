@@ -30,6 +30,9 @@ export default function LiabilityPage() {
     else if (tab === 'database') setActiveTab('database');
     else if (tab === 'manage') setActiveTab('manage');
   }, [searchParams]);
+  const [isSidebarPinned, setIsSidebarPinned] = useState(false);
+  const [isSidebarHovered, setIsSidebarHovered] = useState(false);
+  const isExpanded = isSidebarPinned || isSidebarHovered;
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
   const [showEntryForm, setShowEntryForm] = useState(false);
   const [showReport, setShowReport] = useState(false);
@@ -504,49 +507,78 @@ export default function LiabilityPage() {
         ) : activeTab === 'database' ? (
           <>
             {/* Sidebar List */}
-            <div className="w-64 flex-shrink-0 flex flex-col h-full bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700/50 rounded-2xl overflow-hidden shadow-sm">
-              <div className="p-3 bg-slate-50/50 dark:bg-dark-800/30 border-b border-slate-100 dark:border-dark-700/30 flex items-center justify-between">
-                <p className="text-[10px] font-extrabold text-slate-600 dark:text-dark-200 uppercase tracking-widest">Active Accounts</p>
-                <span className="text-[10px] font-bold text-slate-300">{filteredSidebar.length}</span>
+            <div 
+              onMouseEnter={() => setIsSidebarHovered(true)}
+              onMouseLeave={() => setIsSidebarHovered(false)}
+              className={cn(
+                "flex-shrink-0 flex flex-col gap-3 h-full transition-all duration-300 ease-in-out border border-slate-200 dark:border-dark-700/50 bg-white/50 dark:bg-dark-900/50 rounded-2xl backdrop-blur-md shadow-sm relative z-20 overflow-hidden",
+                isExpanded ? "w-64" : "w-16"
+              )}
+            >
+              <div className="p-3 border-b border-slate-100 dark:border-dark-800/50 flex items-center justify-between">
+                {isExpanded && (
+                  <h2 className="text-[10px] font-extrabold text-slate-600 dark:text-dark-200 uppercase tracking-[0.2em] animate-in fade-in slide-in-from-left-2">Accounts</h2>
+                )}
+                <button 
+                  onClick={() => setIsSidebarPinned(!isSidebarPinned)}
+                  className={cn(
+                    "p-1.5 rounded-lg transition-colors ml-auto",
+                    isSidebarPinned ? "text-primary-600 bg-primary-50 dark:bg-primary-900/20" : "text-slate-400 hover:bg-slate-100 dark:hover:bg-dark-800"
+                  )}
+                  title={isSidebarPinned ? "Unpin Sidebar" : "Pin Sidebar"}
+                >
+                  {isSidebarPinned ? <PinOff className="w-3.5 h-3.5" /> : <Pin className="w-3.5 h-3.5" />}
+                </button>
               </div>
+
               <div className="p-2 space-y-2 border-b border-slate-100 dark:border-dark-700/30 bg-slate-50/30">
-                <SearchBar value={sidebarSearch} onChange={setSidebarSearch} placeholder="Search Account..." fullWidth={true} className="!py-1.5 !text-[11px]" />
-                <div className="relative group">
-                  <ArrowUpDown className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 group-hover:text-primary-600 transition-colors pointer-events-none" />
-                  <select
-                    value={sidebarSort}
-                    onChange={(e) => setSidebarSort(e.target.value)}
-                    className="w-full appearance-none pl-7 pr-8 py-1.5 bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700/50 rounded-xl text-[9px] font-black uppercase tracking-wider text-slate-600 dark:text-dark-200 focus:ring-2 focus:ring-primary-600/20 focus:border-primary-600 transition-all cursor-pointer outline-none"
-                  >
-                    <option value="name_asc">A to Z</option>
-                    <option value="name_desc">Z to A</option>
-                    <option value="balance_desc">High Liability</option>
-                    <option value="balance_asc">Low Liability</option>
-                  </select>
-                  <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                    <div className="w-1 h-1 border-r border-b border-current rotate-45" />
+                {isExpanded ? (
+                  <div className="space-y-2 animate-in fade-in duration-300">
+                    <SearchBar value={sidebarSearch} onChange={setSidebarSearch} placeholder="Search Account..." fullWidth={true} className="!py-1.5 !text-[11px]" />
+                    <div className="relative group">
+                      <ArrowUpDown className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 group-hover:text-primary-600 transition-colors pointer-events-none" />
+                      <select
+                        value={sidebarSort}
+                        onChange={(e) => setSidebarSort(e.target.value)}
+                        className="w-full appearance-none pl-7 pr-8 py-1.5 bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700/50 rounded-xl text-[9px] font-black uppercase tracking-wider text-slate-600 dark:text-dark-200 focus:ring-2 focus:ring-primary-600/20 focus:border-primary-600 transition-all cursor-pointer outline-none"
+                      >
+                        <option value="name_asc">A to Z</option>
+                        <option value="name_desc">Z to A</option>
+                        <option value="balance_desc">High Liability</option>
+                        <option value="balance_asc">Low Liability</option>
+                      </select>
+                      <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                        <div className="w-1 h-1 border-r border-b border-current rotate-45" />
+                      </div>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="flex justify-center py-1">
+                    <Search className="w-4 h-4 text-slate-400" />
+                  </div>
+                )}
               </div>
-              <div className="smart-scroll flex-1 p-2 space-y-1">
+
+              <div className="smart-scroll flex-1 p-2 space-y-1 overflow-y-auto">
                 {filteredSidebar.length === 0 ? (
-                  <div className="p-8 text-center text-xs text-slate-400 italic">No Accounts found</div>
+                  isExpanded && <div className="p-8 text-center text-xs text-slate-400 italic">No Accounts found</div>
                 ) : (
                   filteredSidebar.map((c) => (
                     <div
                       key={c.id}
                       onClick={() => { setSelectedCat(c.id); setSearch(''); setPage(1); }}
                       className={cn(
-                        'group flex items-center justify-between px-3 py-3 rounded-xl cursor-pointer text-xs font-black transition-all duration-200 border border-transparent',
+                        'group flex items-center gap-3 px-3 py-3 rounded-xl cursor-pointer transition-all duration-200 border border-transparent',
                         selectedCat === c.id
-                          ? 'bg-primary-600/10 text-primary-600 border-primary-600/10 shadow-sm relative overflow-hidden'
-                          : 'text-slate-600 dark:text-dark-400 hover:bg-slate-50 dark:hover:bg-dark-800 hover:text-slate-900 dark:hover:text-white hover:border-slate-200 dark:hover:border-dark-700/50'
+                          ? 'bg-primary-600 text-white shadow-lg scale-105'
+                          : 'text-slate-600 dark:text-dark-400 hover:bg-slate-100 dark:hover:bg-dark-800'
                       )}
+                      title={!isExpanded ? c.name : ''}
                     >
-                      {selectedCat === c.id && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-primary-600 rounded-r-full"></span>}
-                      <div className="flex flex-col min-w-0">
-                        <p className="truncate text-slate-900 dark:text-white">{c.name}</p>
-                      </div>
+                      <Landmark className={cn("w-4 h-4 flex-shrink-0", selectedCat === c.id ? "text-white" : "text-primary-600")} />
+                      {isExpanded && (
+                        <p className="truncate text-xs font-black uppercase tracking-widest animate-in fade-in slide-in-from-left-2">{c.name}</p>
+                      )}
                     </div>
                   ))
                 )}
@@ -933,17 +965,9 @@ export default function LiabilityPage() {
       {/* Transaction View/Print Receipt Modal */}
       {viewingEntity && (
         <TransactionReceiptModal
-          isOpen={!!viewingEntity}
+          entity={viewingEntity}
+          type="liability"
           onClose={() => setViewingEntity(null)}
-          transaction={{
-            id: viewingEntity.id,
-            date: viewingEntity.date,
-            description: viewingEntity.description || '',
-            debit: viewingEntity.debit,
-            credit: viewingEntity.credit,
-            type: 'LIABILITY',
-            category: cat?.name || 'Liability'
-          }}
         />
       )}
 

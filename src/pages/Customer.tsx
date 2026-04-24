@@ -1056,7 +1056,7 @@ export default function CustomerPage() {
 
       {viewingEntity && (
         <TransactionReceiptModal
-          entity={{ ...viewingEntity, amount: (viewingEntity.debit || viewingEntity.credit) }}
+          entity={viewingEntity}
           type="customer"
           title={`Customer Receipt — ${cust?.name}`}
           onClose={() => setViewingEntity(null)}

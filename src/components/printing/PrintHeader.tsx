@@ -16,7 +16,7 @@ export default function PrintHeader() {
 
           {/* Business Details */}
           <div style={{ textAlign: 'center', flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: '24px', fontWeight: 1000, textTransform: 'uppercase', letterSpacing: '1px', lineHeight: 1.1 }}>
+            <div style={{ fontSize: '20px', fontWeight: 1000, textTransform: 'uppercase', letterSpacing: '1px', lineHeight: 1.1, whiteSpace: 'nowrap' }}>
               Hammad Rahim Filling Station
             </div>
             <div style={{ fontSize: '10px', fontWeight: 700, fontStyle: 'italic', textTransform: 'uppercase', color: '#444', marginTop: 4 }}>

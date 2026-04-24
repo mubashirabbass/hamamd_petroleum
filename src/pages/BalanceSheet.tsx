@@ -87,8 +87,8 @@ export default function BalanceSheet() {
     const totalFixedAssets = allAssets.reduce((s, a) => s + a.bal, 0);
 
     const filteredCustomers = customerEntries.filter(e => (!startDate || e.date >= startDate) && (!endDate || e.date <= endDate));
-    const totalReceivables = filteredCustomers.reduce((s, e) => s + (e.credit || 0), 0);
-    const totalPayables = filteredCustomers.reduce((s, e) => s + (e.debit || 0), 0);
+    const totalReceivables = filteredCustomers.reduce((s, e) => s + (e.debit || 0), 0);
+    const totalPayables = filteredCustomers.reduce((s, e) => s + (e.credit || 0), 0);
 
     const stock = (type: 'HSD' | 'PMG') => {
       const p = purchases.filter(x => x.type === type && (!startDate || x.date >= startDate) && (!endDate || x.date <= endDate));

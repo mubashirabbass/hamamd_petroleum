@@ -699,7 +699,7 @@ export default function PurchasePage() {
       ) /* End showForm */}
 
       {viewingEntity && <TransactionReceiptModal entity={viewingEntity} type="purchase" onClose={() => setViewingEntity(null)} />}
-      {showReport && <PrintReportModal data={filtered} type="purchase" fromDate={fromDate} toDate={toDate} onClose={() => setShowReport(false)} />}
+      {showReport && <PrintReportModal data={filtered} type="purchase" title={`${fuelType} Purchase Report`} fromDate={fromDate} toDate={toDate} onClose={() => setShowReport(false)} />}
     </div>
   );
 }

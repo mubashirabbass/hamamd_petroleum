@@ -52,16 +52,15 @@ export default function AssetPage() {
   const [toDate, setToDate] = useState('');
   const [page, setPage] = useState(1);
   const [dashPage, setDashPage] = useState(1);
-  const [editingEntityId, setEditingEntityId] = useState<string | null>(null);
+  const [editingEntity, setEditingEntity] = useState<any>(null);
+  const [viewingEntity, setViewingEntity] = useState<any>(null);
   const [perPage, setPerPage] = useState(40);
+  const [showEntryForm, setShowEntryForm] = useState(false);
+  const [form, setForm] = useState({ date: today(), description: '', debit: '', credit: '' });
   const [isSaving, setIsSaving] = useState(false);
   const [dashSort, setDashSort] = useState('name_asc');
   const [entrySort, setEntrySort] = useState('date_desc');
   const [sidebarSort, setSidebarSort] = useState('name_asc');
-
-  // Inline Entry State
-  const [isInlineAdding, setIsInlineAdding] = useState(false);
-  const [inlineForm, setInlineForm] = useState({ date: today(), description: '', debit: '', credit: '' });
 
   useEffect(() => {
     if (!selectedCat && assetCategories.length > 0) {
@@ -136,25 +135,30 @@ export default function AssetPage() {
 
   const paged = paginate(withBalance, page, perPage);
 
-  const handleSaveInline = async () => {
-    if (!selectedCat || !inlineForm.date) { toast('Fill required fields', 'error'); return; }
+  const pageTotals = useMemo(() => ({
+    debit: paged.reduce((s, e) => s + (e.debit || 0), 0),
+    credit: paged.reduce((s, e) => s + (e.credit || 0), 0),
+  }), [paged]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedCat || !form.date) { toast('Fill required fields', 'error'); return; }
     
-    const debit = parseFloat(inlineForm.debit) || 0;
-    const credit = parseFloat(inlineForm.credit) || 0;
-    const payload = { categoryId: selectedCat, date: inlineForm.date, description: inlineForm.description, debit, credit, balance: 0 };
+    const debit = parseFloat(form.debit) || 0;
+    const credit = parseFloat(form.credit) || 0;
+    const payload = { categoryId: selectedCat, date: form.date, description: form.description, debit, credit, balance: 0 };
     
     setIsSaving(true);
     try {
-      if (editingEntityId) {
-        await updateAssetEntry(editingEntityId, payload);
+      if (editingEntity) {
+        await updateAssetEntry(editingEntity.id, payload);
         toast('Entry updated', 'success');
-        setEditingEntityId(null);
+        closeForm();
       } else {
         await addAssetEntry(payload);
         toast('Entry added', 'success');
+        resetFormForNext();
       }
-      setIsInlineAdding(false);
-      setInlineForm({ date: today(), description: '', debit: '', credit: '' });
     } catch (err: any) {
       toast(`Failed to save: ${err.message}`, 'error');
     } finally {
@@ -162,15 +166,26 @@ export default function AssetPage() {
     }
   };
 
-  const handleEditInline = (e: any) => {
-    setEditingEntityId(e.id);
-    setInlineForm({
+  const resetFormForNext = () => {
+    setEditingEntity(null);
+    setForm(prev => ({ ...prev, description: '', debit: '', credit: '' }));
+  };
+
+  const closeForm = () => {
+    setShowEntryForm(false);
+    setEditingEntity(null);
+    setForm({ date: today(), description: '', debit: '', credit: '' });
+  };
+
+  const handleEdit = (e: any) => {
+    setEditingEntity(e);
+    setForm({
       date: e.date,
       description: e.description || '',
       debit: e.debit ? e.debit.toString() : '',
       credit: e.credit ? e.credit.toString() : '',
     });
-    setIsInlineAdding(true);
+    setShowEntryForm(true);
   };
 
   const totals = useMemo(() => ({
@@ -341,41 +356,93 @@ export default function AssetPage() {
             </div>
           </div>
         ) : activeTab === 'database' ? (
-          <div className="flex-1 flex gap-4 h-full w-full p-4 overflow-hidden">
+          <div className="flex-1 flex gap-4 h-full w-full p-4 overflow-hidden min-h-0">
              {/* Sidebar List */}
-             <div className={cn("flex-shrink-0 flex flex-col gap-3 h-full transition-all border border-slate-200 dark:border-dark-700/50 bg-white/50 dark:bg-dark-900/50 rounded-2xl", isExpanded ? "w-64" : "w-16")}>
-               <div className="p-3 border-b border-slate-100 flex items-center justify-between">
-                 {isExpanded && <h2 className="text-[10px] font-black uppercase tracking-widest">Accounts</h2>}
-                 <button onClick={() => setIsSidebarPinned(!isSidebarPinned)} className="p-1">{isSidebarPinned ? <PinOff className="w-3.5 h-3.5" /> : <Pin className="w-3.5 h-3.5" />}</button>
+            <div 
+              onMouseEnter={() => setIsSidebarHovered(true)}
+              onMouseLeave={() => setIsSidebarHovered(false)}
+              className={cn(
+                "flex-shrink-0 flex flex-col gap-3 h-full transition-all duration-300 ease-in-out border border-slate-200 dark:border-dark-700/50 bg-white/50 dark:bg-dark-900/50 rounded-2xl backdrop-blur-md shadow-sm relative z-20 overflow-hidden",
+                isExpanded ? "w-64" : "w-16"
+              )}
+            >
+               <div className="p-3 border-b border-slate-100 dark:border-dark-800/50 flex items-center justify-between">
+                 {isExpanded && <h2 className="text-[10px] font-extrabold text-slate-600 dark:text-dark-200 uppercase tracking-[0.2em]">Accounts</h2>}
+                 <button onClick={() => setIsSidebarPinned(!isSidebarPinned)} className="p-1.5 rounded-lg transition-colors ml-auto">{isSidebarPinned ? <PinOff className="w-3.5 h-3.5" /> : <Pin className="w-3.5 h-3.5" />}</button>
                </div>
-               <div className="overflow-y-auto p-2 space-y-1">
+               <div className="p-2 space-y-2 border-b border-slate-100 dark:border-dark-700/30 bg-slate-50/30">
+                 {isExpanded ? (
+                   <div className="space-y-2">
+                     <SearchBar value={sidebarSearch} onChange={setSidebarSearch} placeholder="Search Assets..." fullWidth={true} className="!py-1.5 !text-[11px]" />
+                     <div className="relative group">
+                       <ArrowUpDown className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 group-hover:text-primary-600 transition-colors pointer-events-none" />
+                       <select
+                         value={sidebarSort}
+                         onChange={(e) => setSidebarSort(e.target.value)}
+                         className="w-full appearance-none pl-7 pr-8 py-1.5 bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700/50 rounded-xl text-[9px] font-black uppercase tracking-wider text-slate-600 dark:text-dark-200 focus:ring-2 focus:ring-primary-600/20 focus:border-primary-600 transition-all cursor-pointer outline-none"
+                       >
+                         <option value="name_asc">A to Z</option>
+                         <option value="name_desc">Z to A</option>
+                         <option value="balance_desc">High Valuation</option>
+                         <option value="balance_asc">Low Valuation</option>
+                       </select>
+                       <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                         <div className="w-1 h-1 border-r border-b border-current rotate-45" />
+                       </div>
+                     </div>
+                   </div>
+                 ) : (
+                   <div className="flex justify-center py-1">
+                     <Search className="w-4 h-4 text-slate-400" />
+                   </div>
+                 )}
+               </div>
+               <div className="smart-scroll flex-1 p-2 space-y-1 overflow-y-auto">
                  {filteredSidebar.map(c => (
                    <div key={c.id} onClick={() => { setSelectedCat(c.id); setPage(1); }} className={cn("flex items-center gap-3 px-3 py-3 rounded-xl cursor-pointer transition-all", selectedCat === c.id ? "bg-primary-600 text-white shadow-lg" : "hover:bg-slate-100")}>
                      <Briefcase className="w-4 h-4 flex-shrink-0" />
-                     {isExpanded && <p className="truncate text-xs font-black uppercase">{c.name}</p>}
+                     {isExpanded && <p className="truncate text-xs font-black uppercase tracking-widest">{c.name}</p>}
                    </div>
                  ))}
                </div>
              </div>
 
-             {/* Main Table */}
-             <div className="flex-1 min-w-0 flex flex-col h-full">
+             {/* Main Content */}
+             <div className="flex-1 min-w-0 flex flex-col h-full pr-1">
                {cat ? (
                  <>
-                   <div className="flex items-center justify-between mb-6">
+                   <div className="flex items-center justify-between mb-5 animate-in slide-in-from-bottom duration-350">
                       <div className="flex items-center gap-4">
-                        <div className="w-14 h-14 rounded-2xl bg-primary-600/10 flex items-center justify-center"><Briefcase className="w-8 h-8 text-primary-600" /></div>
+                        <div className="w-14 h-14 rounded-2xl bg-primary-600/10 dark:bg-primary-600/20 flex items-center justify-center"><Briefcase className="w-8 h-8 text-primary-600" /></div>
                         <div>
-                          <h1 className="text-3xl font-black tracking-tighter uppercase">{cat.name} Ledger</h1>
-                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Transaction History</p>
+                          <h1 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight">{cat.name} Ledger</h1>
                         </div>
                       </div>
-                      <button onClick={() => { setEditingEntityId(null); setInlineForm({ date: today(), description: '', debit: '', credit: '' }); setIsInlineAdding(true); }} className="btn-primary flex items-center gap-2 !rounded-2xl shadow-xl shadow-primary-600/20">
+                      <button onClick={() => { setEditingEntity(null); setForm({ date: today(), description: '', debit: '', credit: '' }); setShowEntryForm(true); }} className="btn-primary flex items-center gap-2 !rounded-2xl shadow-xl shadow-primary-600/20">
                         <Plus className="w-5 h-5" /> New Entry
                       </button>
                    </div>
 
-                   <div className="flex-1 glass rounded-[2rem] overflow-hidden border border-slate-200 dark:border-dark-700/50 flex flex-col shadow-2xl bg-white dark:bg-dark-900">
+                   {/* Summary Cards */}
+                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 animate-in slide-in-from-bottom duration-350 delay-75">
+                     <div className="glass p-5 rounded-2xl border-l-4 border-emerald-500 shadow-sm">
+                       <p className="text-[10px] font-black text-slate-400 dark:text-dark-500 uppercase tracking-widest mb-1">Total Additions (Debit)</p>
+                       <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 tabular-nums break-words break-all whitespace-normal leading-tight w-full">₨ {formatCurrency(totals.debit)}</p>
+                     </div>
+                     <div className="glass p-5 rounded-2xl border-l-4 border-orange-500 shadow-sm">
+                       <p className="text-[10px] font-black text-slate-400 dark:text-dark-500 uppercase tracking-widest mb-1">Total Withdrawals (Credit)</p>
+                       <p className="text-2xl font-black text-orange-600 dark:text-orange-400 tabular-nums break-words break-all whitespace-normal leading-tight w-full">₨ {formatCurrency(totals.credit)}</p>
+                     </div>
+                     <div className="glass p-5 rounded-2xl border-l-4 border-primary-600 shadow-sm">
+                       <p className="text-[10px] font-black text-slate-400 dark:text-dark-500 uppercase tracking-widest mb-1">Current Valuation</p>
+                       <p className="text-2xl font-black text-primary-600 tabular-nums break-words break-all whitespace-normal leading-tight w-full">
+                         ₨ {formatCurrency(Math.abs(totals.debit - totals.credit))}
+                         <span className="text-xs ml-1 text-slate-400">{(totals.debit - totals.credit) >= 0 ? 'DR' : 'CR'}</span>
+                       </p>
+                     </div>
+                   </div>
+
+                   <div className="flex-1 glass rounded-2xl overflow-hidden border border-slate-200 dark:border-dark-700/50 flex flex-col shadow-2xl bg-white dark:bg-dark-900 animate-in slide-in-from-bottom duration-350 delay-150">
                      <div className="p-4 border-b flex items-center justify-between bg-slate-50/50">
                         <SearchBar value={search} onChange={setSearch} placeholder="Search ledger..." />
                         <div className="flex items-center gap-2">
@@ -385,51 +452,67 @@ export default function AssetPage() {
                         </div>
                      </div>
                      <div className="flex-1 overflow-auto smart-scroll">
-                        <table className="w-full border-collapse">
-                           <thead className="sticky top-0 z-10 bg-slate-900 text-white font-mono">
-                             <tr className="text-[10px] uppercase tracking-widest">
-                               <th className="px-6 py-4 text-left border-r border-slate-700">Date</th>
-                               <th className="px-6 py-4 text-left border-r border-slate-700">Description</th>
-                               <th className="px-6 py-4 text-right border-r border-slate-700">Debit (Addition)</th>
-                               <th className="px-6 py-4 text-right border-r border-slate-700">Credit (Withdraw)</th>
-                               <th className="px-6 py-4 text-right border-r border-slate-700">Balance</th>
-                               <th className="px-6 py-4 text-center">Actions</th>
+                        <table className="table-excel">
+                           <thead className="sticky top-0 z-10 bg-slate-200 dark:bg-dark-800">
+                             <tr className="table-header text-[9px]">
+                               <th className="px-4 py-3 text-left w-24">Date</th>
+                               <th className="px-4 py-3 text-left w-auto">Description</th>
+                               <th className="px-4 py-3 text-right w-36">Debit (Add)</th>
+                               <th className="px-4 py-3 text-right w-36">Credit (Out)</th>
+                               <th className="px-4 py-3 text-right w-44">Balance</th>
+                               <th className="px-4 py-3 w-20 text-center">Actions</th>
                              </tr>
                            </thead>
-                           <tbody className="divide-y divide-slate-100 dark:divide-dark-800">
-                             {/* Inline Add Row */}
-                             {isInlineAdding && (
-                               <tr className="bg-primary-50/50 dark:bg-primary-900/10 animate-slide-down border-b-2 border-primary-500">
-                                 <td className="px-4 py-3"><input type="date" className="w-full bg-white dark:bg-dark-800 border border-primary-300 rounded px-2 py-1 outline-none text-xs" value={inlineForm.date} onChange={e => setInlineForm({...inlineForm, date: e.target.value})} /></td>
-                                 <td className="px-4 py-3"><input type="text" className="w-full bg-white dark:bg-dark-800 border border-primary-300 rounded px-2 py-1 outline-none text-xs" placeholder="Description..." value={inlineForm.description} onChange={e => setInlineForm({...inlineForm, description: e.target.value})} /></td>
-                                 <td className="px-4 py-3"><input type="number" className="w-full bg-white dark:bg-dark-800 border border-primary-300 rounded px-2 py-1 outline-none text-xs text-right" placeholder="0.00" value={inlineForm.debit} onChange={e => setInlineForm({...inlineForm, debit: e.target.value})} /></td>
-                                 <td className="px-4 py-3"><input type="number" className="w-full bg-white dark:bg-dark-800 border border-primary-300 rounded px-2 py-1 outline-none text-xs text-right" placeholder="0.00" value={inlineForm.credit} onChange={e => setInlineForm({...inlineForm, credit: e.target.value})} /></td>
-                                 <td className="px-4 py-3 text-right text-slate-400 font-bold italic">Draft</td>
-                                 <td className="px-4 py-3 text-center">
-                                   <div className="flex justify-center gap-2">
-                                     <button onClick={handleSaveInline} className="p-1.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 shadow-sm" disabled={isSaving}><Save className="w-4 h-4" /></button>
-                                     <button onClick={() => { setIsInlineAdding(false); setEditingEntityId(null); }} className="p-1.5 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300"><X className="w-4 h-4" /></button>
-                                   </div>
-                                 </td>
-                               </tr>
-                             )}
-
-                             {paged.map(e => (
-                               <tr key={e.id} className="group hover:bg-slate-50 transition-colors border-b border-slate-50 font-mono text-[11px]">
-                                 <td className="px-6 py-4 font-bold text-slate-500 border-r border-slate-100">{formatDate(e.date)}</td>
-                                 <td className="px-6 py-4 text-slate-800 font-medium border-r border-slate-100">{e.description || '—'}</td>
-                                 <td className="px-6 py-4 text-right text-emerald-600 font-black border-r border-slate-100">{e.debit ? formatCurrency(e.debit) : '—'}</td>
-                                 <td className="px-6 py-4 text-right text-orange-600 font-black border-r border-slate-100">{e.credit ? formatCurrency(e.credit) : '—'}</td>
-                                 <td className="px-6 py-4 text-right font-black text-slate-900 border-r border-slate-100 bg-slate-50/30 whitespace-nowrap">₨ {formatCurrency(e.balance)}</td>
-                                 <td className="px-6 py-4 text-center">
-                                   <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                     <button onClick={() => handleEditInline(e)} className="p-1.5 text-primary-600 hover:bg-primary-50 rounded-lg"><Edit2 className="w-3.5 h-3.5" /></button>
-                                     <button onClick={() => { if(confirm('Delete?')) deleteAssetEntry(e.id); }} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg"><Trash2 className="w-3.5 h-3.5" /></button>
+                           <tbody>
+                             {paged.length === 0 ? (
+                               <tr><td colSpan={6} className="text-center text-slate-400 py-12 italic">No transactions found</td></tr>
+                             ) : paged.map(e => (
+                               <tr key={e.id} className="group">
+                                 <td className="whitespace-nowrap text-[11px] font-medium uppercase tracking-tighter text-slate-500 dark:text-dark-400 tabular-nums">{formatDate(e.date)}</td>
+                                 <td className="text-black dark:text-white font-medium text-[13px]">{e.description || '—'}</td>
+                                 <td className="amount !text-emerald-600 dark:!text-emerald-400 whitespace-nowrap tabular-nums">{e.debit ? formatCurrency(e.debit) : '—'}</td>
+                                 <td className="amount !text-orange-600 dark:!text-orange-400 whitespace-nowrap tabular-nums">{e.credit ? formatCurrency(e.credit) : '—'}</td>
+                                 <td className="amount !text-black dark:!text-white !text-sm font-medium whitespace-nowrap tabular-nums">₨ {formatCurrency(e.balance)}</td>
+                                 <td className="text-right">
+                                   <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                     <button onClick={() => setViewingEntity(e)} className="flex items-center gap-1.5 px-2 py-0.5 text-[9px] font-black uppercase tracking-tighter text-primary-600 dark:text-primary-400 bg-primary-50/50 dark:bg-primary-900/20 border border-primary-200/50 dark:border-primary-800/30 rounded hover:bg-primary-100 transition-all font-serif" title="Quick Print"><Printer className="w-3 h-3" /><span>PRINT</span></button>
+                                     <button onClick={() => setViewingEntity(e)} className="p-1 text-blue-600 hover:bg-blue-50 rounded" title="View"><Eye className="w-3.5 h-3.5" /></button>
+                                     <button onClick={() => handleEdit(e)} className="p-1 text-emerald-600 hover:bg-emerald-50 rounded" title="Edit"><Edit2 className="w-3.5 h-3.5" /></button>
+                                     <button onClick={() => { if(confirm('Delete?')) deleteAssetEntry(e.id); }} className="p-1 text-red-600 hover:bg-red-50 rounded" title="Delete"><Trash2 className="w-3.5 h-3.5" /></button>
                                    </div>
                                  </td>
                                </tr>
                              ))}
                            </tbody>
+                           <tfoot className="border-t-2 border-slate-200 dark:border-dark-700 bg-slate-50/50 dark:bg-dark-900/50 font-black text-black">
+                             <tr className="bg-slate-200 dark:bg-dark-800 border-t-2 border-slate-400">
+                               <td colSpan={2} className="px-4 py-3 text-right">
+                                 <div className="flex flex-col items-end">
+                                   <span className="text-xs font-black text-slate-500 uppercase tracking-tighter leading-none">Page Total</span>
+                                   <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tighter mt-1">Grand Total</span>
+                                 </div>
+                               </td>
+                               <td className="px-4 py-3 text-right whitespace-nowrap tabular-nums">
+                                 <div className="flex flex-col items-end">
+                                   <span className="text-sm font-black text-slate-500 leading-none">₨ {formatCurrency(pageTotals.debit)}</span>
+                                   <span className="text-sm font-black text-emerald-600 mt-1">₨ {formatCurrency(totals.debit)}</span>
+                                 </div>
+                               </td>
+                               <td className="px-4 py-3 text-right whitespace-nowrap tabular-nums">
+                                 <div className="flex flex-col items-end">
+                                   <span className="text-sm font-black text-slate-500 leading-none">₨ {formatCurrency(pageTotals.credit)}</span>
+                                   <span className="text-sm font-black text-orange-600 mt-1">₨ {formatCurrency(totals.credit)}</span>
+                                 </div>
+                               </td>
+                               <td className="px-4 py-3 text-right whitespace-nowrap">
+                                 <div className="flex flex-col items-end border-l border-slate-300 dark:border-dark-700 pl-4">
+                                   <span className="text-lg font-black text-primary-600/70 leading-none">₨ {formatCurrency(pageTotals.debit - pageTotals.credit)}</span>
+                                   <span className="text-lg font-black text-primary-600 mt-1">₨ {formatCurrency(totals.debit - totals.credit)}</span>
+                                 </div>
+                               </td>
+                               <td></td>
+                             </tr>
+                           </tfoot>
                         </table>
                      </div>
                      <Pagination page={page} total={withBalance.length} perPage={perPage} onChange={setPage} onPerPageChange={setPerPage} />
@@ -495,11 +578,9 @@ export default function AssetPage() {
           isOpen={showReport}
           onClose={() => setShowReport(false)}
           type="asset"
-          data={{
-            entries: withBalance,
-            totals: { ...totals, balance: totals.debit - totals.credit },
-            accountName: cat.name
-          }}
+          data={withBalance}
+          totals={{ ...totals, balance: totals.debit - totals.credit }}
+          title={`${cat.name} Asset Ledger`}
         />
       )}
       {showSummaryReport && (
@@ -507,15 +588,127 @@ export default function AssetPage() {
           isOpen={showSummaryReport}
           onClose={() => setShowSummaryReport(false)}
           type="asset_summary"
-          data={{
-            accounts: assetCategories.map(c => {
+          title="Asset Summary Report"
+          columns={[
+            { header: 'Asset Account', accessor: 'name' },
+            { header: 'Entries', accessor: 'count', align: 'center' },
+            { header: 'Current Value', accessor: 'balance', align: 'right', isCurrency: true },
+          ]}
+          data={(() => {
+            const items = assetCategories.map(c => {
               const entries = filterByStartDate(assetEntries, settings.startDate).filter(e => e.categoryId === c.id);
               const debit = entries.reduce((s, e) => s + (e.debit || 0), 0);
               const credit = entries.reduce((s, e) => s + (e.credit || 0), 0);
-              return { ...c, balance: debit - credit, debit, credit };
-            })
-          }}
+              return { ...c, balance: debit - credit, debit, credit, count: entries.length };
+            });
+            return items;
+          })()}
+          totals={(() => {
+            const items = assetCategories.map(c => {
+              const entries = filterByStartDate(assetEntries, settings.startDate).filter(e => e.categoryId === c.id);
+              const debit = entries.reduce((s, e) => s + (e.debit || 0), 0);
+              const credit = entries.reduce((s, e) => s + (e.credit || 0), 0);
+              return { debit, credit };
+            });
+            const d = items.reduce((s, x) => s + x.debit, 0);
+            const c = items.reduce((s, x) => s + x.credit, 0);
+            return { debit: d, credit: c, balance: d - c };
+          })()}
         />
+      )}
+
+      {/* Transaction View Modal */}
+      {viewingEntity && (
+        <TransactionReceiptModal
+          entity={viewingEntity}
+          type="asset"
+          onClose={() => setViewingEntity(null)}
+        />
+      )}
+
+      {/* Entry Form Modal */}
+      {showEntryForm && (
+        <Modal
+          isOpen={showEntryForm}
+          onClose={closeForm}
+          title={editingEntity ? 'Edit Asset Entry' : 'New Asset Entry'}
+        >
+          <form onSubmit={handleSubmit} className="flex flex-col gap-1">
+            <div className="bg-slate-50 dark:bg-dark-800/50 rounded-2xl p-4 mb-4 border border-slate-200 dark:border-dark-700/50">
+              <div className="desktop-form-row">
+                <label className="desktop-form-label">Date *</label>
+                <div className="desktop-form-field">
+                  <input 
+                    type="date" 
+                    className="input !py-1.5" 
+                    value={form.date} 
+                    onChange={e => setForm({...form, date: e.target.value})} 
+                    required 
+                  />
+                </div>
+              </div>
+              <div className="desktop-form-row">
+                <label className="desktop-form-label">Description</label>
+                <div className="desktop-form-field">
+                  <input 
+                    className="input !py-1.5" 
+                    placeholder="Transaction details..."
+                    value={form.description} 
+                    onChange={e => setForm({...form, description: e.target.value})}
+                    dir="auto"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="px-2 space-y-1">
+              <div className="desktop-form-row">
+                <label className="desktop-form-label text-emerald-600 dark:text-emerald-400">Debit (Addition)</label>
+                <div className="desktop-form-field">
+                  <input 
+                    type="number" 
+                    step="any" 
+                    className="input !py-1.5 !bg-emerald-50/30 dark:!bg-emerald-900/10 focus:ring-emerald-500/20" 
+                    placeholder="0.00"
+                    value={form.debit} 
+                    onChange={e => setForm({...form, debit: e.target.value})} 
+                  />
+                </div>
+              </div>
+              <div className="desktop-form-row !border-b-0">
+                <label className="desktop-form-label text-orange-600 dark:text-orange-400">Credit (Withdrawal)</label>
+                <div className="desktop-form-field">
+                  <input 
+                    type="number" 
+                    step="any" 
+                    className="input !py-1.5 !bg-orange-50/30 dark:!bg-orange-900/10 focus:ring-orange-500/20" 
+                    placeholder="0.00"
+                    value={form.credit} 
+                    onChange={e => setForm({...form, credit: e.target.value})} 
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="desktop-form-footer">
+              <div className="desktop-summary-strip flex-1 mr-4">
+                <div className="flex flex-col">
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Value Change</span>
+                  <span className={`text-xl font-black font-mono tracking-tighter ${ (Number(form.debit)||0) >= (Number(form.credit)||0) ? 'text-emerald-600 dark:text-emerald-500' : 'text-orange-600 dark:text-orange-500'}`}>
+                    ₨ {formatCurrency((Number(form.debit)||0) - (Number(form.credit)||0))}
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={closeForm} className="btn-secondary !py-2 !px-4" disabled={isSaving}>Cancel</button>
+                <button type="submit" disabled={isSaving} className="btn-primary !bg-primary-600 hover:opacity-90 !py-2 !px-6">
+                  {isSaving ? <span className="animate-spin rounded-full h-4 w-4 border-2 border-white/30 border-t-white"></span> : <Save className="w-4 h-4" />}
+                  {editingEntity ? 'Update' : 'Confirm [F10]'}
+                </button>
+              </div>
+            </div>
+          </form>
+        </Modal>
       )}
     </div>
   );
