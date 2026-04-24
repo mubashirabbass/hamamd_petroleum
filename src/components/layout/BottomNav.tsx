@@ -14,6 +14,7 @@ const navItems = [
   { label: 'Liability', path: '/liability', icon: AlertTriangle },
   { label: 'Stock',     path: '/stock',     icon: BarChart3 },
   { label: 'Customer',  path: '/customer',  icon: Users },
+  { label: 'Balance',   path: '/balancesheet', icon: LayoutDashboard },
   { label: 'Settings',  path: '/settings',  icon: Settings },
 ];
 

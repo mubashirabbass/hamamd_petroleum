@@ -17,6 +17,9 @@ import Asset from '../../pages/Asset';
 import Liability from '../../pages/Liability';
 import Stock from '../../pages/Stock';
 import Customer from '../../pages/Customer';
+import BalanceSheet from '../../pages/BalanceSheet';
+import PLS from '../../pages/PLS';
+import Capital from '../../pages/Capital';
 import Settings from '../../pages/Settings';
 
 export default function Layout() {
@@ -109,6 +112,9 @@ export default function Layout() {
           <div style={{ display: isPath('/liability') ? 'block' : 'none' }} className="h-full"><Liability /></div>
           <div style={{ display: isStock ? 'block' : 'none' }} className="h-full"><Stock /></div>
           <div style={{ display: isPath('/customer') ? 'block' : 'none' }} className="h-full"><Customer /></div>
+          <div style={{ display: isPath('/capital') ? 'block' : 'none' }} className="h-full"><Capital /></div>
+          <div style={{ display: isPath('/pls') ? 'block' : 'none' }} className="h-full"><PLS /></div>
+          <div style={{ display: isPath('/balancesheet') ? 'block' : 'none' }} className="h-full"><BalanceSheet /></div>
           <div style={{ display: isPath('/settings') ? 'block' : 'none' }} className="h-full"><Settings /></div>
         </div>
 

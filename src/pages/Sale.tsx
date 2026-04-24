@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { 
   Plus, Trash2, Eye, Edit2, Printer, BarChart3, ArrowRight, History, Zap, Fuel, 
-  Database, TrendingUp, Save, Pin, PinOff, ArrowUpDown, XCircle
+  Database, TrendingUp, Save, Pin, PinOff, ArrowUpDown, XCircle, DollarSign
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { formatCurrency, formatDate, today, paginate, filterByStartDate, startOfMonth, startOfYear, getErrorMessage, cn } from '../lib/utils';
@@ -15,7 +15,7 @@ import PrintReportModal from '../components/modals/PrintReportModal';
 import type { FuelType } from '../store/useStore';
 
 export default function SalePage() {
-  const { sales, addSale, deleteSale, settings, currentUser } = useStore();
+  const { sales, purchases, addSale, deleteSale, settings, currentUser } = useStore();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
 
@@ -90,13 +90,52 @@ export default function SalePage() {
     amount: paged.reduce((s, x) => s + x.amount, 0),
   }), [paged]);
 
-  const grandTotals = useMemo(() => ({
-    qty: filtered.reduce((s, x) => s + x.quantity, 0),
-    amount: filtered.reduce((s, x) => s + x.amount, 0),
-  }), [filtered]);
+  const grandTotals = useMemo(() => {
+    const qty = filtered.reduce((s, x) => s + x.quantity, 0);
+    const amount = filtered.reduce((s, x) => s + x.amount, 0);
+    
+    // Sale average (Overall - since software start)
+    const allSales = filterByStartDate(sales, settings.startDate).filter(s => s.type === fuelType);
+    const sQty = allSales.reduce((s, x) => s + x.quantity, 0);
+    const sAmt = allSales.reduce((s, x) => s + x.amount, 0);
+    const avgSale = sQty > 0 ? sAmt / sQty : 0;
+
+    // Purchase average (Overall - since software start)
+    const allPurchases = filterByStartDate(purchases, settings.startDate).filter(p => p.type === fuelType);
+    const pQty = allPurchases.reduce((s, x) => s + x.quantity, 0);
+    const pTotal = allPurchases.reduce((s, x) => s + x.totalAmount, 0);
+    const avgPurchase = pQty > 0 ? pTotal / pQty : 0;
+
+    return {
+      qty,
+      amount,
+      avgSaleRate: avgSale,
+      avgPurchaseRate: avgPurchase
+    };
+  }, [filtered, purchases, settings.startDate, fuelType, search, fromDate, toDate]);
 
   // Dashboard Specific Calculations
   const dashStats = useMemo(() => {
+    const allSales = filterByStartDate(sales, settings.startDate);
+    const getOverallSaleAvg = (type: FuelType) => {
+      const s = allSales.filter(x => x.type === type);
+      const sQty = s.reduce((sum, x) => sum + x.quantity, 0);
+      const sAmt = s.reduce((sum, x) => sum + x.amount, 0);
+      return sQty > 0 ? sAmt / sQty : 0;
+    };
+    const overallHSDSaleAvg = getOverallSaleAvg('HSD');
+    const overallPMGSaleAvg = getOverallSaleAvg('PMG');
+
+    const allPurchases = filterByStartDate(purchases, settings.startDate);
+    const getOverallPurchaseAvg = (type: FuelType) => {
+      const p = allPurchases.filter(x => x.type === type);
+      const pQty = p.reduce((s, x) => s + x.quantity, 0);
+      const pTotal = p.reduce((s, x) => s + x.totalAmount, 0);
+      return pQty > 0 ? pTotal / pQty : 0;
+    };
+    const overallHSDPurchaseAvg = getOverallPurchaseAvg('HSD');
+    const overallPMGPurchaseAvg = getOverallPurchaseAvg('PMG');
+
     const periodSales = filterByStartDate(sales, settings.startDate).filter(s => {
       const matchesFrom = !fromDate || s.date >= fromDate;
       const matchesTo = !toDate || s.date <= toDate;
@@ -107,10 +146,13 @@ export default function SalePage() {
       const f = periodSales.filter(s => s.type === type);
       const qty = f.reduce((s, x) => s + x.quantity, 0);
       const amt = f.reduce((s, x) => s + x.amount, 0);
+      
       return {
         qty,
         amt,
         avgRate: qty > 0 ? amt / qty : 0,
+        avgSaleRate: type === 'HSD' ? overallHSDSaleAvg : overallPMGSaleAvg,
+        avgPurchaseRate: type === 'HSD' ? overallHSDPurchaseAvg : overallPMGPurchaseAvg,
         count: f.length
       };
     };
@@ -120,7 +162,7 @@ export default function SalePage() {
       PMG: getStats('PMG'),
       recent: [...periodSales].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 10)
     };
-  }, [sales, settings.startDate, fromDate, toDate]);
+  }, [sales, purchases, settings.startDate, fromDate, toDate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -254,6 +296,28 @@ export default function SalePage() {
                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">PMG Sale Avg</p>
                     <p className="text-lg font-black text-blue-600 dark:text-blue-400 tabular-nums leading-none font-mono tracking-tighter">
                       ₨ {formatCurrency(dashStats.PMG.avgRate)}
+                    </p>
+                  </div>
+                </div>
+                <div className="glass px-4 py-2 rounded-2xl border border-violet-200 dark:border-violet-800/30 flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center text-violet-600">
+                    <DollarSign className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">HSD Profit Margin / L</p>
+                    <p className="text-lg font-black text-violet-600 dark:text-violet-400 tabular-nums leading-none font-mono tracking-tighter">
+                      ₨ {formatCurrency(dashStats.HSD.avgSaleRate - dashStats.HSD.avgPurchaseRate)}
+                    </p>
+                  </div>
+                </div>
+                <div className="glass px-4 py-2 rounded-2xl border border-violet-200 dark:border-violet-800/30 flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center text-violet-600">
+                    <DollarSign className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">PMG Profit Margin / L</p>
+                    <p className="text-lg font-black text-violet-600 dark:text-violet-400 tabular-nums leading-none font-mono tracking-tighter">
+                      ₨ {formatCurrency(dashStats.PMG.avgSaleRate - dashStats.PMG.avgPurchaseRate)}
                     </p>
                   </div>
                 </div>
@@ -436,6 +500,17 @@ export default function SalePage() {
                       <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">{fuelType} Avg Price</p>
                       <p className="text-lg font-black text-emerald-600 dark:text-emerald-400 tabular-nums leading-none font-mono tracking-tighter">
                         ₨ {formatCurrency(grandTotals.qty > 0 ? grandTotals.amount / grandTotals.qty : 0)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="glass px-4 py-2 rounded-xl border border-violet-200 dark:border-dark-700 flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center">
+                      <DollarSign className="w-4 h-4 text-violet-600" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Profit Margin per Litre</p>
+                      <p className="text-lg font-black text-violet-600 dark:text-violet-400 tabular-nums leading-none font-mono tracking-tighter">
+                        ₨ {formatCurrency(grandTotals.avgSaleRate - grandTotals.avgPurchaseRate)}
                       </p>
                     </div>
                   </div>

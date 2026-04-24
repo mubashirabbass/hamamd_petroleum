@@ -11,6 +11,9 @@ import Asset      from './pages/Asset';
 import Liability  from './pages/Liability';
 import Stock      from './pages/Stock';
 import Customer   from './pages/Customer';
+import PLS from './pages/PLS';
+import BalanceSheet from './pages/BalanceSheet';
+import Capital from './pages/Capital';
 import Settings   from './pages/Settings';
 import Login      from './pages/Login';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -360,6 +363,9 @@ export default function App() {
               <Route path="stock"      element={<Stock     />} />
               <Route path="stock/:type" element={<Stock    />} />
               <Route path="customer"   element={<Customer  />} />
+              <Route path="capital"    element={<Capital   />} />
+              <Route path="pls" element={<PLS />} />
+              <Route path="balancesheet" element={<BalanceSheet />} />
               <Route path="settings"   element={<Settings  />} />
             </Route>
           </Routes>

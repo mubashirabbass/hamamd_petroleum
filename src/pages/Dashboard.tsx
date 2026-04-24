@@ -4,7 +4,8 @@ import {
   ShoppingCart, TrendingUp, DollarSign,
   Package, BarChart3, Users, ArrowRight,
   Fuel, Zap, Calendar, XCircle, Keyboard, Sun, Moon,
-  Mail, Shield, Clock, X, LogOut, Landmark, Printer
+  Mail, Shield, Clock, X, LogOut, Landmark, Printer, Activity, Wallet,
+  FileText
 } from 'lucide-react';
 import PrintReportModal from '../components/modals/PrintReportModal';
 import { useStore } from '../store/useStore';
@@ -208,6 +209,9 @@ export default function Dashboard() {
     { label: 'Liability', path: '/liability',  icon: Landmark,     color: 'text-orange-600', bg: 'bg-orange-600/10 border-orange-600/20', desc: `${liabilityCategories.length} accounts` },
     { label: 'Stock',     path: '/stock',      icon: BarChart3,    color: 'text-cyan-600', bg: 'bg-cyan-600/10 border-cyan-600/20', desc: 'Real-time tracking' },
     { label: 'Customer',  path: '/customer',   icon: Users,        color: 'text-pink-600', bg: 'bg-pink-600/10 border-pink-600/20', desc: `${customers.length} registered` },
+    { label: 'Capital',   path: '/capital',    icon: Wallet,       color: 'text-violet-600', bg: 'bg-violet-600/10 border-violet-600/20', desc: 'Equity' },
+    { label: 'PLS',       path: '/pls',        icon: Activity,     color: 'text-emerald-600', bg: 'bg-emerald-600/10 border-emerald-600/20', desc: 'Trading Acc' },
+    { label: 'BalanceSheet', path: '/balancesheet', icon: FileText, color: 'text-slate-600', bg: 'bg-slate-600/10 border-slate-600/20', desc: 'Financials' },
     { label: 'Settings',  path: '/settings',   icon: Package,      color: 'text-blue-600', bg: 'bg-blue-600/10 border-blue-600/20', desc: 'System Configuration' },
   ].map(m => ({
     ...m,

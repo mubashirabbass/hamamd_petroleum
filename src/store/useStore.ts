@@ -99,6 +99,17 @@ export interface CustomerEntry {
   balance:     number;
 }
 
+export interface CapitalEntry {
+  id:          string;
+  categoryId:  string;
+  billNo:      string;
+  date:        string;
+  description: string;
+  debit:       number;
+  credit:      number;
+  balance:     number;
+}
+
 export interface User {
   id:        string;
   name:      string;
@@ -200,6 +211,17 @@ interface AppState {
   updateCustomerEntry: (id: string, e: Partial<CustomerEntry>)        => Promise<void>;
   deleteCustomerEntry: (id: string)                                   => Promise<void>;
 
+  // ─ Capital ────────────────────────────────────────────────────────────────
+  capitalCategories:    Category[];
+  capitalEntries:       CapitalEntry[];
+  nextCapitalNo:        number;
+  addCapitalCategory:   (name: string)                               => Promise<void>;
+  updateCapitalCategory:(id: string, name: string)                   => Promise<void>;
+  deleteCapitalCategory:(id: string)                                 => Promise<void>;
+  addCapitalEntry:      (e: Omit<CapitalEntry, 'id' | 'billNo'>)    => Promise<void>;
+  updateCapitalEntry:   (id: string, e: Partial<CapitalEntry>)      => Promise<void>;
+  deleteCapitalEntry:   (id: string)                                 => Promise<void>;
+
   // ─ Settings & Users ───────────────────────────────────────────────────────
   settings:       Settings;
   updateSettings: (s: Partial<Settings>) => Promise<void>;
@@ -255,6 +277,8 @@ export const useStore = create<AppState>()(
         liabilityEntries:    data.liabilityEntries,
         customers:           data.customers,
         customerEntries:     data.customerEntries,
+        capitalCategories:   data.capitalCategories,
+        capitalEntries:      data.capitalEntries,
         nextPurchaseNo:      data.counters['purchase']  ?? 1,
         nextSaleNo:          data.counters['sale']       ?? 1,
 
@@ -262,6 +286,7 @@ export const useStore = create<AppState>()(
         nextAssetNo:         data.counters['asset']      ?? 1,
         nextLiabilityNo:     data.counters['liability']  ?? 1,
         nextCustomerNo:      data.counters['customer']   ?? 1,
+        nextCapitalNo:       data.counters['capital']    ?? 1,
         currentMachineId: machineId,
         settings: {
           startDate:    data.settings['startDate']    ?? '',
@@ -657,6 +682,67 @@ export const useStore = create<AppState>()(
     set(s => ({ customerEntries: s.customerEntries.filter(x => x.id !== id) }));
   },
 
+  // ── Capital ────────────────────────────────────────────────────────────────
+  capitalCategories: [],
+  capitalEntries:    [],
+  nextCapitalNo:     1,
+
+  addCapitalCategory: async (name) => {
+    const db = await getDB();
+    const id = uid();
+    await db.execute('INSERT INTO capital_categories (id,name) VALUES (?,?)', [id, name]);
+    set(s => ({ capitalCategories: [...s.capitalCategories, { id, name }] }));
+  },
+  updateCapitalCategory: async (id, name) => {
+    const db = await getDB();
+    await db.execute('UPDATE capital_categories SET name=? WHERE id=?', [name, id]);
+    set(s => ({ capitalCategories: s.capitalCategories.map(c => c.id === id ? { ...c, name } : c) }));
+  },
+  deleteCapitalCategory: async (id) => {
+    await runInTransaction(async (db) => {
+      await db.execute('DELETE FROM capital_categories WHERE id=?', [id]);
+      await db.execute('DELETE FROM capital_entries WHERE category_id=?', [id]);
+    });
+    set(s => ({
+      capitalCategories: s.capitalCategories.filter(c => c.id !== id),
+      capitalEntries: s.capitalEntries.filter(e => e.categoryId !== id),
+    }));
+  },
+  addCapitalEntry: async (e) => {
+    let no = 0;
+    try {
+      await runInTransaction(async (db) => {
+        no = await getAndBumpCounter('capital', db);
+        const billNo = `CAP-${String(no).padStart(2, '0')}`;
+        const id = uid();
+        await db.execute(
+          `INSERT INTO capital_entries (id,category_id,bill_no,date,description,debit,credit,balance) VALUES (?,?,?,?,?,?,?,?)`,
+          [id, e.categoryId, billNo, e.date, e.description, e.debit, e.credit, e.balance]
+        );
+        const entry: CapitalEntry = { ...e, id, billNo };
+        set(s => ({ capitalEntries: [entry, ...s.capitalEntries], nextCapitalNo: no + 1 }));
+      });
+    } catch (err) {
+      console.error('[Store] addCapitalEntry failed:', err);
+      throw err;
+    }
+  },
+  updateCapitalEntry: async (id, data) => {
+    const db = await getDB();
+    const current = get().capitalEntries.find(x => x.id === id)!;
+    const updated = { ...current, ...data };
+    await db.execute(
+      `UPDATE capital_entries SET date=?,description=?,debit=?,credit=?,balance=? WHERE id=?`,
+      [updated.date, updated.description, updated.debit, updated.credit, updated.balance, id]
+    );
+    set(s => ({ capitalEntries: s.capitalEntries.map(x => x.id === id ? updated : x) }));
+  },
+  deleteCapitalEntry: async (id) => {
+    const db = await getDB();
+    await db.execute('DELETE FROM capital_entries WHERE id=?', [id]);
+    set(s => ({ capitalEntries: s.capitalEntries.filter(x => x.id !== id) }));
+  },
+
   // ── Settings & Users ─────────────────────────────────────────────────────────
   settings: {
     startDate:    '',
@@ -748,11 +834,12 @@ export const useStore = create<AppState>()(
         'asset_entries', 'asset_categories',
         'liability_entries', 'liability_categories',
         'customer_entries', 'customers',
+        'capital_entries', 'capital_categories',
       ];
       for (const t of tables) await db.execute(`DELETE FROM ${t}`);
       // Reset counters
       await db.execute(
-        `UPDATE counters SET value=1 WHERE name IN ('purchase','sale','expense','asset','liability','customer')`
+        `UPDATE counters SET value=1 WHERE name IN ('purchase','sale','expense','asset','liability','customer','capital')`
       );
     });
 
@@ -762,9 +849,10 @@ export const useStore = create<AppState>()(
       assetCategories: [], assetEntries: [],
       liabilityCategories: [], liabilityEntries: [],
       customers: [], customerEntries: [],
+      capitalCategories: [], capitalEntries: [],
       nextPurchaseNo: 1, nextSaleNo: 1,
       nextExpenseNo: 1,
-      nextAssetNo: 1, nextLiabilityNo: 1, nextCustomerNo: 1,
+      nextAssetNo: 1, nextLiabilityNo: 1, nextCustomerNo: 1, nextCapitalNo: 1,
       settings: get().settings,
     });
   },

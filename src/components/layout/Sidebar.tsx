@@ -3,7 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, ShoppingCart, TrendingUp,
   DollarSign, Package, AlertTriangle, BarChart3, Users,
-  Settings, LogOut, X, Plus, Minus
+  Settings, LogOut, X, Plus, Minus, Wallet, Activity
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useStore } from '../../store/useStore';
@@ -25,6 +25,9 @@ const navItems = [
     ],
   },
   { label: 'Customer',  path: '/customer',  icon: Users },
+  { label: 'Capital',   path: '/capital',   icon: Wallet },
+  { label: 'PLS',       path: '/pls',       icon: Activity },
+  { label: 'Balance Sheet', path: '/balancesheet', icon: LayoutDashboard },
   { label: 'Settings',  path: '/settings',  icon: Settings },
 ];
 
