@@ -310,38 +310,62 @@ export default function CustomerPage() {
 
         {activeTab === 'dashboard' ? (
           <div className="flex-1 flex flex-col h-full overflow-hidden p-4 md:p-6 pb-6">
-            <div className="grid grid-cols-2 gap-3 mb-6">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
               {(() => {
-                const allFilteredEntries = filterByStartDate(customerEntries, settings.startDate)
-                  .filter(e => {
-                    const matchesFrom = !fromDate || e.date >= fromDate;
-                    const matchesTo = !toDate || e.date <= toDate;
-                    return matchesFrom && matchesTo;
-                  });
-                const globalDebit = allFilteredEntries.reduce((sum, e) => sum + e.debit, 0);
-                const globalCredit = allFilteredEntries.reduce((sum, e) => sum + e.credit, 0);
-                const globalNet = globalDebit - globalCredit;
+                // Calculate per-customer net balances to determine Total Receivable and Total Payable
+                const customerFinancials = customers.map(c => {
+                  const entries = filterByStartDate(customerEntries, settings.startDate)
+                    .filter(e => e.customerId === c.id)
+                    .filter(e => {
+                      const matchesFrom = !fromDate || e.date >= fromDate;
+                      const matchesTo = !toDate || e.date <= toDate;
+                      return matchesFrom && matchesTo;
+                    });
+                  const dr = entries.reduce((sum, e) => sum + e.debit, 0);
+                  const cr = entries.reduce((sum, e) => sum + e.credit, 0);
+                  const bal = dr - cr;
+                  return { ...c, balance: bal, entriesCount: entries.length };
+                });
+
+                const totalReceivable = customerFinancials
+                  .filter(c => c.balance > 0)
+                  .reduce((sum, c) => sum + c.balance, 0);
+                
+                const totalPayable = customerFinancials
+                  .filter(c => c.balance < 0)
+                  .reduce((sum, c) => sum + Math.abs(c.balance), 0);
+                
+                const netCash = totalReceivable - totalPayable;
+                const totalTrx = customerFinancials.reduce((sum, c) => sum + c.entriesCount, 0);
                 
                 return (
                   <>
-                    <div className="glass p-4 rounded-3xl border-l-4 border-pink-500 shadow-lg bg-white dark:bg-dark-900 overflow-hidden col-span-2">
-                      <p className="text-[10px] font-black text-pink-600 uppercase tracking-widest mb-1">Total Net Balance (DR)</p>
-                      <p className="text-2xl font-black text-slate-800 dark:text-white tabular-nums">
-                        ₨ {formatCurrency(Math.abs(globalNet))}
-                        <span className="text-[10px] ml-1 font-bold text-slate-400 uppercase">{globalNet >= 0 ? 'DR' : 'CR'}</span>
+                    <div className="glass p-4 rounded-3xl border-l-4 border-pink-500 shadow-lg bg-white dark:bg-dark-900 overflow-hidden">
+                      <p className="text-[10px] font-black text-pink-600 uppercase tracking-widest mb-1">Total Receivable (Debits)</p>
+                      <p className="text-xl font-black text-slate-800 dark:text-white tabular-nums">
+                        ₨ {formatCurrency(totalReceivable)}
                       </p>
                     </div>
 
-                    <div className="glass p-4 rounded-3xl border-l-4 border-slate-400 shadow-lg bg-white dark:bg-dark-900 col-span-1">
-                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Clients</p>
+                    <div className="glass p-4 rounded-3xl border-l-4 border-emerald-500 shadow-lg bg-white dark:bg-dark-900 overflow-hidden">
+                      <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">Total Payable (Credits)</p>
                       <p className="text-xl font-black text-slate-800 dark:text-white tabular-nums">
-                        {customers.length}
+                        ₨ {formatCurrency(totalPayable)}
                       </p>
                     </div>
-                    <div className="glass p-4 rounded-3xl border-l-4 border-emerald-500 shadow-lg bg-white dark:bg-dark-900 col-span-1">
-                      <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest mb-1">Entries</p>
+
+                    <div className="glass p-4 rounded-3xl border-l-4 border-blue-500 shadow-lg bg-white dark:bg-dark-900 overflow-hidden">
+                      <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1">Net Cash Balance</p>
                       <p className="text-xl font-black text-slate-800 dark:text-white tabular-nums">
-                        {allFilteredEntries.length}
+                        ₨ {formatCurrency(Math.abs(netCash))}
+                        <span className="text-[10px] ml-1 font-bold text-slate-400 uppercase">{netCash >= 0 ? 'DR' : 'CR'}</span>
+                      </p>
+                    </div>
+
+                    <div className="glass p-4 rounded-3xl border-l-4 border-slate-400 shadow-lg bg-white dark:bg-dark-900">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Clients & Transactions</p>
+                      <p className="text-xl font-black text-slate-800 dark:text-white tabular-nums">
+                        {customers.length} Cust. / {totalTrx} Trx.
                       </p>
                     </div>
                   </>
