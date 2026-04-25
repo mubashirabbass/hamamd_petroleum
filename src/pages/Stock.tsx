@@ -1,10 +1,10 @@
 import { useState, useMemo, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   BarChart3, TrendingUp, TrendingDown, ArrowLeft,
   Package, LayoutList, Fuel, Zap, Clock, Download,
-  ChevronRight, Calendar, Printer, ArrowUpDown, Pin, PinOff
+  ChevronRight, Calendar, Printer, ArrowUpDown, Pin, PinOff, Check, X
 } from 'lucide-react';
-import { useParams, useNavigate } from 'react-router-dom';
 import { useStore, FuelType } from '../store/useStore';
 import {
   formatCurrency, filterByStartDate, formatDate, getErrorMessage,
@@ -24,8 +24,12 @@ export default function StockPage() {
   const settings = useStore((s) => s.settings);
   const initializeFromDB = useStore((s) => s.initializeFromDB);
   const dbReady = useStore((s) => s.dbReady);
-  const { type } = useParams<{ type: string }>();
+  const location = useLocation();
   const navigate = useNavigate();
+
+  // Parse type from URL e.g. /stock/hsd
+  const pathParts = location.pathname.split('/');
+  const typeParam = pathParts[2]; // "hsd" or "pmg"
 
   // ── View State ──
   const [view, setView] = useState<'overview' | 'manage'>('overview');
@@ -33,13 +37,13 @@ export default function StockPage() {
 
   // Sync state with URL params
   useEffect(() => {
-    if (type) {
+    if (typeParam) {
       setView('manage');
-      setSelectedType(type.toUpperCase() as FuelType);
+      setSelectedType(typeParam.toUpperCase() as FuelType);
     } else {
       setView('overview');
     }
-  }, [type]);
+  }, [typeParam]);
 
   // Keep stock cards synced with latest Sale/Purchase writes.
   // This guarantees fresh totals when user returns to the Stock module.
@@ -71,6 +75,12 @@ export default function StockPage() {
   const [isSidebarPinned, setIsSidebarPinned] = useState(false);
   const [isSidebarHovered, setIsSidebarHovered] = useState(false);
   const isExpanded = isSidebarPinned || isSidebarHovered;
+  const updateSettings = useStore((s) => s.updateSettings);
+
+  // ── Manual Adjustment State ──
+  const [editingType, setEditingType] = useState<FuelType | null>(null);
+  const [editingField, setEditingField] = useState<'in' | 'out' | 'stock' | 'rate'>('stock');
+  const [editValue, setEditValue] = useState('');
 
   // ── Calculation Logic ──
   const stockData = useMemo(() => {
@@ -89,10 +99,8 @@ export default function StockPage() {
         (!toDate || s.date <= toDate)
       );
 
-      const totalPurchased = periodPurchases.reduce((s, p) => s + p.quantity, 0);
-      const totalSold = periodSales.reduce((s, x) => s + x.quantity, 0);
-      const purchaseValue = periodPurchases.reduce((s, p) => s + p.totalAmount, 0);
-      const saleValue = periodSales.reduce((s, x) => s + x.amount, 0);
+      const pQty = periodPurchases.reduce((s, p) => s + p.quantity, 0);
+      const sQty = periodSales.reduce((s, x) => s + x.quantity, 0);
 
       // 2. Closing Balance (Total ever up to 'toDate')
       const upToDatePurchases = rawPurchases.filter(p =>
@@ -106,13 +114,83 @@ export default function StockPage() {
         (!toDate || s.date <= toDate)
       );
 
-      const current = upToDatePurchases.reduce((s, p) => s + p.quantity, 0) -
-        upToDateSales.reduce((s, x) => s + x.quantity, 0);
+      const rawTotalIn = upToDatePurchases.reduce((s, p) => s + p.quantity, 0);
+      const rawTotalOut = upToDateSales.reduce((s, x) => s + x.quantity, 0);
+      
+      const pAdj = type === 'HSD' ? settings.purchaseAdjustmentHSD : settings.purchaseAdjustmentPMG;
+      const sAdj = type === 'HSD' ? settings.stockAdjustmentHSD : settings.stockAdjustmentPMG;
+      const oAdj = type === 'HSD' ? settings.saleAdjustmentHSD : settings.saleAdjustmentPMG;
+      
+      const totalPurchased = rawTotalIn + pAdj;
+      const totalSold = rawTotalOut + oAdj;
+      const current = totalPurchased - totalSold + sAdj;
+      
+      const latestRate = [...upToDatePurchases].sort((a, b) => b.date.localeCompare(a.date))[0]?.rate || 0;
+      const baseRate = type === 'HSD' ? settings.baseRateHSD : settings.baseRatePMG;
+      const rawInAmt = upToDatePurchases.reduce((s, p) => s + (p.totalAmount || 0), 0);
+      const currentRate = rawTotalIn > 0 ? rawInAmt / rawTotalIn : (baseRate || latestRate);
 
-      return { totalPurchased, totalSold, current, purchaseValue, saleValue };
+      const purchaseValue = totalPurchased * currentRate;
+      const saleValue = upToDateSales.reduce((s, x) => s + (x.amount || 0), 0);
+      const stockValue = current * currentRate;
+
+      return { 
+        totalPurchased, 
+        totalSold, 
+        current, 
+        currentRate,
+        adjustment: sAdj, 
+        purchaseAdjustment: pAdj,
+        saleAdjustment: oAdj,
+        purchaseValue, 
+        saleValue, 
+        stockValue
+      };
     };
     return { HSD: calc('HSD'), PMG: calc('PMG') };
-  }, [rawPurchases, rawSales, settings.startDate, fromDate, toDate]);
+  }, [rawPurchases, rawSales, settings.startDate, fromDate, toDate, settings.stockAdjustmentHSD, settings.stockAdjustmentPMG, settings.purchaseAdjustmentHSD, settings.purchaseAdjustmentPMG, settings.saleAdjustmentHSD, settings.saleAdjustmentPMG, settings.baseRateHSD, settings.baseRatePMG]);
+
+  const handleManualAdjustment = async () => {
+    if (!editingType) return;
+    const newValue = parseFloat(editValue) || 0;
+    
+    try {
+      if (editingField === 'stock') {
+        // Calculate current baseline (Total Adjusted Purchased - Total Sold)
+        const baseline = stockData[editingType].totalPurchased - stockData[editingType].totalSold;
+        const newAdjustment = newValue - baseline;
+        
+        const key = editingType === 'HSD' ? 'stockAdjustmentHSD' : 'stockAdjustmentPMG';
+        await updateSettings({ [key]: newAdjustment });
+      } else if (editingField === 'in') {
+        // Calculate Purchase Adjustment
+        // Baseline is raw total in
+        const rawIn = rawPurchases
+          .filter(p => p.type === editingType && p.date >= settings.startDate && (!toDate || p.date <= toDate))
+          .reduce((s, p) => s + p.quantity, 0);
+        
+        const newAdjustment = newValue - rawIn;
+        const key = editingType === 'HSD' ? 'purchaseAdjustmentHSD' : 'purchaseAdjustmentPMG';
+        await updateSettings({ [key]: newAdjustment });
+      } else if (editingField === 'out') {
+        const rawOut = rawSales
+          .filter(s => s.type === editingType && s.date >= settings.startDate && (!toDate || s.date <= toDate))
+          .reduce((s, p) => s + p.quantity, 0);
+        
+        const newAdjustment = newValue - rawOut;
+        const key = editingType === 'HSD' ? 'saleAdjustmentHSD' : 'saleAdjustmentPMG';
+        await updateSettings({ [key]: newAdjustment });
+      } else if (editingField === 'rate') {
+        const key = editingType === 'HSD' ? 'baseRateHSD' : 'baseRatePMG';
+        await updateSettings({ [key]: newValue });
+      }
+      
+      toast(`Updated for ${editingType} to ${newValue} L`, 'success');
+      setEditingType(null);
+    } catch (err) {
+      toast(getErrorMessage(err), 'error');
+    }
+  };
 
   const historyData = useMemo(() => {
     if (view !== 'manage') return [];
@@ -473,7 +551,7 @@ export default function StockPage() {
       <>
         <div className="animate-fade-in flex flex-col h-full w-full">
         {/* Detail Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 relative z-30">
           <div className="flex items-center gap-4">
             <button
               onClick={() => navigate('/stock')}
@@ -521,13 +599,13 @@ export default function StockPage() {
         </div>
 
         {/* Main Content Layout */}
-        <div className="flex gap-4 h-full overflow-hidden p-4">
+        <div className="flex-1 flex gap-4 min-h-0 p-4 overflow-hidden relative z-40">
           {/* Sidebar selection */}
           <div 
             onMouseEnter={() => setIsSidebarHovered(true)}
             onMouseLeave={() => setIsSidebarHovered(false)}
             className={cn(
-              "flex-shrink-0 flex flex-col gap-3 h-full transition-all duration-300 ease-in-out border border-slate-200 dark:border-dark-700/50 bg-white/50 dark:bg-dark-900/50 rounded-2xl backdrop-blur-md",
+              "flex-shrink-0 flex flex-col gap-3 h-full transition-all duration-300 ease-in-out border border-slate-200 dark:border-dark-700/50 bg-white/50 dark:bg-dark-900/50 rounded-2xl backdrop-blur-md relative z-50 ml-4",
               isExpanded ? "w-64" : "w-16"
             )}
           >
@@ -554,11 +632,12 @@ export default function StockPage() {
               ].map((fuel) => {
                 const active = selectedType === fuel.id;
                 return (
-                  <div
+                  <Link
                     key={fuel.id}
-                    onClick={() => navigate(`/stock/${fuel.id.toLowerCase()}`)}
+                    to={`/stock/${fuel.id.toLowerCase()}`}
+                    onClick={() => setEditingType(null)}
                     className={cn(
-                      "flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200",
+                      "flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200 w-full text-left relative z-[60]",
                       active 
                         ? `bg-${fuel.color}-600 text-white shadow-lg scale-105` 
                         : "hover:bg-slate-100 dark:hover:bg-dark-800 text-slate-500",
@@ -568,11 +647,11 @@ export default function StockPage() {
                   >
                     <fuel.icon className={cn("w-5 h-5 flex-shrink-0", active ? "text-white" : `text-${fuel.color}-600`)} />
                     {isExpanded && (
-                      <span className="font-black text-xs uppercase tracking-widest truncate animate-in fade-in slide-in-from-left-2">
+                      <span className="font-black text-xs uppercase tracking-widest truncate">
                         {fuel.label}
                       </span>
                     )}
-                  </div>
+                  </Link>
                 );
               })}
             </div>
@@ -593,17 +672,63 @@ export default function StockPage() {
                 </div>
                 <div className="flex flex-col gap-3 p-4">
                   {[
-                    { label: 'Purchase Stock',  qty: detailTotals.in,  highlight: false, color: 'emerald' },
-                    { label: 'Sale Stock',      qty: detailTotals.out, highlight: false, color: 'red' },
-                    { label: 'Remaining Stock', qty: stockData[selectedType].current, highlight: true, color: selectedType === 'HSD' ? 'amber' : 'emerald' }
+                    { label: 'Purchase Stock',  qty: stockData[selectedType].totalPurchased, highlight: false, color: 'emerald', field: 'in' as const, suffix: 'Ltrs' },
+                    { label: 'Sale Stock',      qty: stockData[selectedType].totalSold,      highlight: false, color: 'red',     field: 'out' as const, suffix: 'Ltrs' },
+                    { label: 'Purchase Rate',   qty: stockData[selectedType].currentRate,   highlight: false, color: 'blue',    field: 'rate' as const, suffix: 'Rs' },
+                    { label: 'Remaining Stock', qty: stockData[selectedType].current,        highlight: true,  color: selectedType === 'HSD' ? 'amber' : 'emerald', field: 'stock' as const, suffix: 'Ltrs' }
                   ].map(col => (
                     <div key={col.label} className={cn("flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-4 rounded-2xl border transition-colors", col.highlight ? `bg-${col.color}-500/5 border-${col.color}-500/20 shadow-inner` : "bg-slate-50/50 dark:bg-dark-800/30 border-slate-100 dark:border-dark-700/50")}>
                       <div className="flex-1 min-w-0">
                         <p className={cn("text-[10px] font-black uppercase tracking-widest", col.highlight ? `text-${col.color}-600 dark:text-${col.color}-400` : "text-slate-600 dark:text-slate-400")}>{col.label}</p>
                       </div>
                       <div className="flex items-baseline gap-1.5 sm:text-right flex-shrink-1">
-                        <span className={cn('font-black tabular-nums break-words', col.highlight ? `text-2xl text-${col.color}-600 dark:text-${col.color}-400` : 'text-xl text-black dark:text-white')} title={col.qty.toLocaleString()}>{col.qty.toLocaleString()}</span>
-                        <span className={cn("text-xs font-black uppercase", col.highlight ? `text-${col.color}-600 dark:text-${col.color}-400` : "text-slate-600 dark:text-slate-400")}>Ltrs</span>
+                        {editingType === selectedType && editingField === col.field ? (
+                          <div className="flex items-center gap-2 animate-in zoom-in-95 duration-200">
+                            <input
+                              autoFocus
+                              type="number"
+                              step="any"
+                              value={editValue}
+                              onChange={(e) => setEditValue(e.target.value)}
+                              onKeyDown={(e) => e.key === 'Enter' && handleManualAdjustment()}
+                              className="input !py-1 !px-2 !w-32 !text-lg !font-black !h-10 text-right tabular-nums bg-white dark:bg-dark-900 border-2 border-primary-500 focus:ring-4 focus:ring-primary-500/20"
+                            />
+                            <button onClick={handleManualAdjustment} className="p-2 bg-primary-600 text-white rounded-xl shadow-lg hover:bg-primary-500 transition-colors">
+                              <Check className="w-5 h-5" />
+                            </button>
+                            <button onClick={() => setEditingType(null)} className="p-2 bg-slate-200 dark:bg-dark-800 text-slate-600 dark:text-dark-400 rounded-xl hover:bg-slate-300 transition-colors">
+                              <X className="w-5 h-5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div 
+                            className={cn("flex items-baseline gap-1.5 cursor-pointer group/qty", (col.field === 'stock' || col.field === 'in' || col.field === 'out' || col.field === 'rate') && "hover:scale-105 transition-transform")}
+                            onClick={() => {
+                              if (col.field === 'stock' || col.field === 'in' || col.field === 'out' || col.field === 'rate') {
+                                setEditingType(selectedType);
+                                setEditingField(col.field);
+                                setEditValue(col.qty.toString());
+                              }
+                            }}
+                          >
+                            <span className={cn('font-black tabular-nums break-words', col.highlight ? `text-2xl text-${col.color}-600 dark:text-${col.color}-400` : 'text-xl text-black dark:text-white')} title={col.qty?.toLocaleString() || '0'}>
+                              {col.field === 'rate' ? formatCurrency(col.qty) : (col.qty?.toLocaleString() || '0')}
+                            </span>
+                            {col.field === 'stock' && stockData[selectedType].adjustment !== 0 && (
+                              <span className="text-[8px] font-black uppercase bg-amber-500/10 text-amber-600 px-1.5 py-0.5 rounded border border-amber-500/20 animate-pulse-slow">Edited</span>
+                            )}
+                            {col.field === 'in' && stockData[selectedType].purchaseAdjustment !== 0 && (
+                              <span className="text-[8px] font-black uppercase bg-amber-500/10 text-amber-600 px-1.5 py-0.5 rounded border border-amber-500/20 animate-pulse-slow">Edited</span>
+                            )}
+                            {col.field === 'out' && stockData[selectedType].saleAdjustment !== 0 && (
+                              <span className="text-[8px] font-black uppercase bg-amber-500/10 text-amber-600 px-1.5 py-0.5 rounded border border-amber-500/20 animate-pulse-slow">Edited</span>
+                            )}
+                            {col.field === 'rate' && (selectedType === 'HSD' ? settings.baseRateHSD : settings.baseRatePMG) !== 0 && (
+                              <span className="text-[8px] font-black uppercase bg-amber-500/10 text-amber-600 px-1.5 py-0.5 rounded border border-amber-500/20 animate-pulse-slow">Edited</span>
+                            )}
+                          </div>
+                        )}
+                        <span className={cn("text-xs font-black uppercase", col.highlight ? `text-${col.color}-600 dark:text-${col.color}-400` : "text-slate-600 dark:text-slate-400")}>{col.suffix}</span>
                       </div>
                     </div>
                   ))}
@@ -678,21 +803,21 @@ export default function StockPage() {
                           <td className="table-cell font-black text-slate-900 dark:text-white truncate max-w-[180px]">{h.details || 'Daily Sale'}</td>
                           <td className="table-cell text-right text-emerald-600 font-mono font-bold">{h.qtyIn ? `+${h.qtyIn.toLocaleString()}` : '—'}</td>
                           <td className="table-cell text-right text-red-600 font-mono font-bold">{h.qtyOut ? `-${h.qtyOut.toLocaleString()}` : '—'}</td>
-                          <td className="table-cell text-right font-black text-slate-900 dark:text-white tabular-nums">{h.balance.toLocaleString()} L</td>
+                          <td className="table-cell text-right font-black text-slate-900 dark:text-white tabular-nums">{h.balance?.toLocaleString() || '0'} L</td>
                         </tr>
                       ))}
                     </tbody>
                     <tfoot>
                       <tr className="font-black text-black dark:text-white bg-slate-100/50 dark:bg-dark-800/50 border-t-[3px] border-black dark:border-black">
                         <td colSpan={2} className="table-cell text-right text-xs uppercase tracking-widest text-slate-600 dark:text-slate-400 font-black italic">Page Total</td>
-                        <td className="table-cell text-right font-black font-mono whitespace-nowrap">+{pageTotals.qtyIn.toLocaleString()} L</td>
-                        <td className="table-cell text-right font-black font-mono whitespace-nowrap">-{pageTotals.qtyOut.toLocaleString()} L</td>
+                        <td className="table-cell text-right font-black font-mono whitespace-nowrap">+{pageTotals.qtyIn?.toLocaleString() || '0'} L</td>
+                        <td className="table-cell text-right font-black font-mono whitespace-nowrap">-{pageTotals.qtyOut?.toLocaleString() || '0'} L</td>
                         <td className="table-cell"></td>
                       </tr>
                       <tr className="font-black text-black dark:text-white bg-slate-200/50 dark:bg-dark-700/50 border-t border-slate-300 dark:border-dark-600">
                         <td colSpan={2} className="table-cell text-right text-xs uppercase tracking-widest text-slate-600 dark:text-slate-300 font-black">Grand Total</td>
-                        <td className="table-cell text-right font-black font-mono whitespace-nowrap">+{detailTotals.in.toLocaleString()} L</td>
-                        <td className="table-cell text-right font-black font-mono whitespace-nowrap">-{detailTotals.out.toLocaleString()} L</td>
+                        <td className="table-cell text-right font-black font-mono whitespace-nowrap">+{detailTotals.in?.toLocaleString() || '0'} L</td>
+                        <td className="table-cell text-right font-black font-mono whitespace-nowrap">-{detailTotals.out?.toLocaleString() || '0'} L</td>
                         <td className="table-cell"></td>
                       </tr>
                     </tfoot>
@@ -869,15 +994,15 @@ export default function StockPage() {
             <tbody className="divide-y divide-slate-100 dark:divide-dark-800">
               <tr className="group hover:bg-slate-50/50 dark:hover:bg-dark-900/40">
                 <td className="px-8 py-5 text-sm font-black text-slate-700 dark:text-dark-300 uppercase tracking-tighter">HSD</td>
-                <td className="px-8 py-5 text-right font-black tabular-nums text-emerald-600">{stockData.HSD.totalPurchased.toLocaleString()} L</td>
-                <td className="px-8 py-5 text-right font-black tabular-nums text-red-600">{stockData.HSD.totalSold.toLocaleString()} L</td>
-                <td className="px-8 py-5 text-right font-black tabular-nums bg-primary-600/5 text-slate-900 dark:text-white">{stockData.HSD.current.toLocaleString()} L</td>
+                <td className="px-8 py-5 text-right font-black tabular-nums text-emerald-600">{stockData.HSD.totalPurchased?.toLocaleString() || '0'} L</td>
+                <td className="px-8 py-5 text-right font-black tabular-nums text-red-600">{stockData.HSD.totalSold?.toLocaleString() || '0'} L</td>
+                <td className="px-8 py-5 text-right font-black tabular-nums bg-primary-600/5 text-slate-900 dark:text-white">{stockData.HSD.current?.toLocaleString() || '0'} L</td>
               </tr>
               <tr className="group hover:bg-slate-50/50 dark:hover:bg-dark-900/40">
                 <td className="px-8 py-5 text-sm font-black text-slate-700 dark:text-dark-300 uppercase tracking-tighter">PMG</td>
-                <td className="px-8 py-5 text-right font-black tabular-nums text-emerald-600">{stockData.PMG.totalPurchased.toLocaleString()} L</td>
-                <td className="px-8 py-5 text-right font-black tabular-nums text-red-600">{stockData.PMG.totalSold.toLocaleString()} L</td>
-                <td className="px-8 py-5 text-right font-black tabular-nums bg-primary-600/5 text-slate-900 dark:text-white">{stockData.PMG.current.toLocaleString()} L</td>
+                <td className="px-8 py-5 text-right font-black tabular-nums text-emerald-600">{stockData.PMG.totalPurchased?.toLocaleString() || '0'} L</td>
+                <td className="px-8 py-5 text-right font-black tabular-nums text-red-600">{stockData.PMG.totalSold?.toLocaleString() || '0'} L</td>
+                <td className="px-8 py-5 text-right font-black tabular-nums bg-primary-600/5 text-slate-900 dark:text-white">{stockData.PMG.current?.toLocaleString() || '0'} L</td>
               </tr>
               <tr aria-hidden="true">
                 <td colSpan={4} className="px-0 py-0">
@@ -886,10 +1011,10 @@ export default function StockPage() {
               </tr>
               <tr className="group hover:bg-slate-50/50 dark:hover:bg-dark-900/40">
                 <td className="px-8 py-5 text-sm font-black text-slate-700 dark:text-dark-300 uppercase tracking-tighter">Total Volume</td>
-                <td className="px-8 py-5 text-right font-black tabular-nums text-emerald-600">{(stockData.HSD.totalPurchased + stockData.PMG.totalPurchased).toLocaleString()} L</td>
-                <td className="px-8 py-5 text-right font-black tabular-nums text-red-600">{(stockData.HSD.totalSold + stockData.PMG.totalSold).toLocaleString()} L</td>
+                <td className="px-8 py-5 text-right font-black tabular-nums text-emerald-600">{(stockData.HSD.totalPurchased + stockData.PMG.totalPurchased)?.toLocaleString() || '0'} L</td>
+                <td className="px-8 py-5 text-right font-black tabular-nums text-red-600">{(stockData.HSD.totalSold + stockData.PMG.totalSold)?.toLocaleString() || '0'} L</td>
                 <td className="px-8 py-5 text-right font-black tabular-nums bg-primary-600/5 text-2xl text-black dark:text-white">
-                  {(stockData.HSD.current + stockData.PMG.current).toLocaleString()} L
+                  {(stockData.HSD.current + stockData.PMG.current)?.toLocaleString() || '0'} L
                 </td>
               </tr>
             </tbody>

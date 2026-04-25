@@ -347,7 +347,15 @@ async function initSchema(db: Database): Promise<void> {
       ('googleUserName', ''),
       ('licenseStartDate', ''),
       ('licenseEndDate', ''),
-      ('authorizedMachineId', '')
+      ('authorizedMachineId', ''),
+      ('stockAdjustmentHSD', '0'),
+      ('stockAdjustmentPMG', '0'),
+      ('purchaseAdjustmentHSD', '0'),
+      ('purchaseAdjustmentPMG', '0'),
+      ('saleAdjustmentHSD', '0'),
+      ('saleAdjustmentPMG', '0'),
+      ('baseRateHSD', '0'),
+      ('baseRatePMG', '0')
   `);
 
   // ── Seed default users (only if table is empty) ───────────────────────────

@@ -9,7 +9,7 @@ import Pagination from '../components/ui/Pagination';
 import Modal from '../components/ui/Modal';
 import TransactionReceiptModal from '../components/modals/TransactionReceiptModal';
 import PrintReportModal from '../components/modals/PrintReportModal';
-import { ask } from '@tauri-apps/plugin-dialog';
+import { useConfirm } from '../contexts/ConfirmContext';
 
 // const PER_PAGE = 40; // Replaced by state
 
@@ -21,6 +21,7 @@ export default function CustomerPage() {
 
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
+  const confirm = useConfirm();
 
   // Layout State
   const [activeTab, setActiveTab] = useState<'dashboard' | 'database' | 'register' | 'manage'>('dashboard');
@@ -244,7 +245,7 @@ export default function CustomerPage() {
       return;
     }
 
-    const confirmed = await ask(`Update customer details for: "${editForm.name.trim()}"?`, {
+    const confirmed = await confirm(`Update customer details for: "${editForm.name.trim()}"?`, {
       title: 'Confirm Update',
       kind: 'warning'
     });
@@ -271,7 +272,7 @@ export default function CustomerPage() {
     setIsSaving(true);
     try {
       if (editingEntity) {
-        const confirmed = await ask('Save changes to this customer ledger entry?', {
+        const confirmed = await confirm('Save changes to this customer ledger entry?', {
           title: 'Confirm Update',
           kind: 'warning'
         });
@@ -814,7 +815,7 @@ export default function CustomerPage() {
                                       </button>
                                       <button 
                                         onClick={async () => { 
-                                          if (await ask('Are you sure you want to delete this entry?', { title: 'Confirm Deletion', kind: 'warning' })) { 
+                                          if (await confirm('Delete this customer entry permanently?', { title: 'Confirm Deletion', kind: 'warning' })) { 
                                             deleteCustomerEntry(e.id); 
                                             toast('Entry deleted', 'warning'); 
                                           } 
@@ -1001,7 +1002,7 @@ export default function CustomerPage() {
                                   <button
                                     onClick={async (ev) => { 
                                       ev.stopPropagation(); 
-                                      if (await ask('Delete this customer and ALL their history? This action cannot be undone.', { title: 'DANGER: Confirm Deletion', kind: 'error' })) { 
+                                      if (await confirm('Delete this customer and ALL their transaction history? This action is permanent.', { title: 'DANGER: Confirm Deletion', kind: 'error' })) { 
                                         deleteCustomer(c.id); 
                                       } 
                                     }}

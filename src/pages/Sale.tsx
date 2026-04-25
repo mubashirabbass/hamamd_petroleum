@@ -10,7 +10,7 @@ import { useToast } from '../components/ui/Toast';
 import SearchBar from '../components/ui/SearchBar';
 import Pagination from '../components/ui/Pagination';
 import Modal from '../components/ui/Modal';
-import { ask } from '@tauri-apps/plugin-dialog';
+import { useConfirm } from '../contexts/ConfirmContext';
 import TransactionReceiptModal from '../components/modals/TransactionReceiptModal';
 import PrintReportModal from '../components/modals/PrintReportModal';
 import type { FuelType } from '../store/useStore';
@@ -19,6 +19,7 @@ export default function SalePage() {
   const { sales, purchases, addSale, updateSale, deleteSale, settings, currentUser } = useStore();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
+  const confirm = useConfirm();
 
   // Layout State
   const [perPage, setPerPage] = useState(20);
@@ -68,7 +69,7 @@ export default function SalePage() {
 
   const filtered = useMemo(() => {
     let list = filterByStartDate(sales, settings.startDate)
-      .filter((s) => s.type === fuelType)
+      .filter((s) => s.type?.toUpperCase() === fuelType.toUpperCase())
       .filter((s) => {
         const matchesSearch = !search || s.date.includes(search) || (s.description && s.description.toLowerCase().includes(search.toLowerCase()));
         const matchesFrom = !fromDate || s.date >= fromDate;
@@ -181,7 +182,7 @@ export default function SalePage() {
     setIsSaving(true);
     try {
       if (editingEntity) {
-        const confirmed = await ask('Save changes to this sale entry?', {
+        const confirmed = await confirm('Save changes to this sale entry?', {
           title: 'Confirm Update',
           kind: 'warning'
         });
@@ -358,7 +359,7 @@ export default function SalePage() {
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-dark-800/50 pb-4">
                     <div className="space-y-1">
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sales Liters</p>
-                      <p className="text-xl font-black text-slate-900 dark:text-white tabular-nums">{fuel.stats.qty.toLocaleString()} <span className="text-xs text-slate-400 font-normal">L</span></p>
+                      <p className="text-xl font-black text-slate-900 dark:text-white tabular-nums">{fuel.stats.qty?.toLocaleString() || '0'} <span className="text-xs text-slate-400 font-normal">L</span></p>
                     </div>
                     <div className="space-y-1 sm:text-right flex-1">
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Avg Sale Rate</p>
@@ -424,7 +425,7 @@ export default function SalePage() {
                       <td className="px-6 py-4 font-bold text-slate-600 dark:text-dark-300">{formatDate(s.date)}</td>
                       <td className="px-6 py-4 font-black uppercase tracking-tighter text-emerald-600">{s.type}</td>
                       <td className="px-6 py-4 font-bold text-slate-900 dark:text-white truncate max-w-[150px]">{s.description || 'Daily Sale'}</td>
-                      <td className="px-6 py-4 text-right font-black tabular-nums">{s.quantity.toLocaleString()}</td>
+                      <td className="px-6 py-4 text-right font-black tabular-nums">{s.quantity?.toLocaleString() || '0'}</td>
                       <td className="px-6 py-4 text-right font-black text-emerald-600 tabular-nums">₨ {formatCurrency(s.amount)}</td>
                     </tr>
                   ))}
@@ -569,7 +570,7 @@ export default function SalePage() {
                         <td className="table-cell whitespace-nowrap">{formatDate(s.date)}</td>
                         <td className="table-cell truncate max-w-[15rem]">{s.description || '—'}</td>
                         <td className="table-cell text-right whitespace-nowrap tabular-nums">₨ {formatCurrency(s.rate)}</td>
-                        <td className="table-cell text-right whitespace-nowrap tabular-nums">{s.quantity.toLocaleString()} L</td>
+                        <td className="table-cell text-right whitespace-nowrap tabular-nums">{s.quantity?.toLocaleString() || '0'} L</td>
                         <td className="table-cell text-right font-semibold text-slate-900 dark:text-white whitespace-nowrap tabular-nums">₨ {formatCurrency(s.amount)}</td>
                         <td className="table-cell text-right">
                           <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -580,7 +581,7 @@ export default function SalePage() {
                                 <button onClick={() => handleEdit(s)} className="p-1.5 text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-lg transition-colors" title="Edit Entry"><Edit2 className="w-4 h-4" /></button>
                                 <button 
                                   onClick={async () => { 
-                                    if (await ask('Are you sure you want to delete this sale entry?', { title: 'Confirm Deletion', kind: 'warning' })) { 
+                                    if (await confirm('Are you sure you want to delete this sale entry?', { title: 'Confirm Deletion', kind: 'warning' })) { 
                                       deleteSale(s.id); 
                                       toast('Sale deleted', 'warning'); 
                                     } 
@@ -605,7 +606,7 @@ export default function SalePage() {
                           <span className="text-[10px] font-black text-slate-500 dark:text-dark-400 uppercase tracking-widest italic">Page Total</span>
                         </td>
                         <td className="px-4 py-2 text-right whitespace-nowrap">
-                          <span className="text-xs font-bold text-slate-600 dark:text-dark-400 tabular-nums">{pageTotals.qty.toLocaleString()} L</span>
+                          <span className="text-xs font-bold text-slate-600 dark:text-dark-400 tabular-nums">{pageTotals.qty?.toLocaleString() || '0'} L</span>
                         </td>
                         <td className="px-4 py-2 text-right whitespace-nowrap">
                            <span className="text-xs font-bold text-slate-600 dark:text-dark-400 tabular-nums">₨ {formatCurrency(pageTotals.amount)}</span>
@@ -618,7 +619,7 @@ export default function SalePage() {
                           <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tighter">Grand Total Analysis</span>
                         </td>
                         <td className="px-4 py-3 text-right whitespace-nowrap">
-                           <span className="text-sm font-black text-slate-900 dark:text-white">{grandTotals.qty.toLocaleString()} L</span>
+                           <span className="text-sm font-black text-slate-900 dark:text-white">{grandTotals.qty?.toLocaleString() || '0'} L</span>
                         </td>
                         <td className="px-4 py-3 text-right whitespace-nowrap">
                           <div className="flex flex-col items-end border-l border-slate-300 dark:border-dark-700 pl-4">

@@ -9,7 +9,7 @@ import Pagination from '../components/ui/Pagination';
 import Modal from '../components/ui/Modal';
 import TransactionReceiptModal from '../components/modals/TransactionReceiptModal';
 import PrintReportModal from '../components/modals/PrintReportModal';
-import { ask } from '@tauri-apps/plugin-dialog';
+import { useConfirm } from '../contexts/ConfirmContext';
 
 // const PER_PAGE = 40; // Replaced by state
 
@@ -21,6 +21,7 @@ export default function LiabilityPage() {
   } = useStore();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
+  const confirm = useConfirm();
 
   const [activeTab, setActiveTab] = useState<'dashboard' | 'database' | 'register' | 'manage'>('dashboard');
 
@@ -153,7 +154,7 @@ export default function LiabilityPage() {
     setIsSaving(true);
     try {
       if (editingEntity) {
-        const confirmed = await ask('Save changes to this liability entry?', {
+        const confirmed = await confirm('Save changes to this liability entry?', {
           title: 'Confirm Update',
           kind: 'warning'
         });
@@ -233,7 +234,7 @@ export default function LiabilityPage() {
       return;
     }
 
-    const confirmed = await ask(`Update account name to: "${editForm.name.trim()}"?`, {
+    const confirmed = await confirm(`Update account name to: "${editForm.name.trim()}"?`, {
       title: 'Confirm Update',
       kind: 'warning'
     });
@@ -719,7 +720,7 @@ export default function LiabilityPage() {
                                       </button>
                                       <button 
                                         onClick={async () => { 
-                                          if (await ask('Are you sure you want to delete this entry?', { title: 'Confirm Deletion', kind: 'warning' })) { 
+                                          if (await confirm('Delete this liability entry permanently?', { title: 'Confirm Deletion', kind: 'warning' })) { 
                                             deleteLiabilityEntry(e.id); 
                                             toast('Entry deleted', 'warning'); 
                                           } 
@@ -886,7 +887,7 @@ export default function LiabilityPage() {
                                   <button
                                     onClick={async (ev) => { 
                                       ev.stopPropagation(); 
-                                      if (await ask('Delete this account and ALL its history? This action cannot be undone.', { title: 'DANGER: Confirm Deletion', kind: 'error' })) { 
+                                      if (await confirm('Delete this liability account and ALL its history? This action is permanent.', { title: 'DANGER: Confirm Deletion', kind: 'error' })) { 
                                         deleteLiabilityCategory(c.id); 
                                       } 
                                     }}

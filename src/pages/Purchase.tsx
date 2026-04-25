@@ -7,16 +7,17 @@ import {
 import { useStore } from '../store/useStore';
 import { formatCurrency, formatDate, today, paginate, filterByStartDate, startOfMonth, startOfYear, getErrorMessage, cn } from '../lib/utils';
 import { useToast } from '../components/ui/Toast';
+import { useConfirm } from '../contexts/ConfirmContext';
 import SearchBar from '../components/ui/SearchBar';
 import Pagination from '../components/ui/Pagination';
 import Modal from '../components/ui/Modal';
-import { ask } from '@tauri-apps/plugin-dialog';
 import TransactionReceiptModal from '../components/modals/TransactionReceiptModal';
 import PrintReportModal from '../components/modals/PrintReportModal';
 import type { FuelType } from '../store/useStore';
 
 export default function PurchasePage() {
   const { purchases, addPurchase, updatePurchase, deletePurchase, settings, currentUser } = useStore();
+  const confirm = useConfirm();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
   
@@ -63,6 +64,11 @@ export default function PurchasePage() {
     totalAmount: '',
   });
 
+  // Reset page when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [search, fromDate, toDate, fuelType]);
+
   const handleFuelSelect = (type: FuelType) => {
     setFuelType(type);
     setSearch('');
@@ -71,7 +77,7 @@ export default function PurchasePage() {
 
   const filtered = useMemo(() => {
     let list = filterByStartDate(purchases, settings.startDate)
-      .filter((p) => p.type === fuelType)
+      .filter((p) => p.type?.toUpperCase() === fuelType.toUpperCase())
       .filter((p) => {
         const matchesSearch = !search || p.date.includes(search) || (p.invoiceNo && p.invoiceNo.toLowerCase().includes(search.toLowerCase())) || (p.vehicleNo && p.vehicleNo.toLowerCase().includes(search.toLowerCase()));
         const matchesFrom = !fromDate || p.date >= fromDate;
@@ -127,7 +133,7 @@ export default function PurchasePage() {
     setIsSaving(true);
     try {
       if (editingEntity) {
-        const confirmed = await ask('Save changes to this purchase entry?', {
+        const confirmed = await confirm('Save changes to this purchase entry?', {
           title: 'Confirm Update',
           kind: 'warning'
         });
@@ -344,7 +350,10 @@ export default function PurchasePage() {
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-dark-800/50 pb-4">
                     <div className="space-y-1">
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Liters</p>
-                      <p className="text-xl font-black text-slate-900 dark:text-white tabular-nums">{fuel.stats.qty.toLocaleString()} <span className="text-xs text-slate-400 font-normal">L</span></p>
+                      <p className="text-xl font-black text-slate-900 dark:text-white tabular-nums">
+                        {fuel.stats.qty?.toLocaleString() || '0'} <span className="text-xs text-slate-400 font-normal">L</span>
+                        <span className="text-[10px] ml-2 text-slate-400">({fuel.stats.count} records)</span>
+                      </p>
                     </div>
                     <div className="space-y-1 sm:text-right flex-1">
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Avg Rate</p>
@@ -410,7 +419,7 @@ export default function PurchasePage() {
                       <td className="px-6 py-4 font-bold text-slate-600 dark:text-dark-300">{formatDate(p.date)}</td>
                       <td className="px-6 py-4 font-black text-blue-600">{p.invoiceNo || '—'}</td>
                       <td className="px-6 py-4 font-bold text-slate-900 dark:text-white truncate max-w-[150px]">{p.description || 'Direct Purchase'}</td>
-                      <td className="px-6 py-4 text-right font-black tabular-nums">{p.quantity.toLocaleString()}</td>
+                      <td className="px-6 py-4 text-right font-black tabular-nums">{p.quantity?.toLocaleString() || '0'}</td>
                       <td className="px-6 py-4 text-right font-black text-blue-600 tabular-nums">₨ {formatCurrency(p.totalAmount)}</td>
                     </tr>
                   ))}
@@ -543,7 +552,7 @@ export default function PurchasePage() {
                   </thead>
                   <tbody>
                     {paged.length === 0 ? (
-                      <tr><td colSpan={10} className="table-cell text-center text-slate-400 dark:text-dark-500 py-12 italic">No {fuelType} purchases found</td></tr>
+                      <tr><td colSpan={10} className="table-cell text-center text-slate-400 dark:text-dark-500 py-12 italic">No {fuelType} purchases found {settings.startDate ? `since ${settings.startDate}` : ''}</td></tr>
                     ) : paged.map((p) => (
                       <tr key={p.id} className="table-row group hover:bg-slate-50 dark:hover:bg-dark-800/50 text-[11px]">
                         <td className="table-cell whitespace-nowrap">{formatDate(p.date)}</td>
@@ -551,7 +560,7 @@ export default function PurchasePage() {
                         <td className="table-cell whitespace-normal break-words leading-4 truncate">{p.description || '—'}</td>
                         <td className="table-cell text-slate-500 uppercase tracking-wider whitespace-nowrap truncate max-w-[7rem]">{p.vehicleNo || '—'}</td>
                         <td className="table-cell text-right whitespace-nowrap tabular-nums">₨{formatCurrency(p.rate)}</td>
-                        <td className="table-cell text-right whitespace-nowrap tabular-nums">{p.quantity.toLocaleString()}</td>
+                        <td className="table-cell text-right whitespace-nowrap tabular-nums">{p.quantity?.toLocaleString() || '0'}</td>
                         <td className="table-cell text-right whitespace-nowrap tabular-nums">₨{formatCurrency(p.carriage)}</td>
                         <td className="table-cell text-right whitespace-nowrap tabular-nums">₨{formatCurrency(p.amount)}</td>
                         <td className="table-cell text-right font-semibold text-slate-900 dark:text-white whitespace-nowrap tabular-nums">₨{formatCurrency(p.totalAmount)}</td>
@@ -564,7 +573,7 @@ export default function PurchasePage() {
                                 <button onClick={() => handleEdit(p)} className="p-1.5 text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-lg transition-colors" title="Edit Entry"><Edit2 className="w-4 h-4" /></button>
                                 <button 
                                   onClick={async () => { 
-                                    if (await ask('Are you sure you want to delete this purchase entry?', { title: 'Confirm Deletion', kind: 'warning' })) { 
+                                    if (await confirm('Are you sure you want to delete this purchase entry?', { title: 'Confirm Deletion', kind: 'warning' })) { 
                                       deletePurchase(p.id); 
                                       toast('Purchase deleted', 'warning'); 
                                     } 
@@ -589,7 +598,7 @@ export default function PurchasePage() {
                           <span className="text-[10px] font-black text-slate-500 dark:text-dark-400 uppercase tracking-widest italic">Page Total</span>
                         </td>
                         <td className="px-2 py-2 text-right whitespace-nowrap">
-                          <span className="text-xs font-bold text-slate-600 dark:text-dark-400 tabular-nums">{pageTotals.qty.toLocaleString()} L</span>
+                          <span className="text-xs font-bold text-slate-600 dark:text-dark-400 tabular-nums">{pageTotals.qty?.toLocaleString() || '0'} L</span>
                         </td>
                         <td className="px-2 py-2 text-right whitespace-nowrap">
                           <span className="text-xs font-bold text-slate-600 dark:text-dark-400 tabular-nums">₨ {formatCurrency(pageTotals.carriage)}</span>
@@ -608,7 +617,7 @@ export default function PurchasePage() {
                           <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tighter">Grand Total Analysis</span>
                         </td>
                         <td className="px-2 py-3 text-right whitespace-nowrap">
-                          <span className="text-sm font-black text-slate-900 dark:text-white">{grandTotals.qty.toLocaleString()} L</span>
+                          <span className="text-sm font-black text-slate-900 dark:text-white">{grandTotals.qty?.toLocaleString() || '0'} L</span>
                         </td>
                         <td className="px-2 py-3 text-right whitespace-nowrap text-xs font-bold text-slate-500">
                           ₨{formatCurrency(grandTotals.carriage)}

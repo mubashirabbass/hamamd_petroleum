@@ -12,7 +12,7 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   data: any[];
-  type?: 'sale' | 'purchase' | 'expense' | 'asset' | 'liability' | 'capital' | 'customer' | 'stock' | 'customer_summary' | 'asset_summary' | 'liability_summary' | 'expense_summary' | 'capital_summary' | 'pls' | 'balancesheet';
+  type?: 'sale' | 'purchase' | 'expense' | 'asset' | 'liability' | 'capital' | 'customer' | 'stock' | 'customer_summary' | 'asset_summary' | 'liability_summary' | 'expense_summary' | 'capital_summary' | 'pls' | 'balancesheet' | 'dashboard_summary';
   title?: string;
   customerPhone?: string;
   fromDate?: string;
@@ -72,7 +72,7 @@ export default function PrintReportModal({
   }, []);
 
   const chunks = useMemo(() => {
-    if (type === 'pls') return [data];
+    if (type === 'pls' || type === 'dashboard_summary') return [data];
     if (type === 'balancesheet') {
       const d = data[0];
       if (!d) return [[]];
@@ -397,7 +397,7 @@ export default function PrintReportModal({
               )}
 
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-                {type !== 'pls' && type !== 'balancesheet' && (
+                {type !== 'pls' && type !== 'balancesheet' && type !== 'dashboard_summary' && (
                   <table style={{
                     width: '100%', borderCollapse: 'collapse', fontSize: isPurchase ? '9px' : '12px',
                     borderLeft: '2px solid #111', borderRight: '2px solid #111', borderBottom: '2px solid #111',
@@ -613,6 +613,118 @@ export default function PrintReportModal({
                       )}
                     </tfoot>
                   </table>
+                )}
+
+                {type === 'dashboard_summary' && chunk[0] && (
+                  <div style={{ padding: '0px' }}>
+                    {/* SECTION 1: EXECUTIVE FINANCIAL PERFORMANCE */}
+                    <div style={{ background: '#1e293b', padding: '10px 15px', color: '#fff', fontSize: 13, fontWeight: 1000, borderRadius: '4px 4px 0 0', marginBottom: 0, border: '2px solid #111' }}>
+                      EXECUTIVE FINANCIAL PERFORMANCE OVERVIEW
+                    </div>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', border: '2px solid #111', marginBottom: 20 }}>
+                      <thead style={{ background: '#f5f5f5', borderBottom: '1px solid #111', fontSize: 10 }}>
+                        <tr>
+                          <th style={{ padding: 6, textAlign: 'left', borderRight: '1px solid #ddd' }}>Metric Description</th>
+                          <th style={{ padding: 6, textAlign: 'right' }}>Amount (₨)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[
+                          { label: 'Total Sales Revenue (Gross)', val: chunk[0].totalSales, color: '#1e293b' },
+                          { label: 'Total Operating Expenses', val: chunk[0].totalExpense, color: '#dc2626' },
+                          { label: 'Gross Trading Profit', val: chunk[0].grossProfit, color: '#059669', bold: true },
+                          { label: 'Net Business Profit', val: chunk[0].netProfit, color: chunk[0].netProfit >= 0 ? '#059669' : '#dc2626', bold: true, highlight: true },
+                        ].map((r, i) => (
+                          <tr key={i} style={{ borderBottom: '1px solid #eee', background: r.highlight ? '#f0f9ff' : 'transparent' }}>
+                            <td style={{ padding: '8px 12px', fontSize: 12, fontWeight: 800, borderRight: '1px solid #ddd' }}>{r.label}</td>
+                            <td style={{ padding: '8px 12px', textAlign: 'right', fontSize: 13, fontWeight: 1000, color: r.color }}>
+                              {r.highlight ? '₨ ' : ''}{formatCurrency(r.val)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+
+                    {/* SECTION 2: FUEL OPERATIONAL PERFORMANCE (HSD & PMG) */}
+                    <div style={{ background: '#0f172a', padding: '8px 15px', color: '#fff', fontSize: 12, fontWeight: 1000, border: '2px solid #111', borderBottom: 'none' }}>
+                      FUEL OPERATIONAL PERFORMANCE MATRIX
+                    </div>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', border: '2px solid #111', marginBottom: 20 }}>
+                      <thead style={{ background: '#f1f5f9', borderBottom: '2px solid #111', fontSize: 10 }}>
+                        <tr>
+                          <th style={{ padding: 6, textAlign: 'left', borderRight: '1px solid #ddd' }}>Fuel Type</th>
+                          <th style={{ padding: 6, textAlign: 'right', borderRight: '1px solid #ddd' }}>Total Qty (L)</th>
+                          <th style={{ padding: 6, textAlign: 'right', borderRight: '1px solid #ddd' }}>Avg Purchase</th>
+                          <th style={{ padding: 6, textAlign: 'right', borderRight: '1px solid #ddd' }}>Avg Sale</th>
+                          <th style={{ padding: 6, textAlign: 'right', borderRight: '1px solid #ddd' }}>Margin/L</th>
+                          <th style={{ padding: 6, textAlign: 'right' }}>Segment Profit</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[
+                          { type: 'HSD (Diesel)', qty: chunk[0].hsdSoldQty, pRate: chunk[0].hsdAvg, sRate: chunk[0].hsdSaleAvg, profit: chunk[0].hsdPL, total: chunk[0].hsdSoldQty * chunk[0].hsdPL },
+                          { type: 'PMG (Petrol)', qty: chunk[0].pmgSoldQty, pRate: chunk[0].pmgAvg, sRate: chunk[0].pmgSaleAvg, profit: chunk[0].pmgPL, total: chunk[0].pmgSoldQty * chunk[0].pmgPL },
+                        ].map((r, i) => (
+                          <tr key={i} style={{ borderBottom: '1px solid #111' }}>
+                            <td style={{ padding: '10px 12px', fontSize: 11, fontWeight: 1000, borderRight: '1px solid #ddd', background: '#f8fafc' }}>{r.type}</td>
+                            <td style={{ padding: '10px 12px', textAlign: 'right', fontSize: 11, fontWeight: 900, borderRight: '1px solid #ddd' }}>{r.qty.toLocaleString()}</td>
+                            <td style={{ padding: '10px 12px', textAlign: 'right', fontSize: 11, borderRight: '1px solid #ddd' }}>₨ {formatCurrency(r.pRate)}</td>
+                            <td style={{ padding: '10px 12px', textAlign: 'right', fontSize: 11, borderRight: '1px solid #ddd' }}>₨ {formatCurrency(r.sRate)}</td>
+                            <td style={{ padding: '10px 12px', textAlign: 'right', fontSize: 11, fontWeight: 1000, color: '#059669', borderRight: '1px solid #ddd' }}>₨ {formatCurrency(r.profit)}</td>
+                            <td style={{ padding: '10px 12px', textAlign: 'right', fontSize: 11, fontWeight: 1000, color: '#1e293b' }}>₨ {formatCurrency(r.total)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot style={{ background: '#f8fafc', fontWeight: 1000 }}>
+                        <tr>
+                          <td style={{ padding: '10px 12px', textAlign: 'right', borderRight: '1px solid #ddd' }} colSpan={5}>TOTAL OPERATIONAL PROFIT (GROSS):</td>
+                          <td style={{ padding: '10px 12px', textAlign: 'right', fontSize: 13, borderTop: '2px solid #111' }}>₨ {formatCurrency(chunk[0].grossProfit)}</td>
+                        </tr>
+                      </tfoot>
+                    </table>
+
+                    {/* SECTION 3: INVENTORY & STOCK POSITION */}
+                    <div style={{ background: '#334155', padding: '8px 15px', color: '#fff', fontSize: 11, fontWeight: 1000, border: '2px solid #111', borderBottom: 'none' }}>
+                      INVENTORY & STOCK POSITION
+                    </div>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', border: '2px solid #111' }}>
+                      <thead style={{ background: '#f8fafc', borderBottom: '1px solid #111', fontSize: 9 }}>
+                        <tr>
+                          <th style={{ padding: 5, textAlign: 'left', borderRight: '1px solid #ddd' }}>Fuel Product</th>
+                          <th style={{ padding: 5, textAlign: 'right', borderRight: '1px solid #ddd' }}>Closing Stock (L)</th>
+                          <th style={{ padding: 5, textAlign: 'right', borderRight: '1px solid #ddd' }}>Valuation Rate</th>
+                          <th style={{ padding: 5, textAlign: 'right' }}>Asset Value (₨)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[
+                          { label: 'HSD Stock', qty: chunk[0].hsdStock, rate: chunk[0].hsdAvg, val: chunk[0].hsdStockVal },
+                          { label: 'PMG Stock', qty: chunk[0].pmgStock, rate: chunk[0].pmgAvg, val: chunk[0].pmgStockVal },
+                        ].map((r, i) => (
+                          <tr key={i} style={{ borderBottom: '1px solid #eee' }}>
+                            <td style={{ padding: '8px 12px', fontSize: 11, borderRight: '1px solid #ddd' }}>{r.label}</td>
+                            <td style={{ padding: '8px 12px', textAlign: 'right', fontSize: 11, fontWeight: 900, borderRight: '1px solid #ddd' }}>{r.qty.toLocaleString()} L</td>
+                            <td style={{ padding: '8px 12px', textAlign: 'right', fontSize: 11, borderRight: '1px solid #ddd' }}>₨ {formatCurrency(r.rate)}</td>
+                            <td style={{ padding: '8px 12px', textAlign: 'right', fontSize: 11, fontWeight: 1000 }}>₨ {formatCurrency(r.val)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot style={{ background: '#f8fafc', fontWeight: 1000, borderTop: '2px solid #111' }}>
+                        <tr>
+                          <td colSpan={3} style={{ padding: '10px 12px', textAlign: 'right', borderRight: '1px solid #ddd' }}>TOTAL INVENTORY ASSET VALUE:</td>
+                          <td style={{ padding: '10px 12px', textAlign: 'right', fontSize: 12 }}>₨ {formatCurrency(chunk[0].hsdStockVal + chunk[0].pmgStockVal)}</td>
+                        </tr>
+                      </tfoot>
+                    </table>
+
+                    {/* OVERALL MARGIN FOOTER */}
+                    <div style={{ marginTop: 20, padding: 15, border: '2px dashed #111', textAlign: 'center' }}>
+                      <span style={{ fontSize: 10, fontWeight: 900, color: '#666', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Business Performance Ratio:</span>
+                      <span style={{ fontSize: 18, fontWeight: 1000, marginLeft: 10, color: '#1e293b' }}>
+                        GROSS MARGIN: {chunk[0].grossMargin?.toFixed(2)}%
+                      </span>
+                    </div>
+                  </div>
                 )}
 
                 {type === 'pls' && chunk[0] && (

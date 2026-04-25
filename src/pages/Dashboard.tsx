@@ -174,37 +174,72 @@ export default function Dashboard() {
 
     const hsdTPQty = hsdBaseP.reduce((sum: number, p: any) => sum + (p.quantity || 0), 0);
     const hsdTPAmt = hsdBaseP.reduce((sum: number, p: any) => sum + (p.totalAmount || 0), 0);
-    const hsdAvg   = hsdTPQty > 0 ? hsdTPAmt / hsdTPQty : 0;
-
+    
     const pmgTPQty = pmgBaseP.reduce((sum: number, p: any) => sum + (p.quantity || 0), 0);
     const pmgTPAmt = pmgBaseP.reduce((sum: number, p: any) => sum + (p.totalAmount || 0), 0);
-    const pmgAvg   = pmgTPQty > 0 ? pmgTPAmt / pmgTPQty : 0;
+    const latestHSDRate = [...hsdBaseP].sort((a, b) => b.date.localeCompare(a.date))[0]?.rate || settings.baseRateHSD || 0;
+    const latestPMGRate = [...pmgBaseP].sort((a, b) => b.date.localeCompare(a.date))[0]?.rate || settings.baseRatePMG || 0;
+
+    const hsdAvg = (hsdTPQty > 0 ? hsdTPAmt / hsdTPQty : latestHSDRate) || settings.baseRateHSD || 0;
+    const pmgAvg = (pmgTPQty > 0 ? pmgTPAmt / pmgTPQty : latestPMGRate) || settings.baseRatePMG || 0;
 
     const grossProfit = (hsdSoldAmt + pmgSoldAmt) - (hsdSoldQty * hsdAvg + pmgSoldQty * pmgAvg);
 
     const baseSales = settings.startDate ? rawSales.filter(s => s.date >= settings.startDate) : rawSales;
-    const hsdStock = hsdTPQty - baseSales.filter((s: any) => s.type === 'HSD').reduce((sum: number, x: any) => sum + (x.quantity || 0), 0);
-    const pmgStock = pmgTPQty - baseSales.filter((s: any) => s.type === 'PMG').reduce((sum: number, x: any) => sum + (x.quantity || 0), 0);
+    const hsdS = baseSales.filter((s: any) => s.type === 'HSD').reduce((sum: number, x: any) => sum + (x.quantity || 0), 0);
+    const pmgS = baseSales.filter((s: any) => s.type === 'PMG').reduce((sum: number, x: any) => sum + (x.quantity || 0), 0);
+
+    const hsdStock = (hsdTPQty + settings.purchaseAdjustmentHSD - (hsdS + settings.saleAdjustmentHSD)) + settings.stockAdjustmentHSD;
+    const pmgStock = (pmgTPQty + settings.purchaseAdjustmentPMG - (pmgS + settings.saleAdjustmentPMG)) + settings.stockAdjustmentPMG;
+
+    const hsdSaleAvg = (hsdSoldQty > 0 ? hsdSoldAmt / hsdSoldQty : hsdAvg) || 0;
+    const pmgSaleAvg = (pmgSoldQty > 0 ? pmgSoldAmt / pmgSoldQty : pmgAvg) || 0;
+    
+    // Raw Base Metrics
+    const rawHsdPurchasedQty = periodPurchases.filter((p: any) => p.type === 'HSD').reduce((sum: number, p: any) => sum + (p.quantity || 0), 0);
+    const rawPmgPurchasedQty = periodPurchases.filter((p: any) => p.type === 'PMG').reduce((sum: number, p: any) => sum + (p.quantity || 0), 0);
+
+    // Live Adjusted Metrics for Cards
+    const adjHsdSoldQty = hsdSoldQty + (settings.saleAdjustmentHSD || 0);
+    const adjPmgSoldQty = pmgSoldQty + (settings.saleAdjustmentPMG || 0);
+    const adjHsdPurchasedQty = rawHsdPurchasedQty + (settings.purchaseAdjustmentHSD || 0);
+    const adjPmgPurchasedQty = rawPmgPurchasedQty + (settings.purchaseAdjustmentPMG || 0);
+
+    const adjHsdSoldAmt = adjHsdSoldQty * (hsdSoldQty > 0 ? hsdSaleAvg : hsdAvg);
+    const adjPmgSoldAmt = adjPmgSoldQty * (pmgSoldQty > 0 ? pmgSaleAvg : pmgAvg);
+    const adjHsdPurchasedAmt = adjHsdPurchasedQty * hsdAvg;
+    const adjPmgPurchasedAmt = adjPmgPurchasedQty * pmgAvg;
+
+    const hsdPL = (adjHsdSoldQty > 0) ? (adjHsdSoldAmt / adjHsdSoldQty) - hsdAvg : 0;
+    const pmgPL = (adjPmgSoldQty > 0) ? (adjPmgSoldAmt / adjPmgSoldQty) - pmgAvg : 0;
+    
+    const margin = (adjHsdSoldAmt + adjPmgSoldAmt) > 0 ? (grossProfit / (adjHsdSoldAmt + adjPmgSoldAmt)) * 100 : 0;
 
     return {
-      totalSales: hsdSoldAmt + pmgSoldAmt,
-      totalSoldQty: hsdSoldQty + pmgSoldQty,
+      totalSales: adjHsdSoldAmt + adjPmgSoldAmt,
+      totalSoldQty: adjHsdSoldQty + adjPmgSoldQty,
       purchaseCount: periodPurchases.length,
       saleCount: periodSales.length,
       totalExpense: totalExp,
       grossProfit,
       netProfit: grossProfit - totalExp,
+      grossMargin: margin,
       hsdStock, pmgStock,
-      hsdSoldQty, pmgSoldQty,
-      hsdSoldAmt, pmgSoldAmt,
-      hsdPurchasedQty: periodPurchases.filter((p: any) => p.type === 'HSD').reduce((sum: number, p: any) => sum + (p.quantity || 0), 0),
-      pmgPurchasedQty: periodPurchases.filter((p: any) => p.type === 'PMG').reduce((sum: number, p: any) => sum + (p.quantity || 0), 0),
-      hsdPurchasedAmt: periodPurchases.filter((p: any) => p.type === 'HSD').reduce((sum: number, p: any) => sum + (p.totalAmount || 0), 0),
-      pmgPurchasedAmt: periodPurchases.filter((p: any) => p.type === 'PMG').reduce((sum: number, p: any) => sum + (p.totalAmount || 0), 0),
-      hsdStockVal: hsdStock * hsdAvg,
-      pmgStockVal: pmgStock * pmgAvg
+      hsdSoldQty: adjHsdSoldQty, 
+      pmgSoldQty: adjPmgSoldQty,
+      hsdSoldAmt: adjHsdSoldAmt, 
+      pmgSoldAmt: adjPmgSoldAmt,
+      hsdAvg, pmgAvg,
+      hsdSaleAvg, pmgSaleAvg,
+      hsdPL, pmgPL,
+      hsdPurchasedQty: adjHsdPurchasedQty,
+      pmgPurchasedQty: adjPmgPurchasedQty,
+      hsdPurchasedAmt: adjHsdPurchasedAmt,
+      pmgPurchasedAmt: adjPmgPurchasedAmt,
+      hsdStockVal: Math.max(0, hsdStock) * hsdAvg,
+      pmgStockVal: Math.max(0, pmgStock) * pmgAvg
     };
-  }, [rawPurchases, rawSales, rawExpenses, settings.startDate, filter, fromDate, toDate]);
+  }, [rawPurchases, rawSales, rawExpenses, settings.startDate, settings.stockAdjustmentHSD, settings.stockAdjustmentPMG, settings.purchaseAdjustmentHSD, settings.purchaseAdjustmentPMG, settings.saleAdjustmentHSD, settings.saleAdjustmentPMG, settings.baseRateHSD, settings.baseRatePMG, filter, fromDate, toDate]);
 
   const fuelModules = [
     { type: 'HSD', label: 'High Speed Diesel', stock: dashboardStats.hsdStock, sold: dashboardStats.hsdSoldQty, pQty: dashboardStats.hsdPurchasedQty, stockVal: dashboardStats.hsdStockVal, soldVal: dashboardStats.hsdSoldAmt, pVal: dashboardStats.hsdPurchasedAmt, icon: Fuel, color: 'amber' },
@@ -337,18 +372,27 @@ export default function Dashboard() {
             </div>
             <div className="flex items-stretch gap-4 md:gap-6 relative border-t border-slate-100 dark:border-dark-800/60 pt-6 md:pt-8">
               {[
-                { label: 'Purchase', qty: f.pQty, amt: f.pVal },
-                { label: 'Sale',     qty: f.sold, amt: f.soldVal },
-                { label: 'Stock',    qty: f.stock, amt: f.stockVal, highlight: true },
+                { label: 'Purchase',  qty: f.pQty, amt: f.pVal },
+                { label: 'Sale',      qty: f.sold, amt: f.soldVal },
+                { label: 'Remaining', qty: f.stock, amt: f.stockVal, highlight: true },
               ].map((col, idx, arr) => (
                 <div key={col.label} className="flex-1 flex flex-col space-y-1 md:space-y-1.5 min-w-0 relative">
                   {idx < arr.length - 1 && (
                     <div className="absolute top-1 right-[-8px] md:right-[-12px] bottom-1 w-[1.5px] bg-slate-900 dark:bg-slate-100 opacity-20" />
                   )}
                   <p className="text-[8px] md:text-[9px] font-black text-slate-400 uppercase tracking-widest truncate">{col.label}</p>
-                  <div className="flex items-baseline gap-1">
+                  <div className="flex items-baseline gap-1 relative">
                     <span className={cn("font-black tabular-nums tracking-tighter leading-none", col.highlight ? `text-xl md:text-2xl text-${f.color}-600` : 'text-lg md:text-xl text-slate-900 dark:text-white')}>{col.qty.toLocaleString()}</span>
                     <span className="text-[8px] md:text-[9px] font-black text-slate-400 uppercase">L</span>
+                    {col.label === 'Remaining' && ((f.type === 'HSD' && settings.stockAdjustmentHSD !== 0) || (f.type === 'PMG' && settings.stockAdjustmentPMG !== 0)) && (
+                      <span className="absolute -top-3 left-0 text-[6px] font-black uppercase bg-amber-500/10 text-amber-600 px-1 py-0.5 rounded border border-amber-500/20">Edited</span>
+                    )}
+                    {col.label === 'Purchase' && ((f.type === 'HSD' && settings.purchaseAdjustmentHSD !== 0) || (f.type === 'PMG' && settings.purchaseAdjustmentPMG !== 0)) && (
+                      <span className="absolute -top-3 left-0 text-[6px] font-black uppercase bg-amber-500/10 text-amber-600 px-1 py-0.5 rounded border border-amber-500/20">Edited</span>
+                    )}
+                    {col.label === 'Sale' && ((f.type === 'HSD' && settings.saleAdjustmentHSD !== 0) || (f.type === 'PMG' && settings.saleAdjustmentPMG !== 0)) && (
+                      <span className="absolute -top-3 left-0 text-[6px] font-black uppercase bg-amber-500/10 text-amber-600 px-1 py-0.5 rounded border border-amber-500/20">Edited</span>
+                    )}
                   </div>
                   <p className="text-[10px] md:text-[11px] font-bold text-slate-500 dark:text-dark-400 tracking-tight tabular-nums truncate">
                     ₨ {formatCurrency(col.amt)}
@@ -378,23 +422,9 @@ export default function Dashboard() {
         <PrintReportModal
           isOpen={showSummaryReport}
           onClose={() => setShowSummaryReport(false)}
-          title="Executive Summary Report"
-          columns={[
-            { header: 'Metric', accessor: 'label' },
-            { header: 'Value', accessor: 'value', align: 'right' },
-          ]}
-          data={[
-            { label: 'Total Sales Revenue', value: `₨ ${formatCurrency(dashboardStats.totalSales)}` },
-            { label: 'Total Operating Expenses', value: `₨ ${formatCurrency(dashboardStats.totalExpense)}` },
-            { label: 'Gross Profit Margin', value: `₨ ${formatCurrency(dashboardStats.grossProfit)}` },
-            { label: 'Net Business Profit', value: `₨ ${formatCurrency(dashboardStats.netProfit)}` },
-            { label: '---', value: '---' },
-            { label: 'HSD Current Stock', value: `${dashboardStats.hsdStock.toLocaleString()} L` },
-            { label: 'PMG Current Stock', value: `${dashboardStats.pmgStock.toLocaleString()} L` },
-            { label: '---', value: '---' },
-            { label: 'HSD Period Sales', value: `${dashboardStats.hsdSoldQty.toLocaleString()} L` },
-            { label: 'PMG Period Sales', value: `${dashboardStats.pmgSoldQty.toLocaleString()} L` },
-          ]}
+          title="Executive Performance Bill"
+          type="dashboard_summary"
+          data={[dashboardStats]}
           dateRange={filter !== 'overall' ? { 
             from: filter === 'today' ? today() : filter === 'month' ? today().substring(0, 7) + '-01' : fromDate, 
             to: filter === 'custom' ? toDate : today() 

@@ -8,7 +8,7 @@ import SearchBar from '../components/ui/SearchBar';
 import Pagination from '../components/ui/Pagination';
 import Modal from '../components/ui/Modal';
 import TransactionReceiptModal from '../components/modals/TransactionReceiptModal';
-import { ask } from '@tauri-apps/plugin-dialog';
+import { useConfirm } from '../contexts/ConfirmContext';
 import PrintReportModal from '../components/modals/PrintReportModal';
 
 export default function AssetPage() {
@@ -19,6 +19,7 @@ export default function AssetPage() {
   } = useStore();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
+  const confirm = useConfirm();
 
   const [activeTab, setActiveTab] = useState<'dashboard' | 'database' | 'register' | 'manage'>('dashboard');
 
@@ -152,7 +153,7 @@ export default function AssetPage() {
     setIsSaving(true);
     try {
       if (editingEntity) {
-        const confirmed = await ask('Save changes to this asset entry?', {
+        const confirmed = await confirm('Save changes to this asset entry?', {
           title: 'Confirm Update',
           kind: 'warning'
         });
@@ -228,7 +229,7 @@ export default function AssetPage() {
       return;
     }
 
-    const confirmed = await ask(`Update account name to: "${editForm.name.trim()}"?`, {
+    const confirmed = await confirm(`Update account name to: "${editForm.name.trim()}"?`, {
       title: 'Confirm Update',
       kind: 'warning'
     });
@@ -495,8 +496,9 @@ export default function AssetPage() {
                                      <button onClick={() => handleEdit(e)} className="p-1 text-emerald-600 hover:bg-emerald-50 rounded" title="Edit"><Edit2 className="w-3.5 h-3.5" /></button>
                                      <button 
                                        onClick={async () => { 
-                                         if (await ask('Delete this asset entry?', { title: 'Confirm Deletion', kind: 'warning' })) { 
+                                         if (await confirm('Delete this asset entry permanently?', { title: 'Confirm Deletion', kind: 'warning' })) { 
                                            deleteAssetEntry(e.id); 
+                                           toast('Entry deleted', 'warning');
                                          } 
                                        }} 
                                        className="p-1 text-red-600 hover:bg-red-50 rounded" 
@@ -586,8 +588,9 @@ export default function AssetPage() {
                         <div className="flex items-center gap-2">
                           <button onClick={() => handleStartEdit(cat)} className="p-2 text-primary-600 hover:bg-primary-50 rounded-lg"><Edit2 className="w-4 h-4" /></button>
                           <button 
-                            onClick={async () => { 
-                              if (await ask('Delete this account and ALL its entries?', { title: 'DANGER: Confirm Deletion', kind: 'error' })) { 
+                            onClick={async (ev) => { 
+                              ev.stopPropagation(); 
+                              if (await confirm('Delete this asset category and ALL its history? This action is permanent.', { title: 'DANGER: Confirm Deletion', kind: 'error' })) { 
                                 deleteAssetCategory(cat.id); 
                               } 
                             }} 

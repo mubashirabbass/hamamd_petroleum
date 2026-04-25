@@ -137,6 +137,14 @@ export interface Settings {
   licenseEndDate:      string;
   authorizedMachineId: string;
   shortcuts:           Shortcut[];
+  stockAdjustmentHSD:  number;
+  stockAdjustmentPMG:  number;
+  purchaseAdjustmentHSD: number;
+  purchaseAdjustmentPMG: number;
+  saleAdjustmentHSD: number;
+  saleAdjustmentPMG: number;
+  baseRateHSD: number;
+  baseRatePMG: number;
 }
 
 // ─── Store Interface ──────────────────────────────────────────────────────────
@@ -301,6 +309,14 @@ export const useStore = create<AppState>()(
           licenseStartDate:    data.settings['licenseStartDate'] || '',
           licenseEndDate:      data.settings['licenseEndDate']   || '',
           authorizedMachineId: data.settings['authorizedMachineId'] || '',
+          stockAdjustmentHSD:  parseFloat(data.settings['stockAdjustmentHSD'] || '0'),
+          stockAdjustmentPMG:  parseFloat(data.settings['stockAdjustmentPMG'] || '0'),
+          purchaseAdjustmentHSD: parseFloat(data.settings['purchaseAdjustmentHSD'] || '0'),
+          purchaseAdjustmentPMG: parseFloat(data.settings['purchaseAdjustmentPMG'] || '0'),
+          saleAdjustmentHSD:     parseFloat(data.settings['saleAdjustmentHSD']     || '0'),
+          saleAdjustmentPMG:     parseFloat(data.settings['saleAdjustmentPMG']     || '0'),
+          baseRateHSD:           parseFloat(data.settings['baseRateHSD']           || '0'),
+          baseRatePMG:           parseFloat(data.settings['baseRatePMG']           || '0'),
           shortcuts: (() => {
             try {
               const saved = data.settings['shortcuts'];
@@ -769,6 +785,14 @@ export const useStore = create<AppState>()(
     }
     if (updates.zoomLevel    !== undefined) await setSetting('zoomLevel',    String(updates.zoomLevel));
     if (updates.shortcuts    !== undefined) await setSetting('shortcuts',    JSON.stringify(updates.shortcuts));
+    if (updates.stockAdjustmentHSD    !== undefined) await setSetting('stockAdjustmentHSD',    String(updates.stockAdjustmentHSD));
+    if (updates.stockAdjustmentPMG    !== undefined) await setSetting('stockAdjustmentPMG',    String(updates.stockAdjustmentPMG));
+    if (updates.purchaseAdjustmentHSD !== undefined) await setSetting('purchaseAdjustmentHSD', String(updates.purchaseAdjustmentHSD));
+    if (updates.purchaseAdjustmentPMG !== undefined) await setSetting('purchaseAdjustmentPMG', String(updates.purchaseAdjustmentPMG));
+    if (updates.saleAdjustmentHSD     !== undefined) await setSetting('saleAdjustmentHSD',     String(updates.saleAdjustmentHSD));
+    if (updates.saleAdjustmentPMG     !== undefined) await setSetting('saleAdjustmentPMG',     String(updates.saleAdjustmentPMG));
+    if (updates.baseRateHSD           !== undefined) await setSetting('baseRateHSD',           String(updates.baseRateHSD));
+    if (updates.baseRatePMG           !== undefined) await setSetting('baseRatePMG',           String(updates.baseRatePMG));
 
     set({ settings: merged });
   },
@@ -824,34 +848,79 @@ export const useStore = create<AppState>()(
 
   // ── Reset All Data ────────────────────────────────────────────────────────────
   resetAllData: async () => {
-    await runInTransaction(async (db) => {
-      const tables = [
-        'purchases', 'sales',
-        'expense_entries', 'expense_categories',
-        'asset_entries', 'asset_categories',
-        'liability_entries', 'liability_categories',
-        'customer_entries', 'customers',
-        'capital_entries', 'capital_categories',
-      ];
-      for (const t of tables) await db.execute(`DELETE FROM ${t}`);
-      // Reset counters
-      await db.execute(
-        `UPDATE counters SET value=1 WHERE name IN ('purchase','sale','expense','asset','liability','customer','capital')`
-      );
-    });
+    try {
+      await runInTransaction(async (db) => {
+        const tables = [
+          'purchases', 'sales',
+          'expense_entries', 'expense_categories',
+          'asset_entries', 'asset_categories',
+          'liability_entries', 'liability_categories',
+          'customer_entries', 'customers',
+          'capital_entries', 'capital_categories',
+        ];
+        
+        // Execute deletes sequentially to avoid locking
+        for (const t of tables) {
+          try {
+            await db.execute(`DELETE FROM ${t}`);
+          } catch (e) {
+            console.warn(`[Reset] Could not clear table ${t}:`, e);
+          }
+        }
+        
+        // Reset counters
+        try {
+          await db.execute(
+            `UPDATE counters SET value=1 WHERE name IN ('purchase','sale','expense','asset','liability','customer','capital')`
+          );
+        } catch (e) {
+          console.warn(`[Reset] Could not reset counters:`, e);
+        }
 
-    set({
-      purchases: [], sales: [],
-      expenseCategories: [], expenseEntries: [],
-      assetCategories: [], assetEntries: [],
-      liabilityCategories: [], liabilityEntries: [],
-      customers: [], customerEntries: [],
-      capitalCategories: [], capitalEntries: [],
-      nextPurchaseNo: 1, nextSaleNo: 1,
-      nextExpenseNo: 1,
-      nextAssetNo: 1, nextLiabilityNo: 1, nextCustomerNo: 1, nextCapitalNo: 1,
-      settings: get().settings,
-    });
+        // Reset adjustment settings in DB
+        const adjKeys = [
+          'stockAdjustmentHSD', 'stockAdjustmentPMG',
+          'purchaseAdjustmentHSD', 'purchaseAdjustmentPMG',
+          'saleAdjustmentHSD', 'saleAdjustmentPMG',
+          'baseRateHSD', 'baseRatePMG'
+        ];
+        for (const key of adjKeys) {
+          try {
+            await db.execute(`UPDATE settings SET value='0' WHERE key=?`, [key]);
+          } catch (e) {
+            console.warn(`[Reset] Could not reset setting ${key}:`, e);
+          }
+        }
+      });
+
+      // Update In-Memory State
+      set({
+        purchases: [], sales: [],
+        expenseCategories: [], expenseEntries: [],
+        assetCategories: [], assetEntries: [],
+        liabilityCategories: [], liabilityEntries: [],
+        customers: [], customerEntries: [],
+        capitalCategories: [], capitalEntries: [],
+        nextPurchaseNo: 1, nextSaleNo: 1,
+        nextExpenseNo: 1,
+        nextAssetNo: 1, nextLiabilityNo: 1, nextCustomerNo: 1, nextCapitalNo: 1,
+        settings: {
+          ...get().settings,
+          stockAdjustmentHSD: 0,
+          stockAdjustmentPMG: 0,
+          purchaseAdjustmentHSD: 0,
+          purchaseAdjustmentPMG: 0,
+          saleAdjustmentHSD: 0,
+          saleAdjustmentPMG: 0,
+          baseRateHSD: 0,
+          baseRatePMG: 0,
+        },
+      });
+      return true;
+    } catch (err) {
+      console.error('[Reset] Critical reset failure:', err);
+      throw err;
+    }
   },
     }),
     {

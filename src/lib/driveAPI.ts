@@ -268,9 +268,9 @@ export async function downloadLocalBackup(): Promise<string> {
     });
 
     if (savePath) {
-      // Use Tauri FS to copy the temp zip to user's desired location
-      const { copyFile } = await import('@tauri-apps/plugin-fs');
-      await copyFile(zipPath, savePath);
+      // Use the native Rust command to copy the zip. 
+      // This is much more reliable on Windows than JS-side copy.
+      await invoke('copy_to_path', { src: zipPath, dest: savePath });
       return savePath;
     } else {
       throw new Error('Canceled');

@@ -50,13 +50,14 @@ fn get_app_data_path(app: tauri::AppHandle) -> Result<String, String> {
 #[tauri::command]
 #[allow(unused_variables)]
 async fn create_backup_zip(app: tauri::AppHandle) -> Result<String, String> {
+    // Generate fresh snapshots first
+    let export_dir_str = export_data_snapshot(app.clone()).await?;
+    let export_dir = std::path::Path::new(&export_dir_str);
+
     #[cfg(not(mobile))]
     let app_dir = get_base_dir()?;
-
     #[cfg(mobile)]
-    let app_dir = app.path().app_data_dir()
-        .map(|p| { let _ = std::fs::create_dir_all(&p); p })
-        .map_err(|e| e.to_string())?;
+    let app_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
 
     let db_path = app_dir.join("ebs_business.db");
     if !db_path.exists() {
@@ -66,9 +67,7 @@ async fn create_backup_zip(app: tauri::AppHandle) -> Result<String, String> {
     let backups_dir = app_dir.join("backups");
     std::fs::create_dir_all(&backups_dir).map_err(|e| e.to_string())?;
 
-    let timestamp = chrono::Utc::now()
-        .format("%Y%m%d_%H%M%S")
-        .to_string();
+    let timestamp = chrono::Utc::now().format("%Y%m%d_%H%M%S").to_string();
     let zip_name = format!("EBS_Backup_{}.zip", timestamp);
     let zip_path = backups_dir.join(&zip_name);
 
@@ -79,32 +78,26 @@ async fn create_backup_zip(app: tauri::AppHandle) -> Result<String, String> {
 
     // 1. Backup metadata
     let meta = serde_json::json!({
-        "version": "1.0",
-        "app": "EBS Petroleum",
-        "device_type": "Mobile",
+        "version": "2.0",
+        "app": "HR Filling Station",
         "createdAt": chrono::Utc::now().to_rfc3339(),
-        "dbFile": "ebs_business.db"
+        "hasExcelReports": true
     });
-    zip.start_file("metadata.json", options)
-        .map_err(|e| e.to_string())?;
-    zip.write_all(meta.to_string().as_bytes())
-        .map_err(|e| e.to_string())?;
+    zip.start_file("metadata.json", options).map_err(|e| e.to_string())?;
+    zip.write_all(meta.to_string().as_bytes()).map_err(|e| e.to_string())?;
 
     // 2. Main SQLite database file
-    zip.start_file("ebs_business.db", options)
-        .map_err(|e| e.to_string())?;
+    zip.start_file("ebs_business.db", options).map_err(|e| e.to_string())?;
     let db_data = std::fs::read(&db_path).map_err(|e| e.to_string())?;
     zip.write_all(&db_data).map_err(|e| e.to_string())?;
 
-    // 3. Write-Ahead Logs (WAL) if they exist (Crucial for real-time uncommitted data)
+    // 3. WAL/SHM logs
     let wal_path = app_dir.join("ebs_business.db-wal");
     if wal_path.exists() {
         zip.start_file("ebs_business.db-wal", options).map_err(|e| e.to_string())?;
         let wal_data = std::fs::read(&wal_path).map_err(|e| e.to_string())?;
         zip.write_all(&wal_data).map_err(|e| e.to_string())?;
     }
-
-    // 4. Shared memory file (SHM)
     let shm_path = app_dir.join("ebs_business.db-shm");
     if shm_path.exists() {
         zip.start_file("ebs_business.db-shm", options).map_err(|e| e.to_string())?;
@@ -112,8 +105,18 @@ async fn create_backup_zip(app: tauri::AppHandle) -> Result<String, String> {
         zip.write_all(&shm_data).map_err(|e| e.to_string())?;
     }
 
-    zip.finish().map_err(|e| e.to_string())?;
+    // 4. Excel Reports Folder (The user's specific request)
+    let entries = std::fs::read_dir(export_dir).map_err(|e| e.to_string())?;
+    for entry in entries.flatten() {
+        let fname = entry.file_name().to_string_lossy().to_string();
+        if fname.ends_with(".csv") || fname == "README.txt" {
+            let data = std::fs::read(entry.path()).map_err(|e| e.to_string())?;
+            zip.start_file(format!("Excel_Reports/{}", fname), options).map_err(|e| e.to_string())?;
+            zip.write_all(&data).map_err(|e| e.to_string())?;
+        }
+    }
 
+    zip.finish().map_err(|e| e.to_string())?;
     Ok(zip_path.to_string_lossy().to_string())
 }
 
@@ -660,6 +663,11 @@ async fn copy_file_native(
         
     Ok(target_path.to_string_lossy().to_string())
 }
+#[tauri::command]
+async fn copy_to_path(src: String, dest: String) -> Result<(), String> {
+    std::fs::copy(&src, &dest).map_err(|e| format!("Failed to copy file: {}", e))?;
+    Ok(())
+}
 
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -751,6 +759,8 @@ async fn export_data_snapshot(app: tauri::AppHandle) -> Result<String, String> {
     let (_, lib_entries) = query_rows!(conn, "SELECT lc.name as category,l.bill_no,l.date,l.description,l.debit,l.credit,l.balance FROM liability_entries l JOIN liability_categories lc ON l.category_id=lc.id ORDER BY l.date");
     let (_, customers)   = query_rows!(conn, "SELECT name,phone FROM customers");
     let (_, cust_entries)= query_rows!(conn, "SELECT c.name as customer,c.phone,ce.bill_no,ce.date,ce.description,ce.debit,ce.credit,ce.balance FROM customer_entries ce JOIN customers c ON ce.customer_id=c.id ORDER BY ce.date");
+    let (_, cap_cats)    = query_rows!(conn, "SELECT name FROM capital_categories");
+    let (_, cap_entries) = query_rows!(conn, "SELECT cc.name as category,cp.bill_no,cp.date,cp.description,cp.debit,cp.credit,cp.balance FROM capital_entries cp JOIN capital_categories cc ON cp.category_id=cc.id ORDER BY cp.date");
     let (_, users)        = query_rows!(conn, "SELECT name,email,role,created_at FROM users");
     let (_, settings)     = query_rows!(conn, "SELECT key,value FROM app_settings");
 
@@ -760,6 +770,7 @@ async fn export_data_snapshot(app: tauri::AppHandle) -> Result<String, String> {
     root["assets"]     = serde_json::json!({ "categories": ast_cats, "entries": ast_entries.clone() });
     root["liabilities"]= serde_json::json!({ "categories": lib_cats, "entries": lib_entries.clone() });
     root["customers"]  = serde_json::json!({ "list": customers, "entries": cust_entries.clone() });
+    root["capital"]    = serde_json::json!({ "categories": cap_cats, "entries": cap_entries.clone() });
     root["users"]      = serde_json::Value::Array(users.clone());
     root["settings"]   = serde_json::Value::Array(settings.clone());
 
@@ -797,6 +808,15 @@ async fn export_data_snapshot(app: tauri::AppHandle) -> Result<String, String> {
             jstr(r,"bill_no"),jstr(r,"type"),jstr(r,"date"),jstr(r,"description"),
             jstr(r,"invoice_no"),jstr(r,"vehicle_no"),jstr(r,"details"),
             jstr(r,"rate"),jstr(r,"quantity"),jstr(r,"carriage"),jstr(r,"amount"),jstr(r,"total_amount")
+        ]
+    );
+
+    write_csv!(export_dir, "08_Capital_Ledger.csv",
+        "Category,Bill No,Date,Description,Debit,Credit,Balance",
+        cap_entries,
+        |r: &serde_json::Value| vec![
+            jstr(r,"category"),jstr(r,"bill_no"),jstr(r,"date"),jstr(r,"description"),
+            jstr(r,"debit"),jstr(r,"credit"),jstr(r,"balance")
         ]
     );
 
@@ -978,6 +998,7 @@ pub fn run() {
             copy_file_native,
             export_data_snapshot,
             create_full_export_zip,
+            copy_to_path,
             activation::get_hwid_activation,
             activation::set_hwid_activation,
         ])

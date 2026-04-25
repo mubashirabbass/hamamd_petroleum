@@ -8,7 +8,7 @@ import SearchBar from '../components/ui/SearchBar';
 import Pagination from '../components/ui/Pagination';
 import Modal from '../components/ui/Modal';
 import TransactionReceiptModal from '../components/modals/TransactionReceiptModal';
-import { ask } from '@tauri-apps/plugin-dialog';
+import { useConfirm } from '../contexts/ConfirmContext';
 import PrintReportModal from '../components/modals/PrintReportModal';
 
 export default function CapitalPage() {
@@ -19,6 +19,7 @@ export default function CapitalPage() {
   } = useStore();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
+  const confirm = useConfirm();
 
   const [activeTab, setActiveTab] = useState<'dashboard' | 'database' | 'register' | 'manage'>('dashboard');
 
@@ -152,7 +153,7 @@ export default function CapitalPage() {
     setIsSaving(true);
     try {
       if (editingEntity) {
-        const confirmed = await ask('Save changes to this capital transaction?', {
+        const confirmed = await confirm('Save changes to this capital transaction?', {
           title: 'Confirm Update',
           kind: 'warning'
         });
@@ -228,7 +229,7 @@ export default function CapitalPage() {
       return;
     }
 
-    const confirmed = await ask(`Update account name to: "${editForm.name.trim()}"?`, {
+    const confirmed = await confirm(`Update account name to: "${editForm.name.trim()}"?`, {
       title: 'Confirm Update',
       kind: 'warning'
     });
@@ -621,7 +622,7 @@ export default function CapitalPage() {
                                       </button>
                                       <button 
                                         onClick={async () => { 
-                                          if (await ask('Are you sure you want to delete this entry?', { title: 'Confirm Deletion', kind: 'warning' })) { 
+                                          if (await confirm('Delete this capital entry permanently?', { title: 'Confirm Deletion', kind: 'warning' })) { 
                                             deleteCapitalEntry(e.id); 
                                             toast('Entry deleted', 'warning'); 
                                           } 
@@ -771,8 +772,9 @@ export default function CapitalPage() {
                           <div className="flex items-center justify-center gap-2">
                             <button onClick={() => handleStartEdit(cat)} className="p-2 text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-xl transition-all"><Edit2 className="w-4 h-4" /></button>
                             <button 
-                              onClick={async () => { 
-                                if (await ask('Delete this account and ALL its history? This action cannot be undone.', { title: 'DANGER: Confirm Deletion', kind: 'error' })) { 
+                              onClick={async (ev) => { 
+                                ev.stopPropagation(); 
+                                if (await confirm('Delete this capital account and ALL its history? This action is permanent.', { title: 'DANGER: Confirm Deletion', kind: 'error' })) { 
                                   deleteCapitalCategory(cat.id); 
                                 } 
                               }} 

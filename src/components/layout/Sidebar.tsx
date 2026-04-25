@@ -50,7 +50,7 @@ export default function Sidebar({ className = '', isCollapsed = false, onNavigat
   return (
     <aside className={cn(
       "relative h-screen flex-shrink-0 flex flex-col transition-all duration-300 border-r border-slate-200 dark:border-dark-800 bg-white dark:bg-dark-900 shadow-2xl",
-      isCollapsed ? "w-14" : "w-60",
+      isCollapsed ? "w-14" : "w-52",
       className
     )}>
       <div className="flex-1 flex flex-col h-full overflow-hidden">
@@ -104,15 +104,15 @@ export default function Sidebar({ className = '', isCollapsed = false, onNavigat
                     if (onNavigate) onNavigate();
                   }}
                   className={cn(
-                    'flex items-center rounded-2xl text-sm font-black transition-all duration-300 relative group mb-1',
-                    isCollapsed ? "justify-center px-0 py-2.5" : "px-3 py-2.5 gap-3",
+                    'flex items-center rounded-xl text-[13px] font-black transition-all duration-300 relative group mb-0.5',
+                    isCollapsed ? "justify-center px-0 py-2" : "px-3 py-2 gap-2.5",
                     active 
-                      ? 'bg-primary-600 text-white shadow-[0_4px_12px_rgba(37,99,235,0.25)]' 
+                      ? 'bg-primary-600 text-white shadow-[0_3px_10px_rgba(37,99,235,0.2)]' 
                       : 'text-slate-500 dark:text-dark-400 hover:bg-slate-50 dark:hover:bg-dark-800'
                   )}
                   title={isCollapsed ? label : ""}
                 >
-                  <Icon className={cn("w-5 h-5 flex-shrink-0", active ? "scale-110" : "")} />
+                  <Icon className={cn("w-4 h-4 flex-shrink-0", active ? "scale-105" : "")} />
                   {!isCollapsed && <span className="flex-1 truncate">{label}</span>}
                   {active && !isCollapsed && (
                     <div className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-white rounded-full" />
@@ -131,7 +131,7 @@ export default function Sidebar({ className = '', isCollapsed = false, onNavigat
                             if (onNavigate) onNavigate();
                           }}
                           className={cn(
-                            'flex items-center gap-3 px-4 py-2.5 rounded-xl text-[13px] font-black transition-all duration-200',
+                            'flex items-center gap-3 px-4 py-2 rounded-lg text-[12px] font-black transition-all duration-200',
                             childActive
                               ? 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/10'
                               : 'text-slate-400 dark:text-dark-500 hover:text-slate-600 dark:hover:text-dark-300'

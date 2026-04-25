@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import ManageUsersModal from '../components/modals/ManageUsersModal';
+import Modal from '../components/ui/Modal';
 import { useToast } from '../components/ui/Toast';
 import { cn } from '../lib/utils';
 import DeveloperSettings from '../components/settings/DeveloperSettings';
@@ -78,7 +79,7 @@ function BackupPanel() {
   const [backupList,    setBackupList]    = useState<DriveFile[]>([]);
   const [loadingList,   setLoadingList]   = useState(false);
   const [progress,      setProgress]      = useState<{ msg: string; active: boolean }>({ msg: '', active: false });
-  const _driveName = driveName; void _driveName; // suppress unused warning — reserved for future UI
+  const _driveName = driveName; void _driveName; // suppress unused warning
   const [confirmRestore, setConfirmRestore] = useState<DriveFile | null>(null);
   const [confirmLocalRestore, setConfirmLocalRestore] = useState<{ name: string; path?: string; file?: File } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -104,6 +105,9 @@ function BackupPanel() {
     })();
   }, []);
 
+  // ── Sub-Tab Navigation ───────────────────────────────────────────────────
+  const [subTab, setSubTab] = useState<'cloud' | 'local' | 'export' | 'tools'>('cloud');
+
   const fetchList = async () => {
     setLoadingList(true);
     try {
@@ -113,7 +117,6 @@ function BackupPanel() {
     finally     { setLoadingList(false); }
   };
 
-  // ── Save credentials then immediately open OAuth ──────────────────────────
   const handleConnectWithCreds = async () => {
     if (!clientId.trim() || !clientSecret.trim()) {
       toast('Please enter both Client ID and Client Secret.', 'error');
@@ -124,7 +127,6 @@ function BackupPanel() {
     await setSetting('googleClientSecret', clientSecret.trim());
     setCredsSaved(true);
     setSavingCreds(false);
-    // Immediately trigger OAuth — no second button needed
     setConnecting(true);
     try {
       const info = await connectGoogleDrive();
@@ -194,11 +196,9 @@ function BackupPanel() {
     setCheckingStatus(false);
   };
 
-  // ── Backup Now ─────────────────────────────────────────────────────────────
   const handleBackupNow = async () => {
     setProgress({ msg: 'Starting backup…', active: true });
     try {
-      // Append device type to filename for cross-app sync visibility
       const name = await backupNow((msg) => setProgress({ msg, active: true }));
       toast(`✅ Cloud Sync Complete: ${name}`, 'success');
       await fetchList();
@@ -209,23 +209,18 @@ function BackupPanel() {
     }
   };
 
-  // ── Local ZIP Download ─────────────────────────────────────────────────────
   const handleLocalBackup = async () => {
     setProgress({ msg: 'Creating local backup ZIP…', active: true });
     try {
       const zipPath = await downloadLocalBackup();
-      
-      // If the path doesn't contain 'AppData', we successfully saved it to the user's location via dialog
       if (!zipPath.includes('AppData')) {
         toast(`Local backup saved to:\n${zipPath}`, 'success');
         return;
       }
-
-      // Fallback: Open the folder so the user can find the file
       try {
         const { revealItemInDir } = await import('@tauri-apps/plugin-opener');
         await revealItemInDir(zipPath);
-      } catch (_) { /* folder open is best-effort */ }
+      } catch (_) { }
       toast(`Local backup saved to:\n${zipPath}`, 'success');
     } catch (err: any) {
       if (err instanceof Error && err.message === 'Canceled') {
@@ -238,7 +233,6 @@ function BackupPanel() {
     }
   };
 
-  // ── Cloud Restore ──────────────────────────────────────────────────────────
   const handleCloudRestore = async (file: DriveFile) => {
     setConfirmRestore(null);
     setProgress({ msg: 'Downloading from Google Drive…', active: true });
@@ -250,11 +244,6 @@ function BackupPanel() {
       toast(`Restore failed: ${err?.message ?? err}`, 'error');
       setProgress({ msg: '', active: false });
     }
-  };
-
-  // ── Local Restore (file upload) ────────────────────────────────────────────
-  const handleLocalFile = async (file: File) => {
-    setConfirmLocalRestore({ name: file.name, file });
   };
 
   const handleNativePicker = async () => {
@@ -293,16 +282,13 @@ function BackupPanel() {
     try {
       const arrayBuffer = await file.arrayBuffer();
       const uint8 = Array.from(new Uint8Array(arrayBuffer));
-      // Write file via Tauri then restore
       const appDir = await invoke<string>('get_app_data_path');
       const tempPath = `${appDir}/local_restore_temp.zip`;
-      // Use tauri-plugin-fs to write the binary
       const { writeFile } = await import('@tauri-apps/plugin-fs');
       await writeFile(tempPath, new Uint8Array(uint8));
       setProgress({ msg: 'Restoring database…', active: true });
       const { closeDB } = await import('../lib/db');
       await closeDB();
-      // Release file handlers before replacing the DB
       await new Promise(resolve => setTimeout(resolve, 500));
       await invoke('restore_from_zip', { zipPath: tempPath });
       toast('Restore complete! Reloading app…', 'success');
@@ -313,514 +299,370 @@ function BackupPanel() {
     }
   };
 
-  // ─────────────────────────────────────────────────────────────────────────
-  const step = connected ? 3 : credsSaved ? 2 : 1;
-
-  const StepDot = ({ n, done }: { n: number; done: boolean }) => (
-    <div className={cn(
-      'w-8 h-8 rounded-full flex items-center justify-center text-sm font-black shrink-0 transition-all',
-      done              ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30'
-        : n === step    ? 'bg-primary-600 text-white shadow-lg shadow-primary-500/30'
-        :                 'bg-slate-800 text-slate-500'
-    )}>
-      {done ? '✓' : n}
-    </div>
-  );
-
   return (
-    <div className="space-y-6 h-full overflow-auto pb-6">
-
-      {/* ── Global Progress Banner ──────────────────────────────────────────── */}
-      {progress.active && (
-        <div className="bg-slate-900 rounded-2xl border border-white/10 p-4 flex items-center gap-4">
-          <RefreshCcw className="w-5 h-5 text-primary-400 animate-spin shrink-0" />
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-white mb-2">{progress.msg}</p>
-            <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-primary-500 to-primary-400 rounded-full animate-[loading_1.5s_ease-in-out_infinite]" />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Initial Loading Overlay ────────────────────────────────────────── */}
-      {checkingStatus && !connected && (
-        <div className="bg-white/50 dark:bg-dark-950/50 backdrop-blur-md rounded-2xl border border-slate-200 dark:border-dark-700 p-12 flex flex-col items-center justify-center text-center animate-pulse">
-           <div className="w-20 h-20 bg-primary-500/10 rounded-3xl flex items-center justify-center mb-6 border border-primary-500/20">
-             <RefreshCcw className="w-10 h-10 text-primary-500 animate-spin" />
-           </div>
-           <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Syncing Account Status</h3>
-           <p className="text-sm text-slate-500 dark:text-dark-400 mt-2 font-black uppercase tracking-[0.2em]">Please Wait...</p>
-        </div>
-      )}
-
-      {/* ── Connection Status Banner ──────────────────────────────────────────── */}
-      <div className={cn(
-        'rounded-2xl border p-5 flex items-center justify-between gap-4',
-        connected ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-primary-500/5 border-primary-500/10'
-      )}>
-        <div className="flex items-center gap-4">
-          <div className={cn(
-            'w-14 h-14 rounded-2xl flex items-center justify-center shadow-xl shrink-0',
-            connected ? 'bg-emerald-500 shadow-emerald-500/30' : 'bg-primary-600 shadow-primary-500/30'
+    <div className="flex flex-col md:flex-row gap-8 h-full min-h-[500px]">
+      {/* Sub-Sidebar */}
+      <div className="w-full md:w-60 space-y-1 bg-slate-50/50 dark:bg-dark-900/50 p-3 rounded-2xl border border-slate-200/50 dark:border-dark-700/50 h-fit shrink-0">
+        <h5 className="px-4 mb-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">Backup Methods</h5>
+        <button onClick={() => setSubTab('cloud')}
+          className={cn(
+            "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+            subTab === 'cloud' ? "bg-primary-600 text-white shadow-lg shadow-primary-500/20" : "text-slate-500 hover:bg-slate-100 dark:hover:bg-dark-800"
           )}>
-            {connected ? <Cloud className="w-7 h-7 text-white" /> : <CloudOff className="w-7 h-7 text-white" />}
-          </div>
-          <div>
-            <h3 className={cn('font-black text-lg', connected ? 'text-emerald-400' : 'text-white')}>
-              {connected ? 'Cloud Backup Connected' : 'Cloud Backup'}
-            </h3>
-            {connected ? (
-              <div className="flex flex-col gap-1 mt-0.5">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-base text-emerald-600 dark:text-emerald-400 font-black tracking-tight">{driveEmail}</span>
-                </div>
-                {driveName && (
-                  <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] pl-4 flex items-center gap-2 opacity-70">
-                    <User className="w-3 h-3" /> {driveName}
-                  </p>
-                )}
+          <Cloud className="w-4 h-4" /> Cloud Sync (Drive)
+        </button>
+        <button onClick={() => setSubTab('local')}
+          className={cn(
+            "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+            subTab === 'local' ? "bg-primary-600 text-white shadow-lg shadow-primary-500/20" : "text-slate-500 hover:bg-slate-100 dark:hover:bg-dark-800"
+          )}>
+          <HardDrive className="w-4 h-4" /> Local ZIP Archive
+        </button>
+        <button onClick={() => setSubTab('export')}
+          className={cn(
+            "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+            subTab === 'export' ? "bg-primary-600 text-white shadow-lg shadow-primary-500/20" : "text-slate-500 hover:bg-slate-100 dark:hover:bg-dark-800"
+          )}>
+          <FileSpreadsheet className="w-4 h-4" /> Excel/CSV Export
+        </button>
+        <div className="h-px bg-slate-200 dark:bg-dark-700/50 my-2" />
+        <button onClick={() => setSubTab('tools')}
+          className={cn(
+            "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+            subTab === 'tools' ? "bg-primary-600 text-white shadow-lg shadow-primary-500/20" : "text-slate-500 hover:bg-slate-100 dark:hover:bg-dark-800"
+          )}>
+          <Zap className="w-4 h-4" /> Recovery Tools
+        </button>
+      </div>
+
+      <div className="flex-1 space-y-6 overflow-y-auto no-scrollbar pb-10">
+        
+        {progress.active && (
+          <div className="bg-slate-900 rounded-3xl border border-white/10 p-6 flex items-center gap-5 animate-in slide-in-from-top duration-500 shadow-2xl">
+            <div className="relative shrink-0">
+               <RefreshCcw className="w-6 h-6 text-primary-400 animate-spin" />
+               <div className="absolute inset-0 bg-primary-500/20 blur-xl animate-pulse" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-black text-white mb-2 uppercase tracking-tight">{progress.msg}</p>
+              <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-primary-500 to-blue-500 rounded-full animate-[loading_1.5s_ease-in-out_infinite]" />
               </div>
-            ) : checkingStatus ? (
-              <p className="text-sm text-slate-500 mt-0.5 animate-pulse">Checking connection…</p>
+            </div>
+          </div>
+        )}
+
+        {subTab === 'cloud' && (
+          <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+            {!connected ? (
+               <div className="glass rounded-[2rem] p-10 border border-slate-200/50 dark:border-dark-700/50 shadow-sm">
+                 <div className="flex flex-col md:flex-row items-center gap-8 mb-10">
+                    <div className="w-24 h-24 bg-primary-100 dark:bg-primary-900/30 rounded-[2rem] flex items-center justify-center shadow-inner shrink-0 rotate-3">
+                      <Cloud className="w-12 h-12 text-primary-600" />
+                    </div>
+                    <div className="text-center md:text-left">
+                      <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">Google Drive Sync</h3>
+                      <p className="text-sm text-slate-500 dark:text-dark-400 font-medium leading-relaxed mt-1">
+                        Connect your private cloud storage to enable automated, encrypted backups.
+                      </p>
+                    </div>
+                 </div>
+
+                 <div className="bg-slate-50 dark:bg-dark-900/50 rounded-2xl border border-slate-200 dark:border-dark-800 p-8 space-y-6">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">OAuth Configuration</h4>
+                      <div className="flex items-center gap-2 px-2 py-0.5 bg-amber-500/10 text-amber-600 text-[8px] font-black uppercase rounded border border-amber-500/20">
+                        Required for Cloud
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Client ID</label>
+                        <input type="text" value={clientId} onChange={e => setClientId(e.target.value)}
+                          placeholder="Paste from Google Console..."
+                          className="input w-full !bg-white dark:!bg-dark-900 !py-3 !text-xs !font-mono border-slate-200" />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Client Secret</label>
+                        <div className="relative">
+                          <input type={showSecret ? "text" : "password"} value={clientSecret} onChange={e => setClientSecret(e.target.value)}
+                            placeholder="Enter Secret..."
+                            className="input w-full !bg-white dark:!bg-dark-900 !py-3 !text-xs !font-mono pr-12 border-slate-200" />
+                          <button onClick={() => setShowSecret(!showSecret)} className="absolute right-3 top-2.5 text-slate-400 hover:text-primary-500 transition-colors">
+                            {showSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col md:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-200 dark:border-dark-800">
+                      <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest max-w-sm">
+                        Ensure you use a <span className="text-primary-500">Desktop</span> OAuth client type in Google Console.
+                      </div>
+                      <button onClick={handleConnectWithCreds} disabled={connecting}
+                        className="w-full md:w-auto px-8 py-3.5 bg-primary-600 text-white rounded-xl font-black text-xs shadow-xl shadow-primary-500/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-3">
+                        {connecting ? <RefreshCcw className="w-4 h-4 animate-spin" /> : <Cloud className="w-4 h-4" />}
+                        {connecting ? 'Connecting...' : 'Authorize Sync'}
+                      </button>
+                    </div>
+                 </div>
+
+                 <div className="mt-8 p-6 rounded-2xl bg-red-500/5 border border-red-500/10 flex gap-4 text-red-700 dark:text-red-400 shadow-sm">
+                    <AlertCircle className="w-6 h-6 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-widest mb-1.5">Getting Error 401 (invalid_client)?</p>
+                      <ul className="text-[11px] font-medium opacity-80 list-disc pl-4 space-y-1">
+                        <li>Verify that the <b>Client ID</b> and <b>Secret</b> match exactly what's in your Google Console.</li>
+                        <li>Ensure you have set the <b>Redirect URI</b> to <code>http://localhost:3001/oauth/callback</code>.</li>
+                        <li>Make sure your Google Project is in <b>Production</b> or you are added as a <b>Test User</b>.</li>
+                      </ul>
+                    </div>
+                 </div>
+               </div>
             ) : (
-              <p className="text-sm text-slate-500 mt-0.5">Sign in to enable automatic Google Drive backups.</p>
+              <div className="space-y-6">
+                <div className="bg-slate-900 rounded-[2.5rem] p-8 flex flex-col md:flex-row items-center justify-between gap-8 shadow-2xl border border-white/5 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-primary-500/10 blur-[100px] rounded-full -mr-20 -mt-20" />
+                  <div className="flex items-center gap-6 relative z-10">
+                    <div className="w-20 h-20 bg-primary-500/10 rounded-3xl flex items-center justify-center border border-primary-500/20">
+                      <Cloud className="w-10 h-10 text-primary-400" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="text-[10px] font-black text-primary-400 uppercase tracking-widest">Cloud Storage Active</p>
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                      </div>
+                      <p className="text-xl font-black text-white tracking-tight">{driveEmail}</p>
+                      <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">Last Synced: {backupList[0]?.modifiedTime ? new Date(backupList[0].modifiedTime).toLocaleString() : 'Never'}</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-3 relative z-10">
+                    <button onClick={handleBackupNow} disabled={progress.active}
+                      className="px-8 py-3.5 bg-white text-slate-900 rounded-2xl font-black text-xs hover:bg-blue-50 transition-all shadow-xl shadow-white/5 active:scale-95">
+                      Sync Now
+                    </button>
+                    <button onClick={handleDisconnect} className="px-6 py-3.5 bg-red-600/10 text-red-500 rounded-2xl font-black text-xs hover:bg-red-600/20 transition-all">
+                      Logout
+                    </button>
+                  </div>
+                </div>
+
+                <div className="glass rounded-[2rem] border border-slate-200/50 dark:border-dark-700/50 overflow-hidden shadow-sm">
+                  <div className="px-8 py-5 border-b border-slate-200 dark:border-dark-700/50 flex items-center justify-between bg-slate-50/50 dark:bg-dark-900/30">
+                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                      <ShieldCheck className="w-3.5 h-3.5" /> Google Drive Snapshot History
+                    </h4>
+                    <button onClick={fetchList} className="text-[10px] font-black text-primary-600 uppercase tracking-[0.2em] hover:opacity-70 transition-opacity">
+                      Refresh List
+                    </button>
+                  </div>
+                  <div className="max-h-[500px] overflow-y-auto no-scrollbar divide-y divide-slate-100 dark:divide-dark-800">
+                    {backupList.length > 0 ? backupList.map((bk, i) => (
+                      <div key={bk.id} className="p-6 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-dark-800/50 transition-all group">
+                        <div className="flex items-center gap-5">
+                          <div className={cn(
+                            "w-14 h-14 rounded-2xl flex items-center justify-center text-2xl transition-all shadow-sm",
+                            i === 0 ? "bg-emerald-50 dark:bg-emerald-900/20" : "bg-slate-100 dark:bg-dark-800"
+                          )}>
+                            {bk.name.includes('Desktop') ? '💻' : '📱'}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">{bk.name}</p>
+                              {i === 0 && <span className="px-2 py-0.5 bg-emerald-500 text-white text-[8px] font-black uppercase rounded-full tracking-widest shadow-md shadow-emerald-500/20">Active</span>}
+                            </div>
+                            <p className="text-[11px] text-slate-500 font-bold uppercase tracking-tight mt-1 opacity-70">
+                               {new Date(bk.modifiedTime ?? '').toLocaleString()} • {(parseInt(bk.size ?? '0') / 1024).toFixed(0)} KB
+                            </p>
+                          </div>
+                        </div>
+                        <button onClick={() => setConfirmRestore(bk)} 
+                          className="opacity-0 group-hover:opacity-100 transition-all px-6 py-2.5 bg-primary-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary-500/20 hover:bg-primary-700 active:scale-95">
+                          Restore
+                        </button>
+                      </div>
+                    )) : (
+                      <div className="py-20 text-center opacity-40">
+                        <CloudOff className="w-16 h-16 mx-auto mb-4" />
+                        <p className="text-xs font-black uppercase tracking-widest">No Cloud Backups Found</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             )}
           </div>
-        </div>
-        <div className="flex gap-2 shrink-0">
-          {connected ? (
-            <>
-              <button onClick={handleCheckStatus} disabled={checkingStatus}
-                className="px-3 py-1.5 text-xs font-bold text-emerald-400 border border-emerald-500/30 rounded-lg hover:bg-emerald-500/10 transition-colors">
-                Refresh
-              </button>
-              <button onClick={handleDisconnect}
-                className="px-3 py-1.5 text-xs font-bold text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/10 transition-colors">
-                Disconnect
-              </button>
-            </>
-          ) : (
-            <button onClick={handleCheckStatus} disabled={checkingStatus}
-              className="px-4 py-2 text-xs font-black bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors shadow-sm">
-              {checkingStatus ? 'Checking…' : 'Check Status'}
-            </button>
-          )}
-        </div>
-      </div>
+        )}
 
-      {/* ── Simple Sign-In Panel (hidden when connected or loading) ───────────── */}
-      {!connected && !checkingStatus && (
-        <div className="glass rounded-2xl border border-slate-200/50 dark:border-dark-700/50 overflow-hidden">
-          <div className="p-8 flex flex-col items-center text-center gap-6">
-            <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-blue-500 to-primary-600 flex items-center justify-center shadow-2xl shadow-primary-500/30">
-              <Cloud className="w-10 h-10 text-white" />
-            </div>
-            <div>
-              <h4 className="font-black text-slate-900 dark:text-white text-lg mb-1">
-                Connect Google Drive
-              </h4>
-              <p className="text-sm text-slate-500 dark:text-dark-400">
-                Enter your Google API credentials to enable cloud backup. Your account name will be auto-fetched after sign-in.
+        {subTab === 'local' && (
+          <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-6">
+            <div className="glass rounded-[2rem] p-12 text-center border border-slate-200/50 dark:border-dark-700/50 shadow-xl relative overflow-hidden">
+              <div className="absolute bottom-0 right-0 w-32 h-32 bg-blue-500/5 blur-3xl rounded-full" />
+              <div className="w-24 h-24 bg-blue-100 dark:bg-blue-900/30 rounded-[2rem] flex items-center justify-center mx-auto mb-8 shadow-inner rotate-6">
+                <HardDrive className="w-12 h-12 text-blue-600" />
+              </div>
+              <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-3 tracking-tighter uppercase">Local Business Archive</h3>
+              <p className="text-sm text-slate-500 dark:text-dark-400 mb-10 max-w-sm mx-auto font-medium leading-relaxed">
+                Save a full business snapshot directly to your computer. This ZIP includes the <b>database</b> and a folder of <b>Excel sheets</b> for offline review.
               </p>
+              <button onClick={handleLocalBackup} disabled={progress.active}
+                className="px-12 py-4 bg-blue-600 text-white rounded-2xl font-black shadow-2xl shadow-blue-500/30 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-4 mx-auto text-xs uppercase tracking-widest">
+                <Download className="w-5 h-5" /> Download Local ZIP
+              </button>
             </div>
 
-            <div className="w-full space-y-3 text-left">
-              <div>
-                <label className="block text-xs font-bold text-slate-500 dark:text-dark-400 mb-1 uppercase tracking-wider">Client ID</label>
-                <input type="text" value={clientId} onChange={e => setClientId(e.target.value)}
-                  placeholder="1234567890-abc...apps.googleusercontent.com"
-                  className="input w-full !font-mono !text-xs" />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-500 dark:text-dark-400 mb-1 uppercase tracking-wider">Client Secret</label>
-                <div className="relative">
-                  <input type={showSecret ? 'text' : 'password'} value={clientSecret}
-                    onChange={e => setClientSecret(e.target.value)} placeholder="GOCSPX-…"
-                    className="input w-full !font-mono !text-xs pr-9" />
-                  <button type="button" onClick={() => setShowSecret(!showSecret)}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400">
-                    {showSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="glass rounded-[2rem] border border-amber-200/50 dark:border-amber-900/30 p-8 flex flex-col items-center text-center shadow-sm hover:shadow-md transition-shadow">
+                <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/30 rounded-2xl flex items-center justify-center mb-6">
+                  <Upload className="w-8 h-8 text-amber-600" />
                 </div>
+                <h4 className="text-base font-black text-slate-900 dark:text-white mb-2 uppercase tracking-tighter">Manual File Restore</h4>
+                <p className="text-[11px] text-slate-500 dark:text-dark-400 mb-8 font-medium leading-relaxed">Select a previously saved .zip backup file from your PC to overwrite the current database and restore records.</p>
+                <button onClick={handleNativePicker} className="w-full py-3.5 border-2 border-amber-600 text-amber-600 rounded-xl font-black hover:bg-amber-600 hover:text-white transition-all text-[10px] uppercase tracking-[0.2em]">
+                  Pick Local ZIP File
+                </button>
               </div>
-              <button
-                onClick={handleConnectWithCreds}
-                disabled={savingCreds || connecting || !clientId.trim() || !clientSecret.trim()}
-                className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700 text-slate-800 dark:text-white rounded-2xl text-base font-black hover:bg-slate-50 dark:hover:bg-dark-700 transition-all shadow-lg active:scale-95 disabled:opacity-60"
-              >
-                <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
-                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
-                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
-                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
-                </svg>
-                {connecting ? 'Connecting…' : savingCreds ? 'Saving…' : 'Sign in with Google'}
-              </button>
               
-              <div className="w-full text-center mt-2">
-                <button
-                  onClick={() => setShowManualPin(!showManualPin)}
-                  className="text-[10px] text-slate-400 font-bold hover:text-primary-500 uppercase tracking-widest transition-colors py-2"
-                >
-                  {showManualPin ? 'Hide Manual PIN' : 'Use Manual OAuth PIN'}
-                </button>
-              </div>
-
-              {showManualPin && (
-                <div className="p-4 bg-slate-50 dark:bg-dark-900/50 rounded-2xl border border-slate-200 dark:border-dark-700/50 space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
-                  <p className="text-[10px] text-slate-500 leading-relaxed font-medium">
-                    If the browser fails to automatically sign you in, copy the full URL (or PIN code) from the browser address bar that says <code className="text-primary-500 text-[9px] bg-primary-500/10 px-1 py-0.5 rounded">localhost:3001</code> and paste it here:
-                  </p>
-                  <input type="text" value={manualPin} onChange={e => setManualPin(e.target.value)}
-                    placeholder="Paste URL or OAuth PIN Code..."
-                    className="input w-full !text-xs !py-2.5" />
-                  <button onClick={handleConnect} disabled={!manualPin.trim() || connecting}
-                    className="w-full py-2 bg-slate-900 dark:bg-dark-700 text-white text-xs font-black rounded-xl hover:bg-black transition-all active:scale-95 disabled:opacity-40">
-                    Connect with PIN
-                  </button>
+              <div className="glass rounded-[2rem] border border-slate-200 dark:border-dark-700 p-8 flex flex-col items-center text-center shadow-sm bg-slate-50/50 dark:bg-dark-900/30">
+                <div className="w-16 h-16 bg-slate-200 dark:bg-dark-800 rounded-2xl flex items-center justify-center mb-6">
+                  <FolderOpen className="w-8 h-8 text-slate-600" />
                 </div>
-              )}
-
-              {credsSaved && !connected && (
-                <button onClick={handleChangeCreds} className="w-full text-xs text-red-400 hover:text-red-500 font-bold transition-colors py-1 text-center">
-                  Clear saved credentials
-                </button>
-              )}
-              <button onClick={handleCheckStatus} disabled={checkingStatus}
-                className="w-full flex items-center justify-center gap-2 text-xs font-bold text-slate-400 hover:text-primary-500 transition-colors py-1">
-                <RefreshCcw className={cn('w-3 h-3', checkingStatus && 'animate-spin')} />
-                Already signed in? Check status
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-
-      {/* ── Backup Engine (shown when connected) ─────────────────────────────── */}
-      {connected && (
-        <div className="bg-slate-900 rounded-2xl border border-white/10 overflow-hidden">
-          <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between">
-            <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest">Backup Engine</h4>
-            <span className="text-xs text-slate-500 font-mono">📁 EBS Petroleum / Backups</span>
-          </div>
-          <div className="p-6 flex gap-3">
-            <button onClick={handleBackupNow} disabled={progress.active}
-              className={cn(
-                'flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-black transition-all',
-                progress.active
-                  ? 'bg-white/5 text-slate-500 cursor-not-allowed'
-                  : 'bg-white text-slate-900 hover:bg-blue-50 shadow-lg active:scale-95'
-              )}>
-              <RefreshCcw className={cn('w-4 h-4', progress.active && 'animate-spin')} />
-              {progress.active ? 'Working…' : 'Backup Now to Drive'}
-            </button>
-            <button onClick={handleLocalBackup} disabled={progress.active}
-              title="Save a local ZIP backup"
-              className="flex items-center gap-2 px-4 py-3 rounded-xl bg-white/10 text-white hover:bg-white/20 transition-all text-xs font-black active:scale-90 disabled:opacity-40">
-              <HardDrive className="w-4 h-4" /> Local ZIP
-            </button>
-            <button
-               onClick={async () => {
-                 try {
-                   const appDir = await invoke<string>('get_app_data_path');
-                   const { revealItemInDir } = await import('@tauri-apps/plugin-opener');
-                   // Create folder if missing before opening
-                   const { mkdir } = await import('@tauri-apps/plugin-fs');
-                   try { await mkdir(`${appDir}/backups`, { recursive: true }); } catch(_) {}
-                   await revealItemInDir(`${appDir}/backups`);
-                 } catch (err: any) {
-                   toast('Could not open folder', 'error');
-                 }
-               }}
-               className="flex items-center gap-2 px-4 py-3 rounded-xl bg-slate-800 text-slate-400 hover:bg-slate-700 transition-all text-[10px] font-black uppercase tracking-widest border border-white/5"
-            >
-              Open Backup Folder ↗
-            </button>
-          </div>
-          
-          {/* Recovery Tips */}
-          <div className="mx-6 mb-6 p-4 rounded-xl bg-blue-500/5 border border-blue-500/20 text-[11px] text-blue-300/80 leading-relaxed">
-            <p className="font-black text-blue-400 uppercase tracking-widest mb-1.5 flex items-center gap-2">
-              <AlertCircle className="w-3.5 h-3.5" /> Manual Data Recovery
-            </p>
-            Your backups are standard <b>ZIP</b> files containing a <b>SQLite database</b>. Even without this software, you can open the <code>ebs_business.db</code> file using free tools like <i>"DB Browser for SQLite"</i> to view or export your data to Excel.
-          </div>
-        </div>
-      )}
-
-      {/* ── Cloud Backup List ────────────────────────────────────────────────── */}
-      {connected && (
-        <div className="glass rounded-2xl border border-slate-200/50 dark:border-dark-700/50 overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-200 dark:border-dark-700/50 flex items-center justify-between">
-            <h4 className="font-black text-slate-900 dark:text-white text-sm flex items-center gap-2">
-              <Cloud className="w-4 h-4 text-primary-500" />
-              Cloud Backups on Google Drive
-              {backupList.length > 0 && (
-                <span className="px-2 py-0.5 bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 text-xs font-black rounded-full">
-                  {backupList.length}
-                </span>
-              )}
-            </h4>
-            <button onClick={fetchList} disabled={loadingList}
-              className="flex items-center gap-1.5 text-xs font-bold text-primary-500 hover:text-primary-400 uppercase tracking-wider">
-              <RefreshCcw className={cn('w-3 h-3', loadingList && 'animate-spin')} />
-              {loadingList ? 'Loading…' : 'Refresh'}
-            </button>
-          </div>
-          <div className="max-h-64 overflow-auto divide-y divide-slate-100 dark:divide-dark-700/50">
-            {backupList.length > 0 ? backupList.map((bk, i) => (
-              <div key={bk.id}
-                className="flex items-center justify-between px-6 py-4 hover:bg-primary-50/30 dark:hover:bg-primary-900/5 transition-colors group">
-                <div className="flex items-center gap-3">
-                  <div className={cn(
-                    'w-10 h-10 rounded-xl flex items-center justify-center text-xs font-black',
-                    i === 0 ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400'
-                            : 'bg-slate-100 dark:bg-dark-800 text-slate-500'
-                  )}>
-                    {bk.name.includes('_Desktop') ? '💻' : bk.name.includes('_Mobile') ? '📱' : (i === 0 ? '★' : i + 1)}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-black text-slate-900 dark:text-white">{bk.name}</p>
-                      {bk.name.includes('_Desktop') && (
-                        <span className="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[9px] font-black rounded uppercase">Desktop</span>
-                      )}
-                      {bk.name.includes('_Mobile') && (
-                        <span className="px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 text-[9px] font-black rounded uppercase">Mobile</span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-400">
-                      {bk.size && <span>{(parseInt(bk.size) / 1024).toFixed(0)} KB</span>}
-                      {bk.size && <span>•</span>}
-                      <span>{new Date(bk.modifiedTime ?? bk.createdTime ?? '').toLocaleString()}</span>
-                      {i === 0 && (
-                        <span className="px-1.5 py-0.5 bg-emerald-100 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 font-black rounded text-[10px]">
-                          Latest Cloud Sync
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setConfirmRestore(bk)}
-                  disabled={progress.active}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1.5 px-3 py-1.5 bg-primary-600 text-white rounded-lg text-xs font-black hover:bg-primary-700 shadow-md disabled:opacity-40">
-                  <Download className="w-3 h-3" /> Restore
-                </button>
-              </div>
-            )) : (
-              <div className="py-12 text-center">
-                <Cloud className="w-12 h-12 text-slate-200 dark:text-dark-700 mx-auto mb-3" />
-                <p className="text-sm text-slate-500 dark:text-dark-400 font-medium">
-                  {loadingList ? 'Fetching backups from Google Drive…'
-                    : 'No backups yet. Click "Backup Now" to create your first one.'}
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ── Local Backup / Restore ───────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        {/* Local Download */}
-        <div className="glass rounded-2xl border border-slate-200/50 dark:border-dark-700/50 p-5 flex flex-col gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-50 dark:bg-blue-900/20 rounded-xl flex items-center justify-center">
-              <HardDrive className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-            </div>
-            <div>
-              <h4 className="font-black text-slate-900 dark:text-white text-sm">Download Local Backup</h4>
-              <p className="text-xs text-slate-500 dark:text-dark-400 mt-0.5">Save a ZIP file of all data to your PC.</p>
-            </div>
-          </div>
-          <button onClick={handleLocalBackup} disabled={progress.active}
-            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-black hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-40">
-            <Save className="w-4 h-4" /> Download ZIP
-          </button>
-        </div>
-
-        {/* Local Restore */}
-        <div className="glass rounded-2xl border border-slate-200/50 dark:border-dark-700/50 p-5 flex flex-col gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-amber-50 dark:bg-amber-900/20 rounded-xl flex items-center justify-center">
-              <Upload className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-            </div>
-            <div>
-              <h4 className="font-black text-slate-900 dark:text-white text-sm">Restore from File</h4>
-              <p className="text-xs text-slate-500 dark:text-dark-400 mt-0.5">Restore from a local backup ZIP file.</p>
-            </div>
-          </div>
-          <div className="flex flex-col gap-2">
-            <button onClick={handleNativePicker} disabled={progress.active}
-              className="flex items-center justify-center gap-2 px-5 py-2.5 bg-amber-600 text-white rounded-xl text-sm font-black hover:bg-amber-700 transition-colors shadow-sm disabled:opacity-40">
-              <Upload className="w-4 h-4" /> Import from Device
-            </button>
-            <label className={cn(
-              'flex items-center justify-center gap-2 px-5 py-2 text-xs font-bold transition-colors cursor-pointer text-center text-slate-500 hover:text-amber-600 dark:text-dark-400',
-              progress.active ? 'opacity-40 cursor-not-allowed' : ''
-            )}>
-              <input ref={fileInputRef} type="file" accept=".zip" className="hidden" disabled={progress.active}
-                onChange={e => { const f = e.target.files?.[0]; if (f) { handleLocalFile(f); e.target.value = ''; } }} />
-              <span className="underline">Or select file manually</span>
-            </label>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Excel / JSON Data Export ─────────────────────────────────────────── */}
-      <div className="glass rounded-2xl border border-slate-200/50 dark:border-dark-700/50 overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-200 dark:border-dark-700/50 bg-emerald-500/5 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl flex items-center justify-center">
-              <FileSpreadsheet className="w-5 h-5 text-emerald-600" />
-            </div>
-            <div>
-              <h4 className="font-black text-slate-900 dark:text-white text-sm">Export Data to Excel / JSON</h4>
-              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Crash-safe portable backup</p>
-            </div>
-          </div>
-          {lastExport && (
-            <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest bg-emerald-50 dark:bg-emerald-900/20 px-2 py-1 rounded-lg">
-              Last: {lastExport}
-            </span>
-          )}
-        </div>
-        <div className="p-5 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-[10px] font-black uppercase tracking-widest">
-            <div className="flex items-center gap-2 p-3 bg-emerald-50 dark:bg-emerald-900/10 rounded-xl border border-emerald-100 dark:border-emerald-900/20">
-              <FileSpreadsheet className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-              <span className="text-emerald-700 dark:text-emerald-300">6 CSV files — opens directly in Excel</span>
-            </div>
-            <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/10 rounded-xl border border-blue-100 dark:border-blue-900/20">
-              <FileJson className="w-4 h-4 text-blue-600 flex-shrink-0" />
-              <span className="text-blue-700 dark:text-blue-300">JSON snapshot — migrate to any future app</span>
-            </div>
-            <div className="flex items-center gap-2 p-3 bg-slate-50 dark:bg-dark-800 rounded-xl border border-slate-100 dark:border-dark-700/50">
-              <HardDrive className="w-4 h-4 text-slate-500 flex-shrink-0" />
-              <span className="text-slate-600 dark:text-dark-300">Raw SQLite DB — open with DB Browser</span>
-            </div>
-          </div>
-
-          <div className="flex gap-3">
-            <button
-              onClick={handleExportData}
-              disabled={exporting || progress.active}
-              className="flex-1 flex items-center justify-center gap-2 px-5 py-3 bg-emerald-600 text-white rounded-xl text-sm font-black hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-500/20 active:scale-95 disabled:opacity-40"
-            >
-              {exporting
-                ? <RefreshCcw className="w-4 h-4 animate-spin" />
-                : <Zap className="w-4 h-4" />}
-              {exporting ? 'Exporting…' : 'Export All Data Now'}
-            </button>
-            {exportPath && (
-              <button
-                onClick={async () => {
+                <h4 className="text-base font-black text-slate-900 dark:text-white mb-2 uppercase tracking-tighter">Browse Directory</h4>
+                <p className="text-[11px] text-slate-500 dark:text-dark-400 mb-8 font-medium leading-relaxed">Directly access the internal folder where the software stores all created local backups and logs.</p>
+                <button onClick={async () => {
                   try {
+                    const appDir = await invoke<string>('get_app_data_path');
                     const { revealItemInDir } = await import('@tauri-apps/plugin-opener');
-                    await revealItemInDir(exportPath);
-                  } catch { toast('Could not open folder', 'error'); }
-                }}
-                className="flex items-center gap-2 px-4 py-3 bg-slate-100 dark:bg-dark-800 text-slate-600 dark:text-dark-300 rounded-xl text-xs font-black hover:bg-slate-200 dark:hover:bg-dark-700 transition-all"
-              >
-                <FolderOpen className="w-4 h-4" /> Open Folder
-              </button>
-            )}
+                    await revealItemInDir(`${appDir}/backups`);
+                  } catch(_) { toast('Could not open folder', 'error'); }
+                }} className="w-full py-3.5 bg-slate-800 text-white rounded-xl font-black hover:bg-slate-700 transition-all text-[10px] uppercase tracking-[0.2em] shadow-xl">
+                  Open Backups Folder
+                </button>
+              </div>
+            </div>
           </div>
+        )}
 
-          <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-900/20">
-            <p className="text-[10px] text-amber-800 dark:text-amber-200 font-medium leading-relaxed">
-              <strong>📌 How it works:</strong> Clicking "Export All Data Now" creates a ZIP file containing:
-              6 ready-to-open <strong>Excel CSV files</strong> (one per module) +
-              a <strong>JSON snapshot</strong> of everything +
-              the raw <strong>SQLite database</strong>.
-              If the app ever crashes or you switch to a new system, all your data is in readable form.
-            </p>
+        {subTab === 'export' && (
+          <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-6">
+            <div className="glass rounded-[2.5rem] p-12 text-center border border-emerald-200/50 dark:border-emerald-900/30 shadow-xl bg-emerald-500/[0.02]">
+              <div className="w-24 h-24 bg-emerald-100 dark:bg-emerald-900/30 rounded-[2.2rem] flex items-center justify-center mx-auto mb-8 shadow-inner -rotate-3 border border-emerald-500/10">
+                <FileSpreadsheet className="w-12 h-12 text-emerald-600" />
+              </div>
+              <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-3 tracking-tighter uppercase">High-Fidelity Excel Snapshot</h3>
+              <p className="text-sm text-slate-500 dark:text-dark-400 mb-10 max-w-sm mx-auto font-medium leading-relaxed">
+                Generate human-readable <b>Excel (.csv)</b> files for every module. Perfect for audit, print, or manual data entry into other accounting software.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-md mx-auto mb-10">
+                 <div className="p-3 bg-white dark:bg-dark-900 rounded-xl border border-slate-200 dark:border-dark-800 flex items-center gap-3">
+                   <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                   <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest text-left">Auto-formatted for Excel</p>
+                 </div>
+                 <div className="p-3 bg-white dark:bg-dark-900 rounded-xl border border-slate-200 dark:border-dark-800 flex items-center gap-3">
+                   <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                   <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest text-left">Includes all Ledger Data</p>
+                 </div>
+              </div>
+              <button onClick={handleExportData} disabled={progress.active}
+                className="px-12 py-4 bg-emerald-600 text-white rounded-2xl font-black shadow-2xl shadow-emerald-500/30 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-4 mx-auto text-xs uppercase tracking-widest">
+                <FileJson className="w-5 h-5" /> Export All Module Sheets
+              </button>
+            </div>
           </div>
-        </div>
+        )}
+
+        {subTab === 'tools' && (
+          <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-6">
+            <div className="bg-slate-900 rounded-[2.5rem] p-10 shadow-2xl border border-white/5 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 blur-[100px] rounded-full -mr-20 -mt-20" />
+              <h4 className="text-xl font-black text-white mb-8 uppercase tracking-tighter flex items-center gap-3 relative z-10">
+                <Zap className="w-6 h-6 text-amber-400" /> Advanced System Recovery
+              </h4>
+              <div className="space-y-4 relative z-10">
+                 <div className="p-8 rounded-[2rem] bg-white/5 border border-white/5 hover:bg-white/[0.08] transition-all flex items-center justify-between group cursor-default">
+                    <div className="flex items-center gap-5">
+                       <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center text-primary-400 border border-white/10 group-hover:border-primary-500/50 transition-colors">
+                         <ShieldCheck className="w-6 h-6" />
+                       </div>
+                       <div>
+                         <p className="text-base font-black text-white mb-1">Database Health Audit</p>
+                         <p className="text-[11px] text-slate-500 font-bold uppercase tracking-widest leading-relaxed max-w-md">Performs a structural check on the SQLite file to ensure no records are corrupted.</p>
+                       </div>
+                    </div>
+                    <button className="px-6 py-2.5 bg-primary-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all shadow-lg shadow-primary-500/20">Start Audit</button>
+                 </div>
+                 
+                 <div className="p-8 rounded-[2rem] bg-white/5 border border-white/5 hover:bg-white/[0.08] transition-all flex items-center justify-between group cursor-default">
+                    <div className="flex items-center gap-5">
+                       <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center text-red-400 border border-white/10 group-hover:border-red-500/50 transition-colors">
+                         <Trash2 className="w-6 h-6" />
+                       </div>
+                       <div>
+                         <p className="text-base font-black text-white mb-1 text-red-400">Purge Temp Cache</p>
+                         <p className="text-[11px] text-slate-500 font-bold uppercase tracking-widest leading-relaxed max-w-md">Clears the temporary backup cache and old export logs to free up storage space.</p>
+                       </div>
+                    </div>
+                    <button className="px-6 py-2.5 bg-red-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all shadow-lg shadow-red-600/20">Clear Cache</button>
+                 </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      {progress.active && (
-        <div className="fixed inset-0 z-[10000] flex flex-col items-center justify-center p-6 bg-slate-950/80 backdrop-blur-xl animate-in fade-in duration-500">
-           <div className="relative mb-8">
-              <div className="absolute inset-0 bg-primary-500/20 blur-3xl rounded-full animate-pulse" />
-              <div className="relative w-24 h-24 border-t-4 border-r-4 border-primary-500 rounded-full animate-spin shadow-2xl shadow-primary-500/20" />
-              <Cloud className="absolute inset-0 m-auto w-10 h-10 text-white animate-bounce" />
-           </div>
-           
-           <div className="text-center max-w-sm">
-             <h2 className="text-2xl font-black text-white mb-2 uppercase tracking-tighter">System Processing</h2>
-             <p className="text-primary-400 font-bold text-sm mb-6 animate-pulse uppercase tracking-[0.3em]">{progress.msg}</p>
-             
-             <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-3">
-                <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest leading-relaxed">
-                  Please do not close the software. We are securing your business data across the cloud.
-                </p>
-                <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
-                   <div className="h-full bg-primary-500 w-1/3 animate-[loading_2s_infinite]" />
-                </div>
-             </div>
-           </div>
-        </div>
-      )}
-
-      {/* ── Cloud Restore Confirmation Modal ─────────────────────────────────── */}
       {confirmRestore && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[11000] p-4 animate-in fade-in duration-300"
           onClick={() => setConfirmRestore(null)}>
-          <div className="bg-white dark:bg-dark-900 rounded-2xl shadow-2xl max-w-md w-full p-6"
+          <div className="bg-white dark:bg-dark-900 rounded-[2.5rem] shadow-2xl max-w-md w-full p-10 scale-in-center border border-slate-200 dark:border-dark-800"
             onClick={e => e.stopPropagation()}>
-            <div className="w-14 h-14 bg-red-100 dark:bg-red-900/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <AlertCircle className="w-7 h-7 text-red-600" />
+            <div className="w-24 h-24 bg-red-100 dark:bg-red-900/20 rounded-[2.2rem] flex items-center justify-center mx-auto mb-8 shadow-inner border border-red-500/10">
+              <AlertCircle className="w-12 h-12 text-red-600" />
             </div>
-            <h3 className="text-lg font-black text-slate-900 dark:text-white text-center">Restore From Drive?</h3>
-            <p className="text-sm text-slate-600 dark:text-dark-400 text-center mt-2">
-              This will <span className="font-black text-red-600">overwrite ALL current data</span> with:
+            <h3 className="text-2xl font-black text-slate-900 dark:text-white text-center tracking-tighter uppercase">Restore From Cloud?</h3>
+            <p className="text-sm text-slate-500 dark:text-dark-400 text-center mt-4 leading-relaxed font-medium">
+              This will <span className="font-black text-red-600 underline decoration-2 underline-offset-4">completely overwrite</span> your current local data with this cloud snapshot.
             </p>
-            <p className="text-xs text-center font-mono bg-slate-100 dark:bg-dark-800 px-3 py-2 rounded-lg text-slate-700 dark:text-dark-200 mt-3 mb-5 break-all">
+            <div className="text-[11px] text-center font-mono bg-slate-100 dark:bg-dark-950 px-5 py-4 rounded-2xl text-slate-700 dark:text-primary-400 mt-8 mb-10 break-all border border-slate-200 dark:border-dark-800 shadow-inner">
               {confirmRestore.name}
-            </p>
-            <div className="flex gap-3">
+            </div>
+            <div className="flex gap-4">
               <button onClick={() => setConfirmRestore(null)}
-                className="flex-1 px-4 py-2.5 border border-slate-200 dark:border-dark-700 rounded-xl text-sm font-bold text-slate-700 dark:text-dark-200 hover:bg-slate-50 dark:hover:bg-dark-800 transition-colors">
+                className="flex-1 px-6 py-4 border-2 border-slate-200 dark:border-dark-700 rounded-2xl text-[10px] font-black text-slate-500 hover:bg-slate-50 dark:hover:bg-dark-800 transition-all uppercase tracking-widest active:scale-95">
                 Cancel
               </button>
               <button onClick={() => handleCloudRestore(confirmRestore)}
-                className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-xl text-sm font-black hover:bg-red-700 transition-colors">
-                Yes, Restore
+                className="flex-1 px-6 py-4 bg-red-600 text-white rounded-2xl text-[10px] font-black hover:bg-red-700 transition-all shadow-xl shadow-red-600/20 uppercase tracking-widest active:scale-95">
+                Confirm Restore
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── Local Restore Confirmation Modal ─────────────────────────────────── */}
       {confirmLocalRestore && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[11000] p-4 animate-in fade-in duration-300"
           onClick={() => setConfirmLocalRestore(null)}>
-          <div className="bg-white dark:bg-dark-900 rounded-2xl shadow-2xl max-w-md w-full p-6"
+          <div className="bg-white dark:bg-dark-900 rounded-[2.5rem] shadow-2xl max-w-md w-full p-10 scale-in-center border border-slate-200 dark:border-dark-800"
             onClick={e => e.stopPropagation()}>
-            <div className="w-14 h-14 bg-amber-100 dark:bg-amber-900/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <AlertCircle className="w-7 h-7 text-amber-600" />
+            <div className="w-24 h-24 bg-amber-100 dark:bg-amber-900/20 rounded-[2.2rem] flex items-center justify-center mx-auto mb-8 shadow-inner border border-amber-500/10">
+              <AlertCircle className="w-12 h-12 text-amber-600" />
             </div>
-            <h3 className="text-lg font-black text-slate-900 dark:text-white text-center">Restore From File?</h3>
-            <p className="text-sm text-slate-600 dark:text-dark-400 text-center mt-2">
-              This will <span className="font-black text-red-600">replace ALL current data</span> with the backup:
+            <h3 className="text-2xl font-black text-slate-900 dark:text-white text-center tracking-tighter uppercase">Restore From ZIP?</h3>
+            <p className="text-sm text-slate-500 dark:text-dark-400 text-center mt-4 leading-relaxed font-medium">
+              Restoring from this file will replace all current business records. Ensure you have a manual backup of your current state first.
             </p>
-            <p className="text-xs text-center font-mono bg-slate-100 dark:bg-dark-800 px-3 py-2 rounded-lg text-slate-700 dark:text-dark-200 mt-3 mb-5 break-all">
+            <div className="text-[11px] text-center font-mono bg-slate-100 dark:bg-dark-950 px-5 py-4 rounded-2xl text-slate-700 dark:text-amber-500 mt-8 mb-10 break-all border border-slate-200 dark:border-dark-800 shadow-inner">
               {confirmLocalRestore.name}
-            </p>
-            <div className="flex gap-3">
+            </div>
+            <div className="flex gap-4">
               <button onClick={() => setConfirmLocalRestore(null)}
-                className="flex-1 px-4 py-2.5 border border-slate-200 dark:border-dark-700 rounded-xl text-sm font-bold text-slate-700 dark:text-dark-200 hover:bg-slate-50 dark:hover:bg-dark-800 transition-colors">
+                className="flex-1 px-6 py-4 border-2 border-slate-200 dark:border-dark-700 rounded-2xl text-[10px] font-black text-slate-500 hover:bg-slate-50 dark:hover:bg-dark-800 transition-all uppercase tracking-widest active:scale-95">
                 Cancel
               </button>
               <button onClick={() => handleLocalRestoreAction()}
-                className="flex-1 px-4 py-2.5 bg-amber-600 text-white rounded-xl text-sm font-black hover:bg-amber-700 transition-colors">
-                Yes, Restore
+                className="flex-1 px-6 py-4 bg-amber-600 text-white rounded-2xl text-[10px] font-black hover:bg-amber-700 transition-all shadow-xl shadow-amber-600/20 uppercase tracking-widest active:scale-95">
+                Proceed Restore
               </button>
             </div>
           </div>
@@ -829,6 +671,7 @@ function BackupPanel() {
     </div>
   );
 }
+
 // ─────────────────────────────────────────────────────────────────────────────
 // SETTINGS PAGE
 // ─────────────────────────────────────────────────────────────────────────────
@@ -838,9 +681,9 @@ export default function SettingsPage() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<'general' | 'users' | 'backup' | 'developer' | 'danger' | 'shortcuts'>('general');
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [progress, setProgress] = useState<{ msg: string; active: boolean }>({ msg: '', active: false });
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
 
-  // Staff can now access Settings but with restricted tabs
   const isStaff = currentUser?.role === 'Staff';
 
   const handleUpdateStartDate = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -851,8 +694,15 @@ export default function SettingsPage() {
 
   const handleReset = async () => {
     setShowResetConfirm(false);
-    await resetAllData();
-    toast('All business data has been reset.', 'success');
+    setProgress({ msg: 'Resetting all business data...', active: true });
+    try {
+      await resetAllData();
+      toast('✅ All business data has been reset successfully.', 'success');
+    } catch (err: any) {
+      toast(`Reset failed: ${err?.message ?? err}`, 'error');
+    } finally {
+      setProgress({ msg: '', active: false });
+    }
   };
 
   const tabs = [
@@ -872,14 +722,12 @@ export default function SettingsPage() {
     }] : []),
   ];
 
-  // If staff, default to backup tab
   useEffect(() => {
     if (isStaff) setActiveTab('backup');
   }, [isStaff]);
 
   return (
     <div className="animate-fade-in flex flex-col h-full overflow-hidden">
-      {/* Header — only show if not in mobile detail view */}
       {!mobileDetailOpen && (
         <div className="flex items-center gap-3 mb-8 shrink-0">
           <div className="w-10 h-10 rounded-xl bg-primary-600/10 dark:bg-primary-600/20 flex items-center justify-center">
@@ -893,7 +741,6 @@ export default function SettingsPage() {
       )}
 
       <div className="flex flex-1 gap-6 items-start overflow-hidden relative">
-        {/* Sidebar / List Pane */}
         <div className={cn(
           "w-full md:w-72 flex-shrink-0 space-y-2 h-full overflow-y-auto no-scrollbar",
           mobileDetailOpen ? "hidden md:block" : "block"
@@ -906,12 +753,15 @@ export default function SettingsPage() {
                 setMobileDetailOpen(true);
               }}
               className={cn(
-                'w-full flex items-center justify-between px-5 py-4 rounded-2xl text-sm transition-all duration-300 group',
+                'w-full flex items-center justify-between px-5 py-4 rounded-2xl text-sm transition-all duration-300 group relative overflow-hidden',
                 activeTab === tab.id
-                  ? 'bg-white dark:bg-dark-900 shadow-xl border-l-4 border-l-primary-600 scale-[1.02] z-10'
-                  : 'bg-white/50 dark:bg-dark-900/40 hover:bg-white dark:hover:bg-dark-800 border-transparent hover:scale-[1.01]'
+                  ? 'bg-white dark:bg-dark-900 shadow-xl scale-[1.02] z-10'
+                  : 'bg-white/50 dark:bg-dark-900/40 hover:bg-white dark:hover:bg-dark-800'
               )}
             >
+              {activeTab === tab.id && (
+                <div className="absolute left-0 top-3 bottom-3 w-1.5 bg-primary-600 rounded-r-full shadow-[2px_0_10px_rgba(37,99,235,0.4)]" />
+              )}
               <div className="flex items-center gap-4">
                 <div className={cn(
                   'w-11 h-11 rounded-2xl flex items-center justify-center transition-all duration-500',
@@ -933,12 +783,10 @@ export default function SettingsPage() {
           ))}
         </div>
 
-        {/* Content Pane */}
         <div className={cn(
           "flex-1 h-full min-w-0 flex flex-col transition-all duration-500 animate-slide-in",
           mobileDetailOpen ? "block fixed inset-0 z-[150] bg-slate-50 dark:bg-dark-950 p-4 md:relative md:inset-auto md:p-0" : "hidden md:flex"
         )}>
-          {/* Mobile Back Button */}
           {mobileDetailOpen && (
             <button 
               onClick={() => setMobileDetailOpen(false)}
@@ -949,8 +797,19 @@ export default function SettingsPage() {
           )}
 
           <div className="flex-1 overflow-y-auto no-scrollbar smart-scroll">
+            
+            {progress.active && (
+              <div className="mb-6 bg-slate-900 rounded-2xl border border-white/10 p-4 flex items-center gap-4 animate-in slide-in-from-top duration-300">
+                <RefreshCcw className="w-5 h-5 text-primary-400 animate-spin shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-white mb-2">{progress.msg}</p>
+                  <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-primary-500 to-primary-400 rounded-full animate-[loading_1.5s_ease-in-out_infinite]" />
+                  </div>
+                </div>
+              </div>
+            )}
 
-          {/* General */}
           {activeTab === 'general' && (
             <div className="glass rounded-2xl overflow-hidden border border-slate-200/50 dark:border-dark-700/50 h-full">
               <div className="p-5 border-b border-slate-200 dark:border-dark-700/50 bg-primary-500/5">
@@ -986,13 +845,10 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* Backup & Restore */}
           {activeTab === 'backup' && <BackupPanel />}
 
-          {/* Shortcuts Management */}
           {activeTab === 'shortcuts' && <KeyboardShortcutsPanel />}
 
-          {/* User Management — Inline Panel */}
           {activeTab === 'users' && (
             <div className="glass rounded-2xl overflow-hidden border border-slate-200/50 dark:border-dark-700/50 h-full flex flex-col">
               <div className="p-4 border-b border-slate-200 dark:border-dark-700/50 bg-emerald-500/5 flex-shrink-0">
@@ -1007,7 +863,6 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* Developer Tools */}
           {activeTab === 'developer' && (
             <div className="space-y-12">
               <DeveloperSettings />
@@ -1026,7 +881,6 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* Danger Zone */}
           {activeTab === 'danger' && (
             <div className="glass rounded-2xl overflow-hidden border border-red-200/50 dark:border-red-900/30">
               <div className="p-5 border-b border-red-100 dark:border-red-900/30 bg-red-500/5">
@@ -1056,31 +910,26 @@ export default function SettingsPage() {
       </div>
     </div>
 
-
-
-      {/* Reset Confirmation */}
       {showResetConfirm && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-          onClick={() => setShowResetConfirm(false)}>
-          <div className="bg-white dark:bg-dark-900 rounded-2xl shadow-2xl max-w-md w-full p-6"
-            onClick={e => e.stopPropagation()}>
-            <div className="w-14 h-14 bg-red-100 dark:bg-red-900/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <AlertCircle className="w-7 h-7 text-red-600" />
+        <div className="fixed inset-0 flex items-center justify-center p-4 z-[9999]">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setShowResetConfirm(false)} />
+          <div className="relative bg-white dark:bg-dark-900 rounded-3xl shadow-2xl max-w-sm w-full p-8 border border-slate-200 dark:border-dark-800 animate-in zoom-in-95 duration-200">
+            <div className="w-16 h-16 bg-red-100 dark:bg-red-900/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
+              <AlertCircle className="w-8 h-8 text-red-600" />
             </div>
-            <h3 className="text-lg font-black text-center text-slate-900 dark:text-white">⚠️ CRITICAL WARNING</h3>
-            <p className="text-sm text-slate-600 dark:text-dark-400 text-center mt-2 leading-relaxed">
-              This will <strong className="text-red-600">permanently delete ALL</strong> purchases, sales,
-              expenses, assets, liabilities and customer records.
+            <h3 className="text-xl font-black text-center text-slate-900 dark:text-white mb-2">CRITICAL WARNING</h3>
+            <p className="text-sm text-slate-600 dark:text-dark-400 text-center mb-8 leading-relaxed">
+              This will <strong className="text-red-600">permanently delete ALL</strong> business records.
               This action <strong>cannot be undone</strong>.
             </p>
-            <div className="flex gap-3 mt-6">
+            <div className="flex gap-4">
               <button onClick={() => setShowResetConfirm(false)}
-                className="flex-1 px-4 py-2.5 border border-slate-200 dark:border-dark-700 rounded-xl text-sm font-bold hover:bg-slate-50 dark:hover:bg-dark-800 transition-colors">
-                Cancel — Keep Data
+                className="flex-1 px-4 py-3 border border-slate-200 dark:border-dark-700 rounded-2xl text-sm font-bold hover:bg-slate-50 dark:hover:bg-dark-800 transition-colors">
+                Cancel
               </button>
               <button onClick={handleReset}
-                className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-xl text-sm font-black hover:bg-red-700 transition-colors">
-                Yes, Delete Everything
+                className="flex-1 px-4 py-3 bg-red-600 text-white rounded-2xl text-sm font-black hover:bg-red-700 transition-colors shadow-lg shadow-red-600/20">
+                Yes, Delete
               </button>
             </div>
           </div>
