@@ -70,15 +70,9 @@ export function handleFormKeyDown(e: React.KeyboardEvent) {
   const target = e.target as HTMLElement;
   if (!['INPUT', 'SELECT', 'TEXTAREA'].includes(target.tagName)) return;
 
-  // Don't intercept if typing in a textarea or using a date input (which needs arrows for internal navigation)
   if (target.tagName === 'TEXTAREA') return;
   if (target instanceof HTMLInputElement && target.type === 'date') {
-    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-       // Still allow vertical navigation in date fields if preferred, 
-       // but browsers use Up/Down to change values. 
-       // Let's stay out of date fields for arrows.
-       return;
-    }
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') return;
     return;
   }
 
@@ -107,15 +101,65 @@ export function handleFormKeyDown(e: React.KeyboardEvent) {
     if (target instanceof HTMLInputElement && (target.type === 'text' || target.type === 'search' || target.type === 'tel' || target.type === 'url')) {
       if (target.selectionStart === target.value.length) moveFocus(1);
     } else {
-      // For numbers and selects, ArrowRight moves to next
       moveFocus(1);
     }
   } else if (e.key === 'ArrowLeft') {
     if (target instanceof HTMLInputElement && (target.type === 'text' || target.type === 'search' || target.type === 'tel' || target.type === 'url')) {
       if (target.selectionStart === 0) moveFocus(-1);
     } else {
-      // For numbers and selects, ArrowLeft moves to prev
       moveFocus(-1);
     }
   }
+}
+
+// ─── Shared PLS Computation ────────────────────────────────────────────────────
+// Single source of truth. Pass settings.plsOverrides so edits on the PLS screen
+// propagate to Dashboard, BalanceSheet, and Stock automatically.
+export interface FuelStats {
+  purchase: { qty: number; avg: number; amt: number };
+  sale:     { qty: number; avg: number; amt: number };
+  stock:    { qty: number; avg: number; amt: number };
+}
+
+export function computeFuelStats(
+  type: 'HSD' | 'PMG',
+  purchases: Array<{ type: string; date: string; quantity?: number; totalAmount?: number }>,
+  sales: Array<{ type: string; date: string; quantity?: number; amount?: number }>,
+  overrides: Record<string, number> = {},
+  startDate = '',
+  endDate = '',
+  adjustments: { pur?: number; sal?: number; stock?: number; baseRate?: number } = {}
+): FuelStats {
+  const t = type.toLowerCase();
+  const p = purchases.filter(x =>
+    x.type === type && (!startDate || x.date >= startDate) && (!endDate || x.date <= endDate)
+  );
+  const s = sales.filter(x =>
+    x.type === type && (!startDate || x.date >= startDate) && (!endDate || x.date <= endDate)
+  );
+
+  const pQtyCalc = p.reduce((sum, x) => sum + (x.quantity    || 0), 0);
+  const pAmtCalc = p.reduce((sum, x) => sum + (x.totalAmount || 0), 0);
+  
+  // Apply Purchase Adjustment
+  const pQty = (overrides[`pur_${t}_qty`] ?? pQtyCalc) + (adjustments.pur || 0);
+  const pAvg = overrides[`pur_${t}_avg`] ?? (pQtyCalc > 0 ? pAmtCalc / pQtyCalc : (adjustments.baseRate || 0));
+  const pAmt = pQty * pAvg;
+
+  const sQtyCalc = s.reduce((sum, x) => sum + (x.quantity || 0), 0);
+  const sAmtCalc = s.reduce((sum, x) => sum + (x.amount   || 0), 0);
+  
+  // Apply Sale Adjustment
+  const sQty = (overrides[`sal_${t}_qty`] ?? sQtyCalc) + (adjustments.sal || 0);
+  const sAvg = overrides[`sal_${t}_avg`] ?? (sQtyCalc > 0 ? sAmtCalc / sQtyCalc : 0);
+  const sAmt = sQty * sAvg;
+
+  // Apply Stock Adjustment
+  const stockQty = (pQty - sQty) + (adjustments.stock || 0);
+  
+  return {
+    purchase: { qty: pQty, avg: pAvg, amt: pAmt },
+    sale:     { qty: sQty, avg: sAvg, amt: sAmt },
+    stock:    { qty: stockQty, avg: pAvg, amt: stockQty * pAvg },
+  };
 }

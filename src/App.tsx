@@ -35,7 +35,7 @@ function DBSplash({ error }: { error: string | null }) {
         <div className="w-24 h-24 bg-white/10 rounded-[2.5rem] flex items-center justify-center border border-white/20 mb-8 animate-breath shadow-2xl">
            <div className="w-12 h-12 rounded-full border-t-4 border-l-4 border-blue-500 animate-spin" />
         </div>
-        <h1 className="text-4xl font-black text-white uppercase tracking-tighter mb-2">EBS PETROLEUM</h1>
+        <h1 className="text-4xl font-black text-white uppercase tracking-tighter mb-2">HRM PETROLEUM</h1>
         <p className="text-blue-400 font-bold uppercase tracking-[0.3em] text-[10px]">Initializing Database</p>
         
         {error && (
@@ -57,7 +57,7 @@ function SystemLocked({ reason }: { reason: 'HARDWARE' | 'LICENSE' }) {
       <h1 className="text-3xl font-black text-white uppercase tracking-tight mb-2">System Restricted</h1>
       <p className="text-slate-400 text-sm max-w-sm mb-10 leading-relaxed font-medium">
         {reason === 'HARDWARE' 
-          ? 'This copy of EBS Petroleum is not authorized for use on this device. Please contact support to transfer your license.'
+          ? 'This copy of HRM Petroleum is not authorized for use on this device. Please contact support to transfer your license.'
           : 'Your system license has expired or is not yet active. Please renew your subscription to continue using the software.'}
       </p>
       <div className="p-4 bg-white/5 border border-white/10 rounded-2xl">

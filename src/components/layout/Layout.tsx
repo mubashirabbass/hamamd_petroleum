@@ -56,7 +56,14 @@ export default function Layout() {
   const isPath = (path: string) => location.pathname === path;
   const isStock = location.pathname.startsWith('/stock');
 
-  const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
+  const { settings } = useStore();
+  const isPinned = settings.sidebarPinned;
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(isPinned);
+
+  // Sync internal expansion state when pinned state changes
+  useEffect(() => {
+    setIsSidebarExpanded(isPinned);
+  }, [isPinned]);
 
   const isTransactionPage = ['/purchase', '/sale', '/expense', '/asset', '/liability', '/customer'].some(p => isPath(p)) || isStock;
 
@@ -69,8 +76,8 @@ export default function Layout() {
       {/* Sidebar Container with Auto-Hide trigger */}
       <div 
         className="hidden md:block relative z-50 group"
-        onMouseEnter={() => setIsSidebarExpanded(true)}
-        onMouseLeave={() => setIsSidebarExpanded(false)}
+        onMouseEnter={() => !isPinned && setIsSidebarExpanded(true)}
+        onMouseLeave={() => !isPinned && setIsSidebarExpanded(false)}
       >
         {/* The Trigger Block - a small hot-zone that stays active even when sidebar is w-0 */}
         <div className="absolute inset-y-0 left-0 w-3 cursor-e-resize" />

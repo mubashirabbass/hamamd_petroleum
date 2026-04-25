@@ -1,8 +1,8 @@
 [package]
 name = "tauri-app"
 version = "0.1.0"
-description = "EBS Petroleum Business Software"
-authors = ["EBS Development"]
+description = "HRM Petroleum Business Software"
+authors = ["HRM Development"]
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

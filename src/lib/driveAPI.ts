@@ -288,7 +288,7 @@ export async function backupNow(
   onProgress?.('Connecting to Google Drive...');
   const accessToken = await getValidAccessToken();
 
-  const fileName = `EBS_Backup_Mobile_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}.zip`;
+  const fileName = `HRM_Backup_Mobile_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}.zip`;
 
   onProgress?.('Uploading to Google Drive...');
   await invoke('upload_zip_to_drive', { zipPath, accessToken, fileName });
@@ -341,10 +341,10 @@ export async function downloadLocalBackup(): Promise<string> {
     try {
       const { readFile } = await import('@tauri-apps/plugin-fs');
       const data = await readFile(zipPath);
-      const file = new File([data], `EBS_Backup_${new Date().toISOString().slice(0, 10)}.zip`, { type: 'application/zip' });
+      const file = new File([data], `HRM_Backup_${new Date().toISOString().slice(0, 10)}.zip`, { type: 'application/zip' });
       
       await (navigator as any).share({
-        title: 'EBS Business Backup',
+        title: 'HRM Business Backup',
         files: [file],
       });
       return 'Shared successfully';
@@ -356,7 +356,7 @@ export async function downloadLocalBackup(): Promise<string> {
   try {
     const savePath = await save({
       filters: [{ name: 'ZIP Archive', extensions: ['zip'] }],
-      defaultPath: `EBS_Backup_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}.zip`
+      defaultPath: `HRM_Backup_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}.zip`
     });
 
     if (savePath) {

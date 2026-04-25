@@ -1,12 +1,12 @@
 /**
- * useStore.ts — EBS Petroleum Global State
+ * useStore.ts — HRM Petroleum Global State
  * =========================================
  * In-memory Zustand store backed by SQLite.
  * On startup: loadAllData() populates the store from the database.
  * On every mutation: the action writes to SQLite AND updates in-memory state.
  *
  * NO localStorage / sessionStorage is used — data lives in:
- *   Installation Folder: ebs_business.db (Portable Mode)
+ *   Installation Folder: hrm_business.db (Portable Mode)
  */
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
@@ -103,8 +103,7 @@ export interface CapitalEntry {
   billNo:      string;
   date:        string;
   description: string;
-  debit:       number;
-  credit:      number;
+  amount:      number;
   balance:     number;
 }
 
@@ -145,6 +144,8 @@ export interface Settings {
   saleAdjustmentPMG: number;
   baseRateHSD: number;
   baseRatePMG: number;
+  plsOverrides: Record<string, number>;
+  sidebarPinned: boolean;
 }
 
 // ─── Store Interface ──────────────────────────────────────────────────────────
@@ -302,7 +303,7 @@ export const useStore = create<AppState>()(
         currentMachineId: machineId,
         settings: {
           startDate:    data.settings['startDate']    ?? '',
-          softwareName: (data.settings['softwareName'] === 'EBS Petroleum' || data.settings['softwareName'] === 'HRM Filling Station') ? 'HR Filling Station' : (data.settings['softwareName'] || 'HR Filling Station'),
+          softwareName: (data.settings['softwareName'] === 'EBS Petroleum' || data.settings['softwareName'] === 'HRM Filling Station' || data.settings['softwareName'] === 'HR Filling Station') ? 'HRM Filling Station' : (data.settings['softwareName'] || 'HRM Filling Station'),
           hiddenMenus:  JSON.parse(data.settings['hiddenMenus'] ?? '[]'),
           users:        data.users,
           zoomLevel:    parseFloat(data.settings['zoomLevel'] || '1.0'),
@@ -317,6 +318,8 @@ export const useStore = create<AppState>()(
           saleAdjustmentPMG:     parseFloat(data.settings['saleAdjustmentPMG']     || '0'),
           baseRateHSD:           parseFloat(data.settings['baseRateHSD']           || '0'),
           baseRatePMG:           parseFloat(data.settings['baseRatePMG']           || '0'),
+          plsOverrides: (() => { try { return JSON.parse(data.settings['plsOverrides'] || '{}'); } catch(e) { return {}; } })(),
+          sidebarPinned: data.settings['sidebarPinned'] === 'true',
           shortcuts: (() => {
             try {
               const saved = data.settings['shortcuts'];
@@ -731,7 +734,7 @@ export const useStore = create<AppState>()(
         const id = uid();
         await db.execute(
           `INSERT INTO capital_entries (id,category_id,bill_no,date,description,debit,credit,balance) VALUES (?,?,?,?,?,?,?,?)`,
-          [id, e.categoryId, billNo, e.date, e.description, e.debit, e.credit, e.balance]
+          [id, e.categoryId, billNo, e.date, e.description, 0, e.amount, e.balance]
         );
         const entry: CapitalEntry = { ...e, id, billNo };
         set(s => ({ capitalEntries: [entry, ...s.capitalEntries], nextCapitalNo: no + 1 }));
@@ -748,7 +751,7 @@ export const useStore = create<AppState>()(
     set(s => ({ capitalEntries: s.capitalEntries.map(x => x.id === id ? updated : x) }));
     getDB().then(db => db.execute(
       `UPDATE capital_entries SET date=?,description=?,debit=?,credit=?,balance=? WHERE id=?`,
-      [updated.date, updated.description, updated.debit, updated.credit, updated.balance, id]
+      [updated.date, updated.description, 0, updated.amount, updated.balance, id]
     ));
   },
   deleteCapitalEntry: async (id) => {
@@ -759,7 +762,7 @@ export const useStore = create<AppState>()(
   // ── Settings & Users ─────────────────────────────────────────────────────────
   settings: {
     startDate:    '',
-    softwareName: 'HR Filling Station',
+    softwareName: 'HRM Filling Station',
     hiddenMenus:  [],
     users:        [],
     zoomLevel:    1.0,
@@ -767,6 +770,8 @@ export const useStore = create<AppState>()(
     licenseEndDate:      '',
     authorizedMachineId: '',
     shortcuts:           [],
+    plsOverrides:        {},
+    sidebarPinned:       false,
   },
 
   updateSettings: async (updates) => {
@@ -793,6 +798,8 @@ export const useStore = create<AppState>()(
     if (updates.saleAdjustmentPMG     !== undefined) await setSetting('saleAdjustmentPMG',     String(updates.saleAdjustmentPMG));
     if (updates.baseRateHSD           !== undefined) await setSetting('baseRateHSD',           String(updates.baseRateHSD));
     if (updates.baseRatePMG           !== undefined) await setSetting('baseRatePMG',           String(updates.baseRatePMG));
+    if (updates.plsOverrides          !== undefined) await setSetting('plsOverrides',          JSON.stringify(updates.plsOverrides));
+    if (updates.sidebarPinned         !== undefined) await setSetting('sidebarPinned',         String(updates.sidebarPinned));
 
     set({ settings: merged });
   },

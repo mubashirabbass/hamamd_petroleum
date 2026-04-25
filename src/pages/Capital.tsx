@@ -58,7 +58,7 @@ export default function CapitalPage() {
   const [editingEntity, setEditingEntity] = useState<any>(null);
   const [viewingEntity, setViewingEntity] = useState<any>(null);
   const [perPage, setPerPage] = useState(40);
-  const [form, setForm] = useState({ date: today(), description: '', debit: '', credit: '' });
+  const [form, setForm] = useState({ date: today(), description: '', amount: '' });
   const [isSaving, setIsSaving] = useState(false);
   const [dashSort, setDashSort] = useState('name_asc');
   const [entrySort, setEntrySort] = useState('date_desc');
@@ -77,9 +77,8 @@ export default function CapitalPage() {
     
     const withBalances = list.map(c => {
       const entries = filterByStartDate(capitalEntries, settings.startDate).filter(e => e.categoryId === c.id);
-      const debit = entries.reduce((s, e) => s + (e.debit || 0), 0);
-      const credit = entries.reduce((s, e) => s + (e.credit || 0), 0);
-      return { ...c, balance: Math.abs(debit - credit) };
+      const amount = entries.reduce((s, e) => s + (e.amount || 0), 0);
+      return { ...c, balance: amount };
     });
 
     return [...withBalances].sort((a, b) => {
@@ -114,7 +113,7 @@ export default function CapitalPage() {
     const chronological = [...filteredEntries].sort((a, b) => a.date.localeCompare(b.date));
     let bal = 0;
     const computed = chronological.map((e) => {
-      bal += (e.debit || 0) - (e.credit || 0);
+      bal += (e.amount || 0);
       return { ...e, balance: bal };
     });
 
@@ -124,10 +123,8 @@ export default function CapitalPage() {
         case 'date_asc':         return a.date.localeCompare(b.date);
         case 'description_asc':  return (a.description || '').localeCompare(b.description || '');
         case 'description_desc': return (b.description || '').localeCompare(a.description || '');
-        case 'debit_desc':       return (b.debit || 0) - (a.debit || 0);
-        case 'debit_asc':        return (a.debit || 0) - (b.debit || 0);
-        case 'credit_desc':      return (b.credit || 0) - (a.credit || 0);
-        case 'credit_asc':       return (a.credit || 0) - (b.credit || 0);
+        case 'amount_desc':       return (b.amount || 0) - (a.amount || 0);
+        case 'amount_asc':        return (a.amount || 0) - (b.amount || 0);
         case 'balance_desc':     return b.balance - a.balance;
         case 'balance_asc':      return a.balance - b.balance;
         default:                 return b.date.localeCompare(a.date);
@@ -138,17 +135,15 @@ export default function CapitalPage() {
   const paged = paginate(withBalance, page, perPage);
 
   const pageTotals = useMemo(() => ({
-    debit: paged.reduce((s, e) => s + (e.debit || 0), 0),
-    credit: paged.reduce((s, e) => s + (e.credit || 0), 0),
+    amount: paged.reduce((s, e) => s + (e.amount || 0), 0),
   }), [paged]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedCat || !form.date) { toast('Fill required fields', 'error'); return; }
 
-    const debit = parseFloat(form.debit) || 0;
-    const credit = parseFloat(form.credit) || 0;
-    const payload = { categoryId: selectedCat, date: form.date, description: form.description, debit, credit, balance: 0 };
+    const amount = parseFloat(form.amount) || 0;
+    const payload = { categoryId: selectedCat, date: form.date, description: form.description, amount, balance: 0 };
 
     setIsSaving(true);
     try {
@@ -176,13 +171,13 @@ export default function CapitalPage() {
 
   const resetFormForNext = () => {
     setEditingEntity(null);
-    setForm(prev => ({ ...prev, description: '', debit: '', credit: '' }));
+    setForm(prev => ({ ...prev, description: '', amount: '' }));
   };
 
   const closeForm = () => {
     setShowEntryForm(false);
     setEditingEntity(null);
-    setForm({ date: today(), description: '', debit: '', credit: '' });
+    setForm({ date: today(), description: '', amount: '' });
   };
 
   const handleEdit = (e: any) => {
@@ -190,15 +185,13 @@ export default function CapitalPage() {
     setForm({
       date: e.date,
       description: e.description || '',
-      debit: e.debit ? e.debit.toString() : '',
-      credit: e.credit ? e.credit.toString() : '',
+      amount: e.amount ? e.amount.toString() : '',
     });
     setShowEntryForm(true);
   };
 
   const totals = useMemo(() => ({
-    debit: filteredEntries.reduce((s, e) => s + (e.debit || 0), 0),
-    credit: filteredEntries.reduce((s, e) => s + (e.credit || 0), 0),
+    amount: filteredEntries.reduce((s, e) => s + (e.amount || 0), 0),
   }), [filteredEntries]);
 
   const handleAddCategory = (e: React.FormEvent) => {
@@ -292,11 +285,9 @@ export default function CapitalPage() {
                   const matchesTo = !toDate || e.date <= toDate;
                   return matchesFrom && matchesTo;
                 });
-              const globalDebit = allFilteredEntries.reduce((sum, e) => sum + e.debit, 0);
-              const globalCredit = allFilteredEntries.reduce((sum, e) => sum + e.credit, 0);
-              const globalNet = globalDebit - globalCredit;
+              const globalNet = allFilteredEntries.reduce((sum, e) => sum + (e.amount || 0), 0);
               return (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 animate-in slide-in-from-top duration-500">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 animate-in slide-in-from-top duration-500">
                   <div className="glass p-6 rounded-3xl border-l-8 border-primary-600 shadow-xl bg-gradient-to-br from-primary-50 to-white dark:from-primary-900/10 dark:to-dark-900 overflow-hidden relative group">
                     <div className="absolute top-0 right-0 w-24 h-24 bg-primary-600/5 rounded-bl-full -mr-12 -mt-12 group-hover:bg-primary-600/10 transition-colors" />
                     <p className="text-[10px] font-black text-primary-600 uppercase tracking-widest mb-1">Total Equity Valuation</p>
@@ -309,11 +300,6 @@ export default function CapitalPage() {
                     <div className="absolute top-0 right-0 w-24 h-24 bg-slate-600/5 rounded-bl-full -mr-12 -mt-12 group-hover:bg-slate-600/10 transition-colors" />
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Capital Accounts</p>
                     <p className="text-3xl font-black text-slate-900 dark:text-white">{capitalCategories.length}</p>
-                  </div>
-                  <div className="glass p-6 rounded-3xl border-l-8 border-emerald-500 shadow-xl bg-emerald-50/30 dark:bg-emerald-900/10 overflow-hidden relative group">
-                    <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-600/5 rounded-bl-full -mr-12 -mt-12 group-hover:bg-emerald-600/10 transition-colors" />
-                    <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-1">Total Contributions</p>
-                    <p className="text-3xl font-black text-slate-900 dark:text-white">₨ {formatCurrency(globalDebit)}</p>
                   </div>
                 </div>
               );
@@ -368,7 +354,7 @@ export default function CapitalPage() {
                           const matchesTo = !toDate || e.date <= toDate;
                           return e.categoryId === cat.id && matchesFrom && matchesTo;
                         });
-                        const balance = entries.reduce((s, e) => s + (e.debit - e.credit), 0);
+                        const balance = entries.reduce((s, e) => s + (e.amount || 0), 0);
                         return { ...cat, balance, count: entries.length };
                       }).filter(c => !dashboardSearch || c.name.toLowerCase().includes(dashboardSearch.toLowerCase()));
                       
@@ -518,19 +504,11 @@ export default function CapitalPage() {
                   </div>
 
                   {/* Summary Cards */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 animate-in slide-in-from-bottom duration-350 delay-75">
-                    <div className="glass p-5 rounded-2xl border-l-4 border-slate-400 shadow-sm">
-                      <p className="text-[10px] font-black text-slate-400 dark:text-dark-500 uppercase tracking-widest mb-1">Total Debit (Payment)</p>
-                      <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 tabular-nums break-words break-all whitespace-normal leading-tight w-full">₨ {formatCurrency(totals.debit)}</p>
-                    </div>
-                    <div className="glass p-5 rounded-2xl border-l-4 border-red-500 shadow-sm">
-                      <p className="text-[10px] font-black text-slate-400 dark:text-dark-500 uppercase tracking-widest mb-1">Total Credit (Withdrawal)</p>
-                      <p className="text-2xl font-black text-red-600 dark:text-red-400 tabular-nums break-words break-all whitespace-normal leading-tight w-full">₨ {formatCurrency(totals.credit)}</p>
-                    </div>
+                  <div className="grid grid-cols-1 gap-4 mb-6 animate-in slide-in-from-bottom duration-350 delay-75">
                     <div className="glass p-5 rounded-2xl border-l-4 border-primary-600 shadow-sm">
-                      <p className="text-[10px] font-black text-slate-400 dark:text-dark-500 uppercase tracking-widest mb-1">Current Equity Value</p>
+                      <p className="text-[10px] font-black text-slate-400 dark:text-dark-500 uppercase tracking-widest mb-1">Total Capital</p>
                       <p className={cn("text-2xl font-black tabular-nums text-primary-600 break-words break-all whitespace-normal leading-tight w-full")}>
-                        ₨ {formatCurrency(Math.abs(totals.debit - totals.credit))}
+                        ₨ {formatCurrency(Math.abs(totals.amount))}
                       </p>
                     </div>
                   </div>
@@ -551,10 +529,8 @@ export default function CapitalPage() {
                             <option value="date_asc">Oldest First</option>
                             <option value="description_asc">A to Z (Desc)</option>
                             <option value="description_desc">Z to A (Desc)</option>
-                            <option value="debit_desc">Highest Debit</option>
-                            <option value="debit_asc">Lowest Debit</option>
-                            <option value="credit_desc">Highest Credit</option>
-                            <option value="credit_asc">Lowest Credit</option>
+                            <option value="amount_desc">Highest Amount</option>
+                            <option value="amount_asc">Lowest Amount</option>
                             <option value="balance_desc">Highest Balance</option>
                             <option value="balance_asc">Lowest Balance</option>
                           </select>
@@ -585,8 +561,7 @@ export default function CapitalPage() {
                           <tr className="table-header text-[9px]">
                             <th className="px-4 py-3 text-left w-24">Date</th>
                             <th className="px-4 py-3 text-left w-64">Description</th>
-                            <th className="px-4 py-3 text-right w-36">Debit (In)</th>
-                            <th className="px-4 py-3 text-right w-36">Credit (Out)</th>
+                            <th className="px-4 py-3 text-right w-44">Amount</th>
                             <th className="px-4 py-3 text-right w-44">Balance</th>
                             <th className="px-4 py-3 w-20 text-center">Actions</th>
                           </tr>
@@ -598,8 +573,7 @@ export default function CapitalPage() {
                             <tr key={e.id} className="group">
                               <td className="whitespace-nowrap text-[11px] font-medium uppercase tracking-tighter text-slate-500 dark:text-dark-400">{formatDate(e.date)}</td>
                               <td className="text-black dark:text-white font-medium text-[13px] whitespace-normal break-words max-w-[15rem] leading-5 truncate">{e.description || '—'}</td>
-                              <td className="amount !text-emerald-600 dark:!text-emerald-400 whitespace-nowrap tabular-nums">{e.debit ? formatCurrency(e.debit) : '—'}</td>
-                              <td className="amount !text-red-600 dark:!text-red-400 whitespace-nowrap tabular-nums">{e.credit ? formatCurrency(e.credit) : '—'}</td>
+                              <td className="amount !text-primary-600 dark:!text-primary-400 whitespace-nowrap tabular-nums">{e.amount ? formatCurrency(e.amount) : '—'}</td>
                               <td className="amount !text-black dark:!text-white !text-sm font-medium whitespace-nowrap tabular-nums">₨ {formatCurrency(e.balance)}</td>
                               <td className="text-right">
                                 <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -646,25 +620,13 @@ export default function CapitalPage() {
                               </div>
                             </td>
                              <td className="px-4 py-3 text-right whitespace-nowrap tabular-nums">
-                               <div className="flex flex-col items-end">
-                                 <span className="text-sm font-black text-slate-500 leading-none">₨ {formatCurrency(pageTotals.debit)}</span>
-                                 <span className="text-sm font-black text-emerald-600 mt-1">₨ {formatCurrency(totals.debit)}</span>
+                               <div className="flex flex-col items-end border-l border-slate-300 dark:border-dark-700 pl-4">
+                                 <span className="text-lg font-black text-primary-600/70 leading-none">₨ {formatCurrency(pageTotals.amount)}</span>
+                                 <span className="text-lg font-black text-primary-600 dark:text-primary-400 mt-1">₨ {formatCurrency(totals.amount)}</span>
                                </div>
                              </td>
-                             <td className="px-4 py-3 text-right whitespace-nowrap tabular-nums">
-                               <div className="flex flex-col items-end">
-                                 <span className="text-sm font-black text-slate-500 leading-none">₨ {formatCurrency(pageTotals.credit)}</span>
-                                 <span className="text-sm font-black text-red-600 mt-1">₨ {formatCurrency(totals.credit)}</span>
-                               </div>
-                             </td>
-                            <td className="px-4 py-3 text-right whitespace-nowrap">
-                              <div className="flex flex-col items-end border-l border-slate-300 dark:border-dark-700 pl-4">
-                                <span className="text-lg font-black text-primary-600/70 leading-none">₨ {formatCurrency(pageTotals.debit - pageTotals.credit)}</span>
-                                <span className="text-lg font-black text-primary-600 dark:text-primary-400 mt-1">₨ {formatCurrency(totals.debit - totals.credit)}</span>
-                              </div>
-                            </td>
-                            <td></td>
-                          </tr>
+                             <td></td>
+                           </tr>
                         </tfoot>
                       </table>
                     </div>
@@ -812,13 +774,10 @@ export default function CapitalPage() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="label text-[10px] font-black uppercase tracking-widest text-primary-600 mb-1 block">Debit (In)</label>
-                <input type="number" className="input !py-3 !font-bold" placeholder="0.00" value={form.debit} onChange={e => setForm({ ...form, debit: e.target.value })} />
+                <label className="label text-[10px] font-black uppercase tracking-widest text-primary-600 mb-1 block">Amount</label>
+                <input type="number" className="input !py-3 !font-bold" placeholder="0.00" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} required />
               </div>
-              <div>
-                <label className="label text-[10px] font-black uppercase tracking-widest text-primary-600 mb-1 block">Credit (Out)</label>
-                <input type="number" className="input !py-3 !font-bold" placeholder="0.00" value={form.credit} onChange={e => setForm({ ...form, credit: e.target.value })} />
-              </div>
+              <div></div>
             </div>
             <div className="pt-4 border-t border-slate-100 dark:border-dark-800 flex justify-end gap-3">
               <button type="button" onClick={closeForm} className="btn-secondary">Cancel</button>
@@ -847,7 +806,7 @@ export default function CapitalPage() {
           onClose={() => setShowReport(false)}
           type="capital"
           data={withBalance}
-          totals={{ ...totals, balance: totals.debit - totals.credit }}
+          totals={{ amount: totals.amount, balance: totals.amount }}
           title={`${cat.name} Capital Ledger`}
         />
       )}
@@ -865,22 +824,19 @@ export default function CapitalPage() {
           data={(() => {
             const items = capitalCategories.map(c => {
               const entries = filterByStartDate(capitalEntries, settings.startDate).filter(e => e.categoryId === c.id);
-              const debit = entries.reduce((s, e) => s + (e.debit || 0), 0);
-              const credit = entries.reduce((s, e) => s + (e.credit || 0), 0);
-              return { ...c, balance: debit - credit, debit, credit, count: entries.length };
+              const amount = entries.reduce((s, e) => s + (e.amount || 0), 0);
+              return { ...c, balance: amount, amount, count: entries.length };
             });
             return items;
           })()}
           totals={(() => {
             const items = capitalCategories.map(c => {
               const entries = filterByStartDate(capitalEntries, settings.startDate).filter(e => e.categoryId === c.id);
-              const debit = entries.reduce((s, e) => s + (e.debit || 0), 0);
-              const credit = entries.reduce((s, e) => s + (e.credit || 0), 0);
-              return { debit, credit };
+              const amount = entries.reduce((s, e) => s + (e.amount || 0), 0);
+              return { amount };
             });
-            const d = items.reduce((s, x) => s + x.debit, 0);
-            const c = items.reduce((s, x) => s + x.credit, 0);
-            return { debit: d, credit: c, balance: d - c };
+            const a = items.reduce((s, x) => s + x.amount, 0);
+            return { amount: a, balance: a };
           })()}
         />
       )}

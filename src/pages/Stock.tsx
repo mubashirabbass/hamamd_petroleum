@@ -8,7 +8,7 @@ import {
 import { useStore, FuelType } from '../store/useStore';
 import {
   formatCurrency, filterByStartDate, formatDate, getErrorMessage,
-  paginate, cn, startOfMonth, startOfYear, today
+  paginate, cn, startOfMonth, startOfYear, today, computeFuelStats
 } from '../lib/utils';
 import SearchBar from '../components/ui/SearchBar';
 import Pagination from '../components/ui/Pagination';
@@ -85,70 +85,38 @@ export default function StockPage() {
   // ── Calculation Logic ──
   const stockData = useMemo(() => {
     const calc = (type: 'HSD' | 'PMG') => {
-      // 1. Period Totals (for Purchase/Sale Volume)
-      const periodPurchases = rawPurchases.filter(p =>
-        p.type === type &&
-        p.date >= settings.startDate &&
-        (!fromDate || p.date >= fromDate) &&
-        (!toDate || p.date <= toDate)
-      );
-      const periodSales = rawSales.filter(s =>
-        s.type === type &&
-        s.date >= settings.startDate &&
-        (!fromDate || s.date >= fromDate) &&
-        (!toDate || s.date <= toDate)
-      );
-
-      const pQty = periodPurchases.reduce((s, p) => s + p.quantity, 0);
-      const sQty = periodSales.reduce((s, x) => s + x.quantity, 0);
-
-      // 2. Closing Balance (Total ever up to 'toDate')
-      const upToDatePurchases = rawPurchases.filter(p =>
-        p.type === type &&
-        p.date >= settings.startDate &&
-        (!toDate || p.date <= toDate)
-      );
-      const upToDateSales = rawSales.filter(s =>
-        s.type === type &&
-        s.date >= settings.startDate &&
-        (!toDate || s.date <= toDate)
-      );
-
-      const rawTotalIn = upToDatePurchases.reduce((s, p) => s + p.quantity, 0);
-      const rawTotalOut = upToDateSales.reduce((s, x) => s + x.quantity, 0);
+      const t = type.toLowerCase();
       
-      const pAdj = type === 'HSD' ? settings.purchaseAdjustmentHSD : settings.purchaseAdjustmentPMG;
-      const sAdj = type === 'HSD' ? settings.stockAdjustmentHSD : settings.stockAdjustmentPMG;
-      const oAdj = type === 'HSD' ? settings.saleAdjustmentHSD : settings.saleAdjustmentPMG;
-      
-      const totalPurchased = rawTotalIn + pAdj;
-      const totalSold = rawTotalOut + oAdj;
-      const current = totalPurchased - totalSold + sAdj;
-      
-      const latestRate = [...upToDatePurchases].sort((a, b) => b.date.localeCompare(a.date))[0]?.rate || 0;
-      const baseRate = type === 'HSD' ? settings.baseRateHSD : settings.baseRatePMG;
-      const rawInAmt = upToDatePurchases.reduce((s, p) => s + (p.totalAmount || 0), 0);
-      const currentRate = rawTotalIn > 0 ? rawInAmt / rawTotalIn : (baseRate || latestRate);
+      // Effective start: the later of settings.startDate and fromDate
+      const effectiveFrom = settings.startDate && fromDate
+        ? (settings.startDate > fromDate ? settings.startDate : fromDate)
+        : (settings.startDate || fromDate);
+      const effectiveTo = toDate;
 
-      const purchaseValue = totalPurchased * currentRate;
-      const saleValue = upToDateSales.reduce((s, x) => s + (x.amount || 0), 0);
-      const stockValue = current * currentRate;
+      const adjustments = {
+        pur: type === 'HSD' ? settings.purchaseAdjustmentHSD : settings.purchaseAdjustmentPMG,
+        sal: type === 'HSD' ? settings.saleAdjustmentHSD : settings.saleAdjustmentPMG,
+        stock: type === 'HSD' ? settings.stockAdjustmentHSD : settings.stockAdjustmentPMG,
+        baseRate: type === 'HSD' ? settings.baseRateHSD : settings.baseRatePMG
+      };
+
+      const stats = computeFuelStats(type, rawPurchases, rawSales, settings.plsOverrides || {}, effectiveFrom, effectiveTo, adjustments);
 
       return { 
-        totalPurchased, 
-        totalSold, 
-        current, 
-        currentRate,
-        adjustment: sAdj, 
-        purchaseAdjustment: pAdj,
-        saleAdjustment: oAdj,
-        purchaseValue, 
-        saleValue, 
-        stockValue
+        totalPurchased: stats.purchase.qty, 
+        totalSold: stats.sale.qty, 
+        current: stats.stock.qty, 
+        currentRate: stats.purchase.avg,
+        adjustment: adjustments.stock, 
+        purchaseAdjustment: adjustments.pur,
+        saleAdjustment: adjustments.sal,
+        purchaseValue: stats.purchase.amt, 
+        saleValue: stats.sale.amt, 
+        stockValue: stats.stock.amt
       };
     };
     return { HSD: calc('HSD'), PMG: calc('PMG') };
-  }, [rawPurchases, rawSales, settings.startDate, fromDate, toDate, settings.stockAdjustmentHSD, settings.stockAdjustmentPMG, settings.purchaseAdjustmentHSD, settings.purchaseAdjustmentPMG, settings.saleAdjustmentHSD, settings.saleAdjustmentPMG, settings.baseRateHSD, settings.baseRatePMG]);
+  }, [rawPurchases, rawSales, settings.startDate, fromDate, toDate, settings.stockAdjustmentHSD, settings.stockAdjustmentPMG, settings.purchaseAdjustmentHSD, settings.purchaseAdjustmentPMG, settings.saleAdjustmentHSD, settings.saleAdjustmentPMG, settings.baseRateHSD, settings.baseRatePMG, settings.plsOverrides]);
 
   const handleManualAdjustment = async () => {
     if (!editingType) return;

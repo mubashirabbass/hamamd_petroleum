@@ -10,7 +10,7 @@ import {
 import PrintReportModal from '../components/modals/PrintReportModal';
 import { useStore } from '../store/useStore';
 import { useTheme } from '../contexts/ThemeContext';
-import { formatCurrency, today, cn } from '../lib/utils';
+import { formatCurrency, today, cn, computeFuelStats } from '../lib/utils';
 import loginBg from '../assets/login-bg-whatsapp.jpeg';
 
 // ─── Digital Clock ────────────────────────────────────────────────────────────
@@ -121,6 +121,8 @@ export default function Dashboard() {
     purchases: rawPurchases, sales: rawSales, customers
   } = useStore();
 
+  const plsOverrides = settings.plsOverrides || {};
+
   const [displayText, setDisplayText] = useState('');
   const fullText = "حماد رحیم فلنگ اسٹیشن مینجمنٹ سسٹم";
 
@@ -158,66 +160,73 @@ export default function Dashboard() {
       return true;
     };
 
-    const periodSales = rawSales.filter(filterFn);
+    // ─── Derive filter date window ───────────────────────────────────────────
+    let filterFrom = '';
+    let filterTo   = '';
+    if (filter === 'today') {
+      filterFrom = t;
+      filterTo   = t;
+    } else if (filter === 'month') {
+      filterFrom = `${currentMonth}-01`;
+      filterTo   = t;
+    } else if (filter === 'custom') {
+      filterFrom = fromDate;
+      filterTo   = toDate;
+    }
+    // 'overall' → filterFrom/filterTo stay '' (no date restriction)
+
+    // Effective start: the later of settings.startDate and filterFrom
+    const effectiveFrom = settings.startDate && filterFrom
+      ? (settings.startDate > filterFrom ? settings.startDate : filterFrom)
+      : (settings.startDate || filterFrom);
+    const effectiveTo = filterTo;
+
+    // Apply PLS overrides + date filter via shared computeFuelStats
+    const hsdStats = computeFuelStats('HSD', rawPurchases, rawSales, plsOverrides, effectiveFrom, effectiveTo, {
+      pur: settings.purchaseAdjustmentHSD,
+      sal: settings.saleAdjustmentHSD,
+      stock: settings.stockAdjustmentHSD,
+      baseRate: settings.baseRateHSD
+    });
+    const pmgStats = computeFuelStats('PMG', rawPurchases, rawSales, plsOverrides, effectiveFrom, effectiveTo, {
+      pur: settings.purchaseAdjustmentPMG,
+      sal: settings.saleAdjustmentPMG,
+      stock: settings.stockAdjustmentPMG,
+      baseRate: settings.baseRatePMG
+    });
+
+    const hsdTPQty = hsdStats.purchase.qty;
+    const hsdTPAmt = hsdStats.purchase.amt;
+    const pmgTPQty = pmgStats.purchase.qty;
+    const pmgTPAmt = pmgStats.purchase.amt;
+    const hsdAvg   = hsdStats.purchase.avg || settings.baseRateHSD || 0;
+    const pmgAvg   = pmgStats.purchase.avg || settings.baseRatePMG || 0;
+
+    const hsdSoldQty = hsdStats.sale.qty;
+    const hsdSoldAmt = hsdStats.sale.amt;
+    const pmgSoldQty = pmgStats.sale.qty;
+    const pmgSoldAmt = pmgStats.sale.amt;
+
+    const hsdSaleAvg = hsdSoldQty > 0 ? hsdSoldAmt / hsdSoldQty : hsdAvg;
+    const pmgSaleAvg = pmgSoldQty > 0 ? pmgSoldAmt / pmgSoldQty : pmgAvg;
+
+    const hsdStock = hsdStats.stock.qty;
+    const pmgStock = pmgStats.stock.qty;
+
+    const periodSales     = rawSales.filter(filterFn);
     const periodPurchases = rawPurchases.filter(filterFn);
-    const periodExpenses = rawExpenses.filter(filterFn);
-
-    const hsdSoldAmt = periodSales.filter((s: any) => s.type === 'HSD').reduce((sum: number, x: any) => sum + (x.amount || 0), 0);
-    const pmgSoldAmt = periodSales.filter((s: any) => s.type === 'PMG').reduce((sum: number, x: any) => sum + (x.amount || 0), 0);
-    const hsdSoldQty = periodSales.filter((s: any) => s.type === 'HSD').reduce((sum: number, x: any) => sum + (x.quantity || 0), 0);
-    const pmgSoldQty = periodSales.filter((s: any) => s.type === 'PMG').reduce((sum: number, x: any) => sum + (x.quantity || 0), 0);
-    const totalExp   = periodExpenses.reduce((sum: number, e: any) => sum + (e.amount || 0), 0);
-
-    const basePurchases = settings.startDate ? rawPurchases.filter(p => p.date >= settings.startDate) : rawPurchases;
-    const hsdBaseP = basePurchases.filter(p => p.type === 'HSD');
-    const pmgBaseP = basePurchases.filter(p => p.type === 'PMG');
-
-    const hsdTPQty = hsdBaseP.reduce((sum: number, p: any) => sum + (p.quantity || 0), 0);
-    const hsdTPAmt = hsdBaseP.reduce((sum: number, p: any) => sum + (p.totalAmount || 0), 0);
-    
-    const pmgTPQty = pmgBaseP.reduce((sum: number, p: any) => sum + (p.quantity || 0), 0);
-    const pmgTPAmt = pmgBaseP.reduce((sum: number, p: any) => sum + (p.totalAmount || 0), 0);
-    const latestHSDRate = [...hsdBaseP].sort((a, b) => b.date.localeCompare(a.date))[0]?.rate || settings.baseRateHSD || 0;
-    const latestPMGRate = [...pmgBaseP].sort((a, b) => b.date.localeCompare(a.date))[0]?.rate || settings.baseRatePMG || 0;
-
-    const hsdAvg = (hsdTPQty > 0 ? hsdTPAmt / hsdTPQty : latestHSDRate) || settings.baseRateHSD || 0;
-    const pmgAvg = (pmgTPQty > 0 ? pmgTPAmt / pmgTPQty : latestPMGRate) || settings.baseRatePMG || 0;
+    const periodExpenses  = rawExpenses.filter(filterFn);
+    const totalExp = periodExpenses.reduce((sum: number, e: any) => sum + (e.amount || 0), 0);
 
     const grossProfit = (hsdSoldAmt + pmgSoldAmt) - (hsdSoldQty * hsdAvg + pmgSoldQty * pmgAvg);
+    const margin = (hsdSoldAmt + pmgSoldAmt) > 0 ? (grossProfit / (hsdSoldAmt + pmgSoldAmt)) * 100 : 0;
 
-    const baseSales = settings.startDate ? rawSales.filter(s => s.date >= settings.startDate) : rawSales;
-    const hsdS = baseSales.filter((s: any) => s.type === 'HSD').reduce((sum: number, x: any) => sum + (x.quantity || 0), 0);
-    const pmgS = baseSales.filter((s: any) => s.type === 'PMG').reduce((sum: number, x: any) => sum + (x.quantity || 0), 0);
-
-    const hsdStock = (hsdTPQty + settings.purchaseAdjustmentHSD - (hsdS + settings.saleAdjustmentHSD)) + settings.stockAdjustmentHSD;
-    const pmgStock = (pmgTPQty + settings.purchaseAdjustmentPMG - (pmgS + settings.saleAdjustmentPMG)) + settings.stockAdjustmentPMG;
-
-    const hsdSaleAvg = (hsdSoldQty > 0 ? hsdSoldAmt / hsdSoldQty : hsdAvg) || 0;
-    const pmgSaleAvg = (pmgSoldQty > 0 ? pmgSoldAmt / pmgSoldQty : pmgAvg) || 0;
-    
-    // Raw Base Metrics
-    const rawHsdPurchasedQty = periodPurchases.filter((p: any) => p.type === 'HSD').reduce((sum: number, p: any) => sum + (p.quantity || 0), 0);
-    const rawPmgPurchasedQty = periodPurchases.filter((p: any) => p.type === 'PMG').reduce((sum: number, p: any) => sum + (p.quantity || 0), 0);
-
-    // Live Adjusted Metrics for Cards
-    const adjHsdSoldQty = hsdSoldQty + (settings.saleAdjustmentHSD || 0);
-    const adjPmgSoldQty = pmgSoldQty + (settings.saleAdjustmentPMG || 0);
-    const adjHsdPurchasedQty = rawHsdPurchasedQty + (settings.purchaseAdjustmentHSD || 0);
-    const adjPmgPurchasedQty = rawPmgPurchasedQty + (settings.purchaseAdjustmentPMG || 0);
-
-    const adjHsdSoldAmt = adjHsdSoldQty * (hsdSoldQty > 0 ? hsdSaleAvg : hsdAvg);
-    const adjPmgSoldAmt = adjPmgSoldQty * (pmgSoldQty > 0 ? pmgSaleAvg : pmgAvg);
-    const adjHsdPurchasedAmt = adjHsdPurchasedQty * hsdAvg;
-    const adjPmgPurchasedAmt = adjPmgPurchasedQty * pmgAvg;
-
-    const hsdPL = (adjHsdSoldQty > 0) ? (adjHsdSoldAmt / adjHsdSoldQty) - hsdAvg : 0;
-    const pmgPL = (adjPmgSoldQty > 0) ? (adjPmgSoldAmt / adjPmgSoldQty) - pmgAvg : 0;
-    
-    const margin = (adjHsdSoldAmt + adjPmgSoldAmt) > 0 ? (grossProfit / (adjHsdSoldAmt + adjPmgSoldAmt)) * 100 : 0;
+    const hsdPL = hsdSoldQty > 0 ? hsdSaleAvg - hsdAvg : 0;
+    const pmgPL = pmgSoldQty > 0 ? pmgSaleAvg - pmgAvg : 0;
 
     return {
-      totalSales: adjHsdSoldAmt + adjPmgSoldAmt,
-      totalSoldQty: adjHsdSoldQty + adjPmgSoldQty,
+      totalSales: hsdSoldAmt + pmgSoldAmt,
+      totalSoldQty: hsdSoldQty + pmgSoldQty,
       purchaseCount: periodPurchases.length,
       saleCount: periodSales.length,
       totalExpense: totalExp,
@@ -225,21 +234,20 @@ export default function Dashboard() {
       netProfit: grossProfit - totalExp,
       grossMargin: margin,
       hsdStock, pmgStock,
-      hsdSoldQty: adjHsdSoldQty, 
-      pmgSoldQty: adjPmgSoldQty,
-      hsdSoldAmt: adjHsdSoldAmt, 
-      pmgSoldAmt: adjPmgSoldAmt,
+      hsdSoldQty, pmgSoldQty,
+      hsdSoldAmt, pmgSoldAmt,
       hsdAvg, pmgAvg,
       hsdSaleAvg, pmgSaleAvg,
       hsdPL, pmgPL,
-      hsdPurchasedQty: adjHsdPurchasedQty,
-      pmgPurchasedQty: adjPmgPurchasedQty,
-      hsdPurchasedAmt: adjHsdPurchasedAmt,
-      pmgPurchasedAmt: adjPmgPurchasedAmt,
+      hsdPurchasedQty: hsdTPQty,
+      pmgPurchasedQty: pmgTPQty,
+      hsdPurchasedAmt: hsdTPAmt,
+      pmgPurchasedAmt: pmgTPAmt,
       hsdStockVal: Math.max(0, hsdStock) * hsdAvg,
-      pmgStockVal: Math.max(0, pmgStock) * pmgAvg
+      pmgStockVal: Math.max(0, pmgStock) * pmgAvg,
     };
-  }, [rawPurchases, rawSales, rawExpenses, settings.startDate, settings.stockAdjustmentHSD, settings.stockAdjustmentPMG, settings.purchaseAdjustmentHSD, settings.purchaseAdjustmentPMG, settings.saleAdjustmentHSD, settings.saleAdjustmentPMG, settings.baseRateHSD, settings.baseRatePMG, filter, fromDate, toDate]);
+  }, [rawPurchases, rawSales, rawExpenses, settings.startDate, settings.baseRateHSD, settings.baseRatePMG, settings.plsOverrides, plsOverrides, filter, fromDate, toDate]);
+
 
   const fuelModules = [
     { type: 'HSD', label: 'High Speed Diesel', stock: dashboardStats.hsdStock, sold: dashboardStats.hsdSoldQty, pQty: dashboardStats.hsdPurchasedQty, stockVal: dashboardStats.hsdStockVal, soldVal: dashboardStats.hsdSoldAmt, pVal: dashboardStats.hsdPurchasedAmt, icon: Fuel, color: 'amber' },

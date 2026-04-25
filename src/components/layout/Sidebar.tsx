@@ -3,7 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, ShoppingCart, TrendingUp,
   DollarSign, Package, AlertTriangle, BarChart3, Users,
-  Settings, LogOut, X, Plus, Minus, Wallet, Activity
+  Settings, LogOut, X, Plus, Minus, Wallet, Activity, Pin, PinOff
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useStore } from '../../store/useStore';
@@ -85,6 +85,21 @@ export default function Sidebar({ className = '', isCollapsed = false, onNavigat
                 <X className="w-5 h-5" />
               </button>
             </div>
+          )}
+          {/* Pin Button */}
+          {!isCollapsed && (
+            <button
+              onClick={() => updateSettings({ sidebarPinned: !settings.sidebarPinned })}
+              className={cn(
+                "p-1.5 rounded-xl transition-all border",
+                settings.sidebarPinned 
+                  ? "text-primary-600 bg-primary-50 border-primary-100 dark:bg-primary-900/20 dark:border-primary-900/30" 
+                  : "text-slate-400 hover:text-slate-600 hover:bg-slate-100 border-transparent dark:hover:bg-dark-800"
+              )}
+              title={settings.sidebarPinned ? "Unpin Sidebar" : "Pin Sidebar"}
+            >
+              {settings.sidebarPinned ? <Pin className="w-4 h-4 fill-current" /> : <PinOff className="w-4 h-4" />}
+            </button>
           )}
         </div>
 
