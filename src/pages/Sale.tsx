@@ -5,7 +5,7 @@ import {
   Database, TrendingUp, Save, Pin, PinOff, ArrowUpDown, XCircle, DollarSign
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
-import { formatCurrency, formatDate, today, paginate, filterByStartDate, startOfMonth, startOfYear, getErrorMessage, cn } from '../lib/utils';
+import { formatCurrency, formatDate, today, paginate, filterByStartDate, startOfMonth, startOfYear, getErrorMessage, cn, handleFormKeyDown } from '../lib/utils';
 import { useToast } from '../components/ui/Toast';
 import SearchBar from '../components/ui/SearchBar';
 import Pagination from '../components/ui/Pagination';
@@ -644,7 +644,7 @@ export default function SalePage() {
           title={editingEntity ? 'Edit Sale Entry' : 'Add Sale Entry'} 
           onClose={closeForm}
         >
-          <form onSubmit={handleSubmit} className="flex flex-col gap-1">
+          <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} className="flex flex-col gap-1">
             {/* Date & Description */}
             <div className="bg-slate-50 dark:bg-dark-800/50 rounded-2xl p-4 mb-4 border border-slate-200 dark:border-dark-700/50">
               <div className="desktop-form-row">

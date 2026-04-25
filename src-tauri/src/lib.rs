@@ -117,6 +117,7 @@ async fn create_backup_zip(app: tauri::AppHandle) -> Result<String, String> {
     }
 
     zip.finish().map_err(|e| e.to_string())?;
+    
     Ok(zip_path.to_string_lossy().to_string())
 }
 
@@ -186,7 +187,7 @@ async fn restore_from_zip(zip_path: String, app: tauri::AppHandle) -> Result<(),
 // GOOGLE OAUTH2 — Local HTTP server captures the authorization code
 // ─────────────────────────────────────────────────────────────────────────────
 
-const REDIRECT_URI: &str = "http://localhost:3001/oauth/callback";
+const REDIRECT_URI: &str = "http://127.0.0.1:3001/oauth/callback";
 
 /// Starts a local HTTP listener on port 3001, opens the OAuth URL in the
 /// system browser, waits for Google's callback, and returns the authorization code.
@@ -346,6 +347,31 @@ async fn refresh_access_token(
     }
 
     Ok(tokens)
+}
+
+#[tauri::command]
+async fn request_service_account_token(assertion: String) -> Result<serde_json::Value, String> {
+    let client = reqwest::Client::new();
+    let params = [
+        ("grant_type", "urn:ietf:params:oauth:grant-type:jwt-bearer"),
+        ("assertion", &assertion),
+    ];
+
+    let response = client
+        .post("https://oauth2.googleapis.com/token")
+        .form(&params)
+        .send()
+        .await
+        .map_err(|e| format!("Token request network error: {}", e))?;
+
+    let data: serde_json::Value = response.json().await.map_err(|e| e.to_string())?;
+
+    if let Some(err) = data.get("error") {
+        let desc = data.get("error_description").and_then(|v| v.as_str()).unwrap_or("Unknown error");
+        return Err(format!("Service Account Token failed: {} — {}", err, desc));
+    }
+
+    Ok(data)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -665,7 +691,12 @@ async fn copy_file_native(
 }
 #[tauri::command]
 async fn copy_to_path(src: String, dest: String) -> Result<(), String> {
-    std::fs::copy(&src, &dest).map_err(|e| format!("Failed to copy file: {}", e))?;
+    if src == dest { return Ok(()); }
+    let src_path = std::path::Path::new(&src);
+    if !src_path.exists() {
+        return Err(format!("Source backup file not found at: {}", src));
+    }
+    std::fs::copy(&src, &dest).map_err(|e| format!("Failed to copy file to destination: {}. Ensure you have write permissions.", e))?;
     Ok(())
 }
 
@@ -993,6 +1024,7 @@ pub fn run() {
             upload_zip_to_drive,
             list_drive_backups,
             download_drive_backup,
+            request_service_account_token,
             get_machine_id,
             save_buffer_to_app_data,
             copy_file_native,

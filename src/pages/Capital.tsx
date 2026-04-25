@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Landmark, Plus, Trash2, Eye, Edit2, Search, Check, X, FileText, Settings, UserPlus, Printer, BarChart3, ArrowRight, ArrowUpDown, Save, Pin, PinOff, Package, PlusCircle } from 'lucide-react';
 import { useStore } from '../store/useStore';
-import { formatCurrency, formatDate, today, paginate, filterByStartDate, cn, startOfMonth, startOfYear } from '../lib/utils';
+import { formatCurrency, formatDate, today, paginate, filterByStartDate, cn, startOfMonth, startOfYear, handleFormKeyDown } from '../lib/utils';
 import { useToast } from '../components/ui/Toast';
 import SearchBar from '../components/ui/SearchBar';
 import Pagination from '../components/ui/Pagination';
@@ -212,7 +212,6 @@ export default function CapitalPage() {
     addCapitalCategory(newName.trim());
     setNewName('');
     toast('Account registered successfully', 'success');
-    setActiveTab('dashboard');
   };
 
   const handleStartEdit = (cat: any) => {
@@ -699,7 +698,7 @@ export default function CapitalPage() {
                 </div>
               </div>
 
-              <form onSubmit={handleAddCategory} className="space-y-6">
+              <form onSubmit={handleAddCategory} onKeyDown={handleFormKeyDown} className="space-y-6">
                 <div className="grid grid-cols-1 gap-6">
                   <div>
                     <label className="label text-[10px] font-black uppercase tracking-widest text-primary-600 mb-2 block">Account Name *</label>
@@ -796,7 +795,7 @@ export default function CapitalPage() {
 
       {showEntryForm && (
         <Modal isOpen={showEntryForm} onClose={closeForm} title={editingEntity ? "Edit Capital Transaction" : "New Capital Transaction"} maxWidth="md">
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="label text-[10px] font-black uppercase tracking-widest text-primary-600 mb-1 block">Transaction Date *</label>

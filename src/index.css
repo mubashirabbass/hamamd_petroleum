@@ -445,8 +445,8 @@ html.dark .table-sticky-col {
 /* ── Smart Scrollbar ────────────────────────────────── */
 .smart-scroll {
   scrollbar-width: thin;
-  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
-  overflow: auto; /* Handle both x and y */
+  scrollbar-color: rgba(37, 99, 235, 0.4) transparent;
+  overflow: auto;
   -webkit-overflow-scrolling: touch;
 }
 .smart-scroll::-webkit-scrollbar {
@@ -457,25 +457,25 @@ html.dark .table-sticky-col {
   background: transparent;
 }
 .smart-scroll::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.15);
+  background: rgba(37, 99, 235, 0.3);
   border-radius: 10px;
   border: 2px solid transparent;
   background-clip: padding-box;
 }
 .smart-scroll:hover::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(37, 99, 235, 0.6);
   border: 2px solid transparent;
   background-clip: padding-box;
 }
 
 html.dark .smart-scroll {
-  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+  scrollbar-color: rgba(37, 99, 235, 0.4) transparent;
 }
 html.dark .smart-scroll::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(37, 99, 235, 0.3);
 }
 html.dark .smart-scroll:hover::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(37, 99, 235, 0.6);
 }
 
 .sticky-header {

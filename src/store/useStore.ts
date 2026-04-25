@@ -886,7 +886,7 @@ export const useStore = create<AppState>()(
         ];
         for (const key of adjKeys) {
           try {
-            await db.execute(`UPDATE settings SET value='0' WHERE key=?`, [key]);
+            await db.execute(`UPDATE app_settings SET value='0' WHERE key=?`, [key]);
           } catch (e) {
             console.warn(`[Reset] Could not reset setting ${key}:`, e);
           }

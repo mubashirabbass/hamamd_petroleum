@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Plus, Trash2, Users, UserPlus, Printer, Search, Phone, Edit2, Check, X, UserCog, User, BarChart3, ArrowRight, ArrowUpDown, Save, Pin, PinOff } from 'lucide-react';
 import { useStore } from '../store/useStore';
-import { formatCurrency, formatDate, today, paginate, filterByStartDate, cn, startOfMonth, startOfYear } from '../lib/utils';
+import { formatCurrency, formatDate, today, paginate, filterByStartDate, cn, startOfMonth, startOfYear, handleFormKeyDown } from '../lib/utils';
 import { useToast } from '../components/ui/Toast';
 import SearchBar from '../components/ui/SearchBar';
 import Pagination from '../components/ui/Pagination';
@@ -212,7 +212,6 @@ export default function CustomerPage() {
     addCustomer({ name: newName.trim(), phone: newPhone.trim() });
     setNewName(''); setNewPhone('');
     toast('Customer registered successfully', 'success');
-    setActiveTab('dashboard');
   };
 
   const handleStartEdit = (cust: any) => {
@@ -893,7 +892,7 @@ export default function CustomerPage() {
                 </div>
               </div>
 
-              <form onSubmit={handleAddCustomer} className="space-y-6">
+              <form onSubmit={handleAddCustomer} onKeyDown={handleFormKeyDown} className="space-y-6">
                 <div className="grid grid-cols-1 gap-6">
                   <div>
                     <label className="label text-[10px] font-black uppercase tracking-widest text-primary-600 mb-2 block">Full Name *</label>
@@ -1030,7 +1029,7 @@ export default function CustomerPage() {
           title={editingEntity ? `Edit Entry — ${cust?.name}` : `Add Entry — ${cust?.name}`} 
           onClose={closeEntryForm}
         >
-          <form onSubmit={handleSubmitEntry} className="flex flex-col gap-1">
+          <form onSubmit={handleSubmitEntry} onKeyDown={handleFormKeyDown} className="flex flex-col gap-1">
             <div className="bg-slate-50 dark:bg-dark-800/50 rounded-2xl p-4 mb-4 border border-slate-200 dark:border-dark-700/50">
               <div className="desktop-form-row">
                 <label className="desktop-form-label">Date *</label>

@@ -16,7 +16,86 @@ const SCOPES = [
   'https://www.googleapis.com/auth/userinfo.profile',
 ].join(' ');
 
-const REDIRECT_URI = 'http://localhost:3001/oauth/callback';
+const REDIRECT_URI = 'http://127.0.0.1:3001/oauth/callback';
+
+// ── Service Account Helpers ──────────────────────────────────────────────────
+
+async function signJWT(jsonKey: any) {
+  const header = { alg: 'RS256', typ: 'JWT' };
+  const now = Math.floor(Date.now() / 1000);
+  const payload = {
+    iss: jsonKey.client_email,
+    sub: jsonKey.client_email,
+    scope: SCOPES,
+    aud: 'https://oauth2.googleapis.com/token',
+    exp: now + 3600,
+    iat: now
+  };
+
+  const base64Url = (str: string) => btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+  const encodedHeader = base64Url(JSON.stringify(header));
+  const encodedPayload = base64Url(JSON.stringify(payload));
+  const dataToSign = `${encodedHeader}.${encodedPayload}`;
+
+  // Import the PKCS8 private key
+  const pem = jsonKey.private_key
+    .replace(/-----BEGIN PRIVATE KEY-----/, '')
+    .replace(/-----END PRIVATE KEY-----/, '')
+    .replace(/\s/g, '');
+  
+  const binaryKey = Uint8Array.from(atob(pem), c => c.charCodeAt(0));
+  const key = await window.crypto.subtle.importKey(
+    'pkcs8',
+    binaryKey.buffer,
+    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+
+  const signature = await window.crypto.subtle.sign(
+    'RSASSA-PKCS1-v1_5',
+    key,
+    new TextEncoder().encode(dataToSign)
+  );
+
+  const encodedSignature = base64Url(String.fromCharCode(...new Uint8Array(signature)));
+  return `${dataToSign}.${encodedSignature}`;
+}
+
+export async function connectWithServiceAccount(jsonString: string) {
+  try {
+    console.log('Attempting Service Account Connection...');
+    const jsonKey = JSON.parse(jsonString);
+    if (!jsonKey.private_key || !jsonKey.client_email) {
+      console.warn('Invalid JSON Key structure:', jsonKey);
+      throw new Error('Invalid JSON Key: Missing private_key or client_email.');
+    }
+
+    console.log('Signing JWT for:', jsonKey.client_email);
+    const jwt = await signJWT(jsonKey);
+    console.log('JWT signed, requesting token via Rust...');
+    
+    const data = await invoke<any>('request_service_account_token', { assertion: jwt });
+    console.log('Token response received:', data.error ? 'ERROR' : 'SUCCESS');
+    
+    if (data.error) throw new Error(data.error_description || data.error);
+
+    await setSetting('googleAccessToken', data.access_token);
+    await setSetting('googleTokenExpiry', (Date.now() + 3500 * 1000).toString());
+    await setSetting('googleUserEmail', jsonKey.client_email);
+    await setSetting('googleUserName', 'Service Account');
+    await setSetting('googleServiceAccountKey', jsonString);
+    await setSetting('googleRefreshToken', '');
+    // Clear Personal OAuth creds to prevent conflicts
+    await setSetting('googleClientId', '');
+    await setSetting('googleClientSecret', '');
+
+    return { email: jsonKey.client_email, name: 'Service Account' };
+  } catch (err: any) {
+    console.error('connectWithServiceAccount failed:', err);
+    throw new Error(`Service Account Connection Failed: ${err.message}`);
+  }
+}
 
 // ─── Token Management ─────────────────────────────────────────────────────────
 
@@ -48,6 +127,7 @@ export async function clearTokens(): Promise<void> {
   await setSetting('googleTokenExpiry',  '0');
   await setSetting('googleUserEmail',    '');
   await setSetting('googleUserName',     '');
+  await setSetting('googleServiceAccountKey', '');
 }
 
 /** Returns a valid access token, refreshing if needed */
@@ -58,16 +138,25 @@ export async function getValidAccessToken(): Promise<string> {
   const fiveMinutes = 5 * 60 * 1000;
   const isExpired = tokens.expiry_date && (tokens.expiry_date - Date.now() < fiveMinutes);
 
-  if (isExpired && tokens.refresh_token) {
-    const clientId     = await getSetting('googleClientId');
-    const clientSecret = await getSetting('googleClientSecret');
-    const refreshed = await invoke<OAuthTokens>('refresh_access_token', {
-      refreshToken: tokens.refresh_token,
-      clientId,
-      clientSecret,
-    });
-    await saveTokens({ ...tokens, ...refreshed });
-    return refreshed.access_token;
+  if (isExpired) {
+    const serviceAccountKey = await getSetting('googleServiceAccountKey');
+    if (serviceAccountKey) {
+      console.log("[Drive] Refreshing Service Account Token...");
+      await connectWithServiceAccount(serviceAccountKey);
+      return (await getSetting('googleAccessToken')) || '';
+    }
+
+    if (tokens.refresh_token) {
+      const clientId     = await getSetting('googleClientId');
+      const clientSecret = await getSetting('googleClientSecret');
+      const refreshed = await invoke<OAuthTokens>('refresh_access_token', {
+        refreshToken: tokens.refresh_token,
+        clientId,
+        clientSecret,
+      });
+      await saveTokens({ ...tokens, ...refreshed });
+      return refreshed.access_token;
+    }
   }
 
   if (!tokens.access_token) throw new Error('NOT_CONNECTED');
@@ -98,15 +187,18 @@ export function buildAuthUrl(clientId: string): string {
  * 4. Fetch user info
  * 5. Save everything to SQLite
  */
-export async function connectGoogleDrive(manualPin?: string): Promise<{
+export async function connectGoogleDrive(
+  manualPin?: string,
+  directCreds?: { clientId: string; clientSecret: string }
+): Promise<{
   email: string;
   name: string;
 }> {
-  const clientId     = await getSetting('googleClientId');
-  const clientSecret = await getSetting('googleClientSecret');
+  const clientId     = directCreds?.clientId     || await getSetting('googleClientId');
+  const clientSecret = directCreds?.clientSecret || await getSetting('googleClientSecret');
 
   if (!clientId || !clientSecret) {
-    throw new Error('Google Client ID and Secret are not configured. Please enter them below.');
+    throw new Error('Google Client ID and Secret are not configured. Please enter them above.');
   }
 
   const authUrl = buildAuthUrl(clientId);
@@ -268,10 +360,31 @@ export async function downloadLocalBackup(): Promise<string> {
     });
 
     if (savePath) {
-      // Use the native Rust command to copy the zip. 
-      // This is much more reliable on Windows than JS-side copy.
-      await invoke('copy_to_path', { src: zipPath, dest: savePath });
-      return savePath;
+      try {
+        console.log("Attempting native copy to:", savePath);
+        await invoke('copy_to_path', { src: zipPath, dest: savePath });
+        return savePath;
+      } catch (copyErr) {
+        console.warn("Native copy failed, trying browser-blob fallback:", copyErr);
+        // Fallback: Read file and trigger browser download
+        try {
+          const { readFile } = await import('@tauri-apps/plugin-fs');
+          const data = await readFile(zipPath);
+          const blob = new Blob([data], { type: 'application/zip' });
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = savePath.split(/[\\\/]/).pop() || 'backup.zip';
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+          return `DOWNLOADED_VIA_BROWSER: ${savePath}`;
+        } catch (fallbackErr) {
+          console.error("Browser fallback also failed:", fallbackErr);
+          return `INTERNAL_FALLBACK: ${zipPath}`;
+        }
+      }
     } else {
       throw new Error('Canceled');
     }
@@ -279,9 +392,8 @@ export async function downloadLocalBackup(): Promise<string> {
     if (err instanceof Error && err.message === 'Canceled') {
       throw err;
     }
-    // If saving fails (e.g., plugin not found), fallback to just returning the temp zip path
-    console.warn("Save dialog failed, returning temp path:", err);
-    return zipPath;
+    console.error("Save dialog system failure:", err);
+    return `INTERNAL_FALLBACK: ${zipPath}`;
   }
 }
 

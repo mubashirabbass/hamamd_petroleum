@@ -24,7 +24,9 @@ import {
   downloadLocalBackup,
   openLocalBackupPicker,
   restoreFromFilePath,
+  buildAuthUrl,
   type DriveFile,
+  connectWithServiceAccount,
 } from '../lib/driveAPI';
 import { invoke } from '@tauri-apps/api/core';
 
@@ -74,6 +76,8 @@ function BackupPanel() {
   // ── Manual PIN Fallback ────────────────────────────────────────────────────
   const [showManualPin,  setShowManualPin]  = useState(false);
   const [manualPin,      setManualPin]      = useState('');
+  const [useServiceAccount, setUseServiceAccount] = useState(false);
+  const [serviceAccountJson, setServiceAccountJson] = useState('');
 
   // ── Backup / Restore ───────────────────────────────────────────────────────
   const [backupList,    setBackupList]    = useState<DriveFile[]>([]);
@@ -125,11 +129,15 @@ function BackupPanel() {
     setSavingCreds(true);
     await setSetting('googleClientId',     clientId.trim());
     await setSetting('googleClientSecret', clientSecret.trim());
+    await setSetting('googleServiceAccountKey', ''); // Clear Robot Mode key
     setCredsSaved(true);
     setSavingCreds(false);
     setConnecting(true);
     try {
-      const info = await connectGoogleDrive();
+      const info = await connectGoogleDrive(undefined, { 
+        clientId: clientId.trim(), 
+        clientSecret: clientSecret.trim() 
+      });
       setConnected(true);
       setDriveEmail(info.email);
       setDriveName(info.name);
@@ -165,6 +173,45 @@ function BackupPanel() {
       setShowManualPin(false);
       setManualPin('');
     } catch (err: any) {
+      toast(String(err?.message ?? err), 'error');
+    } finally {
+      setConnecting(false);
+    }
+  };
+
+  const handleConnectServiceAccount = async () => {
+    if (!serviceAccountJson.trim()) {
+      toast('Please paste your Service Account JSON key.', 'error');
+      return;
+    }
+    
+    setConnecting(true);
+    try {
+      // 1. Pre-validation for OAuth JSON
+      const parsed = JSON.parse(serviceAccountJson.trim());
+      if (parsed.web || parsed.installed) {
+        const client = parsed.web || parsed.installed;
+        if (client.client_id && client.client_secret) {
+          toast('Detected OAuth Credentials JSON! Auto-filling Personal Login...', 'info');
+          setClientId(client.client_id);
+          setClientSecret(client.client_secret);
+          setUseServiceAccount(false); // Switch to Personal tab
+          setServiceAccountJson('');
+          setConnecting(false);
+          return;
+        }
+      }
+
+      // 2. Standard Service Account connection
+      const info = await connectWithServiceAccount(serviceAccountJson.trim());
+      setConnected(true);
+      setDriveEmail(info.email);
+      setDriveName(info.name);
+      toast(`✅ Service Account Connected!`, 'success');
+      await fetchList();
+      setServiceAccountJson('');
+    } catch (err: any) {
+      console.error('Service Account Connection Error:', err);
       toast(String(err?.message ?? err), 'error');
     } finally {
       setConnecting(false);
@@ -212,16 +259,29 @@ function BackupPanel() {
   const handleLocalBackup = async () => {
     setProgress({ msg: 'Creating local backup ZIP…', active: true });
     try {
-      const zipPath = await downloadLocalBackup();
-      if (!zipPath.includes('AppData')) {
-        toast(`Local backup saved to:\n${zipPath}`, 'success');
+      const result = await downloadLocalBackup();
+      
+      if (result.startsWith('INTERNAL_FALLBACK:')) {
+        const path = result.replace('INTERNAL_FALLBACK: ', '');
+        toast(`⚠️ Permission Denied. Backup saved to internal storage:\n${path}`, 'warning');
+        try {
+          const { revealItemInDir } = await import('@tauri-apps/plugin-opener');
+          await revealItemInDir(path);
+        } catch (_) { }
         return;
       }
+
+      if (result.startsWith('DOWNLOADED_VIA_BROWSER:')) {
+        const path = result.replace('DOWNLOADED_VIA_BROWSER: ', '');
+        toast(`✅ Saved via Download manager:\n${path}`, 'success');
+        return;
+      }
+
+      toast(`✅ Local backup saved to:\n${result}`, 'success');
       try {
         const { revealItemInDir } = await import('@tauri-apps/plugin-opener');
-        await revealItemInDir(zipPath);
+        await revealItemInDir(result);
       } catch (_) { }
-      toast(`Local backup saved to:\n${zipPath}`, 'success');
     } catch (err: any) {
       if (err instanceof Error && err.message === 'Canceled') {
         toast('Backup was canceled.', 'error');
@@ -335,7 +395,7 @@ function BackupPanel() {
         </button>
       </div>
 
-      <div className="flex-1 space-y-6 overflow-y-auto no-scrollbar pb-10">
+      <div className="flex-1 space-y-6 overflow-y-auto smart-scroll pb-10">
         
         {progress.active && (
           <div className="bg-slate-900 rounded-3xl border border-white/10 p-6 flex items-center gap-5 animate-in slide-in-from-top duration-500 shadow-2xl">
@@ -355,71 +415,232 @@ function BackupPanel() {
         {subTab === 'cloud' && (
           <div className="animate-in fade-in slide-in-from-right-4 duration-300">
             {!connected ? (
-               <div className="glass rounded-[2rem] p-10 border border-slate-200/50 dark:border-dark-700/50 shadow-sm">
-                 <div className="flex flex-col md:flex-row items-center gap-8 mb-10">
-                    <div className="w-24 h-24 bg-primary-100 dark:bg-primary-900/30 rounded-[2rem] flex items-center justify-center shadow-inner shrink-0 rotate-3">
-                      <Cloud className="w-12 h-12 text-primary-600" />
-                    </div>
-                    <div className="text-center md:text-left">
-                      <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">Google Drive Sync</h3>
-                      <p className="text-sm text-slate-500 dark:text-dark-400 font-medium leading-relaxed mt-1">
-                        Connect your private cloud storage to enable automated, encrypted backups.
-                      </p>
-                    </div>
-                 </div>
+              <div className="glass rounded-[2rem] p-10 border border-slate-200/50 dark:border-dark-700/50 shadow-sm">
+                <div className="flex flex-col md:flex-row items-center gap-8 mb-10">
+                  <div className="w-24 h-24 bg-primary-100 dark:bg-primary-900/30 rounded-[2rem] flex items-center justify-center shadow-inner shrink-0 rotate-3">
+                    <Cloud className="w-12 h-12 text-primary-600" />
+                  </div>
+                  <div className="text-center md:text-left">
+                    <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">Google Drive Sync</h3>
+                    <p className="text-sm text-slate-500 dark:text-dark-400 font-medium leading-relaxed mt-1">
+                      Connect your private cloud storage to enable automated, encrypted backups.
+                    </p>
+                  </div>
+                </div>
 
-                 <div className="bg-slate-50 dark:bg-dark-900/50 rounded-2xl border border-slate-200 dark:border-dark-800 p-8 space-y-6">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">OAuth Configuration</h4>
-                      <div className="flex items-center gap-2 px-2 py-0.5 bg-amber-500/10 text-amber-600 text-[8px] font-black uppercase rounded border border-amber-500/20">
-                        Required for Cloud
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Client ID</label>
-                        <input type="text" value={clientId} onChange={e => setClientId(e.target.value)}
-                          placeholder="Paste from Google Console..."
-                          className="input w-full !bg-white dark:!bg-dark-900 !py-3 !text-xs !font-mono border-slate-200" />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Client Secret</label>
-                        <div className="relative">
-                          <input type={showSecret ? "text" : "password"} value={clientSecret} onChange={e => setClientSecret(e.target.value)}
-                            placeholder="Enter Secret..."
-                            className="input w-full !bg-white dark:!bg-dark-900 !py-3 !text-xs !font-mono pr-12 border-slate-200" />
-                          <button onClick={() => setShowSecret(!showSecret)} className="absolute right-3 top-2.5 text-slate-400 hover:text-primary-500 transition-colors">
-                            {showSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                          </button>
+                <div className="flex bg-slate-100 dark:bg-dark-800 p-1 rounded-2xl mb-8">
+                  <button onClick={() => setUseServiceAccount(false)}
+                    className={cn(
+                      "flex-1 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all",
+                      !useServiceAccount ? "bg-white dark:bg-dark-900 text-primary-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                    )}>
+                    Personal Login
+                  </button>
+                  <button onClick={() => setUseServiceAccount(true)}
+                    className={cn(
+                      "flex-1 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all",
+                      useServiceAccount ? "bg-white dark:bg-dark-900 text-primary-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                    )}>
+                    Service Account (No Login)
+                  </button>
+                </div>
+
+                {useServiceAccount ? (
+                  <div className="space-y-6 animate-in fade-in zoom-in-95">
+                    <div className="bg-slate-50 dark:bg-dark-900/50 rounded-2xl border border-slate-200 dark:border-dark-800 p-8 space-y-6">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">JSON Key Configuration</h4>
+                        <div className="flex items-center gap-2 px-2 py-0.5 bg-emerald-500/10 text-emerald-600 text-[8px] font-black uppercase rounded border border-emerald-500/20">
+                          Robot Mode
                         </div>
                       </div>
-                    </div>
 
-                    <div className="flex flex-col md:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-200 dark:border-dark-800">
-                      <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest max-w-sm">
-                        Ensure you use a <span className="text-primary-500">Desktop</span> OAuth client type in Google Console.
+                      <div className="space-y-4">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Paste Service Account JSON</label>
+                        <textarea value={serviceAccountJson} onChange={e => setServiceAccountJson(e.target.value)}
+                          placeholder='{ "type": "service_account", ... }'
+                          className="input w-full !bg-white dark:!bg-dark-950 !py-4 !text-xs font-mono h-40 resize-none border-slate-200 shadow-inner" />
+                        
+                        <button onClick={handleConnectServiceAccount} disabled={connecting || !serviceAccountJson.trim()}
+                          className="w-full py-4 bg-primary-600 text-white rounded-2xl font-black text-xs hover:bg-primary-700 transition-all shadow-xl shadow-primary-500/20 disabled:opacity-50">
+                          {connecting ? 'Validating Robot Key...' : 'Activate Service Account'}
+                        </button>
                       </div>
-                      <button onClick={handleConnectWithCreds} disabled={connecting}
-                        className="w-full md:w-auto px-8 py-3.5 bg-primary-600 text-white rounded-xl font-black text-xs shadow-xl shadow-primary-500/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-3">
-                        {connecting ? <RefreshCcw className="w-4 h-4 animate-spin" /> : <Cloud className="w-4 h-4" />}
-                        {connecting ? 'Connecting...' : 'Authorize Sync'}
-                      </button>
                     </div>
-                 </div>
 
-                 <div className="mt-8 p-6 rounded-2xl bg-red-500/5 border border-red-500/10 flex gap-4 text-red-700 dark:text-red-400 shadow-sm">
-                    <AlertCircle className="w-6 h-6 shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-xs font-black uppercase tracking-widest mb-1.5">Getting Error 401 (invalid_client)?</p>
-                      <ul className="text-[11px] font-medium opacity-80 list-disc pl-4 space-y-1">
-                        <li>Verify that the <b>Client ID</b> and <b>Secret</b> match exactly what's in your Google Console.</li>
-                        <li>Ensure you have set the <b>Redirect URI</b> to <code>http://localhost:3001/oauth/callback</code>.</li>
-                        <li>Make sure your Google Project is in <b>Production</b> or you are added as a <b>Test User</b>.</li>
-                      </ul>
+                    <div className="p-6 rounded-2xl bg-amber-500/5 border border-amber-500/10 flex gap-4 text-amber-700 dark:text-amber-400 shadow-sm">
+                      <ShieldCheck className="w-6 h-6 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-[11px] font-black uppercase tracking-widest mb-1.5">How to Setup Service Account</p>
+                        <ul className="text-[11px] font-medium opacity-80 list-disc pl-4 space-y-2">
+                          <li>In Google Console, create a **Service Account** and download the **JSON Key**.</li>
+                          <li>Paste the entire content of that JSON file into the box above.</li>
+                          <li>**CRITICAL**: Copy the "client_email" from your JSON and **Share your Google Drive Folder** with that email!</li>
+                          <li>The "Robot" can only see folders that you explicitly share with it.</li>
+                        </ul>
+                      </div>
                     </div>
-                 </div>
-               </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="bg-slate-50 dark:bg-dark-900/50 rounded-2xl border border-slate-200 dark:border-dark-800 p-8 space-y-6">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">OAuth Configuration</h4>
+                        <button 
+                          onClick={async () => {
+                            try {
+                              const { open } = await import('@tauri-apps/plugin-dialog');
+                              const { readFile } = await import('@tauri-apps/plugin-fs');
+                              const selected = await open({ filters: [{ name: 'JSON', extensions: ['json'] }] });
+                              if (selected && !Array.isArray(selected)) {
+                                const content = await readFile(selected);
+                                const text = new TextDecoder().decode(content);
+                                const parsed = JSON.parse(text);
+                                const client = parsed.web || parsed.installed;
+                                if (client && client.client_id && client.client_secret) {
+                                  setClientId(client.client_id);
+                                  setClientSecret(client.client_secret);
+                                  toast('Credentials imported successfully!', 'success');
+                                } else {
+                                  toast('Invalid credentials file format.', 'error');
+                                }
+                              }
+                            } catch (err: any) {
+                              toast(`Import failed: ${err.message}`, 'error');
+                            }
+                          }}
+                          className="flex items-center gap-2 px-3 py-1 bg-primary-500/10 text-primary-600 text-[8px] font-black uppercase rounded border border-primary-500/20 hover:bg-primary-500/20 transition-all">
+                          <FileJson className="w-3 h-3" /> Import from JSON
+                        </button>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Client ID</label>
+                          <input type="text" value={clientId} onChange={e => setClientId(e.target.value)}
+                            placeholder="000000000-xxxxxx.apps.googleusercontent.com"
+                            className={cn(
+                              "input w-full !bg-white dark:!bg-dark-900 !py-3 !text-xs !font-mono border-slate-200",
+                              clientId && !clientId.endsWith('.apps.googleusercontent.com') && "border-red-500/50 ring-2 ring-red-500/10"
+                            )} />
+                          {clientId && !clientId.endsWith('.apps.googleusercontent.com') && (
+                            <p className="text-[9px] text-red-500 font-bold uppercase tracking-widest mt-1 ml-1 animate-pulse">
+                              ⚠️ Invalid Format: Must end with .apps.googleusercontent.com
+                            </p>
+                          )}
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Client Secret</label>
+                          <div className="relative">
+                            <input type={showSecret ? "text" : "password"} value={clientSecret} onChange={e => setClientSecret(e.target.value)}
+                              placeholder="GOCSPX-xxxxxxxxxxxxxxxx"
+                              className="input w-full !bg-white dark:!bg-dark-900 !py-3 !text-xs !font-mono pr-12 border-slate-200" />
+                            <button onClick={() => setShowSecret(!showSecret)} className="absolute right-3 top-2.5 text-slate-400 hover:text-primary-500 transition-colors">
+                              {showSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col md:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-200 dark:border-dark-800">
+                        <div className="flex flex-col gap-1">
+                          <div className="text-[11px] text-slate-500 font-bold uppercase tracking-widest leading-relaxed">
+                            Redirect: <code className="text-primary-600 dark:text-primary-400 select-all">http://127.0.0.1:3001/oauth/callback</code>
+                          </div>
+                          <button onClick={async () => {
+                            const { buildAuthUrl } = await import('../lib/driveAPI');
+                            const url = buildAuthUrl(clientId.trim());
+                            alert(`DEBUG OAuth URL:\n\n${url}\n\nCheck if client_id is correctly embedded.`);
+                          }} className="text-[9px] text-primary-500 font-black uppercase tracking-tighter hover:underline text-left">
+                            [Debug] View Generated Auth URL
+                          </button>
+                        </div>
+                        <button onClick={handleConnectWithCreds} disabled={connecting}
+                          className="w-full md:w-auto px-8 py-3.5 bg-primary-600 text-white rounded-xl font-black text-xs shadow-xl shadow-primary-500/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-3">
+                          {connecting ? <RefreshCcw className="w-4 h-4 animate-spin" /> : <Cloud className="w-4 h-4" />}
+                          {connecting ? 'Connecting...' : 'Authorize Sync'}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="mt-8 space-y-6">
+                      <div className="flex items-center justify-between px-2">
+                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Manual Authorization (PIN)</h4>
+                        <button onClick={() => setShowManualPin(!showManualPin)}
+                          className="text-[9px] font-black text-primary-600 uppercase tracking-widest hover:opacity-70 transition-opacity">
+                          {showManualPin ? "← Switch to Auto-Connect" : "Switch to Manual Mode"}
+                        </button>
+                      </div>
+
+                      {showManualPin && (
+                        <div className="glass rounded-[2rem] p-8 border border-primary-200/50 dark:border-primary-900/30 relative overflow-hidden">
+                          <div className="absolute top-0 right-0 w-32 h-32 bg-primary-500/5 blur-3xl -mr-16 -mt-16" />
+                          
+                          <div className="space-y-8 relative z-10">
+                            <div className="flex items-center gap-4">
+                              <div className="w-12 h-12 rounded-2xl bg-primary-600 flex items-center justify-center text-white shadow-lg shadow-primary-500/20">
+                                <Zap className="w-6 h-6" />
+                              </div>
+                              <div>
+                                <p className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">Manual PIN Setup</p>
+                                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Use this if the "Auto-Connect" fails to redirect</p>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 gap-8">
+                              <div className="space-y-4">
+                                <div className="flex items-center gap-3">
+                                  <span className="w-6 h-6 rounded-full bg-slate-100 dark:bg-dark-800 flex items-center justify-center text-[10px] font-black text-slate-500">1</span>
+                                  <p className="text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider">Generate Login URL</p>
+                                </div>
+                                <a href={buildAuthUrl(clientId.trim())} target="_blank" rel="noreferrer" 
+                                  className="block w-full py-4 bg-white dark:bg-dark-900 border-2 border-slate-200 dark:border-dark-800 rounded-2xl text-center text-xs font-black text-primary-600 hover:border-primary-500 transition-all shadow-sm">
+                                  Click here to Sign In with Google
+                                </a>
+                                <p className="text-[9px] text-slate-500 font-medium px-2 leading-relaxed">
+                                  * After you sign in, the browser will go to a page that says "This site can't be reached". This is correct! Just **COPY the full URL** from the top bar.
+                                </p>
+                              </div>
+
+                              <div className="space-y-4">
+                                <div className="flex items-center gap-3">
+                                  <span className="w-6 h-6 rounded-full bg-slate-100 dark:bg-dark-800 flex items-center justify-center text-[10px] font-black text-slate-500">2</span>
+                                  <p className="text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider">Paste the code or URL</p>
+                                </div>
+                                <div className="space-y-3">
+                                  <input type="text" value={manualPin} onChange={e => setManualPin(e.target.value)}
+                                    placeholder="Paste the URL or Code from the browser here..."
+                                    className="input w-full !bg-white dark:!bg-dark-950 !py-4 !text-xs font-mono shadow-inner" />
+                                  
+                                  <button onClick={handleConnect} disabled={connecting || !manualPin.trim()}
+                                    className="w-full py-4 bg-primary-600 text-white rounded-2xl font-black text-xs hover:bg-primary-700 transition-all shadow-xl shadow-primary-500/20 disabled:opacity-50">
+                                    {connecting ? 'Verifying...' : 'Finish Connection'}
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {!showManualPin && (
+                        <div className="mt-8 p-6 rounded-2xl bg-red-500/5 border border-red-500/10 flex gap-4 text-red-700 dark:text-red-400 shadow-sm">
+                          <AlertCircle className="w-6 h-6 shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-[11px] font-black uppercase tracking-widest mb-1.5">Crucial Checklist for "invalid_client" Error</p>
+                            <ul className="text-[11px] font-medium opacity-80 list-disc pl-4 space-y-2">
+                              <li><b>Application Type:</b> Must be set to <span className="underline">Desktop app</span>. If you chose "Web Application", it will fail with 401.</li>
+                              <li><b>Client ID Format:</b> Ensure it ends with <code>.apps.googleusercontent.com</code> and has no spaces.</li>
+                              <li><b>Redirect URI:</b> In the Console, add <code>http://127.0.0.1:3001/oauth/callback</code>.</li>
+                              <li><b>Status:</b> If your project is in "Testing", add your email as a <b>Test User</b>.</li>
+                            </ul>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
             ) : (
               <div className="space-y-6">
                 <div className="bg-slate-900 rounded-[2.5rem] p-8 flex flex-col md:flex-row items-center justify-between gap-8 shadow-2xl border border-white/5 relative overflow-hidden">
@@ -432,6 +653,14 @@ function BackupPanel() {
                       <div className="flex items-center gap-2 mb-1">
                         <p className="text-[10px] font-black text-primary-400 uppercase tracking-widest">Cloud Storage Active</p>
                         <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                        <span className={cn(
+                          "ml-2 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border",
+                          driveName === 'Service Account' 
+                            ? "bg-purple-500/10 text-purple-400 border-purple-500/20" 
+                            : "bg-blue-500/10 text-blue-400 border-blue-500/20"
+                        )}>
+                          {driveName === 'Service Account' ? 'Robot Mode' : 'Personal Mode'}
+                        </span>
                       </div>
                       <p className="text-xl font-black text-white tracking-tight">{driveEmail}</p>
                       <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">Last Synced: {backupList[0]?.modifiedTime ? new Date(backupList[0].modifiedTime).toLocaleString() : 'Never'}</p>
@@ -457,7 +686,7 @@ function BackupPanel() {
                       Refresh List
                     </button>
                   </div>
-                  <div className="max-h-[500px] overflow-y-auto no-scrollbar divide-y divide-slate-100 dark:divide-dark-800">
+                  <div className="max-h-[500px] overflow-y-auto smart-scroll divide-y divide-slate-100 dark:divide-dark-800">
                     {backupList.length > 0 ? backupList.map((bk, i) => (
                       <div key={bk.id} className="p-6 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-dark-800/50 transition-all group">
                         <div className="flex items-center gap-5">
@@ -796,7 +1025,7 @@ export default function SettingsPage() {
             </button>
           )}
 
-          <div className="flex-1 overflow-y-auto no-scrollbar smart-scroll">
+          <div className="flex-1 overflow-y-auto smart-scroll">
             
             {progress.active && (
               <div className="mb-6 bg-slate-900 rounded-2xl border border-white/10 p-4 flex items-center gap-4 animate-in slide-in-from-top duration-300">
@@ -857,7 +1086,7 @@ export default function SettingsPage() {
                   <h2 className="font-black text-slate-900 dark:text-white text-sm uppercase tracking-widest">Login Management</h2>
                 </div>
               </div>
-              <div className="flex-1 overflow-y-auto no-scrollbar p-4">
+              <div className="flex-1 overflow-y-auto smart-scroll p-4">
                 <ManageUsersModal />
               </div>
             </div>

@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Landmark, Plus, Trash2, Eye, Edit2, Search, Check, X, FileText, Settings, UserPlus, Printer, BarChart3, ArrowRight, ArrowUpDown, Save } from 'lucide-react';
 import { useStore } from '../store/useStore';
-import { formatCurrency, formatDate, today, paginate, filterByStartDate, cn, startOfMonth, startOfYear } from '../lib/utils';
+import { formatCurrency, formatDate, today, paginate, filterByStartDate, cn, startOfMonth, startOfYear, handleFormKeyDown } from '../lib/utils';
 import { useToast } from '../components/ui/Toast';
 import SearchBar from '../components/ui/SearchBar';
 import Pagination from '../components/ui/Pagination';
@@ -217,7 +217,6 @@ export default function LiabilityPage() {
     addLiabilityCategory(newName.trim());
     setNewName('');
     toast('Account registered successfully', 'success');
-    setActiveTab('dashboard');
   };
 
   const handleStartEdit = (cat: any) => {
@@ -797,7 +796,7 @@ export default function LiabilityPage() {
                 </div>
               </div>
 
-              <form onSubmit={handleAddCategory} className="space-y-6">
+              <form onSubmit={handleAddCategory} onKeyDown={handleFormKeyDown} className="space-y-6">
                 <div className="grid grid-cols-1 gap-6">
                   <div>
                     <label className="label text-[10px] font-black uppercase tracking-widest text-primary-600 mb-2 block">Account Name *</label>
@@ -1005,7 +1004,7 @@ export default function LiabilityPage() {
           onClose={closeForm}
           title={editingEntity ? 'Edit Liability Entry' : 'New Liability Entry'}
         >
-          <form onSubmit={handleSubmit} className="flex flex-col gap-1">
+          <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} className="flex flex-col gap-1">
             <div className="bg-slate-50 dark:bg-dark-800/50 rounded-2xl p-4 mb-4 border border-slate-200 dark:border-dark-700/50">
               <div className="desktop-form-row">
                 <label className="desktop-form-label">Date *</label>

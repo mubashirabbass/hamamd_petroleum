@@ -65,3 +65,57 @@ export function getErrorMessage(error: unknown): string {
 
   return 'Unknown error';
 }
+
+export function handleFormKeyDown(e: React.KeyboardEvent) {
+  const target = e.target as HTMLElement;
+  if (!['INPUT', 'SELECT', 'TEXTAREA'].includes(target.tagName)) return;
+
+  // Don't intercept if typing in a textarea or using a date input (which needs arrows for internal navigation)
+  if (target.tagName === 'TEXTAREA') return;
+  if (target instanceof HTMLInputElement && target.type === 'date') {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+       // Still allow vertical navigation in date fields if preferred, 
+       // but browsers use Up/Down to change values. 
+       // Let's stay out of date fields for arrows.
+       return;
+    }
+    return;
+  }
+
+  const form = target.closest('form');
+  if (!form) return;
+
+  const elements = Array.from(form.querySelectorAll('input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), button[type="submit"]:not([disabled])')) as HTMLElement[];
+  const index = elements.indexOf(target);
+
+  const moveFocus = (delta: number) => {
+    const nextIndex = index + delta;
+    if (nextIndex >= 0 && nextIndex < elements.length) {
+      e.preventDefault();
+      elements[nextIndex].focus();
+      if (elements[nextIndex] instanceof HTMLInputElement) {
+        (elements[nextIndex] as HTMLInputElement).select();
+      }
+    }
+  };
+
+  if (e.key === 'ArrowDown') {
+    moveFocus(1);
+  } else if (e.key === 'ArrowUp') {
+    moveFocus(-1);
+  } else if (e.key === 'ArrowRight') {
+    if (target instanceof HTMLInputElement && (target.type === 'text' || target.type === 'search' || target.type === 'tel' || target.type === 'url')) {
+      if (target.selectionStart === target.value.length) moveFocus(1);
+    } else {
+      // For numbers and selects, ArrowRight moves to next
+      moveFocus(1);
+    }
+  } else if (e.key === 'ArrowLeft') {
+    if (target instanceof HTMLInputElement && (target.type === 'text' || target.type === 'search' || target.type === 'tel' || target.type === 'url')) {
+      if (target.selectionStart === 0) moveFocus(-1);
+    } else {
+      // For numbers and selects, ArrowLeft moves to prev
+      moveFocus(-1);
+    }
+  }
+}
