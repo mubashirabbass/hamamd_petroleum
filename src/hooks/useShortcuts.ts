@@ -8,6 +8,10 @@ export const useShortcuts = () => {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore shortcuts if we are typing in an input/select/textarea
+      const target = e.target as HTMLElement;
+      if (['INPUT', 'SELECT', 'TEXTAREA'].includes(target.tagName)) return;
+
       // Find a matching shortcut
       const match = shortcuts.find(s => s.key === e.key);
       

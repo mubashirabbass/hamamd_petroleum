@@ -16,6 +16,7 @@ import PrintReportModal from '../components/modals/PrintReportModal';
 import type { FuelType } from '../store/useStore';
 
 export default function PurchasePage() {
+  const firstInputRef = React.useRef<HTMLInputElement>(null);
   const { purchases, addPurchase, updatePurchase, deletePurchase, settings, currentUser } = useStore();
   const confirm = useConfirm();
   const [searchParams] = useSearchParams();
@@ -112,8 +113,8 @@ export default function PurchasePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.date || !form.rate || !form.quantity) {
-      toast('Please fill required fields', 'error');
+    if (!form.date || !form.rate || !form.quantity || parseFloat(form.rate) <= 0 || parseFloat(form.quantity) <= 0) {
+      toast('Please enter valid data in all required fields (Rate and Quantity must be greater than 0)', 'error');
       return;
     }
     const payload = {
@@ -146,6 +147,8 @@ export default function PurchasePage() {
         await addPurchase(payload);
         toast(`${fuelType} purchase added successfully`, 'success');
         resetFormForNext(); // Stay open
+        // Return focus to first input
+        setTimeout(() => firstInputRef.current?.focus(), 100);
       }
     } catch (err: unknown) {
       const errorMessage = getErrorMessage(err);
@@ -645,7 +648,7 @@ export default function PurchasePage() {
 
       {showForm && (
         <Modal 
-          title={editingEntity ? `Edit ${fuelType} Purchase` : `Add ${fuelType} Purchase`} 
+          title={editingEntity ? 'Edit Purchase Entry' : 'Add Purchase Entry'} 
           onClose={closeForm}
           wide
         >
@@ -653,24 +656,44 @@ export default function PurchasePage() {
             {/* Header / Info Section */}
             <div className="bg-slate-50 dark:bg-dark-800/50 rounded-2xl p-4 mb-4 border border-slate-200 dark:border-dark-700/50">
               <div className="desktop-form-row">
-                <label className="desktop-form-label">Date *</label>
-                <div className="desktop-form-field">
-                  <input type="date" className="input !py-1.5" value={form.date} onChange={(e) => set('date', e.target.value)} required />
+                <label className="desktop-form-label font-black text-slate-700">Fuel Type *</label>
+                <div className="desktop-form-field flex items-center gap-4">
+                  {(['HSD', 'PMG'] as FuelType[]).map(t => (
+                    <label key={t} className="flex items-center gap-2 cursor-pointer group">
+                      <input 
+                        type="radio" 
+                        name="fuelType" 
+                        checked={fuelType === t} 
+                        onChange={() => setFuelType(t)}
+                        className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                        required
+                      />
+                      <span className={cn("text-xs font-black uppercase tracking-widest transition-colors", fuelType === t ? "text-blue-600" : "text-slate-400 group-hover:text-slate-600")}>
+                        {t}
+                      </span>
+                    </label>
+                  ))}
                 </div>
               </div>
-              <div className="desktop-form-row">
+              <div className="desktop-form-row mt-3">
+                <label className="desktop-form-label">Date *</label>
+                <div className="desktop-form-field">
+                  <input ref={firstInputRef} type="date" className="input !py-1.5" value={form.date} onChange={(e) => set('date', e.target.value)} required />
+                </div>
+              </div>
+              <div className="desktop-form-row mt-3">
                 <label className="desktop-form-label">Invoice No</label>
                 <div className="desktop-form-field">
                   <input className="input !py-1.5" value={form.invoiceNo} onChange={(e) => set('invoiceNo', e.target.value)} placeholder="e.g. INV-202611" dir="auto" />
                 </div>
               </div>
-              <div className="desktop-form-row">
+              <div className="desktop-form-row mt-3">
                 <label className="desktop-form-label">Vehicle No</label>
                 <div className="desktop-form-field">
                   <input className="input !py-1.5" value={form.vehicleNo} onChange={(e) => set('vehicleNo', e.target.value)} placeholder="e.g. LHR-4567" dir="auto" />
                 </div>
               </div>
-              <div className="desktop-form-row">
+              <div className="desktop-form-row mt-3">
                 <label className="desktop-form-label">Description</label>
                 <div className="desktop-form-field">
                   <input className="input !py-1.5" value={form.description} onChange={(e) => set('description', e.target.value)} placeholder="Purchase order note" dir="auto" />

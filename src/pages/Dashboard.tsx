@@ -10,8 +10,12 @@ import {
 import PrintReportModal from '../components/modals/PrintReportModal';
 import { useStore } from '../store/useStore';
 import { useTheme } from '../contexts/ThemeContext';
-import { formatCurrency, today, cn, computeFuelStats } from '../lib/utils';
+import { formatCurrency, today, cn, computeFuelStats, startOfMonth } from '../lib/utils';
 import loginBg from '../assets/login-bg-whatsapp.jpeg';
+import { 
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  BarChart, Bar, Cell, PieChart, Pie, ComposedChart, Line, Legend
+} from 'recharts';
 
 // ─── Digital Clock ────────────────────────────────────────────────────────────
 function DigitalClock() {
@@ -243,10 +247,61 @@ export default function Dashboard() {
       pmgPurchasedQty: pmgTPQty,
       hsdPurchasedAmt: hsdTPAmt,
       pmgPurchasedAmt: pmgTPAmt,
-      hsdStockVal: Math.max(0, hsdStock) * hsdAvg,
-      pmgStockVal: Math.max(0, pmgStock) * pmgAvg,
+      hsdStockVal: hsdStock * hsdAvg,
+      pmgStockVal: pmgStock * pmgAvg,
     };
   }, [rawPurchases, rawSales, rawExpenses, settings.startDate, settings.baseRateHSD, settings.baseRatePMG, settings.plsOverrides, plsOverrides, filter, fromDate, toDate]);
+
+  // ─── Chart Data ─────────────────────────────────────────────────────────────
+  const chartData = useMemo(() => {
+    const days = 15;
+    const data = [];
+    
+    // We need average rates for accurate profit
+    const hsdAvg = dashboardStats.hsdAvg;
+    const pmgAvg = dashboardStats.pmgAvg;
+
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().split('T')[0];
+      
+      const hsdDayEntries = rawSales.filter(s => s.date === dateStr && s.type === 'HSD');
+      const pmgDayEntries = rawSales.filter(s => s.date === dateStr && s.type === 'PMG');
+      
+      const hsdSalesQty = hsdDayEntries.reduce((sum, s) => sum + (s.liters || 0), 0);
+      const hsdSalesAmt = hsdDayEntries.reduce((sum, s) => sum + (s.amount || 0), 0);
+      
+      const pmgSalesQty = pmgDayEntries.reduce((sum, p) => sum + (p.liters || 0), 0);
+      const pmgSalesAmt = pmgDayEntries.reduce((sum, p) => sum + (p.amount || 0), 0);
+
+      const hsdPurAmt = rawPurchases.filter(p => p.date === dateStr && p.type === 'HSD').reduce((sum, p) => sum + (p.totalAmount || 0), 0);
+      const pmgPurAmt = rawPurchases.filter(p => p.date === dateStr && p.type === 'PMG').reduce((sum, p) => sum + (p.totalAmount || 0), 0);
+
+      // Actual daily profit: Sales - (Qty Sold * Avg Purchase Rate)
+      const hsdProfit = hsdSalesAmt - (hsdSalesQty * hsdAvg);
+      const pmgProfit = pmgSalesAmt - (pmgSalesQty * pmgAvg);
+      
+      data.push({
+        name: d.toLocaleDateString('en-PK', { day: 'numeric', month: 'short' }),
+        hsdSales: hsdSalesAmt,
+        pmgSales: pmgSalesAmt,
+        hsdPur: hsdPurAmt,
+        pmgPur: pmgPurAmt,
+        hsdProfit: hsdProfit,
+        pmgProfit: pmgProfit,
+        Expenses: rawExpenses.filter(e => e.date === dateStr).reduce((sum, e) => sum + (e.amount || 0), 0)
+      });
+    }
+    return data;
+  }, [rawSales, rawPurchases, rawExpenses, dashboardStats.hsdAvg, dashboardStats.pmgAvg]);
+
+  const distributionData = [
+    { name: 'Assets', value: assetCategories.length, color: '#f59e0b' },
+    { name: 'Liabilities', value: liabilityCategories.length, color: '#f97316' },
+    { name: 'Customers', value: customers.length, color: '#ec4899' },
+    { name: 'Expenses', value: expenseCategories.length, color: '#ef4444' },
+  ];
 
 
   const fuelModules = [
@@ -354,7 +409,6 @@ export default function Dashboard() {
           </div>
         )}
       </div>
-
       <div className="flex md:grid md:grid-cols-2 lg:grid-cols-4 gap-4 overflow-x-auto no-scrollbar smart-scroll pb-2">
         {[
           { label: 'Total Sales',   value: `₨ ${formatCurrency(dashboardStats.totalSales)}`,   icon: TrendingUp,   color: 'text-emerald-600', bg: 'bg-emerald-500/10', border: 'border-emerald-600/20' },
@@ -388,7 +442,7 @@ export default function Dashboard() {
                   {idx < arr.length - 1 && (
                     <div className="absolute top-1 right-[-8px] md:right-[-12px] bottom-1 w-[1.5px] bg-slate-900 dark:bg-slate-100 opacity-20" />
                   )}
-                  <p className="text-[8px] md:text-[9px] font-black text-slate-400 uppercase tracking-widest truncate">{col.label}</p>
+                  <p className="text-[10px] md:text-[11px] font-black text-slate-600 dark:text-dark-300 uppercase tracking-[0.15em] mb-1 truncate">{col.label}</p>
                   <div className="flex items-baseline gap-1 relative">
                     <span className={cn("font-black tabular-nums tracking-tighter leading-none", col.highlight ? `text-xl md:text-2xl text-${f.color}-600` : 'text-lg md:text-xl text-slate-900 dark:text-white')}>{col.qty.toLocaleString()}</span>
                     <span className="text-[8px] md:text-[9px] font-black text-slate-400 uppercase">L</span>
@@ -402,7 +456,7 @@ export default function Dashboard() {
                       <span className="absolute -top-3 left-0 text-[6px] font-black uppercase bg-amber-500/10 text-amber-600 px-1 py-0.5 rounded border border-amber-500/20">Edited</span>
                     )}
                   </div>
-                  <p className="text-[10px] md:text-[11px] font-bold text-slate-500 dark:text-dark-400 tracking-tight tabular-nums truncate">
+                  <p className="text-[10px] md:text-[11px] font-black text-slate-600 dark:text-dark-300 tracking-tight tabular-nums truncate">
                     ₨ {formatCurrency(col.amt)}
                   </p>
                 </div>
@@ -412,7 +466,91 @@ export default function Dashboard() {
         ))}
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 md:gap-4 px-2">
+      {/* Modern Graphs Section (Detailed Trends) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* HSD Analysis */}
+        <div className="glass rounded-[2rem] p-6 border border-slate-200 dark:border-dark-700/50 shadow-xl overflow-hidden min-h-[350px] flex flex-col">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-sm font-black uppercase tracking-widest text-amber-600">HSD Trend Analysis</h3>
+              <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Purchase, Sale & Profit</p>
+            </div>
+            <div className="flex items-center gap-3">
+               <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-amber-500" /><span className="text-[8px] font-black uppercase text-slate-500">Pur</span></div>
+               <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-emerald-500" /><span className="text-[8px] font-black uppercase text-slate-500">Sale</span></div>
+               <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-blue-500" /><span className="text-[8px] font-black uppercase text-slate-500">Profit</span></div>
+            </div>
+          </div>
+          <div className="flex-1 min-h-0">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" opacity={0.5} />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: 900, fill: '#94a3b8' }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: 900, fill: '#94a3b8' }} />
+                <Tooltip 
+                  formatter={(value: any) => `₨ ${formatCurrency(value)}`}
+                  contentStyle={{ backgroundColor: 'white', borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)', fontSize: '10px', fontWeight: '900' }} 
+                />
+                <Bar dataKey="hsdPur" name="Purchase" fill="#f59e0b" radius={[4, 4, 0, 0]} barSize={20} />
+                <Bar dataKey="hsdSales" name="Sale" fill="#10b981" radius={[4, 4, 0, 0]} barSize={20} />
+                <Line type="monotone" dataKey="hsdProfit" name="Daily Profit" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4, fill: '#3b82f6' }} />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* PMG Analysis */}
+        <div className="glass rounded-[2rem] p-6 border border-slate-200 dark:border-dark-700/50 shadow-xl overflow-hidden min-h-[350px] flex flex-col">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-sm font-black uppercase tracking-widest text-emerald-600">PMG Trend Analysis</h3>
+              <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Purchase, Sale & Profit</p>
+            </div>
+            <div className="flex items-center gap-3">
+               <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-amber-500" /><span className="text-[8px] font-black uppercase text-slate-500">Pur</span></div>
+               <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-emerald-500" /><span className="text-[8px] font-black uppercase text-slate-500">Sale</span></div>
+               <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-blue-500" /><span className="text-[8px] font-black uppercase text-slate-500">Profit</span></div>
+            </div>
+          </div>
+          <div className="flex-1 min-h-0">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" opacity={0.5} />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: 900, fill: '#94a3b8' }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: 900, fill: '#94a3b8' }} />
+                <Tooltip 
+                  formatter={(value: any) => `₨ ${formatCurrency(value)}`}
+                  contentStyle={{ backgroundColor: 'white', borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)', fontSize: '10px', fontWeight: '900' }} 
+                />
+                <Bar dataKey="pmgPur" name="Purchase" fill="#f59e0b" radius={[4, 4, 0, 0]} barSize={20} />
+                <Bar dataKey="pmgSales" name="Sale" fill="#10b981" radius={[4, 4, 0, 0]} barSize={20} />
+                <Line type="monotone" dataKey="pmgProfit" name="Daily Profit" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4, fill: '#3b82f6' }} />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Expenses & Global Stats */}
+        <div className="lg:col-span-2 glass rounded-[2rem] p-6 border border-slate-200 dark:border-dark-700/50 shadow-xl overflow-hidden min-h-[250px] flex flex-col">
+           <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-black uppercase tracking-widest text-red-600">Expense Trends</h3>
+              <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-red-500" /><span className="text-[8px] font-black uppercase text-slate-500">Daily Expenses</span></div>
+           </div>
+           <div className="flex-1 min-h-0">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" opacity={0.5} />
+                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: 900, fill: '#94a3b8' }} />
+                   <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: 900, fill: '#94a3b8' }} />
+                   <Tooltip contentStyle={{ backgroundColor: 'white', borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)', fontSize: '10px', fontWeight: '900' }} />
+                   <Bar dataKey="Expenses" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+           </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 md:gap-4 px-2 mt-8">
         {modules.map(({ label, path, icon: Icon, color, bg, desc, fkey }) => (
           <Link key={path} to={path} className={cn('glass rounded-2xl p-3 md:p-4 border hover:scale-[1.03] transition-all duration-300 group shadow-md relative min-w-0', bg)}>
             <span className="absolute top-2 right-2 text-[6px] md:text-[7px] font-black text-slate-300 dark:text-dark-600 bg-white/60 dark:bg-black/20 px-1 py-0.5 rounded font-mono hidden md:block">{fkey}</span>

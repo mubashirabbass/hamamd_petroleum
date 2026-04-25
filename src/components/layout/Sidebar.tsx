@@ -50,7 +50,7 @@ export default function Sidebar({ className = '', isCollapsed = false, onNavigat
   return (
     <aside className={cn(
       "relative h-screen flex-shrink-0 flex flex-col transition-all duration-300 border-r border-slate-200 dark:border-dark-800 bg-white dark:bg-dark-900 shadow-2xl",
-      isCollapsed ? "w-14" : "w-52",
+      isCollapsed ? "w-14" : "w-64",
       className
     )}>
       <div className="flex-1 flex flex-col h-full overflow-hidden">
@@ -61,10 +61,10 @@ export default function Sidebar({ className = '', isCollapsed = false, onNavigat
           </div>
           {!isCollapsed && (
             <div className="flex-1 min-w-0">
-              <p className="text-slate-900 dark:text-white font-black text-sm leading-tight truncate">
+              <p className="text-slate-900 dark:text-white font-bold text-sm leading-tight">
                 {settings.softwareName || 'HR Filling Station'}
               </p>
-              <p className="text-slate-400 dark:text-dark-500 text-[10px] font-bold uppercase tracking-widest">Business Suite</p>
+              <p className="text-slate-400 dark:text-dark-500 text-[9px] font-bold uppercase tracking-widest">Business Suite</p>
             </div>
           )}
           {/* Action Buttons in Header */}
@@ -104,7 +104,7 @@ export default function Sidebar({ className = '', isCollapsed = false, onNavigat
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 py-2 px-2 space-y-0.5 overflow-y-auto no-scrollbar">
+        <nav className="flex-1 pt-12 pb-32 px-2 space-y-1.5 overflow-y-auto no-scrollbar">
           {navItems.map(item => {
             const { label, path, icon: Icon, children } = item as any;
             const active = path === '/' ? location.pathname === '/' : location.pathname.startsWith(path);
@@ -119,7 +119,7 @@ export default function Sidebar({ className = '', isCollapsed = false, onNavigat
                     if (onNavigate) onNavigate();
                   }}
                   className={cn(
-                    'flex items-center rounded-xl text-[13px] font-black transition-all duration-300 relative group mb-0.5',
+                    'flex items-center rounded-xl text-[13px] font-semibold transition-all duration-300 relative group mb-0.5',
                     isCollapsed ? "justify-center px-0 py-2" : "px-3 py-2 gap-2.5",
                     active 
                       ? 'bg-primary-600 text-white shadow-[0_3px_10px_rgba(37,99,235,0.2)]' 
@@ -146,7 +146,7 @@ export default function Sidebar({ className = '', isCollapsed = false, onNavigat
                             if (onNavigate) onNavigate();
                           }}
                           className={cn(
-                            'flex items-center gap-3 px-4 py-2 rounded-lg text-[12px] font-black transition-all duration-200',
+                            'flex items-center gap-3 px-4 py-2 rounded-lg text-[12px] font-semibold transition-all duration-200',
                             childActive
                               ? 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/10'
                               : 'text-slate-400 dark:text-dark-500 hover:text-slate-600 dark:hover:text-dark-300'

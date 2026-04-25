@@ -110,6 +110,13 @@ export function handleFormKeyDown(e: React.KeyboardEvent) {
       moveFocus(-1);
     }
   }
+
+  // F10 to submit form
+  if (e.key === 'F10') {
+    e.preventDefault();
+    e.stopPropagation();
+    form.requestSubmit();
+  }
 }
 
 // ─── Shared PLS Computation ────────────────────────────────────────────────────
