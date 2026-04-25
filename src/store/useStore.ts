@@ -49,8 +49,6 @@ export interface Category {
   name: string;
 }
 
-
-
 export interface ExpenseEntry {
   id:         string;
   categoryId: string;
@@ -165,8 +163,6 @@ interface AppState {
   updateSale: (id: string, s: Partial<Sale>)   => Promise<void>;
   deleteSale: (id: string)                      => Promise<void>;
 
-
-
   // ─ Expense ────────────────────────────────────────────────────────────────
   expenseCategories:     Category[];
   expenseEntries:        ExpenseEntry[];
@@ -264,6 +260,14 @@ export const useStore = create<AppState>()(
         invoke<string>('get_machine_id').catch(() => 'UNKNOWN'),
         invoke<string>('get_hwid_activation').catch(() => '')
       ]);
+
+      console.log('[DB] Loaded Data Counts:', {
+        purchases: data.purchases?.length,
+        sales: data.sales?.length,
+        customers: data.customers?.length,
+        expenses: data.expenseEntries?.length,
+        startDate: data.settings['startDate']
+      });
 
       set({
         purchases:           data.purchases,
@@ -368,11 +372,11 @@ export const useStore = create<AppState>()(
       const db = await getDB();
       const current = get().purchases.find(x => x.id === id)!;
       const updated = { ...current, ...data };
-      await db.execute(
+      set(s => ({ purchases: s.purchases.map(x => x.id === id ? updated : x) }));
+      getDB().then(db => db.execute(
         `UPDATE purchases SET type=?,date=?,description=?,invoice_no=?,vehicle_no=?,details=?,rate=?,quantity=?,carriage=?,amount=?,total_amount=? WHERE id=?`,
         [updated.type, updated.date, updated.description || '', updated.invoiceNo || '', updated.vehicleNo || '', updated.details, updated.rate, updated.quantity, updated.carriage, updated.amount, updated.totalAmount, id]
-      );
-      set(s => ({ purchases: s.purchases.map(x => x.id === id ? updated : x) }));
+      ));
     } catch (err) {
       console.error('[Store] updatePurchase failed:', err);
       throw err;
@@ -380,9 +384,8 @@ export const useStore = create<AppState>()(
   },
 
   deletePurchase: async (id) => {
-    const db = await getDB();
-    await db.execute('DELETE FROM purchases WHERE id=?', [id]);
     set(s => ({ purchases: s.purchases.filter(x => x.id !== id) }));
+    getDB().then(db => db.execute('DELETE FROM purchases WHERE id=?', [id]));
   },
 
   // ── Sales ────────────────────────────────────────────────────────────────────
@@ -417,11 +420,11 @@ export const useStore = create<AppState>()(
       const db = await getDB();
       const current = get().sales.find(x => x.id === id)!;
       const updated = { ...current, ...data };
-      await db.execute(
+      set(s => ({ sales: s.sales.map(x => x.id === id ? updated : x) }));
+      getDB().then(db => db.execute(
         `UPDATE sales SET type=?,date=?,description=?,quantity=?,rate=?,amount=? WHERE id=?`,
         [updated.type, updated.date, updated.description || '', updated.quantity, updated.rate, updated.amount, id]
-      );
-      set(s => ({ sales: s.sales.map(x => x.id === id ? updated : x) }));
+      ));
     } catch (err) {
       console.error('[Store] updateSale failed:', err);
       throw err;
@@ -429,12 +432,9 @@ export const useStore = create<AppState>()(
   },
 
   deleteSale: async (id) => {
-    const db = await getDB();
-    await db.execute('DELETE FROM sales WHERE id=?', [id]);
     set(s => ({ sales: s.sales.filter(x => x.id !== id) }));
+    getDB().then(db => db.execute('DELETE FROM sales WHERE id=?', [id]));
   },
-
-
 
   // ── Expense ──────────────────────────────────────────────────────────────────
   expenseCategories: [],
@@ -453,14 +453,14 @@ export const useStore = create<AppState>()(
     set(s => ({ expenseCategories: s.expenseCategories.map(c => c.id === id ? { ...c, name } : c) }));
   },
   deleteExpenseCategory: async (id) => {
-    await runInTransaction(async (db) => {
-      await db.execute('DELETE FROM expense_categories WHERE id=?', [id]);
-      await db.execute('DELETE FROM expense_entries WHERE category_id=?', [id]);
-    });
     set(s => ({
       expenseCategories: s.expenseCategories.filter(c => c.id !== id),
       expenseEntries: s.expenseEntries.filter(e => e.categoryId !== id),
     }));
+    await runInTransaction(async (db) => {
+      await db.execute('DELETE FROM expense_categories WHERE id=?', [id]);
+      await db.execute('DELETE FROM expense_entries WHERE category_id=?', [id]);
+    });
   },
   addExpenseEntry: async (e) => {
     let no = 0;
@@ -485,16 +485,15 @@ export const useStore = create<AppState>()(
     const db = await getDB();
     const current = get().expenseEntries.find(x => x.id === id)!;
     const updated = { ...current, ...data };
-    await db.execute(
+    set(s => ({ expenseEntries: s.expenseEntries.map(x => x.id === id ? updated : x) }));
+    getDB().then(db => db.execute(
       `UPDATE expense_entries SET date=?,details=?,amount=? WHERE id=?`,
       [updated.date, updated.details, updated.amount, id]
-    );
-    set(s => ({ expenseEntries: s.expenseEntries.map(x => x.id === id ? updated : x) }));
+    ));
   },
   deleteExpenseEntry: async (id) => {
-    const db = await getDB();
-    await db.execute('DELETE FROM expense_entries WHERE id=?', [id]);
     set(s => ({ expenseEntries: s.expenseEntries.filter(x => x.id !== id) }));
+    getDB().then(db => db.execute('DELETE FROM expense_entries WHERE id=?', [id]));
   },
 
   // ── Asset ────────────────────────────────────────────────────────────────────
@@ -515,14 +514,14 @@ export const useStore = create<AppState>()(
     set(s => ({ assetCategories: s.assetCategories.map(c => c.id === id ? { ...c, name } : c) }));
   },
   deleteAssetCategory: async (id) => {
-    await runInTransaction(async (db) => {
-      await db.execute('DELETE FROM asset_categories WHERE id=?', [id]);
-      await db.execute('DELETE FROM asset_entries WHERE category_id=?', [id]);
-    });
     set(s => ({
       assetCategories: s.assetCategories.filter(c => c.id !== id),
       assetEntries: s.assetEntries.filter(e => e.categoryId !== id),
     }));
+    await runInTransaction(async (db) => {
+      await db.execute('DELETE FROM asset_categories WHERE id=?', [id]);
+      await db.execute('DELETE FROM asset_entries WHERE category_id=?', [id]);
+    });
   },
   addAssetEntry: async (e) => {
     let no = 0;
@@ -547,16 +546,15 @@ export const useStore = create<AppState>()(
     const db = await getDB();
     const current = get().assetEntries.find(x => x.id === id)!;
     const updated = { ...current, ...data };
-    await db.execute(
+    set(s => ({ assetEntries: s.assetEntries.map(x => x.id === id ? updated : x) }));
+    getDB().then(db => db.execute(
       `UPDATE asset_entries SET date=?,description=?,debit=?,credit=?,balance=? WHERE id=?`,
       [updated.date, updated.description, updated.debit, updated.credit, updated.balance, id]
-    );
-    set(s => ({ assetEntries: s.assetEntries.map(x => x.id === id ? updated : x) }));
+    ));
   },
   deleteAssetEntry: async (id) => {
-    const db = await getDB();
-    await db.execute('DELETE FROM asset_entries WHERE id=?', [id]);
     set(s => ({ assetEntries: s.assetEntries.filter(x => x.id !== id) }));
+    getDB().then(db => db.execute('DELETE FROM asset_entries WHERE id=?', [id]));
   },
 
   // ── Liability ────────────────────────────────────────────────────────────────
@@ -576,14 +574,14 @@ export const useStore = create<AppState>()(
     set(s => ({ liabilityCategories: s.liabilityCategories.map(c => c.id === id ? { ...c, name } : c) }));
   },
   deleteLiabilityCategory: async (id) => {
-    await runInTransaction(async (db) => {
-      await db.execute('DELETE FROM liability_categories WHERE id=?', [id]);
-      await db.execute('DELETE FROM liability_entries WHERE category_id=?', [id]);
-    });
     set(s => ({
       liabilityCategories: s.liabilityCategories.filter(c => c.id !== id),
       liabilityEntries: s.liabilityEntries.filter(e => e.categoryId !== id),
     }));
+    await runInTransaction(async (db) => {
+      await db.execute('DELETE FROM liability_categories WHERE id=?', [id]);
+      await db.execute('DELETE FROM liability_entries WHERE category_id=?', [id]);
+    });
   },
   addLiabilityEntry: async (e) => {
     let no = 0;
@@ -608,16 +606,15 @@ export const useStore = create<AppState>()(
     const db = await getDB();
     const current = get().liabilityEntries.find(x => x.id === id)!;
     const updated = { ...current, ...data };
-    await db.execute(
+    set(s => ({ liabilityEntries: s.liabilityEntries.map(x => x.id === id ? updated : x) }));
+    getDB().then(db => db.execute(
       `UPDATE liability_entries SET date=?,description=?,debit=?,credit=?,balance=? WHERE id=?`,
       [updated.date, updated.description, updated.debit, updated.credit, updated.balance, id]
-    );
-    set(s => ({ liabilityEntries: s.liabilityEntries.map(x => x.id === id ? updated : x) }));
+    ));
   },
   deleteLiabilityEntry: async (id) => {
-    const db = await getDB();
-    await db.execute('DELETE FROM liability_entries WHERE id=?', [id]);
     set(s => ({ liabilityEntries: s.liabilityEntries.filter(x => x.id !== id) }));
+    getDB().then(db => db.execute('DELETE FROM liability_entries WHERE id=?', [id]));
   },
 
   // ── Customers ────────────────────────────────────────────────────────────────
@@ -639,14 +636,14 @@ export const useStore = create<AppState>()(
     set(s => ({ customers: s.customers.map(c => c.id === id ? updated : c) }));
   },
   deleteCustomer: async (id) => {
-    await runInTransaction(async (db) => {
-      await db.execute('DELETE FROM customers WHERE id=?', [id]);
-      await db.execute('DELETE FROM customer_entries WHERE customer_id=?', [id]);
-    });
     set(s => ({
       customers: s.customers.filter(c => c.id !== id),
       customerEntries: s.customerEntries.filter(e => e.customerId !== id),
     }));
+    await runInTransaction(async (db) => {
+      await db.execute('DELETE FROM customers WHERE id=?', [id]);
+      await db.execute('DELETE FROM customer_entries WHERE customer_id=?', [id]);
+    });
   },
   addCustomerEntry: async (e) => {
     let no = 0;
@@ -671,16 +668,15 @@ export const useStore = create<AppState>()(
     const db = await getDB();
     const current = get().customerEntries.find(x => x.id === id)!;
     const updated = { ...current, ...data };
-    await db.execute(
+    set(s => ({ customerEntries: s.customerEntries.map(x => x.id === id ? updated : x) }));
+    getDB().then(db => db.execute(
       `UPDATE customer_entries SET date=?,description=?,debit=?,credit=?,balance=? WHERE id=?`,
       [updated.date, updated.description, updated.debit, updated.credit, updated.balance, id]
-    );
-    set(s => ({ customerEntries: s.customerEntries.map(x => x.id === id ? updated : x) }));
+    ));
   },
   deleteCustomerEntry: async (id) => {
-    const db = await getDB();
-    await db.execute('DELETE FROM customer_entries WHERE id=?', [id]);
     set(s => ({ customerEntries: s.customerEntries.filter(x => x.id !== id) }));
+    getDB().then(db => db.execute('DELETE FROM customer_entries WHERE id=?', [id]));
   },
 
   // ── Capital ────────────────────────────────────────────────────────────────
@@ -701,14 +697,14 @@ export const useStore = create<AppState>()(
     set(s => ({ capitalCategories: s.capitalCategories.map(c => c.id === id ? { ...c, name } : c) }));
   },
   deleteCapitalCategory: async (id) => {
-    await runInTransaction(async (db) => {
-      await db.execute('DELETE FROM capital_categories WHERE id=?', [id]);
-      await db.execute('DELETE FROM capital_entries WHERE category_id=?', [id]);
-    });
     set(s => ({
       capitalCategories: s.capitalCategories.filter(c => c.id !== id),
       capitalEntries: s.capitalEntries.filter(e => e.categoryId !== id),
     }));
+    await runInTransaction(async (db) => {
+      await db.execute('DELETE FROM capital_categories WHERE id=?', [id]);
+      await db.execute('DELETE FROM capital_entries WHERE category_id=?', [id]);
+    });
   },
   addCapitalEntry: async (e) => {
     let no = 0;
@@ -733,16 +729,15 @@ export const useStore = create<AppState>()(
     const db = await getDB();
     const current = get().capitalEntries.find(x => x.id === id)!;
     const updated = { ...current, ...data };
-    await db.execute(
+    set(s => ({ capitalEntries: s.capitalEntries.map(x => x.id === id ? updated : x) }));
+    getDB().then(db => db.execute(
       `UPDATE capital_entries SET date=?,description=?,debit=?,credit=?,balance=? WHERE id=?`,
       [updated.date, updated.description, updated.debit, updated.credit, updated.balance, id]
-    );
-    set(s => ({ capitalEntries: s.capitalEntries.map(x => x.id === id ? updated : x) }));
+    ));
   },
   deleteCapitalEntry: async (id) => {
-    const db = await getDB();
-    await db.execute('DELETE FROM capital_entries WHERE id=?', [id]);
     set(s => ({ capitalEntries: s.capitalEntries.filter(x => x.id !== id) }));
+    getDB().then(db => db.execute('DELETE FROM capital_entries WHERE id=?', [id]));
   },
 
   // ── Settings & Users ─────────────────────────────────────────────────────────
@@ -858,8 +853,11 @@ export const useStore = create<AppState>()(
       settings: get().settings,
     });
   },
-}), {
-  name: 'ebs-auth-storage',
-  storage: createJSONStorage(() => localStorage),
-  partialize: (state) => ({}),
-}));
+    }),
+    {
+      name: 'ebs-auth-storage',
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({ currentUser: state.currentUser }),
+    }
+  )
+);

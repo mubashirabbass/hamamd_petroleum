@@ -8,6 +8,7 @@ import SearchBar from '../components/ui/SearchBar';
 import Pagination from '../components/ui/Pagination';
 import Modal from '../components/ui/Modal';
 import TransactionReceiptModal from '../components/modals/TransactionReceiptModal';
+import { ask } from '@tauri-apps/plugin-dialog';
 import PrintReportModal from '../components/modals/PrintReportModal';
 
 export default function AssetPage() {
@@ -151,6 +152,12 @@ export default function AssetPage() {
     setIsSaving(true);
     try {
       if (editingEntity) {
+        const confirmed = await ask('Save changes to this asset entry?', {
+          title: 'Confirm Update',
+          kind: 'warning'
+        });
+        if (!confirmed) { setIsSaving(false); return; }
+
         await updateAssetEntry(editingEntity.id, payload);
         toast('Entry updated', 'success');
         closeForm();
@@ -212,13 +219,21 @@ export default function AssetPage() {
     setEditForm({ name: cat.name });
   };
 
-  const handleSaveEdit = (id: string) => {
+  const handleSaveEdit = async (id: string) => {
     if (!editForm.name.trim()) return;
+
     const normalized = editForm.name.trim().toLowerCase();
     if (assetCategories.some(c => c.id !== id && c.name.toLowerCase() === normalized)) {
-      toast('Another asset account already has this name!', 'error');
+      toast('Another asset category already has this name!', 'error');
       return;
     }
+
+    const confirmed = await ask(`Update account name to: "${editForm.name.trim()}"?`, {
+      title: 'Confirm Update',
+      kind: 'warning'
+    });
+    if (!confirmed) return;
+
     updateAssetCategory(id, editForm.name.trim());
     setEditingId(null);
     toast('Account details updated', 'success');
@@ -478,7 +493,17 @@ export default function AssetPage() {
                                      <button onClick={() => setViewingEntity(e)} className="flex items-center gap-1.5 px-2 py-0.5 text-[9px] font-black uppercase tracking-tighter text-primary-600 dark:text-primary-400 bg-primary-50/50 dark:bg-primary-900/20 border border-primary-200/50 dark:border-primary-800/30 rounded hover:bg-primary-100 transition-all font-serif" title="Quick Print"><Printer className="w-3 h-3" /><span>PRINT</span></button>
                                      <button onClick={() => setViewingEntity(e)} className="p-1 text-blue-600 hover:bg-blue-50 rounded" title="View"><Eye className="w-3.5 h-3.5" /></button>
                                      <button onClick={() => handleEdit(e)} className="p-1 text-emerald-600 hover:bg-emerald-50 rounded" title="Edit"><Edit2 className="w-3.5 h-3.5" /></button>
-                                     <button onClick={() => { if(confirm('Delete?')) deleteAssetEntry(e.id); }} className="p-1 text-red-600 hover:bg-red-50 rounded" title="Delete"><Trash2 className="w-3.5 h-3.5" /></button>
+                                     <button 
+                                       onClick={async () => { 
+                                         if (await ask('Delete this asset entry?', { title: 'Confirm Deletion', kind: 'warning' })) { 
+                                           deleteAssetEntry(e.id); 
+                                         } 
+                                       }} 
+                                       className="p-1 text-red-600 hover:bg-red-50 rounded" 
+                                       title="Delete"
+                                     >
+                                       <Trash2 className="w-3.5 h-3.5" />
+                                     </button>
                                    </div>
                                  </td>
                                </tr>
@@ -560,7 +585,16 @@ export default function AssetPage() {
                         <span className="font-bold text-slate-700 dark:text-slate-200 uppercase tracking-tight">{cat.name}</span>
                         <div className="flex items-center gap-2">
                           <button onClick={() => handleStartEdit(cat)} className="p-2 text-primary-600 hover:bg-primary-50 rounded-lg"><Edit2 className="w-4 h-4" /></button>
-                          <button onClick={() => { if(confirm('Delete account and all its entries?')) deleteAssetCategory(cat.id); }} className="p-2 text-red-600 hover:bg-red-50 rounded-lg"><Trash2 className="w-4 h-4" /></button>
+                          <button 
+                            onClick={async () => { 
+                              if (await ask('Delete this account and ALL its entries?', { title: 'DANGER: Confirm Deletion', kind: 'error' })) { 
+                                deleteAssetCategory(cat.id); 
+                              } 
+                            }} 
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         </div>
                       </>
                     )}

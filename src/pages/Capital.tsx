@@ -8,6 +8,7 @@ import SearchBar from '../components/ui/SearchBar';
 import Pagination from '../components/ui/Pagination';
 import Modal from '../components/ui/Modal';
 import TransactionReceiptModal from '../components/modals/TransactionReceiptModal';
+import { ask } from '@tauri-apps/plugin-dialog';
 import PrintReportModal from '../components/modals/PrintReportModal';
 
 export default function CapitalPage() {
@@ -151,6 +152,12 @@ export default function CapitalPage() {
     setIsSaving(true);
     try {
       if (editingEntity) {
+        const confirmed = await ask('Save changes to this capital transaction?', {
+          title: 'Confirm Update',
+          kind: 'warning'
+        });
+        if (!confirmed) { setIsSaving(false); return; }
+
         await updateCapitalEntry(editingEntity.id, payload);
         toast('Entry updated', 'success');
         closeForm();
@@ -212,13 +219,21 @@ export default function CapitalPage() {
     setEditForm({ name: cat.name });
   };
 
-  const handleSaveEdit = (id: string) => {
+  const handleSaveEdit = async (id: string) => {
     if (!editForm.name.trim()) return;
+
     const normalized = editForm.name.trim().toLowerCase();
     if (capitalCategories.some(c => c.id !== id && c.name.toLowerCase() === normalized)) {
       toast('Another capital account already has this name!', 'error');
       return;
     }
+
+    const confirmed = await ask(`Update account name to: "${editForm.name.trim()}"?`, {
+      title: 'Confirm Update',
+      kind: 'warning'
+    });
+    if (!confirmed) return;
+
     updateCapitalCategory(id, editForm.name.trim());
     setEditingId(null);
     toast('Account details updated', 'success');
@@ -604,7 +619,15 @@ export default function CapitalPage() {
                                       <button onClick={() => handleEdit(e)} className="p-1 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded transition-colors">
                                         <Edit2 className="w-3.5 h-3.5" />
                                       </button>
-                                      <button onClick={() => { if (confirm('Delete entry?')) { deleteCapitalEntry(e.id); toast('Entry deleted', 'warning'); } }} className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors">
+                                      <button 
+                                        onClick={async () => { 
+                                          if (await ask('Are you sure you want to delete this entry?', { title: 'Confirm Deletion', kind: 'warning' })) { 
+                                            deleteCapitalEntry(e.id); 
+                                            toast('Entry deleted', 'warning'); 
+                                          } 
+                                        }} 
+                                        className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                      >
                                         <Trash2 className="w-3.5 h-3.5" />
                                       </button>
                                     </>
@@ -747,7 +770,16 @@ export default function CapitalPage() {
                         <td className="table-cell">
                           <div className="flex items-center justify-center gap-2">
                             <button onClick={() => handleStartEdit(cat)} className="p-2 text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-xl transition-all"><Edit2 className="w-4 h-4" /></button>
-                            <button onClick={() => { if(confirm('Delete account and all its entries?')) deleteCapitalCategory(cat.id); }} className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all"><Trash2 className="w-4 h-4" /></button>
+                            <button 
+                              onClick={async () => { 
+                                if (await ask('Delete this account and ALL its history? This action cannot be undone.', { title: 'DANGER: Confirm Deletion', kind: 'error' })) { 
+                                  deleteCapitalCategory(cat.id); 
+                                } 
+                              }} 
+                              className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
                           </div>
                         </td>
                       </tr>

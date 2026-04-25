@@ -9,6 +9,7 @@ import Pagination from '../components/ui/Pagination';
 import Modal from '../components/ui/Modal';
 import TransactionReceiptModal from '../components/modals/TransactionReceiptModal';
 import PrintReportModal from '../components/modals/PrintReportModal';
+import { ask } from '@tauri-apps/plugin-dialog';
 
 // const PER_PAGE = 40; // Replaced by state
 
@@ -152,6 +153,12 @@ export default function LiabilityPage() {
     setIsSaving(true);
     try {
       if (editingEntity) {
+        const confirmed = await ask('Save changes to this liability entry?', {
+          title: 'Confirm Update',
+          kind: 'warning'
+        });
+        if (!confirmed) { setIsSaving(false); return; }
+
         await updateLiabilityEntry(editingEntity.id, payload);
         toast('Entry updated', 'success');
         closeForm(); // Close after edit
@@ -217,7 +224,7 @@ export default function LiabilityPage() {
     setEditForm({ name: cat.name });
   };
 
-  const handleSaveEdit = (id: string) => {
+  const handleSaveEdit = async (id: string) => {
     if (!editForm.name.trim()) return;
 
     const normalized = editForm.name.trim().toLowerCase();
@@ -225,6 +232,12 @@ export default function LiabilityPage() {
       toast('Another liability account already has this name!', 'error');
       return;
     }
+
+    const confirmed = await ask(`Update account name to: "${editForm.name.trim()}"?`, {
+      title: 'Confirm Update',
+      kind: 'warning'
+    });
+    if (!confirmed) return;
 
     updateLiabilityCategory(id, editForm.name.trim());
     setEditingId(null);
@@ -704,7 +717,15 @@ export default function LiabilityPage() {
                                       <button onClick={() => handleEdit(e)} className="p-1 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded transition-colors">
                                         <Edit2 className="w-3.5 h-3.5" />
                                       </button>
-                                      <button onClick={() => { if (confirm('Delete entry?')) { deleteLiabilityEntry(e.id); toast('Entry deleted', 'warning'); } }} className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors">
+                                      <button 
+                                        onClick={async () => { 
+                                          if (await ask('Are you sure you want to delete this entry?', { title: 'Confirm Deletion', kind: 'warning' })) { 
+                                            deleteLiabilityEntry(e.id); 
+                                            toast('Entry deleted', 'warning'); 
+                                          } 
+                                        }} 
+                                        className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                      >
                                         <Trash2 className="w-3.5 h-3.5" />
                                       </button>
                                     </>
@@ -863,7 +884,12 @@ export default function LiabilityPage() {
                                 <button onClick={() => handleStartEdit(c)} className="p-2 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-xl"><Edit2 className="w-4 h-4" /></button>
                                 {currentUser?.role === 'Admin' && (
                                   <button
-                                    onClick={(e) => { e.stopPropagation(); if (confirm('Delete account and all history?')) deleteLiabilityCategory(c.id); }}
+                                    onClick={async (ev) => { 
+                                      ev.stopPropagation(); 
+                                      if (await ask('Delete this account and ALL its history? This action cannot be undone.', { title: 'DANGER: Confirm Deletion', kind: 'error' })) { 
+                                        deleteLiabilityCategory(c.id); 
+                                      } 
+                                    }}
                                     className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl"
                                   >
                                     <Trash2 className="w-4 h-4" />

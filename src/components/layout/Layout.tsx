@@ -102,20 +102,18 @@ export default function Layout() {
           </button>
         </div>
         <div className={cn("h-full w-full", isTransactionPage ? "p-0" : "p-3 md:p-6")}>
-          {/* Keep-Alive View Container */}
-          <div style={{ display: isPath('/') ? 'block' : 'none' }} className="h-full"><Dashboard /></div>
-          <div style={{ display: isPath('/purchase') ? 'block' : 'none' }} className="h-full"><Purchase /></div>
-          <div style={{ display: isPath('/sale') ? 'block' : 'none' }} className="h-full"><Sale /></div>
-
-          <div style={{ display: isPath('/expense') ? 'block' : 'none' }} className="h-full"><Expense /></div>
-          <div style={{ display: isPath('/asset') ? 'block' : 'none' }} className="h-full"><Asset /></div>
-          <div style={{ display: isPath('/liability') ? 'block' : 'none' }} className="h-full"><Liability /></div>
-          <div style={{ display: isStock ? 'block' : 'none' }} className="h-full"><Stock /></div>
-          <div style={{ display: isPath('/customer') ? 'block' : 'none' }} className="h-full"><Customer /></div>
-          <div style={{ display: isPath('/capital') ? 'block' : 'none' }} className="h-full"><Capital /></div>
-          <div style={{ display: isPath('/pls') ? 'block' : 'none' }} className="h-full"><PLS /></div>
-          <div style={{ display: isPath('/balancesheet') ? 'block' : 'none' }} className="h-full"><BalanceSheet /></div>
-          <div style={{ display: isPath('/settings') ? 'block' : 'none' }} className="h-full"><Settings /></div>
+          {isPath('/') && <Dashboard />}
+          {isPath('/purchase') && <Purchase />}
+          {isPath('/sale') && <Sale />}
+          {isPath('/expense') && <Expense />}
+          {isPath('/asset') && <Asset />}
+          {isPath('/liability') && <Liability />}
+          {isStock && <Stock />}
+          {isPath('/customer') && <Customer />}
+          {isPath('/capital') && <Capital />}
+          {isPath('/pls') && <PLS />}
+          {isPath('/balancesheet') && <BalanceSheet />}
+          {isPath('/settings') && <Settings />}
         </div>
 
         {/* Mobile Bottom Navigation */}

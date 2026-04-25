@@ -10,12 +10,13 @@ import { useToast } from '../components/ui/Toast';
 import SearchBar from '../components/ui/SearchBar';
 import Pagination from '../components/ui/Pagination';
 import Modal from '../components/ui/Modal';
+import { ask } from '@tauri-apps/plugin-dialog';
 import TransactionReceiptModal from '../components/modals/TransactionReceiptModal';
 import PrintReportModal from '../components/modals/PrintReportModal';
 import type { FuelType } from '../store/useStore';
 
 export default function SalePage() {
-  const { sales, purchases, addSale, deleteSale, settings, currentUser } = useStore();
+  const { sales, purchases, addSale, updateSale, deleteSale, settings, currentUser } = useStore();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
 
@@ -180,8 +181,14 @@ export default function SalePage() {
     setIsSaving(true);
     try {
       if (editingEntity) {
-        await useStore.getState().updateSale(editingEntity.id, payload);
-        toast('Sale updated successfully', 'success');
+        const confirmed = await ask('Save changes to this sale entry?', {
+          title: 'Confirm Update',
+          kind: 'warning'
+        });
+        if (!confirmed) { setIsSaving(false); return; }
+
+        await updateSale(editingEntity.id, payload);
+        toast('Entry updated', 'success');
         closeForm();
       } else {
         await addSale(payload);
@@ -571,7 +578,18 @@ export default function SalePage() {
                             {currentUser?.role === 'Admin' && (
                               <>
                                 <button onClick={() => handleEdit(s)} className="p-1.5 text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-lg transition-colors" title="Edit Entry"><Edit2 className="w-4 h-4" /></button>
-                                <button onClick={() => { deleteSale(s.id); toast('Sale deleted', 'warning'); }} className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors" title="Delete Entry"><Trash2 className="w-4 h-4" /></button>
+                                <button 
+                                  onClick={async () => { 
+                                    if (await ask('Are you sure you want to delete this sale entry?', { title: 'Confirm Deletion', kind: 'warning' })) { 
+                                      deleteSale(s.id); 
+                                      toast('Sale deleted', 'warning'); 
+                                    } 
+                                  }} 
+                                  className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors" 
+                                  title="Delete Entry"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
                               </>
                             )}
                           </div>

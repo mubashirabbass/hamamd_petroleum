@@ -10,12 +10,13 @@ import { useToast } from '../components/ui/Toast';
 import SearchBar from '../components/ui/SearchBar';
 import Pagination from '../components/ui/Pagination';
 import Modal from '../components/ui/Modal';
+import { ask } from '@tauri-apps/plugin-dialog';
 import TransactionReceiptModal from '../components/modals/TransactionReceiptModal';
 import PrintReportModal from '../components/modals/PrintReportModal';
 import type { FuelType } from '../store/useStore';
 
 export default function PurchasePage() {
-  const { purchases, addPurchase, deletePurchase, settings, currentUser } = useStore();
+  const { purchases, addPurchase, updatePurchase, deletePurchase, settings, currentUser } = useStore();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
   
@@ -126,9 +127,15 @@ export default function PurchasePage() {
     setIsSaving(true);
     try {
       if (editingEntity) {
-        await useStore.getState().updatePurchase(editingEntity.id, payload);
-        toast('Purchase updated successfully', 'success');
-        closeForm(); // Close edit form
+        const confirmed = await ask('Save changes to this purchase entry?', {
+          title: 'Confirm Update',
+          kind: 'warning'
+        });
+        if (!confirmed) { setIsSaving(false); return; }
+
+        await updatePurchase(editingEntity.id, payload);
+        toast('Entry updated', 'success');
+        closeForm();
       } else {
         await addPurchase(payload);
         toast(`${fuelType} purchase added successfully`, 'success');
@@ -555,7 +562,18 @@ export default function PurchasePage() {
                             {currentUser?.role === 'Admin' && (
                               <>
                                 <button onClick={() => handleEdit(p)} className="p-1.5 text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-lg transition-colors" title="Edit Entry"><Edit2 className="w-4 h-4" /></button>
-                                <button onClick={() => { deletePurchase(p.id); toast('Purchase deleted', 'warning'); }} className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors" title="Delete Entry"><Trash2 className="w-4 h-4" /></button>
+                                <button 
+                                  onClick={async () => { 
+                                    if (await ask('Are you sure you want to delete this purchase entry?', { title: 'Confirm Deletion', kind: 'warning' })) { 
+                                      deletePurchase(p.id); 
+                                      toast('Purchase deleted', 'warning'); 
+                                    } 
+                                  }} 
+                                  className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors" 
+                                  title="Delete Entry"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
                               </>
                             )}
                           </div>
