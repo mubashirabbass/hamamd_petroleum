@@ -114,7 +114,7 @@ export default function Layout() {
         </>
       )}
 
-      <main className="flex-1 overflow-y-auto overflow-x-hidden relative">
+      <main className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
         <div className="md:hidden sticky top-0 z-30 bg-slate-100/95 dark:bg-dark-950/95 backdrop-blur border-b border-slate-200 dark:border-dark-700 p-3">
           <button
             onClick={() => setMobileSidebarOpen(true)}
@@ -124,7 +124,7 @@ export default function Layout() {
             Menu
           </button>
         </div>
-        <div className={cn("h-full w-full", isTransactionPage ? "p-0" : "p-3 md:p-6")}>
+        <div className={cn("flex-1 min-h-0 w-full flex flex-col", isTransactionPage ? "p-0" : "p-3 md:p-6")}>
           {renderContent()}
         </div>
 

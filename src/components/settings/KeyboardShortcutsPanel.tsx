@@ -107,7 +107,7 @@ export default function KeyboardShortcutsPanel() {
   };
 
   return (
-    <div className="glass rounded-2xl overflow-hidden border border-slate-200/50 dark:border-dark-700/50 h-full flex flex-col animate-in fade-in duration-500">
+    <div className="glass rounded-2xl overflow-hidden border border-slate-200/50 dark:border-dark-700/50 flex-1 min-h-0 flex flex-col animate-in fade-in duration-500 h-full">
       <div className="p-5 border-b border-slate-200 dark:border-dark-700/50 bg-primary-500/5 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Keyboard className="w-5 h-5 text-primary-600 dark:text-primary-400" />

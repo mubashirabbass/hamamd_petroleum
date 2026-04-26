@@ -369,7 +369,7 @@ function BackupPanel() {
   };
 
   return (
-    <div className="flex flex-col md:flex-row gap-8 flex-1 h-[calc(100vh-12rem)] min-h-0 overflow-hidden">
+    <div className="flex flex-col md:flex-row gap-8 flex-1 h-full min-h-0 overflow-hidden">
       {/* Sub-Sidebar */}
       <div className="w-full md:w-64 space-y-1 bg-slate-50/50 dark:bg-dark-900/50 p-4 rounded-3xl border border-slate-200/50 dark:border-dark-700/50 h-full shrink-0 overflow-y-auto no-scrollbar">
         <h5 className="px-4 mb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Backup Methods</h5>
@@ -735,21 +735,6 @@ function BackupPanel() {
 
         {subTab === 'local' && (
           <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-6">
-            <div className="glass rounded-[2rem] p-12 text-center border border-slate-200/50 dark:border-dark-700/50 shadow-xl relative overflow-hidden">
-              <div className="absolute bottom-0 right-0 w-32 h-32 bg-blue-500/5 blur-3xl rounded-full" />
-              <div className="w-24 h-24 bg-blue-100 dark:bg-blue-900/30 rounded-[2rem] flex items-center justify-center mx-auto mb-8 shadow-inner rotate-6">
-                <HardDrive className="w-12 h-12 text-blue-600" />
-              </div>
-              <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-3 tracking-tighter uppercase">Local Business Archive</h3>
-              <p className="text-sm text-slate-500 dark:text-dark-400 mb-10 max-w-sm mx-auto font-medium leading-relaxed">
-                Save a full business snapshot directly to your computer. This ZIP includes the <b>database</b> and a folder of <b>Excel sheets</b> for offline review.
-              </p>
-              <button onClick={handleLocalBackup} disabled={progress.active}
-                className="px-12 py-4 bg-blue-600 text-white rounded-2xl font-black shadow-2xl shadow-blue-500/30 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-4 mx-auto text-xs uppercase tracking-widest">
-                <Download className="w-5 h-5" /> Download Local ZIP
-              </button>
-            </div>
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="glass rounded-[2rem] border border-amber-200/50 dark:border-amber-900/30 p-8 flex flex-col items-center text-center shadow-sm hover:shadow-md transition-shadow">
                 <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/30 rounded-2xl flex items-center justify-center mb-6">
@@ -778,6 +763,21 @@ function BackupPanel() {
                   Open Backups Folder
                 </button>
               </div>
+            </div>
+
+            <div className="glass rounded-[2rem] p-8 text-center border border-slate-200/50 dark:border-dark-700/50 shadow-xl relative overflow-hidden">
+              <div className="absolute bottom-0 right-0 w-32 h-32 bg-blue-500/5 blur-3xl rounded-full" />
+              <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-inner rotate-6">
+                <HardDrive className="w-8 h-8 text-blue-600" />
+              </div>
+              <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2 tracking-tighter uppercase">Local Business Archive</h3>
+              <p className="text-xs text-slate-500 dark:text-dark-400 mb-6 max-w-sm mx-auto font-medium leading-relaxed">
+                Save a full business snapshot directly to your computer. This ZIP includes the <b>database</b> and a folder of <b>Excel sheets</b> for offline review.
+              </p>
+              <button onClick={handleLocalBackup} disabled={progress.active}
+                className="px-8 py-3 bg-blue-600 text-white rounded-2xl font-black shadow-2xl shadow-blue-500/30 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-4 mx-auto text-[10px] uppercase tracking-widest">
+                <Download className="w-4 h-4" /> Download Local ZIP
+              </button>
             </div>
           </div>
         )}
@@ -978,7 +978,7 @@ export default function SettingsPage() {
         </div>
       )}
 
-      <div className="flex flex-1 gap-6 items-start overflow-hidden relative">
+      <div className="flex flex-1 gap-6 items-stretch overflow-hidden relative">
         <div className={cn(
           "w-full md:w-72 flex-shrink-0 space-y-2 h-full overflow-y-auto no-scrollbar",
           mobileDetailOpen ? "hidden md:block" : "block"
@@ -1049,7 +1049,7 @@ export default function SettingsPage() {
             )}
 
           {activeTab === 'general' && (
-            <div className="glass rounded-2xl overflow-hidden border border-slate-200/50 dark:border-dark-700/50 h-full flex flex-col">
+            <div className="glass rounded-2xl overflow-hidden border border-slate-200/50 dark:border-dark-700/50 flex-1 min-h-0 flex flex-col">
               <div className="p-5 border-b border-slate-200 dark:border-dark-700/50 bg-primary-500/5">
                 <div className="flex items-center gap-3">
                   <Calendar className="w-5 h-5 text-primary-600 dark:text-primary-400" />
@@ -1086,13 +1086,13 @@ export default function SettingsPage() {
           {activeTab === 'backup' && <BackupPanel />}
 
           {activeTab === 'shortcuts' && (
-            <div className="flex-1 overflow-y-auto smart-scroll">
+            <div className="flex-1 min-h-0">
               <KeyboardShortcutsPanel />
             </div>
           )}
 
           {activeTab === 'users' && (
-            <div className="glass rounded-2xl overflow-hidden border border-slate-200/50 dark:border-dark-700/50 h-full flex flex-col">
+            <div className="glass rounded-2xl overflow-hidden border border-slate-200/50 dark:border-dark-700/50 flex-1 min-h-0 flex flex-col">
               <div className="p-4 border-b border-slate-200 dark:border-dark-700/50 bg-emerald-500/5 flex-shrink-0">
                 <div className="flex items-center gap-3">
                   <ShieldCheck className="w-5 h-5 text-emerald-600" />
@@ -1124,7 +1124,7 @@ export default function SettingsPage() {
           )}
 
           {activeTab === 'danger' && (
-            <div className="flex-1 overflow-y-auto smart-scroll p-8">
+            <div className="flex-1 min-h-0 overflow-y-auto smart-scroll p-8">
               <div className="glass rounded-2xl overflow-hidden border border-red-200/50 dark:border-red-900/30">
                 <div className="p-5 border-b border-red-100 dark:border-red-900/30 bg-red-500/5">
                   <div className="flex items-center gap-3">

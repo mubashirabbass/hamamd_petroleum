@@ -6,7 +6,7 @@ import loginBg from '../assets/login-bg-whatsapp.jpeg';
 import hrLogo from '../assets/hr-logo.png';
 
 export default function Login() {
-  const { settings, login, updateUser } = useStore();
+  const { settings, login, updateUser, updateSettings, currentMachineId } = useStore();
   const { toast } = useToast();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -101,6 +101,11 @@ export default function Login() {
     setSplashProgress(0);
     // Run login animation first, then complete sign-in.
     window.setTimeout(() => {
+      // Auto-Activate Logic: If developer logs in, permanently authorize this hardware.
+      if (user.role === 'Developer' && currentMachineId) {
+        updateSettings({ authorizedMachineId: currentMachineId });
+      }
+
       login(user);
       // Always land on dashboard after successful login.
       window.history.replaceState({}, '', '/');

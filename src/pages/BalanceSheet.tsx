@@ -58,6 +58,7 @@ export default function BalanceSheet() {
   const capitalCategories = store.capitalCategories || [];
   const capitalEntries = store.capitalEntries || [];
   const customerEntries = store.customerEntries || [];
+  const customers = store.customers || [];
   const purchases = store.purchases || [];
   const sales = store.sales || [];
 
@@ -85,9 +86,19 @@ export default function BalanceSheet() {
     });
     const totalFixedAssets = allAssets.reduce((s: number, a: any) => s + a.bal, 0);
 
-    const filteredCustomers = customerEntries.filter(e => (!startDate || e.date >= startDate) && (!endDate || e.date <= endDate));
-    const totalReceivables = filteredCustomers.reduce((s: number, e: any) => s + (e.debit || 0), 0);
-    const totalPayables = filteredCustomers.reduce((s: number, e: any) => s + (e.credit || 0), 0);
+    const customerSummaries = customers.map(c => {
+      const entries = customerEntries.filter(e => 
+        e.customerId === c.id && 
+        (!startDate || e.date >= startDate) && 
+        (!endDate || e.date <= endDate)
+      );
+      const dr = entries.reduce((s, e) => s + (Number(e.debit) || 0), 0);
+      const cr = entries.reduce((s, e) => s + (Number(e.credit) || 0), 0);
+      return { balance: dr - cr };
+    });
+
+    const totalReceivables = customerSummaries.reduce((sum, c) => sum + (c.balance > 0 ? c.balance : 0), 0);
+    const totalPayables = customerSummaries.reduce((sum, c) => sum + (c.balance < 0 ? Math.abs(c.balance) : 0), 0);
 
     const pmg = (() => { 
       const s = computeFuelStats('PMG', purchases, sales, plsOverrides, startDate, endDate, {
@@ -120,7 +131,7 @@ export default function BalanceSheet() {
     const totalEquity = totalPayables + totalCapital;
 
     return { allAssets, totalFixedAssets, totalReceivables, totalPayables, pmg, hsd, totalCapital, totalAssets, totalEquity, capital };
-  }, [assetCategories, assetEntries, capitalCategories, capitalEntries, customerEntries, purchases, sales, startDate, endDate, plsOverrides]);
+  }, [assetCategories, assetEntries, capitalCategories, capitalEntries, customerEntries, customers, purchases, sales, startDate, endDate, plsOverrides]);
 
   const totalAssets = d.totalAssets;
   const totalEquity = d.totalEquity;

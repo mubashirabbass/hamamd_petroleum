@@ -451,8 +451,8 @@ export default function Dashboard() {
                   )}
                   <p className="text-[10px] md:text-[11px] font-black text-slate-600 dark:text-dark-300 uppercase tracking-[0.15em] mb-1 truncate">{col.label}</p>
                   <div className="flex items-baseline gap-1 relative">
-                    <span className={cn("font-black tabular-nums tracking-tighter leading-none", col.highlight ? `text-xl md:text-2xl text-${f.color}-600` : 'text-lg md:text-xl text-slate-900 dark:text-white')}>{col.qty.toLocaleString()}</span>
-                    <span className="text-[8px] md:text-[9px] font-black text-slate-400 uppercase">L</span>
+                    <span className={cn("font-black tabular-nums tracking-tighter leading-none", (col.label === 'Remaining' && col.qty < 0) ? 'text-xl md:text-2xl text-red-600' : (col.highlight ? `text-xl md:text-2xl text-${f.color}-600` : 'text-lg md:text-xl text-slate-900 dark:text-white'))}>{col.qty.toLocaleString()}</span>
+                    <span className="text-[8px] md:text-[9px] font-black text-slate-900 dark:text-white uppercase">L</span>
                     {col.label === 'Remaining' && ((f.type === 'HSD' && settings.stockAdjustmentHSD !== 0) || (f.type === 'PMG' && settings.stockAdjustmentPMG !== 0)) && (
                       <span className="absolute -top-3 left-0 text-[6px] font-black uppercase bg-amber-500/10 text-amber-600 px-1 py-0.5 rounded border border-amber-500/20">Edited</span>
                     )}
@@ -463,7 +463,7 @@ export default function Dashboard() {
                       <span className="absolute -top-3 left-0 text-[6px] font-black uppercase bg-amber-500/10 text-amber-600 px-1 py-0.5 rounded border border-amber-500/20">Edited</span>
                     )}
                   </div>
-                  <p className="text-[10px] md:text-[11px] font-black text-slate-600 dark:text-dark-300 tracking-tight tabular-nums truncate">
+                  <p className="text-[10px] md:text-[11px] font-black text-slate-900 dark:text-white tracking-tight tabular-nums truncate">
                     ₨ {formatCurrency(col.amt)}
                   </p>
                 </div>

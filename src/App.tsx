@@ -48,28 +48,9 @@ function DBSplash({ error }: { error: string | null }) {
   );
 }
 
-function SystemLocked({ reason }: { reason: 'HARDWARE' | 'LICENSE' }) {
-  return (
-    <div className="min-h-screen w-full flex flex-col items-center justify-center bg-slate-950 p-6 text-center">
-      <div className="w-20 h-20 bg-red-600/20 rounded-3xl flex items-center justify-center mb-8 border border-red-600/30">
-        <span className="text-red-600 text-3xl font-black">!</span>
-      </div>
-      <h1 className="text-3xl font-black text-white uppercase tracking-tight mb-2">System Restricted</h1>
-      <p className="text-slate-400 text-sm max-w-sm mb-10 leading-relaxed font-medium">
-        {reason === 'HARDWARE' 
-          ? 'This copy of HRM Petroleum is not authorized for use on this device. Please contact support to transfer your license.'
-          : 'Your system license has expired or is not yet active. Please renew your subscription to continue using the software.'}
-      </p>
-      <div className="p-4 bg-white/5 border border-white/10 rounded-2xl">
-         <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Device Identity</p>
-         <code className="text-blue-400 text-xs font-mono">{useStore.getState().currentMachineId}</code>
-      </div>
-    </div>
-  );
-}
 
 export default function App() {
-  const { currentUser, dbReady, dbError, initializeFromDB, settings, updateSettings, logout, localActivationId } = useStore();
+  const { currentUser, dbReady, dbError, initializeFromDB, settings, updateSettings, logout } = useStore();
   const [booting, setBooting] = useState(true);
 
   const applyZoom = (zoom: number) => {
@@ -123,17 +104,8 @@ export default function App() {
     return () => clearInterval(interval);
   }, [dbReady]);
 
-  const authorizedId = localActivationId || settings.authorizedMachineId;
-  const isHardwareLocked = !authorizedId || authorizedId !== useStore.getState().currentMachineId;
-  const isLicenseExpired = (() => {
-    const now = new Date().toISOString().split('T')[0];
-    const start = settings.licenseStartDate;
-    const end = settings.licenseEndDate;
-    if (!start || !end) return false;
-    return (now < start || now > end);
-  })();
-
-  const isSystemLocked = (isHardwareLocked || isLicenseExpired) && currentUser?.role !== 'Developer' && currentUser?.role !== 'Admin';
+  // License restriction removed as per user request
+  const isSystemLocked = false;
 
   if (booting || !dbReady) {
     return (
@@ -143,13 +115,7 @@ export default function App() {
     );
   }
 
-  if (isSystemLocked) {
-    return (
-      <ThemeProvider>
-        <SystemLocked reason={isHardwareLocked ? 'HARDWARE' : 'LICENSE'} />
-      </ThemeProvider>
-    );
-  }
+  // System lock logic removed
 
   return (
     <ThemeProvider>

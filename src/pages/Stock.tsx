@@ -893,7 +893,7 @@ export default function StockPage() {
               {[
                 { label: 'Purchase', qty: data.totalPurchased, value: data.purchaseValue, icon: TrendingUp, color: 'text-emerald-600' },
                 { label: 'Sale', qty: data.totalSold, value: data.saleValue, icon: TrendingDown, color: 'text-red-600' },
-                { label: 'Remaining', qty: data.current, value: null, icon: Package, color: color === 'amber' ? 'text-amber-600' : 'text-emerald-600', highlight: true },
+                { label: 'Remaining', qty: data.current, value: data.stockValue, icon: Package, color: data.current < 0 ? 'text-red-600' : (color === 'amber' ? 'text-amber-600' : 'text-emerald-600'), highlight: true },
               ].map(block => (
                 <div key={block.label} className="space-y-2 min-w-0">
                   <div className="flex items-center gap-1.5">
@@ -901,13 +901,13 @@ export default function StockPage() {
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest truncate">{block.label}</p>
                   </div>
                   <div className="flex items-baseline gap-1">
-                    <span className={cn("font-black tabular-nums tracking-tighter break-all whitespace-normal leading-tight w-full", block.highlight ? 'text-2xl lg:text-3xl' : 'text-xl lg:text-2xl text-slate-900 dark:text-white', block.color)}>
+                    <span className={cn("font-black tabular-nums tracking-tighter break-all whitespace-normal leading-tight", block.highlight ? 'text-2xl lg:text-3xl' : 'text-xl lg:text-2xl text-slate-900 dark:text-white', block.color)}>
                       {block.qty.toLocaleString()}
                     </span>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase break-keep ml-1 relative -top-1">L</span>
+                    <span className="text-[10px] font-black text-slate-900 dark:text-white uppercase break-keep ml-1 relative -top-1">L</span>
                   </div>
                   {block.value !== null && (
-                    <p className="text-[11px] font-bold text-slate-500 tabular-nums break-words break-all whitespace-normal leading-tight w-full">₨ {formatCurrency(block.value)}</p>
+                    <p className="text-[11px] font-black text-slate-900 dark:text-white tabular-nums break-words break-all whitespace-normal leading-tight w-full">₨ {formatCurrency(block.value)}</p>
                   )}
                 </div>
               ))}
