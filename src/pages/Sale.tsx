@@ -89,24 +89,24 @@ export default function SalePage() {
   const paged = paginate(filtered, page, perPage);
   
   const pageTotals = useMemo(() => ({
-    qty: paged.reduce((s, x) => s + x.quantity, 0),
-    amount: paged.reduce((s, x) => s + x.amount, 0),
+    qty: paged.reduce((s: number, x: any) => s + x.quantity, 0),
+    amount: paged.reduce((s: number, x: any) => s + x.amount, 0),
   }), [paged]);
 
   const grandTotals = useMemo(() => {
-    const qty = filtered.reduce((s, x) => s + x.quantity, 0);
-    const amount = filtered.reduce((s, x) => s + x.amount, 0);
+    const qty = filtered.reduce((s: number, x: any) => s + x.quantity, 0);
+    const amount = filtered.reduce((s: number, x: any) => s + x.amount, 0);
     
     // Sale average (Overall - since software start)
     const allSales = filterByStartDate(sales, settings.startDate).filter(s => s.type === fuelType);
-    const sQty = allSales.reduce((s, x) => s + x.quantity, 0);
-    const sAmt = allSales.reduce((s, x) => s + x.amount, 0);
+    const sQty = allSales.reduce((s: number, x: any) => s + x.quantity, 0);
+    const sAmt = allSales.reduce((s: number, x: any) => s + x.amount, 0);
     const avgSale = sQty > 0 ? sAmt / sQty : 0;
 
     // Purchase average (Overall - since software start)
     const allPurchases = filterByStartDate(purchases, settings.startDate).filter(p => p.type === fuelType);
-    const pQty = allPurchases.reduce((s, x) => s + x.quantity, 0);
-    const pTotal = allPurchases.reduce((s, x) => s + x.totalAmount, 0);
+    const pQty = allPurchases.reduce((s: number, x: any) => s + x.quantity, 0);
+    const pTotal = allPurchases.reduce((s: number, x: any) => s + x.totalAmount, 0);
     const avgPurchase = pQty > 0 ? pTotal / pQty : 0;
 
     return {
@@ -132,8 +132,8 @@ export default function SalePage() {
     const allPurchases = filterByStartDate(purchases, settings.startDate);
     const getOverallPurchaseAvg = (type: FuelType) => {
       const p = allPurchases.filter(x => x.type === type);
-      const pQty = p.reduce((s, x) => s + x.quantity, 0);
-      const pTotal = p.reduce((s, x) => s + x.totalAmount, 0);
+      const pQty = p.reduce((s: number, x: any) => s + x.quantity, 0);
+      const pTotal = p.reduce((s: number, x: any) => s + x.totalAmount, 0);
       return pQty > 0 ? pTotal / pQty : 0;
     };
     const overallHSDPurchaseAvg = getOverallPurchaseAvg('HSD');
@@ -147,8 +147,8 @@ export default function SalePage() {
 
     const getStats = (type: FuelType) => {
       const f = periodSales.filter(s => s.type === type);
-      const qty = f.reduce((s, x) => s + x.quantity, 0);
-      const amt = f.reduce((s, x) => s + x.amount, 0);
+      const qty = f.reduce((s: number, x: any) => s + x.quantity, 0);
+      const amt = f.reduce((s: number, x: any) => s + x.amount, 0);
       
       return {
         qty,
@@ -724,7 +724,16 @@ export default function SalePage() {
       )}
 
       {viewingEntity && <TransactionReceiptModal entity={viewingEntity} type="sale" onClose={() => setViewingEntity(null)} />}
-      {showReport && <PrintReportModal data={filtered} type="sale" title={`${fuelType} Sale Report`} fromDate={fromDate} toDate={toDate} onClose={() => setShowReport(false)} />}
+      {showReport && (
+        <PrintReportModal 
+          isOpen={showReport}
+          data={filtered} 
+          type="sale" 
+          title={`${fuelType} Sale Report`} 
+          dateRange={fromDate || toDate ? { from: fromDate, to: toDate } : undefined} 
+          onClose={() => setShowReport(false)} 
+        />
+      )}
     </div>
   );
 }

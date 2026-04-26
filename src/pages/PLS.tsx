@@ -160,7 +160,7 @@ export default function PLS() {
         return { categoryName: cat.name, amount: total, count: filtered.length };
       }).filter(e => e.amount > 0);
 
-      return { hsd, pmg, detailedExpenses: groupedExpenses, totalExpenses: groupedExpenses.reduce((s, e) => s + e.amount, 0), error: null };
+      return { hsd, pmg, detailedExpenses: groupedExpenses, totalExpenses: groupedExpenses.reduce((s: number, e: any) => s + e.amount, 0), error: null };
     } catch (err: any) {
       return { error: err.message };
     }
@@ -421,10 +421,10 @@ export default function PLS() {
                       </tr>
                     </thead>
                     <tbody>
-                      {data.detailedExpenses.length === 0 && (
+                      {data?.detailedExpenses?.length === 0 && (
                         <tr><td colSpan={3} style={{ ...tdStyle('#94a3b8'), textAlign: 'center', padding: 32 }}>No expenses recorded</td></tr>
                       )}
-                      {data.detailedExpenses.map((e: any, i: number) => (
+                      {data?.detailedExpenses?.map((e: any, i: number) => (
                         <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
                           <td style={tdStyle()}>{e.categoryName}</td>
                           <td style={tdNum()}>{e.count}</td>
@@ -441,7 +441,7 @@ export default function PLS() {
                       <col style={{ width: '40%' }} />
                     </colgroup>
                   <tfoot>
-                    <FooterRow label="Total Expenses" colSpan={2} value={data.totalExpenses} />
+                    <FooterRow label="Total Expenses" colSpan={2} value={data?.totalExpenses || 0} />
                   </tfoot>
                 </table>
               </div>
@@ -487,7 +487,7 @@ export default function PLS() {
                           <ChevronRight size={14} color="#cbd5e1" /> <span style={{ fontWeight: 600 }}>Total Operating Expenses</span>
                         </td>
                         <td style={{ padding: '14px 20px', textAlign: 'right', fontSize: 13, fontWeight: 700, color: '#dc2626', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
-                          ₨ {formatCurrency(data.totalExpenses)}
+                          ₨ {formatCurrency(data.totalExpenses || 0)}
                         </td>
                       </tr>
                     </tbody>

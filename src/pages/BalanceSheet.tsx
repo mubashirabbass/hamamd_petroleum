@@ -80,14 +80,14 @@ export default function BalanceSheet() {
     const allAssets = assetCategories.map(cat => {
       const bal = assetEntries
         .filter(e => e.categoryId === cat.id && (!startDate || e.date >= startDate) && (!endDate || e.date <= endDate))
-        .reduce((s, e) => s + (e.debit || 0) - (e.credit || 0), 0);
+        .reduce((s: number, e: any) => s + (e.debit || 0) - (e.credit || 0), 0);
       return { id: cat.id, name: cat.name, bal };
     });
-    const totalFixedAssets = allAssets.reduce((s, a) => s + a.bal, 0);
+    const totalFixedAssets = allAssets.reduce((s: number, a: any) => s + a.bal, 0);
 
     const filteredCustomers = customerEntries.filter(e => (!startDate || e.date >= startDate) && (!endDate || e.date <= endDate));
-    const totalReceivables = filteredCustomers.reduce((s, e) => s + (e.debit || 0), 0);
-    const totalPayables = filteredCustomers.reduce((s, e) => s + (e.credit || 0), 0);
+    const totalReceivables = filteredCustomers.reduce((s: number, e: any) => s + (e.debit || 0), 0);
+    const totalPayables = filteredCustomers.reduce((s: number, e: any) => s + (e.credit || 0), 0);
 
     const pmg = (() => { 
       const s = computeFuelStats('PMG', purchases, sales, plsOverrides, startDate, endDate, {
@@ -111,10 +111,10 @@ export default function BalanceSheet() {
     const capital = capitalCategories.map(cat => {
       const bal = capitalEntries
         .filter(e => e.categoryId === cat.id && (!startDate || e.date >= startDate) && (!endDate || e.date <= endDate))
-        .reduce((s, e) => s + (e.amount || 0), 0);
+        .reduce((s: number, e: any) => s + (e.amount || 0), 0);
       return { id: cat.id, name: cat.name, bal };
     });
-    const totalCapital = capital.reduce((s, c) => s + c.bal, 0);
+    const totalCapital = capital.reduce((s: number, c: any) => s + c.bal, 0);
 
     const totalAssets = totalFixedAssets + totalReceivables + pmg.val + hsd.val;
     const totalEquity = totalPayables + totalCapital;
@@ -129,7 +129,7 @@ export default function BalanceSheet() {
   const exportToExcel = async () => {
     // Immediate feedback to verify the click works
     console.log('EXCEL BUTTON CLICKED');
-    toast.loading('Generating Excel Bill...');
+    toast('Generating Excel Bill...', 'info');
     
     try {
       // Robust Workbook instantiation for different bundling styles
@@ -183,35 +183,35 @@ export default function BalanceSheet() {
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
       
-      toast.success('Excel Bill downloaded');
+      toast('Excel Bill downloaded', 'success');
     } catch (err) {
       console.error('Excel Bill export failed:', err);
-      toast.error('Failed to generate Excel Bill. Please try again.');
+      toast('Failed to generate Excel Bill. Please try again.', 'error');
     }
   };
 
   const saveAsset = async () => {
-    if (!newAssetName || !newAssetAmount) { toast.error('Enter name and amount'); return; }
+    if (!newAssetName || !newAssetAmount) { toast('Enter name and amount', 'error'); return; }
     setIsSaving(true);
     try {
       let catId = assetCategories.find(c => c.name.toLowerCase() === newAssetName.toLowerCase())?.id;
       if (!catId) catId = await store.addAssetCategory(newAssetName) as any;
       await store.addAssetEntry({ categoryId: catId!, date: today(), description: 'Balance Sheet', debit: parseFloat(newAssetAmount) || 0, credit: 0, balance: 0 });
       setNewAssetName(''); setNewAssetAmount(''); setShowAssetEntry(false);
-      toast.success('Asset saved');
-    } catch { toast.error('Failed'); } finally { setIsSaving(false); }
+      toast('Asset saved', 'success');
+    } catch { toast('Failed', 'error'); } finally { setIsSaving(false); }
   };
 
   const saveCapital = async () => {
-    if (!newCapName || !newCapAmount) { toast.error('Enter name and amount'); return; }
+    if (!newCapName || !newCapAmount) { toast('Enter name and amount', 'error'); return; }
     setIsSaving(true);
     try {
       let catId = capitalCategories.find(c => c.name.toLowerCase() === newCapName.toLowerCase())?.id;
       if (!catId) catId = await store.addCapitalCategory(newCapName) as any;
       await store.addCapitalEntry({ categoryId: catId!, date: today(), description: 'Balance Sheet', amount: parseFloat(newCapAmount) || 0, balance: 0 } as any);
       setNewCapName(''); setNewCapAmount(''); setShowCapEntry(false);
-      toast.success('Capital saved');
-    } catch { toast.error('Failed'); } finally { setIsSaving(false); }
+      toast('Capital saved', 'success');
+    } catch { toast('Failed', 'error'); } finally { setIsSaving(false); }
   };
 
   return (

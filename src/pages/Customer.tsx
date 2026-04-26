@@ -87,7 +87,7 @@ export default function CustomerPage() {
           const matchesTo = !toDate || e.date <= toDate;
           return matchesFrom && matchesTo;
         });
-      const bal = entries.reduce((s, e) => s + (e.debit || 0) - (e.credit || 0), 0);
+      const bal = entries.reduce((s: number, e: any) => s + (e.debit || 0) - (e.credit || 0), 0);
       return { ...c, balance: bal };
     });
 
@@ -149,10 +149,10 @@ export default function CustomerPage() {
   const paged = paginate(withBalance, page, perPage);
 
   const pageTotals = useMemo(() => ({
-    debit: paged.reduce((s, e) => s + (e.debit || 0), 0),
-    credit: paged.reduce((s, e) => s + (e.credit || 0), 0),
+    debit: paged.reduce((s: number, e: any) => s + (e.debit || 0), 0),
+    credit: paged.reduce((s: number, e: any) => s + (e.credit || 0), 0),
   }), [paged]);
-  const totals = { debit: filteredEntries.reduce((s, e) => s + (e.debit || 0), 0), credit: filteredEntries.reduce((s, e) => s + (e.credit || 0), 0) };
+  const totals = { debit: filteredEntries.reduce((s: number, e: any) => s + (e.debit || 0), 0), credit: filteredEntries.reduce((s: number, e: any) => s + (e.credit || 0), 0) };
   const balance = totals.debit - totals.credit;
 
   // ── Unified Dashboard Summaries (All Customers) ──────────────────────────
@@ -165,8 +165,8 @@ export default function CustomerPage() {
           const matchesTo = !toDate || e.date <= toDate;
           return matchesFrom && matchesTo;
         });
-      const dr = entries.reduce((s, e) => s + (Number(e.debit) || 0), 0);
-      const cr = entries.reduce((s, e) => s + (Number(e.credit) || 0), 0);
+      const dr = entries.reduce((s: number, e: any) => s + (Number(e.debit) || 0), 0);
+      const cr = entries.reduce((s: number, e: any) => s + (Number(e.credit) || 0), 0);
       return { 
         ...c, 
         totalDebit: dr, 
@@ -1092,6 +1092,7 @@ export default function CustomerPage() {
 
       {showReport && (
         <PrintReportModal
+          isOpen={showReport}
           data={activeTab === 'dashboard' ? customerSummaries.filter(c => (fromDate || toDate) ? c.entriesCount > 0 : true) : withBalance}
           type={activeTab === 'dashboard' ? 'customer_summary' : 'customer'}
           title={activeTab === 'dashboard' ? 'All Customers Balance Summary' : `Account Statement — ${cust?.name}`}

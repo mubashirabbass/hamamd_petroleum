@@ -49,13 +49,13 @@ export default function Sidebar({ className = '', isCollapsed = false, onNavigat
 
   return (
     <aside className={cn(
-      "relative h-screen flex-shrink-0 flex flex-col transition-all duration-300 border-r border-slate-200 dark:border-dark-800 bg-white dark:bg-dark-900 shadow-2xl",
+      "relative h-screen flex-shrink-0 flex flex-col transition-[width] duration-200 ease-in-out will-change-[width] border-r border-slate-200 dark:border-dark-800 bg-white dark:bg-dark-900 shadow-2xl overflow-hidden",
       isCollapsed ? "w-14" : "w-64",
       className
     )}>
       <div className="flex-1 flex flex-col h-full overflow-hidden">
         {/* Header */}
-        <div className={cn("h-16 flex items-center border-b border-slate-100 dark:border-dark-800 transition-all", isCollapsed ? "justify-center px-1" : "px-3 gap-2")}>
+        <div className={cn("h-16 flex items-center border-b border-slate-100 dark:border-dark-800 transition-[padding,gap] duration-200", isCollapsed ? "justify-center px-1" : "px-3 gap-2")}>
           <div className="w-10 h-10 rounded-2xl bg-white flex-shrink-0 flex items-center justify-center shadow-xl p-1 border border-slate-150">
             <img src="/assets/logo-hr.png" alt="Logo" className="w-full h-full object-contain" />
           </div>

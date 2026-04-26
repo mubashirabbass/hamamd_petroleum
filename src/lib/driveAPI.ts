@@ -16,7 +16,7 @@ const SCOPES = [
   'https://www.googleapis.com/auth/userinfo.profile',
 ].join(' ');
 
-const REDIRECT_URI = 'http://127.0.0.1:3001/oauth/callback';
+const REDIRECT_URI = 'http://localhost:3001/oauth/callback';
 
 // ── Service Account Helpers ──────────────────────────────────────────────────
 

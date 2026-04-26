@@ -804,10 +804,12 @@ export default function StockPage() {
   
             {showReport && (
               <PrintReportModal 
+                isOpen={showReport}
                 data={filteredHistory} 
                 type="stock" 
                 onClose={() => setShowReport(false)} 
                 title={`${selectedType} STOCK HISTORY`}
+                dateRange={fromDate || toDate ? { from: fromDate, to: toDate } : undefined}
               />
             )}
           </div>
@@ -992,11 +994,11 @@ export default function StockPage() {
 
       {showReport && (
         <PrintReportModal 
+          isOpen={showReport}
           data={filteredHistory} 
           type="stock" 
           title={`${selectedType} STOCK HISTORY`}
-          fromDate={fromDate}
-          toDate={toDate}
+          dateRange={fromDate || toDate ? { from: fromDate, to: toDate } : undefined}
           onClose={() => setShowReport(false)} 
         />
       )}

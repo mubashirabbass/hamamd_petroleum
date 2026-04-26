@@ -12,11 +12,20 @@ import { useConfirm } from '../contexts/ConfirmContext';
 import PrintReportModal from '../components/modals/PrintReportModal';
 
 export default function AssetPage() {
-  const { 
-    assetCategories, assetEntries, 
-    addAssetCategory, updateAssetCategory, deleteAssetCategory, 
-    addAssetEntry, deleteAssetEntry, settings, currentUser, updateAssetEntry 
-  } = useStore();
+  const assetCategories = useStore(s => s.assetCategories);
+  const assetEntries = useStore(s => s.assetEntries);
+  const capitalCategories = useStore(s => s.capitalCategories);
+  const capitalEntries = useStore(s => s.capitalEntries);
+  const liabilityCategories = useStore(s => s.liabilityCategories);
+  const liabilityEntries = useStore(s => s.liabilityEntries);
+  const addAssetCategory = useStore(s => s.addAssetCategory);
+  const updateAssetCategory = useStore(s => s.updateAssetCategory);
+  const deleteAssetCategory = useStore(s => s.deleteAssetCategory);
+  const addAssetEntry = useStore(s => s.addAssetEntry);
+  const updateAssetEntry = useStore(s => s.updateAssetEntry);
+  const deleteAssetEntry = useStore(s => s.deleteAssetEntry);
+  const settings = useStore(s => s.settings);
+  const currentUser = useStore(s => s.currentUser);
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const confirm = useConfirm();
@@ -77,8 +86,8 @@ export default function AssetPage() {
     
     const withBalances = list.map(c => {
       const entries = filterByStartDate(assetEntries, settings.startDate).filter(e => e.categoryId === c.id);
-      const debit = entries.reduce((s, e) => s + (e.debit || 0), 0);
-      const credit = entries.reduce((s, e) => s + (e.credit || 0), 0);
+      const debit = entries.reduce((s: number, e: any) => s + (e.debit || 0), 0);
+      const credit = entries.reduce((s: number, e: any) => s + (e.credit || 0), 0);
       return { ...c, balance: Math.abs(debit - credit) };
     });
 
@@ -138,8 +147,8 @@ export default function AssetPage() {
   const paged = paginate(withBalance, page, perPage);
 
   const pageTotals = useMemo(() => ({
-    debit: paged.reduce((s, e) => s + (e.debit || 0), 0),
-    credit: paged.reduce((s, e) => s + (e.credit || 0), 0),
+    debit: paged.reduce((s: number, e: any) => s + (e.debit || 0), 0),
+    credit: paged.reduce((s: number, e: any) => s + (e.credit || 0), 0),
   }), [paged]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -197,8 +206,8 @@ export default function AssetPage() {
   };
 
   const totals = useMemo(() => ({
-    debit: filteredEntries.reduce((s, e) => s + (e.debit || 0), 0),
-    credit: filteredEntries.reduce((s, e) => s + (e.credit || 0), 0),
+    debit: filteredEntries.reduce((s: number, e: any) => s + (e.debit || 0), 0),
+    credit: filteredEntries.reduce((s: number, e: any) => s + (e.credit || 0), 0),
   }), [filteredEntries]);
 
   const handleAddCategory = (e: React.FormEvent) => {
@@ -284,8 +293,8 @@ export default function AssetPage() {
             {/* Summary Cards */}
             {(() => {
               const allFilteredEntries = filterByStartDate(assetEntries, settings.startDate);
-              const globalDebit = allFilteredEntries.reduce((sum, e) => sum + e.debit, 0);
-              const globalCredit = allFilteredEntries.reduce((sum, e) => sum + e.credit, 0);
+              const globalDebit = allFilteredEntries.reduce((sum: number, e: any) => sum + e.debit, 0);
+              const globalCredit = allFilteredEntries.reduce((sum: number, e: any) => sum + e.credit, 0);
               const globalNet = globalDebit - globalCredit;
               return (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -335,7 +344,7 @@ export default function AssetPage() {
                     {(() => {
                       const items = assetCategories.map(cat => {
                         const entries = filterByStartDate(assetEntries, settings.startDate).filter(e => e.categoryId === cat.id);
-                        const balance = entries.reduce((s, e) => s + (e.debit - e.credit), 0);
+                        const balance = entries.reduce((s: number, e: any) => s + (e.debit - e.credit), 0);
                         return { ...cat, balance, count: entries.length };
                       }).filter(c => !dashboardSearch || c.name.toLowerCase().includes(dashboardSearch.toLowerCase()));
                       
@@ -633,8 +642,8 @@ export default function AssetPage() {
           data={(() => {
             const items = assetCategories.map(c => {
               const entries = filterByStartDate(assetEntries, settings.startDate).filter(e => e.categoryId === c.id);
-              const debit = entries.reduce((s, e) => s + (e.debit || 0), 0);
-              const credit = entries.reduce((s, e) => s + (e.credit || 0), 0);
+              const debit = entries.reduce((s: number, e: any) => s + (e.debit || 0), 0);
+              const credit = entries.reduce((s: number, e: any) => s + (e.credit || 0), 0);
               return { ...c, balance: debit - credit, debit, credit, count: entries.length };
             });
             return items;
@@ -646,8 +655,8 @@ export default function AssetPage() {
               const credit = entries.reduce((s, e) => s + (e.credit || 0), 0);
               return { debit, credit };
             });
-            const d = items.reduce((s, x) => s + x.debit, 0);
-            const c = items.reduce((s, x) => s + x.credit, 0);
+            const d = items.reduce((s: number, x: any) => s + x.debit, 0);
+            const c = items.reduce((s: number, x: any) => s + x.credit, 0);
             return { debit: d, credit: c, balance: d - c };
           })()}
         />
@@ -665,7 +674,6 @@ export default function AssetPage() {
       {/* Entry Form Modal */}
       {showEntryForm && (
         <Modal
-          isOpen={showEntryForm}
           onClose={closeForm}
           title={editingEntity ? 'Edit Asset Entry' : 'New Asset Entry'}
         >

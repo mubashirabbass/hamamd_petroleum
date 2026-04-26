@@ -12,11 +12,16 @@ import { useConfirm } from '../contexts/ConfirmContext';
 import PrintReportModal from '../components/modals/PrintReportModal';
 
 export default function CapitalPage() {
-  const { 
-    capitalCategories, capitalEntries, 
-    addCapitalCategory, updateCapitalCategory, deleteCapitalCategory, 
-    addCapitalEntry, deleteCapitalEntry, settings, currentUser, updateCapitalEntry 
-  } = useStore();
+  const capitalCategories = useStore(s => s.capitalCategories);
+  const capitalEntries = useStore(s => s.capitalEntries);
+  const addCapitalCategory = useStore(s => s.addCapitalCategory);
+  const updateCapitalCategory = useStore(s => s.updateCapitalCategory);
+  const deleteCapitalCategory = useStore(s => s.deleteCapitalCategory);
+  const addCapitalEntry = useStore(s => s.addCapitalEntry);
+  const updateCapitalEntry = useStore(s => s.updateCapitalEntry);
+  const deleteCapitalEntry = useStore(s => s.deleteCapitalEntry);
+  const settings = useStore(s => s.settings);
+  const currentUser = useStore(s => s.currentUser);
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const confirm = useConfirm();
@@ -77,7 +82,7 @@ export default function CapitalPage() {
     
     const withBalances = list.map(c => {
       const entries = filterByStartDate(capitalEntries, settings.startDate).filter(e => e.categoryId === c.id);
-      const amount = entries.reduce((s, e) => s + (e.amount || 0), 0);
+      const amount = entries.reduce((s: number, e: any) => s + (e.amount || 0), 0);
       return { ...c, balance: amount };
     });
 
@@ -135,7 +140,7 @@ export default function CapitalPage() {
   const paged = paginate(withBalance, page, perPage);
 
   const pageTotals = useMemo(() => ({
-    amount: paged.reduce((s, e) => s + (e.amount || 0), 0),
+    amount: paged.reduce((s: number, e: any) => s + (e.amount || 0), 0),
   }), [paged]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -191,7 +196,7 @@ export default function CapitalPage() {
   };
 
   const totals = useMemo(() => ({
-    amount: filteredEntries.reduce((s, e) => s + (e.amount || 0), 0),
+    amount: filteredEntries.reduce((s: number, e: any) => s + (e.amount || 0), 0),
   }), [filteredEntries]);
 
   const handleAddCategory = (e: React.FormEvent) => {
@@ -285,7 +290,7 @@ export default function CapitalPage() {
                   const matchesTo = !toDate || e.date <= toDate;
                   return matchesFrom && matchesTo;
                 });
-              const globalNet = allFilteredEntries.reduce((sum, e) => sum + (e.amount || 0), 0);
+              const globalNet = allFilteredEntries.reduce((sum: number, e: any) => sum + (e.amount || 0), 0);
               return (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 animate-in slide-in-from-top duration-500">
                   <div className="glass p-6 rounded-3xl border-l-8 border-primary-600 shadow-xl bg-gradient-to-br from-primary-50 to-white dark:from-primary-900/10 dark:to-dark-900 overflow-hidden relative group">
@@ -354,7 +359,7 @@ export default function CapitalPage() {
                           const matchesTo = !toDate || e.date <= toDate;
                           return e.categoryId === cat.id && matchesFrom && matchesTo;
                         });
-                        const balance = entries.reduce((s, e) => s + (e.amount || 0), 0);
+                        const balance = entries.reduce((s: number, e: any) => s + (e.amount || 0), 0);
                         return { ...cat, balance, count: entries.length };
                       }).filter(c => !dashboardSearch || c.name.toLowerCase().includes(dashboardSearch.toLowerCase()));
                       
@@ -756,7 +761,7 @@ export default function CapitalPage() {
       </div>
 
       {showEntryForm && (
-        <Modal isOpen={showEntryForm} onClose={closeForm} title={editingEntity ? "Edit Capital Transaction" : "New Capital Transaction"} maxWidth="md">
+        <Modal onClose={closeForm} title={editingEntity ? "Edit Capital Transaction" : "New Capital Transaction"} wide={true}>
           <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -824,7 +829,7 @@ export default function CapitalPage() {
           data={(() => {
             const items = capitalCategories.map(c => {
               const entries = filterByStartDate(capitalEntries, settings.startDate).filter(e => e.categoryId === c.id);
-              const amount = entries.reduce((s, e) => s + (e.amount || 0), 0);
+              const amount = entries.reduce((s: number, e: any) => s + (e.amount || 0), 0);
               return { ...c, balance: amount, amount, count: entries.length };
             });
             return items;
@@ -832,10 +837,10 @@ export default function CapitalPage() {
           totals={(() => {
             const items = capitalCategories.map(c => {
               const entries = filterByStartDate(capitalEntries, settings.startDate).filter(e => e.categoryId === c.id);
-              const amount = entries.reduce((s, e) => s + (e.amount || 0), 0);
+              const amount = entries.reduce((s: number, e: any) => s + (e.amount || 0), 0);
               return { amount };
             });
-            const a = items.reduce((s, x) => s + x.amount, 0);
+            const a = items.reduce((s: number, x: any) => s + x.amount, 0);
             return { amount: a, balance: a };
           })()}
         />

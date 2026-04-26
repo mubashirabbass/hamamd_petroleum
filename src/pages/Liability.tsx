@@ -14,11 +14,16 @@ import { useConfirm } from '../contexts/ConfirmContext';
 // const PER_PAGE = 40; // Replaced by state
 
 export default function LiabilityPage() {
-  const {
-    liabilityCategories, liabilityEntries,
-    addLiabilityCategory, updateLiabilityCategory, deleteLiabilityCategory,
-    addLiabilityEntry, deleteLiabilityEntry, settings, currentUser, updateLiabilityEntry
-  } = useStore();
+  const liabilityCategories = useStore(s => s.liabilityCategories);
+  const liabilityEntries = useStore(s => s.liabilityEntries);
+  const addLiabilityCategory = useStore(s => s.addLiabilityCategory);
+  const updateLiabilityCategory = useStore(s => s.updateLiabilityCategory);
+  const deleteLiabilityCategory = useStore(s => s.deleteLiabilityCategory);
+  const addLiabilityEntry = useStore(s => s.addLiabilityEntry);
+  const updateLiabilityEntry = useStore(s => s.updateLiabilityEntry);
+  const deleteLiabilityEntry = useStore(s => s.deleteLiabilityEntry);
+  const settings = useStore(s => s.settings);
+  const currentUser = useStore(s => s.currentUser);
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const confirm = useConfirm();
@@ -78,8 +83,8 @@ export default function LiabilityPage() {
     
     const withBalances = list.map(c => {
       const entries = filterByStartDate(liabilityEntries, settings.startDate).filter(e => e.categoryId === c.id);
-      const debit = entries.reduce((s, e) => s + (e.debit || 0), 0);
-      const credit = entries.reduce((s, e) => s + (e.credit || 0), 0);
+      const debit = entries.reduce((s: number, e: any) => s + (e.debit || 0), 0);
+      const credit = entries.reduce((s: number, e: any) => s + (e.credit || 0), 0);
       return { ...c, balance: Math.abs(debit - credit) };
     });
 
@@ -139,8 +144,8 @@ export default function LiabilityPage() {
   const paged = paginate(withBalance, page, perPage);
 
   const pageTotals = useMemo(() => ({
-    debit: paged.reduce((s, e) => s + (e.debit || 0), 0),
-    credit: paged.reduce((s, e) => s + (e.credit || 0), 0),
+    debit: paged.reduce((s: number, e: any) => s + (e.debit || 0), 0),
+    credit: paged.reduce((s: number, e: any) => s + (e.credit || 0), 0),
   }), [paged]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -200,8 +205,8 @@ export default function LiabilityPage() {
   };
 
   const totals = useMemo(() => ({
-    debit: filteredEntries.reduce((s, e) => s + (e.debit || 0), 0),
-    credit: filteredEntries.reduce((s, e) => s + (e.credit || 0), 0),
+    debit: filteredEntries.reduce((s: number, e: any) => s + (e.debit || 0), 0),
+    credit: filteredEntries.reduce((s: number, e: any) => s + (e.credit || 0), 0),
   }), [filteredEntries]);
 
   const handleAddCategory = (e: React.FormEvent) => {
@@ -1000,7 +1005,6 @@ export default function LiabilityPage() {
       {/* Entry Form Modal */}
       {showEntryForm && (
         <Modal
-          isOpen={showEntryForm}
           onClose={closeForm}
           title={editingEntity ? 'Edit Liability Entry' : 'New Liability Entry'}
         >

@@ -162,8 +162,17 @@ function BackupPanel() {
   };
 
   const handleConnect = async () => {
+    if (!clientId.trim() || !clientSecret.trim()) {
+      toast('Please enter both Client ID and Client Secret.', 'error');
+      return;
+    }
     setConnecting(true);
     try {
+      // Ensure credentials are saved before manual connection too
+      await setSetting('googleClientId',     clientId.trim());
+      await setSetting('googleClientSecret', clientSecret.trim());
+      setCredsSaved(true);
+
       const info = await connectGoogleDrive(manualPin.trim() || undefined);
       setConnected(true);
       setDriveEmail(info.email);
@@ -360,42 +369,42 @@ function BackupPanel() {
   };
 
   return (
-    <div className="flex flex-col md:flex-row gap-8 h-full min-h-[500px]">
+    <div className="flex flex-col md:flex-row gap-8 flex-1 h-[calc(100vh-12rem)] min-h-0 overflow-hidden">
       {/* Sub-Sidebar */}
-      <div className="w-full md:w-60 space-y-1 bg-slate-50/50 dark:bg-dark-900/50 p-3 rounded-2xl border border-slate-200/50 dark:border-dark-700/50 h-fit shrink-0">
-        <h5 className="px-4 mb-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">Backup Methods</h5>
+      <div className="w-full md:w-64 space-y-1 bg-slate-50/50 dark:bg-dark-900/50 p-4 rounded-3xl border border-slate-200/50 dark:border-dark-700/50 h-full shrink-0 overflow-y-auto no-scrollbar">
+        <h5 className="px-4 mb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Backup Methods</h5>
         <button onClick={() => setSubTab('cloud')}
           className={cn(
-            "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+            "w-full flex items-center gap-3 px-4 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all",
             subTab === 'cloud' ? "bg-primary-600 text-white shadow-lg shadow-primary-500/20" : "text-slate-500 hover:bg-slate-100 dark:hover:bg-dark-800"
           )}>
           <Cloud className="w-4 h-4" /> Cloud Sync (Drive)
         </button>
         <button onClick={() => setSubTab('local')}
           className={cn(
-            "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+            "w-full flex items-center gap-3 px-4 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all",
             subTab === 'local' ? "bg-primary-600 text-white shadow-lg shadow-primary-500/20" : "text-slate-500 hover:bg-slate-100 dark:hover:bg-dark-800"
           )}>
           <HardDrive className="w-4 h-4" /> Local ZIP Archive
         </button>
         <button onClick={() => setSubTab('export')}
           className={cn(
-            "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+            "w-full flex items-center gap-3 px-4 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all",
             subTab === 'export' ? "bg-primary-600 text-white shadow-lg shadow-primary-500/20" : "text-slate-500 hover:bg-slate-100 dark:hover:bg-dark-800"
           )}>
           <FileSpreadsheet className="w-4 h-4" /> Excel/CSV Export
         </button>
-        <div className="h-px bg-slate-200 dark:bg-dark-700/50 my-2" />
+        <div className="h-px bg-slate-200 dark:bg-dark-700/50 my-4" />
         <button onClick={() => setSubTab('tools')}
           className={cn(
-            "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+            "w-full flex items-center gap-3 px-4 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all",
             subTab === 'tools' ? "bg-primary-600 text-white shadow-lg shadow-primary-500/20" : "text-slate-500 hover:bg-slate-100 dark:hover:bg-dark-800"
           )}>
           <Zap className="w-4 h-4" /> Recovery Tools
         </button>
       </div>
 
-      <div className="flex-1 space-y-6 overflow-y-auto smart-scroll pb-10">
+      <div className="flex-1 space-y-6 overflow-y-auto smart-scroll pb-20 pr-2">
         
         {progress.active && (
           <div className="bg-slate-900 rounded-3xl border border-white/10 p-6 flex items-center gap-5 animate-in slide-in-from-top duration-500 shadow-2xl">
@@ -1025,7 +1034,7 @@ export default function SettingsPage() {
             </button>
           )}
 
-          <div className="flex-1 overflow-y-auto smart-scroll">
+          <div className="flex-1 min-h-0 flex flex-col">
             
             {progress.active && (
               <div className="mb-6 bg-slate-900 rounded-2xl border border-white/10 p-4 flex items-center gap-4 animate-in slide-in-from-top duration-300">
@@ -1040,14 +1049,14 @@ export default function SettingsPage() {
             )}
 
           {activeTab === 'general' && (
-            <div className="glass rounded-2xl overflow-hidden border border-slate-200/50 dark:border-dark-700/50 h-full">
+            <div className="glass rounded-2xl overflow-hidden border border-slate-200/50 dark:border-dark-700/50 h-full flex flex-col">
               <div className="p-5 border-b border-slate-200 dark:border-dark-700/50 bg-primary-500/5">
                 <div className="flex items-center gap-3">
                   <Calendar className="w-5 h-5 text-primary-600 dark:text-primary-400" />
                   <h2 className="font-bold text-slate-900 dark:text-white">Financial Record Setup</h2>
                 </div>
               </div>
-              <div className="p-8 space-y-8">
+              <div className="flex-1 overflow-y-auto smart-scroll p-8 space-y-8">
                 <div>
                   <label className="label mb-3 block text-sm font-black uppercase tracking-widest text-slate-400">
                     Software Starting Date
@@ -1076,7 +1085,11 @@ export default function SettingsPage() {
 
           {activeTab === 'backup' && <BackupPanel />}
 
-          {activeTab === 'shortcuts' && <KeyboardShortcutsPanel />}
+          {activeTab === 'shortcuts' && (
+            <div className="flex-1 overflow-y-auto smart-scroll">
+              <KeyboardShortcutsPanel />
+            </div>
+          )}
 
           {activeTab === 'users' && (
             <div className="glass rounded-2xl overflow-hidden border border-slate-200/50 dark:border-dark-700/50 h-full flex flex-col">
@@ -1093,7 +1106,7 @@ export default function SettingsPage() {
           )}
 
           {activeTab === 'developer' && (
-            <div className="space-y-12">
+            <div className="flex-1 overflow-y-auto smart-scroll p-8 space-y-12">
               <DeveloperSettings />
               <div className="pt-12 border-t border-slate-200 dark:border-dark-700/50">
                 <div className="flex items-center gap-3 mb-8">
@@ -1111,26 +1124,28 @@ export default function SettingsPage() {
           )}
 
           {activeTab === 'danger' && (
-            <div className="glass rounded-2xl overflow-hidden border border-red-200/50 dark:border-red-900/30">
-              <div className="p-5 border-b border-red-100 dark:border-red-900/30 bg-red-500/5">
-                <div className="flex items-center gap-3">
-                  <Trash2 className="w-5 h-5 text-red-600" />
-                  <h2 className="font-black text-red-700 dark:text-red-400">Danger Zone</h2>
-                </div>
-              </div>
-              <div className="p-8">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 p-6 rounded-2xl bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30">
-                  <div>
-                    <h4 className="text-base font-black text-slate-900 dark:text-white mb-1">Reset All Business Data</h4>
-                    <p className="text-sm text-slate-600 dark:text-dark-400">
-                      Permanently delete all purchases, sales, expense, asset, liability, and customer records.
-                      User accounts and settings are preserved. <strong>This cannot be undone.</strong>
-                    </p>
+            <div className="flex-1 overflow-y-auto smart-scroll p-8">
+              <div className="glass rounded-2xl overflow-hidden border border-red-200/50 dark:border-red-900/30">
+                <div className="p-5 border-b border-red-100 dark:border-red-900/30 bg-red-500/5">
+                  <div className="flex items-center gap-3">
+                    <Trash2 className="w-5 h-5 text-red-600" />
+                    <h2 className="font-black text-red-700 dark:text-red-400">Danger Zone</h2>
                   </div>
-                  <button onClick={() => setShowResetConfirm(true)}
-                    className="flex items-center gap-2 px-6 py-3 bg-red-600 text-white rounded-xl font-black hover:bg-red-700 transition-colors whitespace-nowrap shadow-lg shadow-red-600/20">
-                    <Trash2 className="w-4 h-4" /> Reset All Data
-                  </button>
+                </div>
+                <div className="p-8">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 p-6 rounded-2xl bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30">
+                    <div>
+                      <h4 className="text-base font-black text-slate-900 dark:text-white mb-1">Reset All Business Data</h4>
+                      <p className="text-sm text-slate-600 dark:text-dark-400">
+                        Permanently delete all purchases, sales, expense, asset, liability, and customer records.
+                        User accounts and settings are preserved. <strong>This cannot be undone.</strong>
+                      </p>
+                    </div>
+                    <button onClick={() => setShowResetConfirm(true)}
+                      className="flex items-center gap-2 px-6 py-3 bg-red-600 text-white rounded-xl font-black hover:bg-red-700 transition-colors whitespace-nowrap shadow-lg shadow-red-600/20">
+                      <Trash2 className="w-4 h-4" /> Reset All Data
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

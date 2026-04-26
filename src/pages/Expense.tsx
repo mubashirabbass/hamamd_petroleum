@@ -85,7 +85,7 @@ export default function ExpensePage() {
     
     const withTotals = list.map(c => {
       const entries = filterByStartDate(expenseEntries, settings.startDate).filter(e => e.categoryId === c.id);
-      const total = entries.reduce((s, e) => s + (e.amount || 0), 0);
+      const total = entries.reduce((s: number, e: any) => s + (e.amount || 0), 0);
       return { ...c, total };
     });
 
@@ -132,7 +132,7 @@ export default function ExpensePage() {
 
   const paged = paginate(catEntries, page, perPage);
 
-  const pageTotals = paged.reduce((s, e) => s + (e.amount || 0), 0);
+  const pageTotals = paged.reduce((s: number, e: any) => s + (e.amount || 0), 0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -188,7 +188,7 @@ export default function ExpensePage() {
     setShowEntryForm(true);
   };
 
-  const totals = catEntries.reduce((s, e) => s + e.amount, 0);
+  const totals = catEntries.reduce((s: number, e: any) => s + e.amount, 0);
 
   const handleAddCategory = (e: React.FormEvent) => {
     e.preventDefault();
@@ -917,7 +917,7 @@ export default function ExpensePage() {
           ]}
           data={catEntries}
           totals={{
-            amount: catEntries.reduce((s, e) => s + (e.amount || 0), 0)
+            amount: catEntries.reduce((s: number, e: any) => s + (e.amount || 0), 0)
           }}
           dateRange={fromDate || toDate ? { from: fromDate, to: toDate } : undefined}
         />

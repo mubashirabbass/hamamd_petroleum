@@ -67,6 +67,22 @@ export default function Layout() {
 
   const isTransactionPage = ['/purchase', '/sale', '/expense', '/asset', '/liability', '/customer'].some(p => isPath(p)) || isStock;
 
+  const renderContent = () => {
+    if (isPath('/')) return <Dashboard />;
+    if (isPath('/purchase')) return <Purchase />;
+    if (isPath('/sale')) return <Sale />;
+    if (isPath('/expense')) return <Expense />;
+    if (isPath('/asset')) return <Asset />;
+    if (isPath('/liability')) return <Liability />;
+    if (isStock) return <Stock />;
+    if (isPath('/customer')) return <Customer />;
+    if (isPath('/capital')) return <Capital />;
+    if (isPath('/pls')) return <PLS />;
+    if (isPath('/balancesheet')) return <BalanceSheet />;
+    if (isPath('/settings')) return <Settings />;
+    return null;
+  };
+
   return (
     <div 
       className="flex h-screen overflow-hidden bg-slate-100 dark:bg-dark-950 transition-colors duration-300"
@@ -109,18 +125,7 @@ export default function Layout() {
           </button>
         </div>
         <div className={cn("h-full w-full", isTransactionPage ? "p-0" : "p-3 md:p-6")}>
-          {isPath('/') && <Dashboard />}
-          {isPath('/purchase') && <Purchase />}
-          {isPath('/sale') && <Sale />}
-          {isPath('/expense') && <Expense />}
-          {isPath('/asset') && <Asset />}
-          {isPath('/liability') && <Liability />}
-          {isStock && <Stock />}
-          {isPath('/customer') && <Customer />}
-          {isPath('/capital') && <Capital />}
-          {isPath('/pls') && <PLS />}
-          {isPath('/balancesheet') && <BalanceSheet />}
-          {isPath('/settings') && <Settings />}
+          {renderContent()}
         </div>
 
         {/* Mobile Bottom Navigation */}

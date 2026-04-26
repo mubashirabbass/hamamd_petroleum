@@ -117,30 +117,39 @@ function FKey({ k, label }: { k: string; label: string }) {
   );
 }
 
-// ─── Main Dashboard ───────────────────────────────────────────────────────────
-export default function Dashboard() {
-  const {
-    expenseEntries: rawExpenses, expenseCategories, settings,
-    assetCategories, liabilityCategories,
-    purchases: rawPurchases, sales: rawSales, customers
-  } = useStore();
-
-  const plsOverrides = settings.plsOverrides || {};
-
+function TypingTitle({ text }: { text: string }) {
   const [displayText, setDisplayText] = useState('');
-  const fullText = "حماد رحیم فلنگ اسٹیشن مینجمنٹ سسٹم";
-
   useEffect(() => {
     let index = 0;
     const timer = setInterval(() => {
-      setDisplayText(fullText.slice(0, index));
+      setDisplayText(text.slice(0, index));
       index++;
-      if (index > fullText.length) {
-        clearInterval(timer);
-      }
+      if (index > text.length) clearInterval(timer);
     }, 30);
     return () => clearInterval(timer);
-  }, []);
+  }, [text]);
+
+  return (
+    <h1 className="text-[13px] xs:text-[15px] sm:text-[17px] md:text-xl lg:text-2xl font-black text-white font-urdu leading-[1.8] text-center drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)] whitespace-nowrap">
+      {displayText}
+    </h1>
+  );
+}
+
+// ─── Main Dashboard ───────────────────────────────────────────────────────────
+export default function Dashboard() {
+  const rawExpenses = useStore(s => s.expenseEntries);
+  const expenseCategories = useStore(s => s.expenseCategories);
+  const settings = useStore(s => s.settings);
+  const assetCategories = useStore(s => s.assetCategories);
+  const liabilityCategories = useStore(s => s.liabilityCategories);
+  const rawPurchases = useStore(s => s.purchases);
+  const rawSales = useStore(s => s.sales);
+  const customers = useStore(s => s.customers);
+
+  if (!settings) return null;
+
+  const plsOverrides = settings.plsOverrides || {};
 
   const [filter, setFilter]     = useState<'today' | 'month' | 'custom' | 'overall'>('overall');
   const [fromDate, setFromDate] = useState('');
@@ -269,14 +278,14 @@ export default function Dashboard() {
       const hsdDayEntries = rawSales.filter(s => s.date === dateStr && s.type === 'HSD');
       const pmgDayEntries = rawSales.filter(s => s.date === dateStr && s.type === 'PMG');
       
-      const hsdSalesQty = hsdDayEntries.reduce((sum, s) => sum + (s.liters || 0), 0);
-      const hsdSalesAmt = hsdDayEntries.reduce((sum, s) => sum + (s.amount || 0), 0);
+      const hsdSalesQty = hsdDayEntries.reduce((sum: number, s: any) => sum + (s.quantity || 0), 0);
+      const hsdSalesAmt = hsdDayEntries.reduce((sum: number, s: any) => sum + (s.amount || 0), 0);
       
-      const pmgSalesQty = pmgDayEntries.reduce((sum, p) => sum + (p.liters || 0), 0);
-      const pmgSalesAmt = pmgDayEntries.reduce((sum, p) => sum + (p.amount || 0), 0);
+      const pmgSalesQty = pmgDayEntries.reduce((sum: number, p: any) => sum + (p.quantity || 0), 0);
+      const pmgSalesAmt = pmgDayEntries.reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
 
-      const hsdPurAmt = rawPurchases.filter(p => p.date === dateStr && p.type === 'HSD').reduce((sum, p) => sum + (p.totalAmount || 0), 0);
-      const pmgPurAmt = rawPurchases.filter(p => p.date === dateStr && p.type === 'PMG').reduce((sum, p) => sum + (p.totalAmount || 0), 0);
+      const hsdPurAmt = rawPurchases.filter(p => p.date === dateStr && p.type === 'HSD').reduce((sum: number, p: any) => sum + (p.totalAmount || 0), 0);
+      const pmgPurAmt = rawPurchases.filter(p => p.date === dateStr && p.type === 'PMG').reduce((sum: number, p: any) => sum + (p.totalAmount || 0), 0);
 
       // Actual daily profit: Sales - (Qty Sold * Avg Purchase Rate)
       const hsdProfit = hsdSalesAmt - (hsdSalesQty * hsdAvg);
@@ -290,7 +299,7 @@ export default function Dashboard() {
         pmgPur: pmgPurAmt,
         hsdProfit: hsdProfit,
         pmgProfit: pmgProfit,
-        Expenses: rawExpenses.filter(e => e.date === dateStr).reduce((sum, e) => sum + (e.amount || 0), 0)
+        Expenses: rawExpenses.filter(e => e.date === dateStr).reduce((sum: number, e: { amount?: number }) => sum + (e.amount || 0), 0)
       });
     }
     return data;
@@ -329,7 +338,7 @@ export default function Dashboard() {
   const clearFilter = () => { setFilter('overall'); setFromDate(''); setToDate(''); };
 
   return (
-    <div className="animate-fade-in space-y-6 pb-24 h-full w-full overflow-y-auto smart-scroll">
+    <div className="space-y-6 pb-24 h-full w-full overflow-y-auto smart-scroll">
       <div className="relative rounded-3xl md:rounded-[2rem] shadow-lg border border-slate-200/60 dark:border-dark-700/60 flex flex-col md:flex-row md:items-center justify-between gap-4 animate-fade-in group min-h-[80px] md:min-h-[100px] px-4 md:px-6 py-4">
         {/* Background Layer with Overflow Clipping */}
         <div className="absolute inset-0 z-0 rounded-3xl md:rounded-[2rem] overflow-hidden">
@@ -351,9 +360,7 @@ export default function Dashboard() {
         {/* 2. Dashboard Title Block (Center) */}
         <div className="flex-1 flex flex-col items-center justify-center relative z-10 overflow-hidden" dir="rtl">
           <div className="min-w-[300px] xs:min-w-[350px] md:min-w-[550px] lg:min-w-[650px] max-w-[95%] mx-auto px-14 py-4 bg-white/10 dark:bg-white/5 backdrop-blur-2xl rounded-[1.5rem] border border-white/20 shadow-2xl flex items-center justify-center transition-all duration-300 md:-translate-x-8">
-            <h1 className="text-[13px] xs:text-[15px] sm:text-[17px] md:text-xl lg:text-2xl font-black text-white font-urdu leading-[1.8] text-center drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)] whitespace-nowrap">
-              {displayText}
-            </h1>
+            <TypingTitle text="حماد رحیم فلنگ اسٹیشن مینجمنٹ سسٹم" />
           </div>
         </div>
 
@@ -416,7 +423,7 @@ export default function Dashboard() {
           { label: 'Gross Profit',  value: `₨ ${formatCurrency(dashboardStats.grossProfit)}`,  icon: DollarSign,   color: 'text-primary-600', bg: 'bg-primary-500/10', border: 'border-primary-600/20' },
           { label: 'Net Profit',    value: `₨ ${formatCurrency(dashboardStats.netProfit)}`,    icon: DollarSign,   color: dashboardStats.netProfit >= 0 ? 'text-emerald-600' : 'text-red-600', bg: 'bg-slate-500/5', border: 'border-slate-600/20' },
         ].map(s => (
-          <div key={s.label} className={cn('flex-shrink-0 w-[240px] md:w-auto glass p-5 md:p-6 rounded-3xl border-l-4 shadow-xl animate-in slide-in-from-bottom duration-350 flex flex-col', s.border)}>
+          <div key={s.label} className={cn('flex-shrink-0 w-[240px] md:w-auto glass p-5 md:p-6 rounded-3xl border-l-4 shadow-xl flex flex-col', s.border)}>
             <div className={`w-10 h-10 md:w-12 md:h-12 rounded-2xl ${s.bg} flex items-center justify-center mb-4 flex-shrink-0`}><s.icon className={`w-5 h-5 md:w-6 md:h-6 ${s.color}`} /></div>
             <p className="text-[9px] md:text-[10px] font-black text-slate-400 dark:text-dark-500 uppercase tracking-[0.2em] mb-1 truncate">{s.label}</p>
             <p className={cn('font-black tracking-tighter tabular-nums break-words break-all leading-tight w-full', s.value.length > 20 ? 'text-base md:text-lg' : s.value.length > 15 ? 'text-lg md:text-xl' : 'text-xl md:text-2xl', s.color)}>{s.value}</p>
@@ -491,9 +498,9 @@ export default function Dashboard() {
                   formatter={(value: any) => `₨ ${formatCurrency(value)}`}
                   contentStyle={{ backgroundColor: 'white', borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)', fontSize: '10px', fontWeight: '900' }} 
                 />
-                <Bar dataKey="hsdPur" name="Purchase" fill="#f59e0b" radius={[4, 4, 0, 0]} barSize={20} />
-                <Bar dataKey="hsdSales" name="Sale" fill="#10b981" radius={[4, 4, 0, 0]} barSize={20} />
-                <Line type="monotone" dataKey="hsdProfit" name="Daily Profit" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4, fill: '#3b82f6' }} />
+                <Bar dataKey="hsdPur" name="Purchase" fill="#f59e0b" radius={[4, 4, 0, 0]} barSize={20} isAnimationActive={false} />
+                <Bar dataKey="hsdSales" name="Sale" fill="#10b981" radius={[4, 4, 0, 0]} barSize={20} isAnimationActive={false} />
+                <Line type="monotone" dataKey="hsdProfit" name="Daily Profit" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4, fill: '#3b82f6' }} isAnimationActive={false} />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
@@ -522,9 +529,9 @@ export default function Dashboard() {
                   formatter={(value: any) => `₨ ${formatCurrency(value)}`}
                   contentStyle={{ backgroundColor: 'white', borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)', fontSize: '10px', fontWeight: '900' }} 
                 />
-                <Bar dataKey="pmgPur" name="Purchase" fill="#f59e0b" radius={[4, 4, 0, 0]} barSize={20} />
-                <Bar dataKey="pmgSales" name="Sale" fill="#10b981" radius={[4, 4, 0, 0]} barSize={20} />
-                <Line type="monotone" dataKey="pmgProfit" name="Daily Profit" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4, fill: '#3b82f6' }} />
+                <Bar dataKey="pmgPur" name="Purchase" fill="#f59e0b" radius={[4, 4, 0, 0]} barSize={20} isAnimationActive={false} />
+                <Bar dataKey="pmgSales" name="Sale" fill="#10b981" radius={[4, 4, 0, 0]} barSize={20} isAnimationActive={false} />
+                <Line type="monotone" dataKey="pmgProfit" name="Daily Profit" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4, fill: '#3b82f6' }} isAnimationActive={false} />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
@@ -543,7 +550,7 @@ export default function Dashboard() {
                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: 900, fill: '#94a3b8' }} />
                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: 900, fill: '#94a3b8' }} />
                    <Tooltip contentStyle={{ backgroundColor: 'white', borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)', fontSize: '10px', fontWeight: '900' }} />
-                   <Bar dataKey="Expenses" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                   <Bar dataKey="Expenses" fill="#ef4444" radius={[4, 4, 0, 0]} isAnimationActive={false} />
                 </BarChart>
               </ResponsiveContainer>
            </div>

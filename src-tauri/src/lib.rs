@@ -68,7 +68,7 @@ async fn create_backup_zip(app: tauri::AppHandle) -> Result<String, String> {
     std::fs::create_dir_all(&backups_dir).map_err(|e| e.to_string())?;
 
     let timestamp = chrono::Utc::now().format("%Y%m%d_%H%M%S").to_string();
-    let zip_name = format!("EBS_Backup_{}.zip", timestamp);
+    let zip_name = format!("EBS_Full_Archive_{}.zip", timestamp);
     let zip_path = backups_dir.join(&zip_name);
 
     let file = std::fs::File::create(&zip_path).map_err(|e| e.to_string())?;
@@ -76,103 +76,100 @@ async fn create_backup_zip(app: tauri::AppHandle) -> Result<String, String> {
     let options = zip::write::FileOptions::<()>::default()
         .compression_method(zip::CompressionMethod::Deflated);
 
-    // 1. Backup metadata
+    // 1. Comprehensive Metadata
     let meta = serde_json::json!({
-        "version": "2.0",
-        "app": "HR Filling Station",
+        "version": "3.0",
+        "app": "HRM Filling Station",
         "createdAt": chrono::Utc::now().to_rfc3339(),
-        "hasExcelReports": true
+        "contents": ["database", "activation_keys", "excel_reports", "app_configs"]
     });
     zip.start_file("metadata.json", options).map_err(|e| e.to_string())?;
     zip.write_all(meta.to_string().as_bytes()).map_err(|e| e.to_string())?;
 
-    // 2. Main SQLite database file
+    // 2. Main SQLite Database + Logs
     zip.start_file("ebs_business.db", options).map_err(|e| e.to_string())?;
     let db_data = std::fs::read(&db_path).map_err(|e| e.to_string())?;
     zip.write_all(&db_data).map_err(|e| e.to_string())?;
 
-    // 3. WAL/SHM logs
-    let wal_path = app_dir.join("ebs_business.db-wal");
-    if wal_path.exists() {
-        zip.start_file("ebs_business.db-wal", options).map_err(|e| e.to_string())?;
-        let wal_data = std::fs::read(&wal_path).map_err(|e| e.to_string())?;
-        zip.write_all(&wal_data).map_err(|e| e.to_string())?;
-    }
-    let shm_path = app_dir.join("ebs_business.db-shm");
-    if shm_path.exists() {
-        zip.start_file("ebs_business.db-shm", options).map_err(|e| e.to_string())?;
-        let shm_data = std::fs::read(&shm_path).map_err(|e| e.to_string())?;
-        zip.write_all(&shm_data).map_err(|e| e.to_string())?;
-    }
-
-    // 4. Excel Reports Folder (The user's specific request)
-    let entries = std::fs::read_dir(export_dir).map_err(|e| e.to_string())?;
-    for entry in entries.flatten() {
-        let fname = entry.file_name().to_string_lossy().to_string();
-        if fname.ends_with(".csv") || fname == "README.txt" {
-            let data = std::fs::read(entry.path()).map_err(|e| e.to_string())?;
-            zip.start_file(format!("Excel_Reports/{}", fname), options).map_err(|e| e.to_string())?;
+    for log_ext in &["-wal", "-shm"] {
+        let log_path = app_dir.join(format!("ebs_business.db{}", log_ext));
+        if log_path.exists() {
+            zip.start_file(format!("ebs_business.db{}", log_ext), options).map_err(|e| e.to_string())?;
+            let data = std::fs::read(&log_path).map_err(|e| e.to_string())?;
             zip.write_all(&data).map_err(|e| e.to_string())?;
         }
     }
 
+    // 3. Hardware Activation Keys (The "everything" requirement)
+    let key_path = app_dir.join("ebs_activation.key");
+    if key_path.exists() {
+        zip.start_file("ebs_activation.key", options).map_err(|e| e.to_string())?;
+        let data = std::fs::read(&key_path).map_err(|e| e.to_string())?;
+        zip.write_all(&data).map_err(|e| e.to_string())?;
+    }
+
+    // 4. Excel Reports Folder (Preserve historical exports)
+    if export_dir.exists() {
+        let entries = std::fs::read_dir(export_dir).map_err(|e| e.to_string())?;
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_file() {
+                let fname = entry.file_name().to_string_lossy().to_string();
+                let data = std::fs::read(&path).map_err(|e| e.to_string())?;
+                zip.start_file(format!("Excel_Reports/{}", fname), options).map_err(|e| e.to_string())?;
+                zip.write_all(&data).map_err(|e| e.to_string())?;
+            }
+        }
+    }
+
     zip.finish().map_err(|e| e.to_string())?;
-    
     Ok(zip_path.to_string_lossy().to_string())
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// RESTORE — Extract ZIP and replace the SQLite database
-// ─────────────────────────────────────────────────────────────────────────────
 
 #[tauri::command]
 #[allow(unused_variables)]
 async fn restore_from_zip(zip_path: String, app: tauri::AppHandle) -> Result<(), String> {
     #[cfg(not(mobile))]
     let app_dir = get_base_dir()?;
-
     #[cfg(mobile)]
-    let app_dir = app.path().app_data_dir()
-        .map_err(|e| e.to_string())?;
+    let app_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
 
+    let file = std::fs::File::open(&zip_path).map_err(|e| format!("Cannot open backup: {}", e))?;
+    let mut archive = zip::ZipArchive::new(file).map_err(|e| format!("Invalid ZIP: {}", e))?;
 
-    let file = std::fs::File::open(&zip_path).map_err(|e| {
-        format!("Cannot open backup file: {}", e)
-    })?;
-
-    let mut archive = zip::ZipArchive::new(file).map_err(|e| {
-        format!("Invalid ZIP archive: {}", e)
-    })?;
-
-    let mut found_db = false;
+    let mut db_found = false;
     let mut has_wal_in_zip = false;
 
-    // First pass: extract files
+    // Clear old exports to avoid mixing data
+    let export_dir = app_dir.join("exports");
+    let _ = std::fs::remove_dir_all(&export_dir);
+    let _ = std::fs::create_dir_all(&export_dir);
+
     for i in 0..archive.len() {
         let mut entry = archive.by_index(i).map_err(|e| e.to_string())?;
         let name = entry.name().to_string();
-        
-        if name == "ebs_business.db" || name == "ebs_business.db-wal" || name == "ebs_business.db-shm" {
-            let mut data = Vec::new();
-            entry.read_to_end(&mut data).map_err(|e| e.to_string())?;
-            
-            let target_path = app_dir.join(&name);
-            let ext = target_path.extension().map(|s| s.to_string_lossy().to_string()).unwrap_or_else(|| "db".to_string());
-            let tmp_path = target_path.with_extension(format!("restoring.{}", ext));
-            
-            std::fs::write(&tmp_path, &data).map_err(|e| e.to_string())?;
-            // Remove existing file before renaming to avoid "File exists" OS error on Windows
-            let _ = std::fs::remove_file(&target_path);
-            std::fs::rename(&tmp_path, &target_path).map_err(|e| e.to_string())?;
+        let mut data = Vec::new();
+        entry.read_to_end(&mut data).map_err(|e| e.to_string())?;
 
-            if name == "ebs_business.db" { found_db = true; }
-            if name == "ebs_business.db-wal" { has_wal_in_zip = true; }
+        if name == "ebs_business.db" {
+            std::fs::write(app_dir.join(&name), &data).map_err(|e| e.to_string())?;
+            db_found = true;
+        } else if name == "ebs_business.db-wal" {
+            std::fs::write(app_dir.join(&name), &data).map_err(|e| e.to_string())?;
+            has_wal_in_zip = true;
+        } else if name == "ebs_business.db-shm" {
+            std::fs::write(app_dir.join(&name), &data).map_err(|e| e.to_string())?;
+        } else if name == "ebs_activation.key" {
+            std::fs::write(app_dir.join(&name), &data).map_err(|e| e.to_string())?;
+        } else if name.starts_with("Excel_Reports/") {
+            let fname = name.replace("Excel_Reports/", "");
+            if !fname.is_empty() {
+                std::fs::write(export_dir.join(fname), &data).map_err(|e| e.to_string())?;
+            }
         }
     }
 
-    if found_db {
-        // If the backup did not contain a WAL file, we MUST proactively delete any local WAL files
-        // so that SQLite doesn't overwrite the fresh backup with stale memory logs!
+    if db_found {
         if !has_wal_in_zip {
             let _ = std::fs::remove_file(app_dir.join("ebs_business.db-wal"));
             let _ = std::fs::remove_file(app_dir.join("ebs_business.db-shm"));
@@ -180,14 +177,14 @@ async fn restore_from_zip(zip_path: String, app: tauri::AppHandle) -> Result<(),
         return Ok(());
     }
 
-    Err("Backup ZIP does not contain a valid database file (ebs_business.db).".to_string())
+    Err("Backup does not contain a valid database (ebs_business.db).".to_string())
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GOOGLE OAUTH2 — Local HTTP server captures the authorization code
 // ─────────────────────────────────────────────────────────────────────────────
 
-const REDIRECT_URI: &str = "http://127.0.0.1:3001/oauth/callback";
+const REDIRECT_URI: &str = "http://localhost:3001/oauth/callback";
 
 /// Starts a local HTTP listener on port 3001, opens the OAuth URL in the
 /// system browser, waits for Google's callback, and returns the authorization code.

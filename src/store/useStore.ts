@@ -5,8 +5,8 @@
  * On startup: loadAllData() populates the store from the database.
  * On every mutation: the action writes to SQLite AND updates in-memory state.
  *
- * NO localStorage / sessionStorage is used — data lives in:
- *   Installation Folder: hrm_business.db (Portable Mode)
+ * ONLY sessionStorage is used for auth persistence — business data lives in:
+ *   Installation Folder: ebs_business.db (Portable Mode)
  */
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
@@ -145,6 +145,7 @@ export interface Settings {
   baseRateHSD: number;
   baseRatePMG: number;
   plsOverrides: Record<string, number>;
+  endDate?:     string;
   sidebarPinned: boolean;
 }
 
@@ -176,7 +177,7 @@ interface AppState {
   expenseCategories:     Category[];
   expenseEntries:        ExpenseEntry[];
   nextExpenseNo:         number;
-  addExpenseCategory:    (name: string)                              => Promise<void>;
+  addExpenseCategory:    (name: string)                              => Promise<string>;
   updateExpenseCategory: (id: string, name: string)                  => Promise<void>;
   deleteExpenseCategory: (id: string)                                => Promise<void>;
   addExpenseEntry:       (e: Omit<ExpenseEntry, 'id' | 'billNo'>)   => Promise<void>;
@@ -187,7 +188,7 @@ interface AppState {
   assetCategories:    Category[];
   assetEntries:       AssetEntry[];
   nextAssetNo:        number;
-  addAssetCategory:   (name: string)                              => Promise<void>;
+  addAssetCategory:   (name: string)                              => Promise<string>;
   updateAssetCategory:(id: string, name: string)                  => Promise<void>;
   deleteAssetCategory:(id: string)                                => Promise<void>;
   addAssetEntry:      (e: Omit<AssetEntry, 'id' | 'billNo'>)     => Promise<void>;
@@ -198,7 +199,7 @@ interface AppState {
   liabilityCategories:    Category[];
   liabilityEntries:       LiabilityEntry[];
   nextLiabilityNo:        number;
-  addLiabilityCategory:   (name: string)                               => Promise<void>;
+  addLiabilityCategory:   (name: string)                               => Promise<string>;
   updateLiabilityCategory:(id: string, name: string)                   => Promise<void>;
   deleteLiabilityCategory:(id: string)                                 => Promise<void>;
   addLiabilityEntry:      (e: Omit<LiabilityEntry, 'id' | 'billNo'>) => Promise<void>;
@@ -209,7 +210,7 @@ interface AppState {
   customers:           Customer[];
   customerEntries:     CustomerEntry[];
   nextCustomerNo:      number;
-  addCustomer:         (c: Omit<Customer, 'id'>)                      => Promise<void>;
+  addCustomer:         (c: Omit<Customer, 'id'>)                      => Promise<string>;
   updateCustomer:      (id: string, c: Partial<Customer>)             => Promise<void>;
   deleteCustomer:      (id: string)                                   => Promise<void>;
   addCustomerEntry:    (e: Omit<CustomerEntry, 'id' | 'billNo'>)      => Promise<void>;
@@ -220,7 +221,7 @@ interface AppState {
   capitalCategories:    Category[];
   capitalEntries:       CapitalEntry[];
   nextCapitalNo:        number;
-  addCapitalCategory:   (name: string)                               => Promise<void>;
+  addCapitalCategory:   (name: string)                               => Promise<string>;
   updateCapitalCategory:(id: string, name: string)                   => Promise<void>;
   deleteCapitalCategory:(id: string)                                 => Promise<void>;
   addCapitalEntry:      (e: Omit<CapitalEntry, 'id' | 'billNo'>)    => Promise<void>;
@@ -465,6 +466,7 @@ export const useStore = create<AppState>()(
     const id = uid();
     await db.execute('INSERT INTO expense_categories (id,name) VALUES (?,?)', [id, name]);
     set(s => ({ expenseCategories: [...s.expenseCategories, { id, name }] }));
+    return id;
   },
   updateExpenseCategory: async (id, name) => {
     const db = await getDB();
@@ -586,6 +588,7 @@ export const useStore = create<AppState>()(
     const id = uid();
     await db.execute('INSERT INTO liability_categories (id,name) VALUES (?,?)', [id, name]);
     set(s => ({ liabilityCategories: [...s.liabilityCategories, { id, name }] }));
+    return id;
   },
   updateLiabilityCategory: async (id, name) => {
     const db = await getDB();
@@ -646,6 +649,7 @@ export const useStore = create<AppState>()(
     const id = uid();
     await db.execute('INSERT INTO customers (id,name,phone) VALUES (?,?,?)', [id, c.name, c.phone]);
     set(s => ({ customers: [...s.customers, { ...c, id }] }));
+    return id;
   },
   updateCustomer: async (id, data) => {
     const db = await getDB();
@@ -772,6 +776,14 @@ export const useStore = create<AppState>()(
     shortcuts:           [],
     plsOverrides:        {},
     sidebarPinned:       false,
+    stockAdjustmentHSD:  0,
+    stockAdjustmentPMG:  0,
+    purchaseAdjustmentHSD: 0,
+    purchaseAdjustmentPMG: 0,
+    saleAdjustmentHSD: 0,
+    saleAdjustmentPMG: 0,
+    baseRateHSD: 0,
+    baseRatePMG: 0,
   },
 
   updateSettings: async (updates) => {
@@ -923,7 +935,7 @@ export const useStore = create<AppState>()(
           baseRatePMG: 0,
         },
       });
-      return true;
+      return;
     } catch (err) {
       console.error('[Reset] Critical reset failure:', err);
       throw err;
@@ -932,7 +944,7 @@ export const useStore = create<AppState>()(
     }),
     {
       name: 'ebs-auth-storage',
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => sessionStorage),
       partialize: (state) => ({ currentUser: state.currentUser }),
     }
   )

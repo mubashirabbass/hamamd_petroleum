@@ -199,17 +199,17 @@ export default function PurchasePage() {
   };
 
   const pageTotals = useMemo(() => ({
-    qty: paged.reduce((s, p) => s + p.quantity, 0),
-    carriage: paged.reduce((s, p) => s + p.carriage, 0),
-    amount: paged.reduce((s, p) => s + p.amount, 0),
-    total: paged.reduce((s, p) => s + p.totalAmount, 0),
+    qty: paged.reduce((s: number, p: any) => s + p.quantity, 0),
+    carriage: paged.reduce((s: number, p: any) => s + p.carriage, 0),
+    amount: paged.reduce((s: number, p: any) => s + p.amount, 0),
+    total: paged.reduce((s: number, p: any) => s + p.totalAmount, 0),
   }), [paged]);
 
   const grandTotals = useMemo(() => ({
-    qty: filtered.reduce((s, p) => s + p.quantity, 0),
-    carriage: filtered.reduce((s, p) => s + p.carriage, 0),
-    amount: filtered.reduce((s, p) => s + p.amount, 0),
-    total: filtered.reduce((s, p) => s + p.totalAmount, 0),
+    qty: filtered.reduce((s: number, p: any) => s + p.quantity, 0),
+    carriage: filtered.reduce((s: number, p: any) => s + p.carriage, 0),
+    amount: filtered.reduce((s: number, p: any) => s + p.amount, 0),
+    total: filtered.reduce((s: number, p: any) => s + p.totalAmount, 0),
   }), [filtered]);
 
   // Dashboard Calculations
@@ -222,9 +222,9 @@ export default function PurchasePage() {
 
     const getStats = (type: FuelType) => {
       const p = periodPurchases.filter(x => x.type === type);
-      const qty = p.reduce((s, x) => s + x.quantity, 0);
-      const amt = p.reduce((s, x) => s + x.amount, 0);
-      const carriage = p.reduce((s, x) => s + x.carriage, 0);
+      const qty = p.reduce((s: number, x: any) => s + x.quantity, 0);
+      const amt = p.reduce((s: number, x: any) => s + x.amount, 0);
+      const carriage = p.reduce((s: number, x: any) => s + x.carriage, 0);
       const total = amt + carriage;
       return {
         qty,
@@ -749,7 +749,16 @@ export default function PurchasePage() {
       ) /* End showForm */}
 
       {viewingEntity && <TransactionReceiptModal entity={viewingEntity} type="purchase" onClose={() => setViewingEntity(null)} />}
-      {showReport && <PrintReportModal data={filtered} type="purchase" title={`${fuelType} Purchase Report`} fromDate={fromDate} toDate={toDate} onClose={() => setShowReport(false)} />}
+      {showReport && (
+        <PrintReportModal 
+          isOpen={showReport}
+          data={filtered} 
+          type="purchase" 
+          title={`${fuelType} Purchase Report`} 
+          dateRange={fromDate || toDate ? { from: fromDate, to: toDate } : undefined} 
+          onClose={() => setShowReport(false)} 
+        />
+      )}
     </div>
   );
 }

@@ -331,7 +331,7 @@ export default function PrintReportModal({
       <div ref={contentRef} className="page-print-container" style={{ width: '210mm', margin: '20px auto' }}>
         {chunks.map((chunk, pi) => {
           const isLast = pi === chunks.length - 1;
-          const total = Array.isArray(chunk) ? chunk.reduce((s, x) => s + (x.amount || x.totalAmount || x.debit || x.credit || 0), 0) : 0;
+          const total = Array.isArray(chunk) ? chunk.reduce((s: number, x: any) => s + (x.amount || x.totalAmount || x.debit || x.credit || 0), 0) : 0;
           const isLedger = type === 'asset' || type === 'liability' || type === 'capital' || type === 'customer';
           const isSale = type === 'sale';
           const isPurchase = type === 'purchase';
@@ -364,23 +364,23 @@ export default function PrintReportModal({
           // Fallback to type-based calculation if grandTotal is still 0 and not explicitly provided
           if (grandTotal === 0 && !dynamicTotals) {
             if (isSale) {
-              grandTotal = data.reduce((s, x) => s + (x.amount ?? 0), 0);
-              totalQty = data.reduce((s, x) => s + (x.quantity || 0), 0);
+              grandTotal = data.reduce((s: number, x: any) => s + (x.amount ?? 0), 0);
+              totalQty = data.reduce((s: number, x: any) => s + (x.quantity || 0), 0);
             } else if (isPurchase) {
-              grandTotal = data.reduce((s, x) => s + (x.totalAmount ?? 0), 0);
-              totalQty = data.reduce((s, x) => s + (x.quantity || 0), 0);
+              grandTotal = data.reduce((s: number, x: any) => s + (x.totalAmount ?? 0), 0);
+              totalQty = data.reduce((s: number, x: any) => s + (x.quantity || 0), 0);
             } else if (isExpense) {
-              grandTotal = data.reduce((s, x) => s + (x.amount || 0), 0);
+              grandTotal = data.reduce((s: number, x: any) => s + (x.amount || 0), 0);
             } else if (isLedger) {
-              totalDebit = data.reduce((s, x) => s + (x.debit || 0), 0);
-              totalCredit = data.reduce((s, x) => s + (x.credit || 0), 0);
+              totalDebit = data.reduce((s: number, x: any) => s + (x.debit || 0), 0);
+              totalCredit = data.reduce((s: number, x: any) => s + (x.credit || 0), 0);
               grandTotal = totalDebit - totalCredit;
             } else if (isStock) {
               grandTotal = data[data.length - 1]?.balance || 0;
             } else if (isSummary) {
-              totalDebit = data.reduce((s, x) => s + (x.totalDebit || x.debit || 0), 0);
-              totalCredit = data.reduce((s, x) => s + (x.totalCredit || x.credit || 0), 0);
-              grandTotal = data.reduce((s, x) => s + (x.total || x.balance || x.amount || 0), 0);
+              totalDebit = data.reduce((s: number, x: any) => s + (x.totalDebit || x.debit || 0), 0);
+              totalCredit = data.reduce((s: number, x: any) => s + (x.totalCredit || x.credit || 0), 0);
+              grandTotal = data.reduce((s: number, x: any) => s + (x.total || x.balance || x.amount || 0), 0);
               if (grandTotal === 0 && (totalDebit !== 0 || totalCredit !== 0)) {
                 grandTotal = totalDebit - totalCredit;
               }
@@ -558,37 +558,37 @@ export default function PrintReportModal({
                         <td colSpan={isLedger || isCustSum ? 2 : (dynamicColumns ? dynamicColumns.length - 1 : (isPurchase ? 5 : 2))} style={{ padding: '5px', textAlign: 'right' }}>PAGE TOTAL:</td>
                         {isLedger || isCustSum ? (
                           <>
-                            <td style={{ padding: '5px', textAlign: 'right', color: '#dc2626' }}>₨ {formatCurrency(chunk.reduce((s, x) => s + (x.debit || x.totalDebit || 0), 0))}</td>
-                            <td style={{ padding: '5px', textAlign: 'right', color: '#059669' }}>₨ {formatCurrency(chunk.reduce((s, x) => s + (x.credit || x.totalCredit || 0), 0))}</td>
+                            <td style={{ padding: '5px', textAlign: 'right', color: '#dc2626' }}>₨ {formatCurrency(chunk.reduce((s: number, x: any) => s + (x.debit || x.totalDebit || 0), 0))}</td>
+                            <td style={{ padding: '5px', textAlign: 'right', color: '#059669' }}>₨ {formatCurrency(chunk.reduce((s: number, x: any) => s + (x.credit || x.totalCredit || 0), 0))}</td>
                             <td style={{ padding: '5px', textAlign: 'right' }}>
-                              {dynamicColumns ? formatCurrency(chunk.reduce((s, x) => s + (x[dynamicColumns[dynamicColumns.length - 1].accessor] || 0), 0)) : '—'}
+                              {dynamicColumns ? formatCurrency(chunk.reduce((s: number, x: any) => s + (x[dynamicColumns[dynamicColumns.length - 1].accessor] || 0), 0)) : '—'}
                             </td>
                           </>
                         ) : dynamicColumns ? (
                           <td style={{ padding: '5px', textAlign: dynamicColumns[dynamicColumns.length - 1].align || 'right' }}>
-                            {dynamicColumns[dynamicColumns.length - 1].isCurrency ? formatCurrency(chunk.reduce((s, x) => s + (x[dynamicColumns[dynamicColumns.length - 1].accessor] || 0), 0)) : '—'}
+                            {dynamicColumns[dynamicColumns.length - 1].isCurrency ? formatCurrency(chunk.reduce((s: number, x: any) => s + (x[dynamicColumns[dynamicColumns.length - 1].accessor] || 0), 0)) : '—'}
                           </td>
                         ) : isPurchase ? (
                           <>
-                            <td style={{ padding: '5px 2px', textAlign: 'right' }}>{chunk.reduce((s, x) => s + (x.quantity || 0), 0).toLocaleString()} L</td>
-                            <td style={{ padding: '5px 2px', textAlign: 'right' }}>₨ {formatCurrency(chunk.reduce((s, x) => s + (x.carriage || 0), 0))}</td>
-                            <td style={{ padding: '5px 2px', textAlign: 'right' }}>₨ {formatCurrency(chunk.reduce((s, x) => s + (x.amount || 0), 0))}</td>
-                            <td style={{ padding: '5px 2px', textAlign: 'right' }}>₨ {formatCurrency(chunk.reduce((s, x) => s + (x.totalAmount || 0), 0))}</td>
+                            <td style={{ padding: '5px 2px', textAlign: 'right' }}>{chunk.reduce((s: number, x: any) => s + (x.quantity || 0), 0).toLocaleString()} L</td>
+                            <td style={{ padding: '5px 2px', textAlign: 'right' }}>₨ {formatCurrency(chunk.reduce((s: number, x: any) => s + (x.carriage || 0), 0))}</td>
+                            <td style={{ padding: '5px 2px', textAlign: 'right' }}>₨ {formatCurrency(chunk.reduce((s: number, x: any) => s + (x.amount || 0), 0))}</td>
+                            <td style={{ padding: '5px 2px', textAlign: 'right' }}>₨ {formatCurrency(chunk.reduce((s: number, x: any) => s + (x.totalAmount || 0), 0))}</td>
                           </>
                         ) : isSale ? (
                           <>
                             <td></td>
-                            <td style={{ padding: '5px', textAlign: 'right' }}>{chunk.reduce((s, x) => s + (x.quantity || 0), 0).toLocaleString()} L</td>
-                            <td style={{ padding: '5px', textAlign: 'right' }}>₨ {formatCurrency(chunk.reduce((s, x) => s + (x.amount || 0), 0))}</td>
+                            <td style={{ padding: '5px', textAlign: 'right' }}>{chunk.reduce((s: number, x: any) => s + (x.quantity || 0), 0).toLocaleString()} L</td>
+                            <td style={{ padding: '5px', textAlign: 'right' }}>₨ {formatCurrency(chunk.reduce((s: number, x: any) => s + (x.amount || 0), 0))}</td>
                           </>
                         ) : isStock ? (
                           <>
-                            <td style={{ padding: '5px', textAlign: 'right', color: '#059669' }}>+{chunk.reduce((s, x) => s + (x.qtyIn || 0), 0).toLocaleString()} L</td>
-                            <td style={{ padding: '5px', textAlign: 'right', color: '#dc2626' }}>-{chunk.reduce((s, x) => s + (x.qtyOut || 0), 0).toLocaleString()} L</td>
+                            <td style={{ padding: '5px', textAlign: 'right', color: '#059669' }}>+{chunk.reduce((s: number, x: any) => s + (x.qtyIn || 0), 0).toLocaleString()} L</td>
+                            <td style={{ padding: '5px', textAlign: 'right', color: '#dc2626' }}>-{chunk.reduce((s: number, x: any) => s + (x.qtyOut || 0), 0).toLocaleString()} L</td>
                             <td style={{ padding: '5px', textAlign: 'right' }}>{chunk[chunk.length - 1]?.balance?.toLocaleString()} L</td>
                           </>
                         ) : (
-                          <td style={{ padding: '5px', textAlign: 'right' }}>₨ {formatCurrency(chunk.reduce((s, x) => s + (x.amount || 0), 0))}</td>
+                          <td style={{ padding: '5px', textAlign: 'right' }}>₨ {formatCurrency(chunk.reduce((s: number, x: any) => s + (x.amount || 0), 0))}</td>
                         )}
                       </tr>
                       {isLast && (
