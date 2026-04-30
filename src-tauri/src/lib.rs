@@ -516,35 +516,18 @@ async fn upload_zip_to_drive(
 
     let content_type = format!("multipart/related; boundary={}", boundary);
 
-    let response: serde_json::Value = if !existing.is_empty() {
-        let file_id = existing[0]["id"].as_str().unwrap_or("");
-        client
-            .patch(format!(
-                "https://www.googleapis.com/upload/drive/v3/files/{}?uploadType=multipart",
-                file_id
-            ))
-            .bearer_auth(&access_token)
-            .header("Content-Type", &content_type)
-            .body(body)
-            .send()
-            .await
-            .map_err(|e| e.to_string())?
-            .json()
-            .await
-            .map_err(|e| e.to_string())?
-    } else {
-        client
-            .post("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart")
-            .bearer_auth(&access_token)
-            .header("Content-Type", &content_type)
-            .body(body)
-            .send()
-            .await
-            .map_err(|e| e.to_string())?
-            .json()
-            .await
-            .map_err(|e| e.to_string())?
-    };
+    // Always create a new backup file — never overwrite existing ones
+    let response: serde_json::Value = client
+        .post("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart")
+        .bearer_auth(&access_token)
+        .header("Content-Type", &content_type)
+        .body(body)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?
+        .json()
+        .await
+        .map_err(|e| e.to_string())?;
 
     if let Some(err) = response.get("error") {
         return Err(format!("Drive API Upload Error: {}", err));
@@ -570,7 +553,7 @@ async fn list_drive_backups(access_token: String) -> Result<Vec<serde_json::Valu
             ("q", q.as_str()),
             ("fields", "files(id,name,size,modifiedTime,createdTime)"),
             ("orderBy", "modifiedTime desc"),
-            ("pageSize", "20"),
+            ("pageSize", "1000"),
         ])
         .send()
         .await
@@ -584,6 +567,31 @@ async fn list_drive_backups(access_token: String) -> Result<Vec<serde_json::Valu
     }
 
     Ok(result["files"].as_array().cloned().unwrap_or_default())
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DELETE A DRIVE FILE
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[tauri::command]
+async fn delete_drive_file(file_id: String, access_token: String) -> Result<(), String> {
+    let client = reqwest::Client::new();
+    let response = client
+        .delete(format!(
+            "https://www.googleapis.com/drive/v3/files/{}",
+            file_id
+        ))
+        .bearer_auth(&access_token)
+        .send()
+        .await
+        .map_err(|e| format!("Delete network error: {}", e))?;
+
+    if response.status().is_success() || response.status().as_u16() == 204 {
+        Ok(())
+    } else {
+        let err_text = response.text().await.unwrap_or_default();
+        Err(format!("Drive delete failed: {}", err_text))
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1021,6 +1029,7 @@ pub fn run() {
             upload_zip_to_drive,
             list_drive_backups,
             download_drive_backup,
+            delete_drive_file,
             request_service_account_token,
             get_machine_id,
             save_buffer_to_app_data,

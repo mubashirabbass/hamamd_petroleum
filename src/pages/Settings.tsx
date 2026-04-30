@@ -27,6 +27,8 @@ import {
   buildAuthUrl,
   type DriveFile,
   connectWithServiceAccount,
+  deleteBackup,
+  deleteAllBackups,
 } from '../lib/driveAPI';
 import { invoke } from '@tauri-apps/api/core';
 
@@ -91,11 +93,41 @@ function BackupPanel() {
   // ── Load saved credentials & check connection ──────────────────────────────
   useEffect(() => {
     (async () => {
-      const id  = await getSetting('googleClientId');
-      const sec = await getSetting('googleClientSecret');
-      if (id)  { setClientId(id);   setCredsSaved(true); }
-      if (sec) { setClientSecret(sec); }
+      const defaultId = "253339430406-b9ia01hgtlfth5l2ct42gk1fetl8tavq.apps.googleusercontent.com";
+      const defaultSec = "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";
 
+      // Load credentials
+      const [id, sec, cachedEmail, cachedName] = await Promise.all([
+        getSetting('googleClientId'),
+        getSetting('googleClientSecret'),
+        getSetting('googleUserEmail'),
+        getSetting('googleUserName'),
+      ]);
+
+      if (id) { setClientId(id); setCredsSaved(true); } else { setClientId(defaultId); }
+      if (sec) { setClientSecret(sec); } else { setClientSecret(defaultSec); }
+
+      // ── INSTANT: show cached state immediately so there's no flash ──
+      if (cachedEmail) {
+        setConnected(true);
+        setDriveEmail(cachedEmail);
+        setDriveName(cachedName ?? '');
+        setCheckingStatus(false); // hide spinner immediately
+
+        // Background: silently refresh backup list & verify token
+        fetchList().catch(() => {});
+        checkConnection().then(status => {
+          if (!status.connected) {
+            // Token expired — reset to disconnected state
+            setConnected(false);
+            setDriveEmail('');
+            setDriveName('');
+          }
+        }).catch(() => {});
+        return;
+      }
+
+      // No cached email — do the full check (shows spinner)
       if (id && sec) {
         const status = await checkConnection();
         if (status.connected) {
@@ -265,6 +297,38 @@ function BackupPanel() {
     }
   };
 
+  const handleMasterBackup = async () => {
+    if (!window.confirm("MASTER BACKUP: This will DELETE all previous backups from your Google Drive and take a fresh one. Continue?")) return;
+    
+    setProgress({ msg: 'Purging old backups…', active: true });
+    try {
+      await deleteAllBackups();
+      setProgress({ msg: 'Taking fresh master backup…', active: true });
+      const name = await backupNow((msg) => setProgress({ msg, active: true }));
+      toast(`✅ Master Backup Complete: ${name}`, 'success');
+      await fetchList();
+    } catch (err: any) {
+      toast(`Master Backup failed: ${err?.message ?? err}`, 'error');
+    } finally {
+      setProgress({ msg: '', active: false });
+    }
+  };
+
+  const handleDeleteBackup = async (fileId: string) => {
+    if (!window.confirm("Are you sure you want to delete this backup?")) return;
+    
+    setProgress({ msg: 'Deleting backup…', active: true });
+    try {
+      await deleteBackup(fileId);
+      toast('Backup deleted successfully', 'success');
+      await fetchList();
+    } catch (err: any) {
+      toast(`Delete failed: ${err?.message ?? err}`, 'error');
+    } finally {
+      setProgress({ msg: '', active: false });
+    }
+  };
+
   const handleLocalBackup = async () => {
     setProgress({ msg: 'Creating local backup ZIP…', active: true });
     try {
@@ -371,7 +435,7 @@ function BackupPanel() {
   return (
     <div className="flex flex-col md:flex-row gap-8 flex-1 h-full min-h-0 overflow-hidden">
       {/* Sub-Sidebar */}
-      <div className="w-full md:w-64 space-y-1 bg-slate-50/50 dark:bg-dark-900/50 p-4 rounded-3xl border border-slate-200/50 dark:border-dark-700/50 h-full shrink-0 overflow-y-auto no-scrollbar">
+      <div className="w-full md:w-64 space-y-1 bg-slate-50/50 dark:bg-dark-900/50 p-4 rounded-3xl border border-slate-200/50 dark:border-dark-700/50 h-full shrink-0 overflow-y-auto smart-scroll pr-2">
         <h5 className="px-4 mb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Backup Methods</h5>
         <button onClick={() => setSubTab('cloud')}
           className={cn(
@@ -423,7 +487,20 @@ function BackupPanel() {
 
         {subTab === 'cloud' && (
           <div className="animate-in fade-in slide-in-from-right-4 duration-300">
-            {!connected ? (
+            {checkingStatus ? (
+              <div className="glass rounded-[2rem] p-10 border border-slate-200/50 dark:border-dark-700/50 shadow-sm flex flex-col items-center justify-center gap-6 min-h-[300px]">
+                <div className="relative">
+                  <div className="w-20 h-20 rounded-[2rem] bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center shadow-inner">
+                    <RefreshCcw className="w-10 h-10 text-primary-500 animate-spin" />
+                  </div>
+                  <div className="absolute inset-0 bg-primary-400/10 blur-2xl animate-pulse rounded-full" />
+                </div>
+                <div className="text-center space-y-2">
+                  <p className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">Checking Cloud Connection…</p>
+                  <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest">Please wait</p>
+                </div>
+              </div>
+            ) : !connected ? (
               <div className="glass rounded-[2rem] p-10 border border-slate-200/50 dark:border-dark-700/50 shadow-sm">
                 <div className="flex flex-col md:flex-row items-center gap-8 mb-10">
                   <div className="w-24 h-24 bg-primary-100 dark:bg-primary-900/30 rounded-[2rem] flex items-center justify-center shadow-inner shrink-0 rotate-3">
@@ -675,12 +752,16 @@ function BackupPanel() {
                       <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">Last Synced: {backupList[0]?.modifiedTime ? new Date(backupList[0].modifiedTime).toLocaleString() : 'Never'}</p>
                     </div>
                   </div>
-                  <div className="flex gap-3 relative z-10">
+                  <div className="flex gap-3 relative z-10 flex-wrap justify-center md:justify-end">
                     <button onClick={handleBackupNow} disabled={progress.active}
-                      className="px-8 py-3.5 bg-white text-slate-900 rounded-2xl font-black text-xs hover:bg-blue-50 transition-all shadow-xl shadow-white/5 active:scale-95">
+                      className="px-6 py-3.5 bg-white text-slate-900 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-50 transition-all shadow-xl shadow-white/5 active:scale-95">
                       Sync Now
                     </button>
-                    <button onClick={handleDisconnect} className="px-6 py-3.5 bg-red-600/10 text-red-500 rounded-2xl font-black text-xs hover:bg-red-600/20 transition-all">
+                    <button onClick={handleMasterBackup} disabled={progress.active}
+                      className="px-6 py-3.5 bg-primary-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-primary-700 transition-all shadow-xl shadow-primary-500/20 active:scale-95">
+                      Master Backup
+                    </button>
+                    <button onClick={handleDisconnect} className="px-6 py-3.5 bg-red-600/10 text-red-500 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-red-600/20 transition-all">
                       Logout
                     </button>
                   </div>
@@ -715,10 +796,17 @@ function BackupPanel() {
                             </p>
                           </div>
                         </div>
-                        <button onClick={() => setConfirmRestore(bk)} 
-                          className="opacity-0 group-hover:opacity-100 transition-all px-6 py-2.5 bg-primary-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary-500/20 hover:bg-primary-700 active:scale-95">
-                          Restore
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button onClick={() => setConfirmRestore(bk)} 
+                            className="px-4 py-2 bg-primary-600 text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg shadow-primary-500/20 hover:bg-primary-700 active:scale-95 transition-all">
+                            Restore
+                          </button>
+                          <button onClick={() => handleDeleteBackup(bk.id)}
+                            className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all"
+                            title="Delete Backup">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
                     )) : (
                       <div className="py-20 text-center opacity-40">
@@ -1049,14 +1137,14 @@ export default function SettingsPage() {
             )}
 
           {activeTab === 'general' && (
-            <div className="glass rounded-2xl overflow-hidden border border-slate-200/50 dark:border-dark-700/50 flex-1 min-h-0 flex flex-col">
+            <div className="glass rounded-2xl overflow-hidden border border-slate-200/50 dark:border-dark-700/50 flex flex-col">
               <div className="p-5 border-b border-slate-200 dark:border-dark-700/50 bg-primary-500/5">
                 <div className="flex items-center gap-3">
                   <Calendar className="w-5 h-5 text-primary-600 dark:text-primary-400" />
                   <h2 className="font-bold text-slate-900 dark:text-white">Financial Record Setup</h2>
                 </div>
               </div>
-              <div className="flex-1 overflow-y-auto smart-scroll p-8 space-y-8">
+              <div className="overflow-y-auto smart-scroll p-8 space-y-8" style={{ maxHeight: 'calc(100vh - 220px)' }}>
                 <div>
                   <label className="label mb-3 block text-sm font-black uppercase tracking-widest text-slate-400">
                     Software Starting Date
@@ -1092,21 +1180,21 @@ export default function SettingsPage() {
           )}
 
           {activeTab === 'users' && (
-            <div className="glass rounded-2xl overflow-hidden border border-slate-200/50 dark:border-dark-700/50 flex-1 min-h-0 flex flex-col">
+            <div className="glass rounded-2xl overflow-hidden border border-slate-200/50 dark:border-dark-700/50 flex flex-col">
               <div className="p-4 border-b border-slate-200 dark:border-dark-700/50 bg-emerald-500/5 flex-shrink-0">
                 <div className="flex items-center gap-3">
                   <ShieldCheck className="w-5 h-5 text-emerald-600" />
                   <h2 className="font-black text-slate-900 dark:text-white text-sm uppercase tracking-widest">Login Management</h2>
                 </div>
               </div>
-              <div className="flex-1 overflow-y-auto smart-scroll p-4">
+              <div className="p-4 overflow-y-auto smart-scroll" style={{ maxHeight: 'calc(100vh - 220px)' }}>
                 <ManageUsersModal />
               </div>
             </div>
           )}
 
           {activeTab === 'developer' && (
-            <div className="flex-1 overflow-y-auto smart-scroll p-8 space-y-12">
+            <div className="overflow-y-auto smart-scroll p-8 space-y-12" style={{ maxHeight: 'calc(100vh - 180px)' }}>
               <DeveloperSettings />
               <div className="pt-12 border-t border-slate-200 dark:border-dark-700/50">
                 <div className="flex items-center gap-3 mb-8">
@@ -1124,7 +1212,7 @@ export default function SettingsPage() {
           )}
 
           {activeTab === 'danger' && (
-            <div className="flex-1 min-h-0 overflow-y-auto smart-scroll p-8">
+            <div className="overflow-y-auto smart-scroll p-8" style={{ maxHeight: 'calc(100vh - 180px)' }}>
               <div className="glass rounded-2xl overflow-hidden border border-red-200/50 dark:border-red-900/30">
                 <div className="p-5 border-b border-red-100 dark:border-red-900/30 bg-red-500/5">
                   <div className="flex items-center gap-3">

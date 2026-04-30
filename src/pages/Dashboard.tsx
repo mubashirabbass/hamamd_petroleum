@@ -338,7 +338,7 @@ export default function Dashboard() {
   const clearFilter = () => { setFilter('overall'); setFromDate(''); setToDate(''); };
 
   return (
-    <div className="space-y-6 pb-24 h-full w-full overflow-y-auto smart-scroll">
+    <div className="space-y-6 pb-24 w-full">
       <div className="relative rounded-3xl md:rounded-[2rem] shadow-lg border border-slate-200/60 dark:border-dark-700/60 flex flex-col md:flex-row md:items-center justify-between gap-4 animate-fade-in group min-h-[80px] md:min-h-[100px] px-4 md:px-6 py-4">
         {/* Background Layer with Overflow Clipping */}
         <div className="absolute inset-0 z-0 rounded-3xl md:rounded-[2rem] overflow-hidden">

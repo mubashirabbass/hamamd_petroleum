@@ -147,8 +147,8 @@ export async function getValidAccessToken(): Promise<string> {
     }
 
     if (tokens.refresh_token) {
-      const clientId     = await getSetting('googleClientId');
-      const clientSecret = await getSetting('googleClientSecret');
+      const clientId     = await getSetting('googleClientId') || DEFAULT_CLIENT_ID;
+      const clientSecret = await getSetting('googleClientSecret') || DEFAULT_CLIENT_SECRET;
       const refreshed = await invoke<OAuthTokens>('refresh_access_token', {
         refreshToken: tokens.refresh_token,
         clientId,
@@ -187,6 +187,9 @@ export function buildAuthUrl(clientId: string): string {
  * 4. Fetch user info
  * 5. Save everything to SQLite
  */
+const DEFAULT_CLIENT_ID = "253339430406-b9ia01hgtlfth5l2ct42gk1fetl8tavq.apps.googleusercontent.com";
+const DEFAULT_CLIENT_SECRET = "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";
+
 export async function connectGoogleDrive(
   manualPin?: string,
   directCreds?: { clientId: string; clientSecret: string }
@@ -194,11 +197,13 @@ export async function connectGoogleDrive(
   email: string;
   name: string;
 }> {
-  const clientId     = directCreds?.clientId     || await getSetting('googleClientId');
-  const clientSecret = directCreds?.clientSecret || await getSetting('googleClientSecret');
+  let clientId     = directCreds?.clientId     || await getSetting('googleClientId');
+  let clientSecret = directCreds?.clientSecret || await getSetting('googleClientSecret');
 
+  // Fallback to the hardcoded default credentials if not explicitly set
   if (!clientId || !clientSecret) {
-    throw new Error('Google Client ID and Secret are not configured. Please enter them above.');
+    clientId = DEFAULT_CLIENT_ID;
+    clientSecret = DEFAULT_CLIENT_SECRET;
   }
 
   const authUrl = buildAuthUrl(clientId);
@@ -310,6 +315,21 @@ export interface DriveFile {
 export async function listBackups(): Promise<DriveFile[]> {
   const accessToken = await getValidAccessToken();
   return invoke<DriveFile[]>('list_drive_backups', { accessToken });
+}
+
+// ─── Delete a single backup ────────────────────────────────────────────────────
+export async function deleteBackup(fileId: string): Promise<void> {
+  const accessToken = await getValidAccessToken();
+  return invoke<void>('delete_drive_file', { fileId, accessToken });
+}
+
+// ─── Delete ALL backups (for Master Backup) ────────────────────────────────────
+export async function deleteAllBackups(): Promise<void> {
+  const files = await listBackups();
+  const accessToken = await getValidAccessToken();
+  await Promise.all(
+    files.map(f => invoke<void>('delete_drive_file', { fileId: f.id, accessToken }))
+  );
 }
 
 // ─── Restore from Drive ───────────────────────────────────────────────────────

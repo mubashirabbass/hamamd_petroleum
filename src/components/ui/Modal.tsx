@@ -48,7 +48,7 @@ export default function Modal({ title, onClose, children, wide, variant = 'cente
         className={variant === 'bottom-sheet' ? "bottom-sheet-box" : `modal-box ${wide ? 'max-w-2xl' : 'max-w-md'}`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center justify-between mb-5 shrink-0">
           <h2 className="text-base font-bold text-slate-900 dark:text-white">{title}</h2>
           <button
             type="button"
@@ -58,7 +58,9 @@ export default function Modal({ title, onClose, children, wide, variant = 'cente
             <X className="w-4 h-4" />
           </button>
         </div>
-        {children}
+        <div className="flex-1 min-h-0 flex flex-col">
+          {children}
+        </div>
       </div>
     </div>
   );

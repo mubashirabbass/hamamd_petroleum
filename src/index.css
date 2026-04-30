@@ -281,7 +281,7 @@
   }
   html.dark .modal-overlay { @apply bg-black/70; }
   .modal-box {
-    @apply bg-white rounded-3xl p-8 w-full max-w-md animate-slide-up shadow-2xl border border-slate-200;
+    @apply bg-white rounded-3xl p-8 w-full max-w-md animate-slide-up shadow-2xl border border-slate-200 max-h-[85vh] flex flex-col;
   }
   html.dark .modal-box {
     @apply bg-dark-900 border-dark-700;
@@ -445,37 +445,39 @@ html.dark .table-sticky-col {
 /* ── Smart Scrollbar ────────────────────────────────── */
 .smart-scroll {
   scrollbar-width: thin;
-  scrollbar-color: rgba(37, 99, 235, 0.4) transparent;
+  scrollbar-color: rgba(148, 163, 184, 0.8) rgba(241, 245, 249, 1);
   overflow: auto;
   -webkit-overflow-scrolling: touch;
 }
 .smart-scroll::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
 }
 .smart-scroll::-webkit-scrollbar-track {
-  background: transparent;
+  background: rgba(241, 245, 249, 1); /* slate-100 */
+  border-radius: 10px;
 }
 .smart-scroll::-webkit-scrollbar-thumb {
-  background: rgba(37, 99, 235, 0.3);
+  background: rgba(148, 163, 184, 0.8); /* slate-400 */
   border-radius: 10px;
-  border: 2px solid transparent;
-  background-clip: padding-box;
+  border: 2px solid rgba(241, 245, 249, 1);
 }
 .smart-scroll:hover::-webkit-scrollbar-thumb {
-  background: rgba(37, 99, 235, 0.6);
-  border: 2px solid transparent;
-  background-clip: padding-box;
+  background: rgba(100, 116, 139, 0.9); /* slate-500 */
 }
 
 html.dark .smart-scroll {
-  scrollbar-color: rgba(37, 99, 235, 0.4) transparent;
+  scrollbar-color: rgba(71, 85, 105, 0.8) rgba(15, 23, 42, 1);
+}
+html.dark .smart-scroll::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 1); /* dark-900 */
 }
 html.dark .smart-scroll::-webkit-scrollbar-thumb {
-  background: rgba(37, 99, 235, 0.3);
+  background: rgba(71, 85, 105, 0.8); /* dark-600 */
+  border-color: rgba(15, 23, 42, 1);
 }
 html.dark .smart-scroll:hover::-webkit-scrollbar-thumb {
-  background: rgba(37, 99, 235, 0.6);
+  background: rgba(100, 116, 139, 0.9); /* dark-500 */
 }
 
 .sticky-header {

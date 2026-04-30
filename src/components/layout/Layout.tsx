@@ -85,7 +85,8 @@ export default function Layout() {
 
   return (
     <div 
-      className="flex h-screen overflow-hidden bg-slate-100 dark:bg-dark-950 transition-colors duration-300"
+      className="flex bg-slate-100 dark:bg-dark-950 transition-colors duration-300"
+      style={{ height: '100dvh', overflow: 'hidden' }}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
@@ -124,7 +125,7 @@ export default function Layout() {
             Menu
           </button>
         </div>
-        <div className={cn("flex-1 min-h-0 w-full flex flex-col", isTransactionPage ? "p-0" : "p-3 md:p-6")}>
+        <div className={cn("flex-1 min-h-0 w-full flex flex-col overflow-y-auto smart-scroll", isTransactionPage ? "p-0" : "p-3 md:p-6")}>
           {renderContent()}
         </div>
 

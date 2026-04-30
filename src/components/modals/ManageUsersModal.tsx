@@ -133,7 +133,7 @@ export default function LoginManagementPanel() {
   const users = settings.users;
 
   return (
-    <div className="flex flex-col gap-4 h-full">
+    <div className="flex flex-col gap-4">
 
       {/* ── Header Stats ──────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between gap-3 p-4 bg-white dark:bg-dark-900 rounded-2xl border border-slate-200 dark:border-dark-800 shadow-sm">
@@ -313,7 +313,7 @@ export default function LoginManagementPanel() {
       )}
 
       {/* ── User Cards List ─────────────────────────────────────────────────── */}
-      <div className="space-y-3 overflow-y-auto no-scrollbar pb-4">
+      <div className="space-y-3 pb-4">
         {users.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 bg-white dark:bg-dark-900 rounded-2xl border border-slate-200 dark:border-dark-800">
             <Users className="w-12 h-12 text-slate-200 dark:text-dark-700 mb-3" />
