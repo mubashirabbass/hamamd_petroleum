@@ -7,6 +7,8 @@ interface Props {
   children: React.ReactNode;
   wide?: boolean;
   variant?: 'center' | 'bottom-sheet';
+  isDesktop?: boolean;
+  icon?: any;
 }
 
 export default function Modal({ title, onClose, children, wide, variant = 'center' }: Props) {

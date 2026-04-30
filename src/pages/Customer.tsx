@@ -113,10 +113,19 @@ export default function CustomerPage() {
       });
   }, [customerEntries, settings.startDate, selectedCust, search, fromDate, toDate]);
 
+  const preFilterBalance = useMemo(() => {
+    if (!selectedCust) return 0;
+    const allEntries = customerEntries.filter(e => e.customerId === selectedCust);
+    if (!settings.startDate) return 0;
+    return allEntries
+      .filter(e => e.date < settings.startDate)
+      .reduce((sum, e) => sum + (e.debit || 0) - (e.credit || 0), 0);
+  }, [customerEntries, selectedCust, settings.startDate]);
+
   const withBalance = useMemo(() => {
     // 1. Calculate running balance chronologically (Date Ascending)
     const chronological = [...filteredEntries].sort((a, b) => a.date.localeCompare(b.date));
-    let bal = 0;
+    let bal = preFilterBalance;
     const computed = chronological.map((e) => {
       bal += (e.debit || 0) - (e.credit || 0);
       return { ...e, balance: bal };
@@ -138,16 +147,95 @@ export default function CustomerPage() {
         default:             return b.date.localeCompare(a.date);
       }
     });
-  }, [filteredEntries, entrySort]);
+  }, [filteredEntries, entrySort, preFilterBalance]);
 
   const paged = paginate(withBalance, page, perPage);
 
-  const pageTotals = useMemo(() => ({
-    debit: paged.reduce((s, e) => s + (e.debit || 0), 0),
-    credit: paged.reduce((s, e) => s + (e.credit || 0), 0),
-  }), [paged]);
-  const totals = { debit: filteredEntries.reduce((s, e) => s + e.debit, 0), credit: filteredEntries.reduce((s, e) => s + e.credit, 0) };
-  const balance = totals.debit - totals.credit;
+  const pageOpeningBalance = useMemo(() => {
+    const chronological = [...filteredEntries].sort((a, b) => a.date.localeCompare(b.date));
+    const prevItems = chronological.slice(0, (page - 1) * perPage);
+    let bal = preFilterBalance;
+    prevItems.forEach(e => bal += (e.debit || 0) - (e.credit || 0));
+    return bal;
+  }, [filteredEntries, preFilterBalance, page, perPage]);
+
+  const pageClosingBalance = useMemo(() => {
+    const chronological = [...filteredEntries].sort((a, b) => a.date.localeCompare(b.date));
+    const thisPageItems = chronological.slice((page - 1) * perPage, page * perPage);
+    let bal = pageOpeningBalance;
+    thisPageItems.forEach(e => bal += (e.debit || 0) - (e.credit || 0));
+    return bal;
+  }, [filteredEntries, pageOpeningBalance, page, perPage]);
+
+  const pageTotals = useMemo(() => {
+    let dr = paged.reduce((s, e) => s + (e.debit || 0), 0);
+    let cr = paged.reduce((s, e) => s + (e.credit || 0), 0);
+    
+    if (pageOpeningBalance > 0) dr += pageOpeningBalance;
+    else if (pageOpeningBalance < 0) cr += Math.abs(pageOpeningBalance);
+    
+    if (pageClosingBalance > 0) cr += pageClosingBalance;
+    else if (pageClosingBalance < 0) dr += Math.abs(pageClosingBalance);
+    
+    return { debit: dr, credit: cr };
+  }, [paged, pageOpeningBalance, pageClosingBalance]);
+
+  const grandTotals = useMemo(() => {
+    let dr = filteredEntries.reduce((s, e) => s + (e.debit || 0), 0);
+    let cr = filteredEntries.reduce((s, e) => s + (e.credit || 0), 0);
+    
+    if (preFilterBalance > 0) dr += preFilterBalance;
+    else if (preFilterBalance < 0) cr += Math.abs(preFilterBalance);
+    
+    const finalBalance = preFilterBalance + filteredEntries.reduce((s, e) => s + (e.debit || 0) - (e.credit || 0), 0);
+    if (finalBalance > 0) cr += finalBalance;
+    else if (finalBalance < 0) dr += Math.abs(finalBalance);
+    
+    return { debit: dr, credit: cr, balance: finalBalance };
+  }, [filteredEntries, preFilterBalance]);
+
+  const globalDashboardTotals = useMemo(() => {
+    let totalDr = 0;
+    let totalCr = 0;
+    let totalNet = 0;
+    let totalEntries = 0;
+
+    customers.forEach(c => {
+      // 1. Get entries for this customer in selected period
+      const entries = filterByStartDate(customerEntries, settings.startDate)
+        .filter(e => e.customerId === c.id)
+        .filter(e => {
+          const mf = !fromDate || e.date >= fromDate;
+          const mt = !toDate || e.date <= toDate;
+          return mf && mt;
+        });
+
+      // 2. Get pre-filter balance for this customer
+      const allC = customerEntries.filter(e => e.customerId === c.id);
+      let pre = 0;
+      if (settings.startDate) {
+        pre = allC.filter(e => e.date < settings.startDate).reduce((s, e) => s + (e.debit || 0) - (e.credit || 0), 0);
+      }
+
+      // 3. Calculate "Grand Totals" for this customer
+      let dr = entries.reduce((s, e) => s + (e.debit || 0), 0);
+      let cr = entries.reduce((s, e) => s + (e.credit || 0), 0);
+      
+      if (pre > 0) dr += pre;
+      else if (pre < 0) cr += Math.abs(pre);
+      
+      const final = pre + entries.reduce((s, e) => s + (e.debit || 0) - (e.credit || 0), 0);
+      if (final > 0) cr += final;
+      else if (final < 0) dr += Math.abs(final);
+
+      totalDr += dr;
+      totalCr += cr;
+      totalNet += final;
+      totalEntries += entries.length;
+    });
+    
+    return { debit: totalDr, credit: totalCr, net: totalNet, count: totalEntries };
+  }, [customers, customerEntries, settings.startDate, fromDate, toDate]);
 
   const handleAddCustomer = (e: React.FormEvent) => {
     e.preventDefault();
@@ -317,43 +405,40 @@ export default function CustomerPage() {
 
         {activeTab === 'dashboard' ? (
           <div className="flex-1 flex flex-col h-full overflow-hidden p-4 md:p-6 pb-6">
-            <div className="grid grid-cols-2 gap-3 mb-6">
-              {(() => {
-                const allFilteredEntries = filterByStartDate(customerEntries, settings.startDate)
-                  .filter(e => {
-                    const matchesFrom = !fromDate || e.date >= fromDate;
-                    const matchesTo = !toDate || e.date <= toDate;
-                    return matchesFrom && matchesTo;
-                  });
-                const globalDebit = allFilteredEntries.reduce((sum, e) => sum + e.debit, 0);
-                const globalCredit = allFilteredEntries.reduce((sum, e) => sum + e.credit, 0);
-                const globalNet = globalDebit - globalCredit;
-                
-                return (
-                  <>
-                    <div className="glass p-4 rounded-3xl border-l-4 border-pink-500 shadow-lg bg-white dark:bg-dark-900 overflow-hidden col-span-2">
-                      <p className="text-[10px] font-black text-pink-600 uppercase tracking-widest mb-1">Total Net Balance (DR)</p>
-                      <p className="text-2xl font-black text-slate-800 dark:text-white tabular-nums">
-                        ₨ {formatCurrency(Math.abs(globalNet))}
-                        <span className="text-[10px] ml-1 font-bold text-slate-400 uppercase">{globalNet >= 0 ? 'DR' : 'CR'}</span>
-                      </p>
-                    </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
+              <div className="glass p-4 rounded-3xl border-l-4 border-pink-500 shadow-lg bg-white dark:bg-dark-900 overflow-hidden col-span-2 md:col-span-1">
+                <p className="text-[10px] font-black text-pink-600 uppercase tracking-widest mb-1">Net Balance</p>
+                <p className="text-2xl font-black text-slate-800 dark:text-white tabular-nums leading-tight">
+                  ₨ {formatCurrency(Math.abs(globalDashboardTotals.net))}
+                  <span className="text-[10px] ml-1 font-bold text-slate-400 uppercase">{globalDashboardTotals.net >= 0 ? 'DR' : 'CR'}</span>
+                </p>
+              </div>
 
-                    <div className="glass p-4 rounded-3xl border-l-4 border-slate-400 shadow-lg bg-white dark:bg-dark-900 col-span-1">
-                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Clients</p>
-                      <p className="text-xl font-black text-slate-800 dark:text-white tabular-nums">
-                        {customers.length}
-                      </p>
-                    </div>
-                    <div className="glass p-4 rounded-3xl border-l-4 border-emerald-500 shadow-lg bg-white dark:bg-dark-900 col-span-1">
-                      <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest mb-1">Entries</p>
-                      <p className="text-xl font-black text-slate-800 dark:text-white tabular-nums">
-                        {allFilteredEntries.length}
-                      </p>
-                    </div>
-                  </>
-                );
-              })()}
+              <div className="glass p-4 rounded-3xl border-l-4 border-emerald-500 shadow-lg bg-white dark:bg-dark-900 col-span-1">
+                <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest mb-1">Total Debit (+)</p>
+                <p className="text-xl font-black text-slate-800 dark:text-white tabular-nums">
+                  ₨ {formatCurrency(globalDashboardTotals.debit)}
+                </p>
+              </div>
+              <div className="glass p-4 rounded-3xl border-l-4 border-red-500 shadow-lg bg-white dark:bg-dark-900 col-span-1">
+                <p className="text-[9px] font-black text-red-600 uppercase tracking-widest mb-1">Total Credit (-)</p>
+                <p className="text-xl font-black text-slate-800 dark:text-white tabular-nums">
+                  ₨ {formatCurrency(globalDashboardTotals.credit)}
+                </p>
+              </div>
+
+              <div className="glass p-3 rounded-2xl border-l-4 border-slate-400 shadow-sm bg-white dark:bg-dark-900 col-span-1">
+                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Clients</p>
+                <p className="text-sm font-black text-slate-800 dark:text-white tabular-nums">
+                  {customers.length}
+                </p>
+              </div>
+              <div className="glass p-3 rounded-2xl border-l-4 border-slate-300 shadow-sm bg-white dark:bg-dark-900 col-span-1">
+                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Entries</p>
+                <p className="text-sm font-black text-slate-800 dark:text-white tabular-nums">
+                  {globalDashboardTotals.count}
+                </p>
+              </div>
             </div>
 
             <div className="flex items-center gap-2 bg-white dark:bg-dark-900 p-2 rounded-2xl border border-slate-200 dark:border-dark-700 shadow-sm overflow-x-auto no-scrollbar smart-scroll mb-6">
@@ -469,24 +554,40 @@ export default function CustomerPage() {
             )}
           </div>
         ) : activeTab === 'database' ? (
-          <div className="flex-1 flex flex-col min-h-0 bg-slate-50 dark:bg-dark-950/20 p-4 pb-6">
-            {/* Account Pill Switcher */}
-            <div className="pill-nav-container mb-6">
-               {customers.map(c => (
-                 <button
-                   key={c.id}
-                   onClick={() => { setSelectedCust(c.id); setPage(1); }}
-                   className={cn(
-                     "pill-nav-item border-2",
-                     selectedCust === c.id 
-                       ? "pill-nav-item-active bg-pink-600 border-pink-600 shadow-pink-500/30" 
-                       : "bg-white dark:bg-dark-900 border-slate-100 dark:border-dark-800 hover:border-pink-200"
-                   )}
-                 >
-                   {c.name}
-                 </button>
-               ))}
+          <div className="flex-1 flex flex-col min-h-0 bg-slate-50 dark:bg-dark-950/20">
+            {/* Account Selector Slide Bar */}
+            <div className="bg-white dark:bg-dark-900 border-b border-slate-200 dark:border-dark-800 p-3 flex items-center gap-3 shrink-0 w-full overflow-hidden">
+               <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 dark:bg-dark-800 rounded-2xl border border-slate-200 dark:border-dark-700 focus-within:ring-2 focus-within:ring-pink-600/20 focus-within:border-pink-600 transition-all shrink-0">
+                 <Search className="w-4 h-4 text-slate-400" />
+                 <input 
+                   placeholder="Find Customer..." 
+                   className="bg-transparent border-none outline-none text-[11px] font-black uppercase tracking-wider w-24 text-slate-700 dark:text-dark-200 placeholder:text-slate-400 placeholder:font-normal"
+                   value={custSearch}
+                   onChange={e => setCustSearch(e.target.value)}
+                 />
+               </div>
+               
+               <div className="flex-1 min-w-0 flex items-center gap-2 overflow-x-auto no-scrollbar smart-scroll py-1 pr-4">
+                 {customers
+                   .filter(c => !custSearch || c.name.toLowerCase().includes(custSearch.toLowerCase()))
+                   .map(c => (
+                   <button 
+                     key={c.id}
+                     onClick={() => { setSelectedCust(c.id); setPage(1); }}
+                     className={cn(
+                       "whitespace-nowrap px-5 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-tight transition-all border-2",
+                       selectedCust === c.id 
+                         ? "bg-pink-600 border-pink-600 text-white shadow-xl shadow-pink-500/30 scale-105" 
+                         : "bg-white dark:bg-dark-900 border-slate-100 dark:border-dark-800 text-slate-600 dark:text-dark-400 hover:border-pink-200 hover:shadow-md"
+                     )}
+                   >
+                     {c.name}
+                   </button>
+                 ))}
+               </div>
             </div>
+
+            <div className="p-4 flex-1 flex flex-col min-h-0">
 
             <div className="flex items-center gap-2 bg-white dark:bg-dark-900 p-2 rounded-2xl border border-slate-200 dark:border-dark-700 shadow-sm overflow-x-auto no-scrollbar smart-scroll mb-4">
               <div className="flex-1 min-w-[120px]">
@@ -532,7 +633,26 @@ export default function CustomerPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-dark-800/50">
-                    {paged.length === 0 ? (
+                    {/* Brought Forward Row */}
+                    {(page > 1 || preFilterBalance !== 0) && (
+                      <tr className="bg-slate-50 dark:bg-dark-800/30 text-[11px] font-bold italic">
+                        <td className="table-cell">---</td>
+                        <td className="table-cell uppercase">Balance Brought Forward (B/F)</td>
+                        <td className="table-cell text-right text-emerald-600">
+                          {pageOpeningBalance > 0 ? `₨ ${formatCurrency(pageOpeningBalance)}` : '---'}
+                        </td>
+                        <td className="table-cell text-right text-red-600">
+                          {pageOpeningBalance < 0 ? `₨ ${formatCurrency(Math.abs(pageOpeningBalance))}` : '---'}
+                        </td>
+                        <td className="table-cell text-right font-black">
+                          ₨ {formatCurrency(Math.abs(pageOpeningBalance))}
+                          <span className="text-[9px] ml-1 opacity-50">{pageOpeningBalance >= 0 ? 'DR' : 'CR'}</span>
+                        </td>
+                        <td className="table-cell text-center">---</td>
+                      </tr>
+                    )}
+
+                    {paged.length === 0 && preFilterBalance === 0 ? (
                       <tr>
                         <td colSpan={6} className="px-6 py-20 text-center">
                            <p className="text-xs font-black text-slate-400 uppercase tracking-widest">No transactions found</p>
@@ -574,6 +694,25 @@ export default function CustomerPage() {
                         </tr>
                       ))
                     )}
+
+                    {/* Close Up Row */}
+                    {(paged.length > 0 || preFilterBalance !== 0) && (
+                      <tr className="bg-slate-50 dark:bg-dark-800/30 text-[11px] font-bold italic border-t-2 border-slate-200">
+                        <td className="table-cell">---</td>
+                        <td className="table-cell uppercase font-black">Close Up Balance (C/F)</td>
+                        <td className="table-cell text-right text-emerald-600">
+                          {pageClosingBalance < 0 ? `₨ ${formatCurrency(Math.abs(pageClosingBalance))}` : '---'}
+                        </td>
+                        <td className="table-cell text-right text-red-600">
+                          {pageClosingBalance > 0 ? `₨ ${formatCurrency(pageClosingBalance)}` : '---'}
+                        </td>
+                        <td className="table-cell text-right font-black">
+                           ₨ {formatCurrency(Math.abs(pageClosingBalance))}
+                           <span className="text-[9px] ml-1 opacity-50">{pageClosingBalance >= 0 ? 'DR' : 'CR'}</span>
+                        </td>
+                        <td className="table-cell text-center">---</td>
+                      </tr>
+                    )}
                   </tbody>
                   <tfoot className="sticky bottom-0 bg-slate-100 dark:bg-dark-900 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] text-[11px] font-black uppercase tracking-wider">
                     <tr className="border-t-2 border-slate-300 dark:border-dark-700">
@@ -584,11 +723,11 @@ export default function CustomerPage() {
                     </tr>
                     <tr className="bg-pink-600 text-white border-t border-white/10">
                       <td colSpan={2} className="px-4 py-3 text-right opacity-80">Filters Grand Total:</td>
-                      <td className="px-4 py-3 text-right tabular-nums">₨ {formatCurrency(totals.debit)}</td>
-                      <td className="px-4 py-3 text-right tabular-nums border-r border-white/20">₨ {formatCurrency(totals.credit)}</td>
+                      <td className="px-4 py-3 text-right tabular-nums">₨ {formatCurrency(grandTotals.debit)}</td>
+                      <td className="px-4 py-3 text-right tabular-nums border-r border-white/20">₨ {formatCurrency(grandTotals.credit)}</td>
                       <td className="px-4 py-3 text-right tabular-nums font-black" colSpan={2}>
-                        NET: ₨ {formatCurrency(Math.abs(totals.debit - totals.credit))} 
-                        <span className="text-[9px] ml-1 opacity-80">{totals.debit - totals.credit >= 0 ? 'DR' : 'CR'}</span>
+                        NET: ₨ {formatCurrency(Math.abs(grandTotals.balance))} 
+                        <span className="text-[9px] ml-1 opacity-80">{grandTotals.balance >= 0 ? 'DR' : 'CR'}</span>
                       </td>
                     </tr>
                   </tfoot>
@@ -599,6 +738,7 @@ export default function CustomerPage() {
               <Pagination page={page} total={withBalance.length} perPage={perPage} onChange={setPage} />
             </div>
           </div>
+        </div>
         ) : activeTab === 'register' ? (
           <div className="flex-1 animate-in zoom-in-95 duration-300">
             <div className="max-w-2xl mx-auto glass p-8 rounded-3xl border border-slate-200 dark:border-dark-700/50 shadow-2xl">

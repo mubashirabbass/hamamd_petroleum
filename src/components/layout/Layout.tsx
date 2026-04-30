@@ -124,7 +124,7 @@ export default function Layout() {
         </div>
 
         {/* Mobile Bottom Navigation */}
-        <BottomNav />
+        <BottomNav onMore={() => setMobileSidebarOpen(true)} />
       </main>
     </div>
   );

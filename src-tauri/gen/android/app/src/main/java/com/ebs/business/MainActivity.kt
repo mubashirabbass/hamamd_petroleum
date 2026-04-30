@@ -1,11 +1,10 @@
 package com.ebs.business
 
 import android.os.Bundle
-import androidx.activity.enableEdgeToEdge
+import com.ebs.business.mobile.TauriActivity
 
 class MainActivity : TauriActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
-    enableEdgeToEdge()
     super.onCreate(savedInstanceState)
   }
 }

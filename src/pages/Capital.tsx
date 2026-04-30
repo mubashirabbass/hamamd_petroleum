@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Wallet, Plus, Trash2, Eye, Edit2, Check, X, ArrowRight, Save } from 'lucide-react';
+import { Wallet, Plus, Trash2, Eye, Edit2, Check, X, ArrowRight, Save, Search } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { formatCurrency, formatDate, today, paginate, filterByStartDate, cn } from '../lib/utils';
 import { useToast } from '../components/ui/Toast';
@@ -30,6 +30,7 @@ export default function CapitalPage() {
   const [form, setForm] = useState({ date: today(), description: '', debit: '', credit: '' });
   const [isSaving, setIsSaving] = useState(false);
   const [manageSearch, setManageSearch] = useState('');
+  const [sidebarSearch, setSidebarSearch] = useState('');
 
   useEffect(() => {
     if (!selectedCat && capitalCategories.length > 0) setSelectedCat(capitalCategories[0].id);
@@ -49,15 +50,110 @@ export default function CapitalPage() {
       });
   }, [capitalEntries, settings.startDate, selectedCat, search, fromDate, toDate]);
 
+  const preFilterBalance = useMemo(() => {
+    if (!selectedCat) return 0;
+    const allEntries = capitalEntries.filter(e => e.categoryId === selectedCat);
+    if (!settings.startDate) return 0;
+    return allEntries
+      .filter(e => e.date < settings.startDate)
+      .reduce((sum, e) => sum + (e.debit || 0) - (e.credit || 0), 0);
+  }, [capitalEntries, selectedCat, settings.startDate]);
+
   const withBalance = useMemo(() => {
     const sorted = [...filteredEntries].sort((a, b) => a.date.localeCompare(b.date));
-    let bal = 0;
-    return sorted.map(e => { bal += (e.debit || 0) - (e.credit || 0); return { ...e, balance: bal }; })
-      .sort((a, b) => b.date.localeCompare(a.date));
-  }, [filteredEntries]);
+    let bal = preFilterBalance;
+    const computed = sorted.map(e => {
+      bal += (e.debit || 0) - (e.credit || 0);
+      return { ...e, balance: bal };
+    });
+
+    return [...computed].sort((a, b) => b.date.localeCompare(a.date));
+  }, [filteredEntries, preFilterBalance]);
 
   const paged = paginate(withBalance, page, perPage);
-  const totals = useMemo(() => ({ debit: filteredEntries.reduce((s, e) => s + (e.debit || 0), 0), credit: filteredEntries.reduce((s, e) => s + (e.credit || 0), 0) }), [filteredEntries]);
+
+  const pageOpeningBalance = useMemo(() => {
+    const chronological = [...filteredEntries].sort((a, b) => a.date.localeCompare(b.date));
+    const prevItems = chronological.slice(0, (page - 1) * perPage);
+    let bal = preFilterBalance;
+    prevItems.forEach(e => bal += (e.debit || 0) - (e.credit || 0));
+    return bal;
+  }, [filteredEntries, preFilterBalance, page, perPage]);
+
+  const pageClosingBalance = useMemo(() => {
+    const chronological = [...filteredEntries].sort((a, b) => a.date.localeCompare(b.date));
+    const thisPageItems = chronological.slice((page - 1) * perPage, page * perPage);
+    let bal = pageOpeningBalance;
+    thisPageItems.forEach(e => bal += (e.debit || 0) - (e.credit || 0));
+    return bal;
+  }, [filteredEntries, pageOpeningBalance, page, perPage]);
+
+  const pageTotals = useMemo(() => {
+    let dr = paged.reduce((s, e) => s + (e.debit || 0), 0);
+    let cr = paged.reduce((s, e) => s + (e.credit || 0), 0);
+    
+    if (pageOpeningBalance > 0) dr += pageOpeningBalance;
+    else if (pageOpeningBalance < 0) cr += Math.abs(pageOpeningBalance);
+    
+    if (pageClosingBalance > 0) cr += pageClosingBalance;
+    else if (pageClosingBalance < 0) dr += Math.abs(pageClosingBalance);
+    
+    return { debit: dr, credit: cr };
+  }, [paged, pageOpeningBalance, pageClosingBalance]);
+
+  const grandTotals = useMemo(() => {
+    let dr = filteredEntries.reduce((s, e) => s + (e.debit || 0), 0);
+    let cr = filteredEntries.reduce((s, e) => s + (e.credit || 0), 0);
+    
+    if (preFilterBalance > 0) dr += preFilterBalance;
+    else if (preFilterBalance < 0) cr += Math.abs(preFilterBalance);
+    
+    const finalBalance = preFilterBalance + filteredEntries.reduce((s, e) => s + (e.debit || 0) - (e.credit || 0), 0);
+    if (finalBalance > 0) cr += finalBalance;
+    else if (finalBalance < 0) dr += Math.abs(finalBalance);
+    
+    return { debit: dr, credit: cr, balance: finalBalance };
+  }, [filteredEntries, preFilterBalance]);
+
+  const globalDashboardTotals = useMemo(() => {
+    let totalDr = 0;
+    let totalCr = 0;
+    let totalNet = 0;
+    let totalEntriesCount = 0;
+
+    capitalCategories.forEach(cat => {
+      const entries = filterByStartDate(capitalEntries, settings.startDate)
+        .filter(e => e.categoryId === cat.id)
+        .filter(e => {
+          const mf = !fromDate || e.date >= fromDate;
+          const mt = !toDate || e.date <= toDate;
+          return mf && mt;
+        });
+
+      const allC = capitalEntries.filter(e => e.categoryId === cat.id);
+      let pre = 0;
+      if (settings.startDate) {
+        pre = allC.filter(e => e.date < settings.startDate).reduce((s, e) => s + (e.debit || 0) - (e.credit || 0), 0);
+      }
+
+      let dr = entries.reduce((s, e) => s + (e.debit || 0), 0);
+      let cr = entries.reduce((s, e) => s + (e.credit || 0), 0);
+      
+      if (pre > 0) dr += pre;
+      else if (pre < 0) cr += Math.abs(pre);
+      
+      const final = pre + entries.reduce((s, e) => s + (e.debit || 0) - (e.credit || 0), 0);
+      if (final > 0) cr += final;
+      else if (final < 0) dr += Math.abs(final);
+
+      totalDr += dr;
+      totalCr += cr;
+      totalNet += final;
+      totalEntriesCount += entries.length;
+    });
+    
+    return { debit: totalDr, credit: totalCr, net: totalNet, count: totalEntriesCount };
+  }, [capitalCategories, capitalEntries, settings.startDate, fromDate, toDate]);
 
   const closeForm = () => { setShowEntryForm(false); setEditingEntity(null); setForm({ date: today(), description: '', debit: '', credit: '' }); };
 
@@ -103,32 +199,36 @@ export default function CapitalPage() {
         {activeTab === 'dashboard' && (
           <div className="p-4 md:p-6 space-y-6 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* KPI Section */}
-            <div className="grid grid-cols-2 gap-4">
-              {(() => {
-                const all = filterByStartDate(capitalEntries, settings.startDate);
-                const gd = all.reduce((s, e) => s + (e.debit || 0), 0);
-                const gc = all.reduce((s, e) => s + (e.credit || 0), 0);
-                const net = gd - gc;
-                return (
-                  <>
-                    <div className="glass p-5 rounded-3xl border-l-4 border-indigo-600 shadow-xl bg-gradient-to-br from-indigo-50/50 to-white dark:from-indigo-900/10 dark:to-dark-900 col-span-2">
-                      <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-1">Total Net Capital</p>
-                      <p className={cn("text-3xl font-black tabular-nums leading-tight", net >= 0 ? "text-slate-900 dark:text-white" : "text-red-600")}>
-                        ₨ {formatCurrency(Math.abs(net))}
-                        <span className="text-xs ml-1 font-bold text-slate-400 uppercase">{net >= 0 ? 'DR' : 'CR'}</span>
-                      </p>
-                    </div>
-                    <div className="glass p-5 rounded-3xl border-l-4 border-slate-400 shadow-lg bg-white/50 dark:bg-dark-800/50">
-                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Accounts</p>
-                      <p className="text-xl font-black text-slate-900 dark:text-white">{capitalCategories.length}</p>
-                    </div>
-                    <div className="glass p-5 rounded-3xl border-l-4 border-indigo-400 shadow-lg bg-indigo-50/30 dark:bg-indigo-900/10">
-                      <p className="text-[9px] font-black text-indigo-600 uppercase tracking-widest mb-1">Total Entries</p>
-                      <p className="text-xl font-black text-slate-900 dark:text-white">{all.length}</p>
-                    </div>
-                  </>
-                );
-              })()}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="glass p-5 rounded-3xl border-l-4 border-indigo-600 shadow-xl bg-gradient-to-br from-indigo-50/50 to-white dark:from-indigo-900/10 dark:to-dark-900 col-span-2 md:col-span-1">
+                <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-1">Net Capital</p>
+                <p className={cn("text-2xl font-black tabular-nums leading-tight", globalDashboardTotals.net >= 0 ? "text-slate-900 dark:text-white" : "text-red-600")}>
+                  ₨ {formatCurrency(Math.abs(globalDashboardTotals.net))}
+                  <span className="text-xs ml-1 font-bold text-slate-400 uppercase">{globalDashboardTotals.net >= 0 ? 'DR' : 'CR'}</span>
+                </p>
+              </div>
+
+              <div className="glass p-5 rounded-3xl border-l-4 border-indigo-500 shadow-lg bg-white dark:bg-dark-900 col-span-1">
+                <p className="text-[9px] font-black text-indigo-600 uppercase tracking-widest mb-1">Total Debit (+)</p>
+                <p className="text-xl font-black text-slate-800 dark:text-white tabular-nums">
+                  ₨ {formatCurrency(globalDashboardTotals.debit)}
+                </p>
+              </div>
+              <div className="glass p-5 rounded-3xl border-l-4 border-red-500 shadow-lg bg-white dark:bg-dark-900 col-span-1">
+                <p className="text-[9px] font-black text-red-600 uppercase tracking-widest mb-1">Total Credit (-)</p>
+                <p className="text-xl font-black text-slate-800 dark:text-white tabular-nums">
+                  ₨ {formatCurrency(globalDashboardTotals.credit)}
+                </p>
+              </div>
+
+              <div className="glass p-4 rounded-2xl border-l-4 border-slate-400 shadow-sm bg-white/50 dark:bg-dark-800/50 col-span-1">
+                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Accounts</p>
+                <p className="text-sm font-black text-slate-900 dark:text-white">{capitalCategories.length}</p>
+              </div>
+              <div className="glass p-4 rounded-2xl border-l-4 border-indigo-400 shadow-sm bg-indigo-50/30 dark:bg-indigo-900/10 col-span-1">
+                <p className="text-[8px] font-black text-indigo-600 uppercase tracking-widest mb-1">Total Entries</p>
+                <p className="text-sm font-black text-slate-900 dark:text-white">{globalDashboardTotals.count}</p>
+              </div>
             </div>
 
             {/* Account List */}
@@ -161,26 +261,41 @@ export default function CapitalPage() {
               })}
             </div>
           </div>
-        )}
-
-        {activeTab === 'database' && (
-          <div className="p-4 flex flex-col h-full space-y-4">
-             <div className="pill-nav-container mb-6">
-               {capitalCategories.map(c => (
-                 <button
-                   key={c.id}
-                   onClick={() => { setSelectedCat(c.id); setPage(1); }}
-                   className={cn(
-                     "pill-nav-item border-2",
-                     selectedCat === c.id 
-                       ? "pill-nav-item-active bg-indigo-600 border-indigo-600 shadow-indigo-500/30" 
-                       : "bg-white dark:bg-dark-900 border-slate-100 dark:border-dark-800 hover:border-indigo-200"
-                   )}
-                 >
-                   {c.name}
-                 </button>
-               ))}
+        )}        {activeTab === 'database' && (
+          <div className="flex-1 flex flex-col min-h-0 bg-slate-50 dark:bg-dark-950/20">
+            {/* Account Selector Slide Bar */}
+            <div className="bg-white dark:bg-dark-900 border-b border-slate-200 dark:border-dark-800 p-3 flex items-center gap-3 shrink-0 w-full overflow-hidden">
+               <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 dark:bg-dark-800 rounded-2xl border border-slate-200 dark:border-dark-700 focus-within:ring-2 focus-within:ring-indigo-600/20 focus-within:border-indigo-600 transition-all shrink-0">
+                 <Search className="w-4 h-4 text-slate-400" />
+                 <input 
+                   placeholder="Find Account..." 
+                   className="bg-transparent border-none outline-none text-[11px] font-black uppercase tracking-wider w-24 text-slate-700 dark:text-dark-200 placeholder:text-slate-400 placeholder:font-normal"
+                   value={sidebarSearch}
+                   onChange={e => setSidebarSearch(e.target.value)}
+                 />
+               </div>
+               
+               <div className="flex-1 min-w-0 flex items-center gap-2 overflow-x-auto no-scrollbar smart-scroll py-1 pr-4">
+                 {capitalCategories
+                   .filter(c => !sidebarSearch || c.name.toLowerCase().includes(sidebarSearch.toLowerCase()))
+                   .map(c => (
+                   <button 
+                     key={c.id}
+                     onClick={() => { setSelectedCat(c.id); setPage(1); }}
+                     className={cn(
+                       "whitespace-nowrap px-5 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-tight transition-all border-2",
+                       selectedCat === c.id 
+                         ? "bg-indigo-600 border-indigo-600 text-white shadow-xl shadow-indigo-500/30 scale-105" 
+                         : "bg-white dark:bg-dark-900 border-slate-100 dark:border-dark-800 text-slate-600 dark:text-dark-400 hover:border-indigo-200 hover:shadow-md"
+                     )}
+                   >
+                     {c.name}
+                   </button>
+                 ))}
+               </div>
             </div>
+
+            <div className="p-4 flex-1 flex flex-col min-h-0 space-y-4">
 
             <div className="flex items-center gap-2 bg-white/50 dark:bg-dark-900/50 backdrop-blur-sm p-2 rounded-2xl border border-slate-200 dark:border-dark-800 shadow-sm">
               <div className="flex-1">
@@ -204,7 +319,26 @@ export default function CapitalPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {paged.length === 0 ? (
+                    {/* Brought Forward Row */}
+                    {(page > 1 || preFilterBalance !== 0) && (
+                      <tr className="bg-slate-50 dark:bg-dark-800/30 text-[11px] font-bold italic">
+                        <td className="table-cell">---</td>
+                        <td className="table-cell uppercase">Balance Brought Forward (B/F)</td>
+                        <td className="table-cell text-right text-indigo-600">
+                          {pageOpeningBalance > 0 ? `₨ ${formatCurrency(pageOpeningBalance)}` : '---'}
+                        </td>
+                        <td className="table-cell text-right text-orange-500">
+                          {pageOpeningBalance < 0 ? `₨ ${formatCurrency(Math.abs(pageOpeningBalance))}` : '---'}
+                        </td>
+                        <td className="table-cell text-right font-black">
+                          ₨ {formatCurrency(Math.abs(pageOpeningBalance))}
+                          <span className="text-[9px] ml-1 opacity-50">{pageOpeningBalance >= 0 ? 'DR' : 'CR'}</span>
+                        </td>
+                        <td className="table-cell text-center">---</td>
+                      </tr>
+                    )}
+
+                    {paged.length === 0 && preFilterBalance === 0 ? (
                       <tr><td colSpan={6} className="px-6 py-20 text-center text-xs font-black text-slate-400 uppercase tracking-widest">No entries found</td></tr>
                     ) : paged.map(e => (
                       <tr key={e.id} className="table-row text-[11px] group">
@@ -217,17 +351,19 @@ export default function CapitalPage() {
                         </td>
                         <td className="table-cell text-center">
                           <div className="flex items-center justify-center gap-1">
-                            <button onClick={() => setViewingEntity(e)} className="p-1.5 text-slate-400 hover:text-indigo-500 transition-colors"><Eye className="w-4 h-4" /></button>
+                            <button onClick={() => setViewingEntity(e)} className="p-1.5 text-slate-400 hover:text-indigo-500 transition-colors" title="View"><Eye className="w-4 h-4" /></button>
                              <button 
                                onClick={() => { if(window.confirm('Modify this capital entry?')) handleEdit(e); }} 
                                className="p-1.5 text-slate-400 hover:text-amber-600 transition-colors"
+                               title="Edit"
                              >
                                <Edit2 className="w-4 h-4" />
                              </button>
                              {(currentUser?.role === 'Admin' || currentUser?.role === 'Developer') && (
                                <button 
-                                 onClick={(e) => { e.stopPropagation(); if (window.confirm('Permanently delete this capital record?')) deleteCapitalEntry(e.id); }} 
+                                 onClick={(ev) => { ev.stopPropagation(); if (window.confirm('Permanently delete this capital record?')) deleteCapitalEntry(e.id); }} 
                                  className="p-1.5 text-slate-400 hover:text-red-500 transition-colors"
+                                 title="Delete"
                                >
                                  <Trash2 className="w-4 h-4" />
                                </button>
@@ -236,13 +372,41 @@ export default function CapitalPage() {
                         </td>
                       </tr>
                     ))}
+
+                    {/* Close Up Row */}
+                    {(paged.length > 0 || preFilterBalance !== 0) && (
+                      <tr className="bg-slate-50 dark:bg-dark-800/30 text-[11px] font-bold italic border-t-2 border-slate-200">
+                        <td className="table-cell">---</td>
+                        <td className="table-cell uppercase font-black">Close Up Balance (C/F)</td>
+                        <td className="table-cell text-right text-indigo-600">
+                          {pageClosingBalance < 0 ? `₨ ${formatCurrency(Math.abs(pageClosingBalance))}` : '---'}
+                        </td>
+                        <td className="table-cell text-right text-orange-500">
+                          {pageClosingBalance > 0 ? `₨ ${formatCurrency(pageClosingBalance)}` : '---'}
+                        </td>
+                        <td className="table-cell text-right font-black">
+                           ₨ {formatCurrency(Math.abs(pageClosingBalance))}
+                           <span className="text-[9px] ml-1 opacity-50">{pageClosingBalance >= 0 ? 'DR' : 'CR'}</span>
+                        </td>
+                        <td className="table-cell text-center">---</td>
+                      </tr>
+                    )}
                   </tbody>
-                  <tfoot className="sticky bottom-0 bg-indigo-600 text-white text-[11px] font-black uppercase tracking-wider">
-                    <tr>
-                      <td colSpan={2} className="px-4 py-3 text-right opacity-80">Ledger Totals:</td>
-                      <td className="px-4 py-3 text-right">₨ {formatCurrency(totals.debit)}</td>
-                      <td className="px-4 py-3 text-right">₨ {formatCurrency(totals.credit)}</td>
-                      <td className="px-4 py-3 text-right" colSpan={2}>NET: ₨ {formatCurrency(Math.abs(totals.debit - totals.credit))} <span className="text-[9px] opacity-80">{totals.debit - totals.credit >= 0 ? 'DR' : 'CR'}</span></td>
+                  <tfoot className="sticky bottom-0 bg-slate-100 dark:bg-dark-900 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] text-[11px] font-black uppercase tracking-wider">
+                    <tr className="border-t-2 border-slate-300 dark:border-dark-700">
+                      <td colSpan={2} className="px-4 py-3 text-right text-slate-500">Page Total:</td>
+                      <td className="px-4 py-3 text-right text-indigo-600 tabular-nums">₨ {formatCurrency(pageTotals.debit)}</td>
+                      <td className="px-4 py-3 text-right text-orange-500 tabular-nums border-r border-slate-200 dark:border-dark-800">₨ {formatCurrency(pageTotals.credit)}</td>
+                      <td colSpan={2}></td>
+                    </tr>
+                    <tr className="bg-indigo-600 text-white border-t border-white/10">
+                      <td colSpan={2} className="px-4 py-3 text-right opacity-80">Filters Grand Total:</td>
+                      <td className="px-4 py-3 text-right tabular-nums">₨ {formatCurrency(grandTotals.debit)}</td>
+                      <td className="px-4 py-3 text-right tabular-nums border-r border-white/20">₨ {formatCurrency(grandTotals.credit)}</td>
+                      <td className="px-4 py-3 text-right tabular-nums font-black" colSpan={2}>
+                        NET: ₨ {formatCurrency(Math.abs(grandTotals.balance))} 
+                        <span className="text-[9px] ml-1 opacity-80">{grandTotals.balance >= 0 ? 'DR' : 'CR'}</span>
+                      </td>
                     </tr>
                   </tfoot>
                 </table>
@@ -250,7 +414,8 @@ export default function CapitalPage() {
             </div>
             <div className="mt-4"><Pagination page={page} total={withBalance.length} perPage={perPage} onChange={setPage} /></div>
           </div>
-        )}
+        </div>
+      )}
 
         {activeTab === 'register' && (
           <div className="p-6">
