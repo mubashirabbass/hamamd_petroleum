@@ -184,7 +184,7 @@ async fn restore_from_zip(zip_path: String, app: tauri::AppHandle) -> Result<(),
 // GOOGLE OAUTH2 — Local HTTP server captures the authorization code
 // ─────────────────────────────────────────────────────────────────────────────
 
-const REDIRECT_URI: &str = "http://localhost:3001/oauth/callback";
+const REDIRECT_URI: &str = "http://127.0.0.1:3001/oauth/callback";
 
 /// Starts a local HTTP listener on port 3001, opens the OAuth URL in the
 /// system browser, waits for Google's callback, and returns the authorization code.
