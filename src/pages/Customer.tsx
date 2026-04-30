@@ -153,6 +153,8 @@ export default function CustomerPage() {
     e.preventDefault();
     if (!newName.trim()) return;
 
+    if (!window.confirm('Are you sure you want to register this new customer?')) return;
+
     // Strict Validation
     const cleanPhone = newPhone.replace(/\D/g, '');
 
@@ -187,6 +189,8 @@ export default function CustomerPage() {
 
   const handleSaveEdit = (id: string) => {
     if (!editForm.name.trim()) return;
+
+    if (!window.confirm('Are you sure you want to save changes to this customer profile?')) return;
 
     // Strict Validation
     const cleanPhone = editForm.phone.replace(/\D/g, '');
@@ -715,7 +719,7 @@ export default function CustomerPage() {
                                 <button onClick={(e) => { e.stopPropagation(); handleStartEdit(c); }} className="p-2 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-xl"><Edit2 className="w-4 h-4" /></button>
                                 {(currentUser?.role === 'Admin' || currentUser?.role === 'Developer') && (
                                   <button
-                                    onClick={(e) => { e.stopPropagation(); if (confirm('Delete customer and all history?')) deleteCustomer(c.id); }}
+                                    onClick={(e) => { e.stopPropagation(); if (window.confirm('Delete customer and all history?')) deleteCustomer(c.id); }}
                                     className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl"
                                   >
                                     <Trash2 className="w-4 h-4" />

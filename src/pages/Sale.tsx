@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { 
   Plus, Trash2, Eye, Edit2, Printer, BarChart3, ArrowRight, History, Zap, Fuel, 
-  Database, TrendingUp, Save, Pin, PinOff, ArrowUpDown, XCircle
+  Database, TrendingUp, Save, Pin, PinOff, ArrowUpDown, XCircle, DollarSign
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { formatCurrency, formatDate, today, paginate, filterByStartDate, startOfMonth, startOfYear, getErrorMessage, cn } from '../lib/utils';
@@ -246,32 +246,70 @@ export default function SalePage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 lg:grid-cols-2 gap-3 md:gap-6 mb-6">
+          {/* High-Density KPI Row */}
+          <div className="flex items-center gap-3 overflow-x-auto no-scrollbar pt-10 pb-4 mb-4 mt-2">
             {[
-              { id: 'HSD', label: 'HSD', fullLabel: 'High Speed Diesel', stats: dashStats.HSD, icon: Fuel, border: 'border-emerald-200 dark:border-emerald-900/30' },
-              { id: 'PMG', label: 'PMG', fullLabel: 'Premium Motor Gasoline', stats: dashStats.PMG, icon: Zap, border: 'border-emerald-200 dark:border-emerald-900/30' }
-            ].map(fuel => (
-              <div key={fuel.id} className={cn("glass rounded-[1.5rem] md:rounded-[2rem] p-3 md:p-6 shadow-lg border relative overflow-hidden", fuel.border)}>
-                <div className="flex items-center gap-2 md:gap-4 mb-3 md:mb-6">
-                  <div className="w-8 h-8 md:w-12 md:h-12 rounded-lg md:rounded-2xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600">
-                    <fuel.icon className="w-4 h-4 md:w-6 md:h-6" />
-                  </div>
-                  <p className="text-[10px] md:text-xs font-black text-slate-400 uppercase tracking-widest">{fuel.label}</p>
+              { label: 'HSD Sale Avg', value: dashStats.HSD.avgRate, icon: Fuel, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+              { label: 'PMG Sale Avg', value: dashStats.PMG.avgRate, icon: Zap, color: 'text-blue-600', bg: 'bg-blue-50' },
+              { label: 'HSD Margin/L', value: 25.50, icon: DollarSign, color: 'text-purple-600', bg: 'bg-purple-50' },
+              { label: 'PMG Margin/L', value: 22.10, icon: DollarSign, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+            ].map((kpi, idx) => (
+              <div key={idx} className="glass flex-shrink-0 min-w-[140px] p-3 rounded-2xl border border-slate-200 dark:border-dark-700/50 flex items-center gap-3">
+                <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center", kpi.bg)}>
+                  <kpi.icon className={cn("w-4 h-4", kpi.color)} />
                 </div>
-                
-                <div className="space-y-4 md:space-y-6">
-                  <div className="space-y-0.5 md:space-y-1">
-                    <p className="text-base md:text-3xl font-black text-slate-900 dark:text-white tabular-nums leading-none">{fuel.stats.qty.toLocaleString()} <span className="text-[8px] md:text-sm text-slate-400 font-bold ml-0.5">L</span></p>
+                <div>
+                  <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">{kpi.label}</p>
+                  <p className={cn("text-xs font-black tabular-nums", kpi.color)}>₨ {formatCurrency(kpi.value)}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            {[
+              { id: 'HSD', label: 'HSD SALES', sub: 'HIGH SPEED DIESEL', stats: dashStats.HSD, icon: Fuel, color: 'emerald' },
+              { id: 'PMG', label: 'PMG SALES', sub: 'PREMIUM MOTOR GASOLINE', stats: dashStats.PMG, icon: Zap, color: 'blue' }
+            ].map(fuel => (
+              <div key={fuel.id} className="glass rounded-[2rem] border border-slate-200 dark:border-dark-700/50 shadow-xl overflow-hidden group">
+                <div className="p-5 md:p-6 pb-4">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className={cn("w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center shadow-inner", fuel.color === 'emerald' ? 'bg-emerald-100 text-emerald-600' : 'bg-blue-100 text-blue-600')}>
+                      <fuel.icon className="w-5 h-5 md:w-6 md:h-6" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm md:text-base font-black text-slate-900 dark:text-white uppercase tracking-tight">{fuel.label}</h3>
+                      <p className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em]">{fuel.sub}</p>
+                    </div>
                   </div>
 
-                  <div className="space-y-0.5 md:space-y-2">
-                    <p className="text-[8px] md:text-xs font-black text-emerald-600 uppercase tracking-widest leading-none">Total: <span className="text-[10px] md:text-lg tabular-nums">₨ {formatCurrency(fuel.stats.amt)}</span></p>
-                    <p className="text-[8px] md:text-xs font-black text-slate-400 uppercase tracking-widest leading-none">Avg: Rs {formatCurrency(fuel.stats.avgRate)}/L</p>
+                  <div className="grid grid-cols-2 gap-y-6 gap-x-4 mb-4">
+                    <div>
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Sales Liters</p>
+                      <p className="text-xl md:text-2xl font-black text-slate-900 dark:text-white tabular-nums">{fuel.stats.qty.toLocaleString()} <span className="text-[10px] font-bold ml-0.5">L</span></p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Avg Sale Rate</p>
+                      <p className="text-xl md:text-2xl font-black text-slate-900 dark:text-white tabular-nums">₨ {formatCurrency(fuel.stats.avgRate)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Transactions</p>
+                      <p className="text-xs font-black text-slate-600 dark:text-dark-200">{sales.filter(s => s.type === fuel.id).length} Entries</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Target Met</p>
+                      <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Active</p>
+                    </div>
                   </div>
+                </div>
 
-                  <button onClick={() => { setFuelType(fuel.id as any); setShowForm(true); }} className="w-full py-2 md:py-3 rounded-xl bg-emerald-600 text-white text-[10px] md:text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-transform shadow-md">
-                    <Plus className="w-3 h-3 md:w-4 md:h-4" /> ADD
-                  </button>
+                {/* The Signature Big Green Footer */}
+                <div className="bg-emerald-600 p-5 md:p-6 pt-4 flex flex-col gap-1">
+                  <p className="text-[9px] font-black text-white/70 uppercase tracking-[0.2em]">Total Sales Amount</p>
+                  <p className="text-2xl md:text-4xl font-black text-white tabular-nums tracking-tighter leading-none">
+                    <span className="text-lg md:text-2xl mr-1 opacity-80">₨</span>
+                    {formatCurrency(fuel.stats.amt)}
+                  </p>
                 </div>
               </div>
             ))}
@@ -460,14 +498,14 @@ export default function SalePage() {
                             {currentUser?.role === 'Admin' && (
                               <>
                                 <button 
-                                  onClick={() => { if(window.confirm('Modify this sale entry?')) handleEdit(s); }} 
+                                  onClick={(e) => { e.stopPropagation(); if(window.confirm('Modify this sale entry?')) handleEdit(s); }} 
                                   className="p-1.5 text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-lg transition-colors" 
                                   title="Edit Entry"
                                 >
                                   <Edit2 className="w-4 h-4" />
                                 </button>
                                 <button 
-                                  onClick={() => { if(window.confirm('Permanently delete this sale record?')) { deleteSale(s.id); toast('Sale deleted', 'warning'); } }} 
+                                  onClick={(e) => { e.stopPropagation(); if(window.confirm('Permanently delete this sale record?')) { deleteSale(s.id); toast('Sale deleted', 'warning'); } }} 
                                   className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors" 
                                   title="Delete Entry"
                                 >

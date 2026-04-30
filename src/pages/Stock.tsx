@@ -606,7 +606,8 @@ export default function StockPage() {
                           <td className="table-cell text-center whitespace-nowrap">
                             {(currentUser?.role === 'Admin' || currentUser?.role === 'Developer') && (
                               <button
-                                onClick={() => {
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   if (window.confirm(`Are you sure you want to PERMANENTLY DELETE this ${h.type.toLowerCase()} record? This will also update your stock balance.`)) {
                                     if (h.type === 'Sale') deleteSale(h.id);
                                     else deletePurchase(h.id);
@@ -700,42 +701,46 @@ export default function StockPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-3 border-t border-slate-100 dark:border-dark-800/60 pt-6">
-                  {[
-                    { label: 'Purchase', qty: data.totalPurchased, icon: TrendingUp, color: 'text-blue-600' },
-                    { label: 'Sale', qty: data.totalSold, icon: TrendingDown, color: 'text-red-600' },
-                    { label: 'Stock', qty: data.current, icon: Package, color: color === 'amber' ? 'text-amber-600' : 'text-emerald-600', highlight: true },
-                  ].map(block => (
-                    <div key={block.label} className="space-y-1">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{block.label}</p>
-                      <p className={cn("font-black tabular-nums tracking-tighter", block.highlight ? 'text-2xl' : 'text-xl text-slate-900 dark:text-white', block.color)}>{block.qty.toLocaleString()} L</p>
-                    </div>
-                  ))}
+                <div className="grid grid-cols-2 gap-4 border-t border-slate-100 dark:border-dark-800/60 pt-6 mb-4">
+                   <div className="space-y-1">
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Total Purchased</p>
+                      <p className="text-xl font-black text-blue-600 tabular-nums tracking-tighter">{data.totalPurchased.toLocaleString()} L</p>
+                   </div>
+                   <div className="space-y-1 text-right">
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Total Sold</p>
+                      <p className="text-xl font-black text-red-600 tabular-nums tracking-tighter">{data.totalSold.toLocaleString()} L</p>
+                   </div>
                 </div>
 
-                <div className="mt-8 flex flex-col gap-3">
+                {/* The Signature Big Colored Footer for Stock */}
+                <div className={cn("mx-[-2rem] p-6 mb-6 flex flex-col gap-1", color === 'amber' ? 'bg-amber-600' : 'bg-emerald-600')}>
+                  <p className="text-[9px] font-black text-white/70 uppercase tracking-[0.2em]">Current Stock Level</p>
+                  <p className="text-3xl md:text-5xl font-black text-white tabular-nums tracking-tighter leading-none">
+                    {data.current.toLocaleString()}
+                    <span className="text-lg md:text-2xl ml-2 opacity-80 uppercase">Liters</span>
+                  </p>
+                </div>
+
+                <div className="flex flex-col gap-3">
                   <button
                     onClick={() => navigate(`/stock/${type.toLowerCase()}`)}
-                    className={cn(
-                      "w-full py-4 rounded-3xl font-black text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 border shadow-sm active:scale-95 group",
-                      color === 'amber' ? "bg-amber-600 text-white" : "bg-emerald-600 text-white"
-                    )}
+                    className="w-full py-3.5 rounded-2xl bg-slate-900 text-white font-black text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 shadow-lg active:scale-95 group"
                   >
                     <LayoutList className="w-4 h-4" />
-                    Details
+                    Manage History
                     <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                   </button>
                   <div className="grid grid-cols-2 gap-3">
                     <button
                       onClick={() => navigate(`/sale?action=add&type=${type}`)}
-                      className="py-3.5 rounded-2xl bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700 text-slate-900 dark:text-white font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-sm active:scale-95"
+                      className="py-3 rounded-xl bg-slate-100 dark:bg-dark-800 border border-slate-200 dark:border-dark-700 text-slate-900 dark:text-white font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-sm active:scale-95"
                     >
                       <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
                       + Sale
                     </button>
                     <button
                       onClick={() => navigate(`/purchase?action=add&type=${type}`)}
-                      className="py-3.5 rounded-2xl bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700 text-slate-900 dark:text-white font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-sm active:scale-95"
+                      className="py-3 rounded-xl bg-slate-100 dark:bg-dark-800 border border-slate-200 dark:border-dark-700 text-slate-900 dark:text-white font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-sm active:scale-95"
                     >
                       <ShoppingCart className="w-3.5 h-3.5 text-blue-600" />
                       + Purchase

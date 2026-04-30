@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { 
   Plus, Trash2, Eye, Edit2, Printer, BarChart3, ArrowRight, History, Zap, Fuel, 
-  LayoutGrid, Database, Save, Pin, PinOff, ArrowUpDown, XCircle, ShoppingCart
+  LayoutGrid, Database, Save, Pin, PinOff, ArrowUpDown, XCircle, ShoppingCart, Package
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { formatCurrency, formatDate, today, paginate, filterByStartDate, startOfMonth, startOfYear, getErrorMessage, cn } from '../lib/utils';
@@ -289,92 +289,87 @@ export default function PurchasePage() {
             </div>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-3">
-                <div className="glass px-4 py-2 rounded-2xl border border-amber-200 dark:border-amber-800/30 flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600">
-                    <Fuel className="w-4 h-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">HSD Avg / L</p>
-                    <p className="text-lg font-black text-amber-600 dark:text-amber-400 tabular-nums leading-none font-mono tracking-tighter">
-                      ₨ {formatCurrency(dashStats.HSD.qty > 0 ? dashStats.HSD.total / dashStats.HSD.qty : 0)}
-                    </p>
-                  </div>
-                </div>
-                <div className="glass px-4 py-2 rounded-2xl border border-blue-200 dark:border-blue-800/30 flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600">
-                    <Zap className="w-4 h-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">PMG Avg / L</p>
-                    <p className="text-lg font-black text-blue-600 dark:text-blue-400 tabular-nums leading-none font-mono tracking-tighter">
-                      ₨ {formatCurrency(dashStats.PMG.qty > 0 ? dashStats.PMG.total / dashStats.PMG.qty : 0)}
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
                 <button onClick={() => setShowReport(true)} className="btn-secondary flex items-center gap-2"><Printer className="w-4 h-4" /> Reports</button>
                 <button onClick={() => setShowForm(true)} className="btn-primary !bg-blue-600 flex items-center gap-2"><Plus className="w-4 h-4" /> New Entry</button>
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* High-Density KPI Row */}
+          <div className="flex items-center gap-3 overflow-x-auto no-scrollbar pt-10 pb-4 mb-4 mt-2">
             {[
-              { id: 'HSD', label: 'High Speed Diesel', stats: dashStats.HSD, icon: Fuel, color: 'emerald' },
-              { id: 'PMG', label: 'Premium Motor Gasoline', stats: dashStats.PMG, icon: Zap, color: 'blue' }
-            ].map(fuel => (
-              <div key={fuel.id} className="glass rounded-[2rem] p-6 border border-slate-200 dark:border-dark-700/50 relative overflow-hidden group hover:scale-[1.01] transition-transform shadow-xl">
-                <div className={cn("absolute top-0 right-0 w-32 h-32 rounded-bl-full -mr-16 -mt-16 opacity-10", fuel.id === 'HSD' ? 'bg-amber-500' : 'bg-blue-500')} />
-                
-                <div className="flex items-center gap-4 mb-6">
-                  <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center", fuel.id === 'HSD' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600' : 'bg-blue-100 dark:bg-blue-900/30 text-blue-600')}>
-                    <fuel.icon className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">{fuel.id} Procurement</h3>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{fuel.label}</p>
-                  </div>
+              { label: 'HSD Pur Avg', value: dashStats.HSD.avgPrice, icon: Fuel, color: 'text-amber-600', bg: 'bg-amber-50' },
+              { label: 'PMG Pur Avg', value: dashStats.PMG.avgPrice, icon: Zap, color: 'text-blue-600', bg: 'bg-blue-50' },
+              { label: 'Total HSD Qty', value: dashStats.HSD.qty, icon: Package, color: 'text-emerald-600', bg: 'bg-emerald-50', unit: 'L' },
+              { label: 'Total PMG Qty', value: dashStats.PMG.qty, icon: Package, color: 'text-blue-600', bg: 'bg-blue-50', unit: 'L' },
+            ].map((kpi, idx) => (
+              <div key={idx} className="glass flex-shrink-0 min-w-[140px] p-3 rounded-2xl border border-slate-200 dark:border-dark-700/50 flex items-center gap-3">
+                <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center", kpi.bg)}>
+                  <kpi.icon className={cn("w-4 h-4", kpi.color)} />
                 </div>
-
-                <div className="flex flex-col gap-5">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-dark-800/50 pb-4">
-                    <div className="space-y-1">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Volume</p>
-                      <p className="text-xl font-black text-slate-900 dark:text-white tabular-nums">{fuel.stats.qty.toLocaleString()} <span className="text-xs text-slate-400 font-normal">Liters</span></p>
-                    </div>
-                    <div className="space-y-1 sm:text-right flex-1">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Avg Price / L</p>
-                      <p className="text-xl font-black text-slate-900 dark:text-white tabular-nums">₨ {formatCurrency(fuel.stats.avgPrice)}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-dark-800/50 pb-4">
-                      <div className="space-y-1">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Net Expenditure</p>
-                        <p className="text-sm font-black text-slate-500 tabular-nums">₨ {formatCurrency(fuel.stats.amt)}</p>
-                      </div>
-                      <div className="space-y-1 sm:text-right">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Carriage</p>
-                        <p className="text-sm font-black text-slate-500 tabular-nums">₨ {formatCurrency(fuel.stats.carriage)}</p>
-                      </div>
-                    </div>
-                    
-                    <div className="p-4 bg-blue-600 dark:bg-blue-600/10 rounded-2xl border border-blue-100/50 dark:border-blue-800/20">
-                      <p className="text-[10px] font-black text-white dark:text-blue-400 uppercase tracking-widest mb-1">Total Procurement Cost</p>
-                      <p className={cn(
-                        "font-black tabular-nums break-words leading-tight text-white dark:text-blue-400",
-                        formatCurrency(fuel.stats.total).length > 15 ? "text-xl lg:text-2xl" : "text-2xl lg:text-4xl"
-                      )}>
-                        <span className="text-lg mr-1 opacity-70">₨</span>
-                        {formatCurrency(fuel.stats.total)}
-                      </p>
-                    </div>
-                  </div>
+                <div>
+                  <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">{kpi.label}</p>
+                  <p className={cn("text-xs font-black tabular-nums", kpi.color)}>
+                    {kpi.unit === 'L' ? kpi.value.toLocaleString() : `₨ ${formatCurrency(kpi.value)}`}
+                    {kpi.unit && <span className="text-[8px] ml-0.5">{kpi.unit}</span>}
+                  </p>
                 </div>
               </div>
             ))}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            {[
+              { id: 'HSD', label: 'HSD PURCHASE', sub: 'HIGH SPEED DIESEL', stats: dashStats.HSD, icon: Fuel, color: 'amber' },
+              { id: 'PMG', label: 'PMG PURCHASE', sub: 'PREMIUM MOTOR GASOLINE', stats: dashStats.PMG, icon: Zap, color: 'blue' }
+            ].map(fuel => {
+              const entriesCount = purchases.filter(p => p.type === fuel.id).length;
+              return (
+                <div key={fuel.id} className="glass rounded-[2rem] border border-slate-200 dark:border-dark-700/50 shadow-xl overflow-hidden group">
+                  <div className="p-5 md:p-6 pb-4">
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className={cn("w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center shadow-inner", fuel.color === 'amber' ? 'bg-amber-500/10 text-amber-600' : 'bg-blue-500/10 text-blue-600')}>
+                        <fuel.icon className="w-5 h-5 md:w-6 md:h-6" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm md:text-base font-black text-slate-900 dark:text-white uppercase tracking-tight">{fuel.label}</h3>
+                        <p className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em]">{fuel.sub}</p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-y-6 gap-x-4 mb-4">
+                      <div>
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Liters</p>
+                        <p className="text-xl md:text-2xl font-black text-slate-900 dark:text-white tabular-nums">
+                          {fuel.stats.qty.toLocaleString()} <span className="text-[9px] text-slate-400 font-bold">L ({entriesCount} records)</span>
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Avg Rate</p>
+                        <p className="text-xl md:text-2xl font-black text-slate-900 dark:text-white tabular-nums">₨ {formatCurrency(fuel.stats.avgPrice)}</p>
+                      </div>
+                      <div>
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Product Cost</p>
+                        <p className="text-xs md:text-sm font-black text-slate-600 dark:text-dark-200 uppercase">₨ {formatCurrency(fuel.stats.amt)}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Carriage</p>
+                        <p className="text-xs md:text-sm font-black text-slate-600 dark:text-dark-200 uppercase">₨ {formatCurrency(fuel.stats.carriage)}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* High-Contrast Blue Footer */}
+                  <div className="bg-blue-600 p-5 md:p-6 pt-4 flex flex-col gap-1">
+                    <p className="text-[9px] font-black text-white/70 uppercase tracking-[0.2em]">Total Purchase Cost</p>
+                    <p className="text-2xl md:text-4xl font-black text-white tabular-nums tracking-tighter leading-none">
+                      <span className="text-lg md:text-2xl mr-1 opacity-80">₨</span>
+                      {formatCurrency(fuel.stats.total)}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
           <div className="glass rounded-[2rem] overflow-hidden border border-slate-200 dark:border-dark-700/50 shadow-xl">
@@ -564,14 +559,14 @@ export default function PurchasePage() {
                             {currentUser?.role === 'Admin' && (
                               <>
                                 <button 
-                                  onClick={() => { if(window.confirm('Modify this purchase entry?')) handleEdit(p); }} 
+                                  onClick={(e) => { e.stopPropagation(); if(window.confirm('Modify this purchase entry?')) handleEdit(p); }} 
                                   className="p-1.5 text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-lg transition-colors" 
                                   title="Edit Entry"
                                 >
                                   <Edit2 className="w-4 h-4" />
                                 </button>
                                 <button 
-                                  onClick={() => { if(window.confirm('Permanently delete this purchase record?')) { deletePurchase(p.id); toast('Purchase deleted', 'warning'); } }} 
+                                  onClick={(e) => { e.stopPropagation(); if(window.confirm('Permanently delete this purchase record?')) { deletePurchase(p.id); toast('Purchase deleted', 'warning'); } }} 
                                   className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors" 
                                   title="Delete Entry"
                                 >

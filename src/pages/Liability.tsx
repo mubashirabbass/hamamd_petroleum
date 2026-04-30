@@ -505,7 +505,7 @@ export default function LiabilityPage() {
                               <button onClick={() => setViewingEntity(e)} className="p-1.5 text-slate-400 hover:text-blue-500 transition-colors" title="View"><Eye className="w-4 h-4" /></button>
                               <button onClick={() => setViewingEntity(e)} className="p-1.5 text-slate-400 hover:text-emerald-600 transition-colors" title="Print Receipt"><Printer className="w-4 h-4" /></button>
                               <button 
-                                 onClick={() => { if(window.confirm('Modify this liability entry?')) handleEdit(e); }} 
+                                 onClick={(ev) => { ev.stopPropagation(); if(window.confirm('Modify this liability entry?')) handleEdit(e); }} 
                                  className="p-1.5 text-slate-400 hover:text-amber-600 transition-colors" 
                                  title="Edit"
                                >
@@ -513,7 +513,7 @@ export default function LiabilityPage() {
                                </button>
                                {(currentUser?.role === 'Admin' || currentUser?.role === 'Developer') && (
                                  <button 
-                                   onClick={() => { if(window.confirm('Permanently delete this liability record?')) deleteLiabilityEntry(e.id); }} 
+                                   onClick={(ev) => { ev.stopPropagation(); if(window.confirm('Permanently delete this liability record?')) deleteLiabilityEntry(e.id); }} 
                                    className="p-1.5 text-slate-400 hover:text-red-500 transition-colors" 
                                    title="Delete"
                                  >
@@ -651,7 +651,7 @@ export default function LiabilityPage() {
                                 <button onClick={() => handleStartEdit(c)} className="p-2 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-xl"><Edit2 className="w-4 h-4" /></button>
                                 {(currentUser?.role === 'Admin' || currentUser?.role === 'Developer') && (
                                   <button
-                                    onClick={(e) => { e.stopPropagation(); if (confirm('Delete account and all history?')) deleteLiabilityCategory(c.id); }}
+                                    onClick={(e) => { e.stopPropagation(); if (window.confirm('Delete account and all history?')) deleteLiabilityCategory(c.id); }}
                                     className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl"
                                   >
                                     <Trash2 className="w-4 h-4" />

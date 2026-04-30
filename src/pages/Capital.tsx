@@ -226,7 +226,7 @@ export default function CapitalPage() {
                              </button>
                              {(currentUser?.role === 'Admin' || currentUser?.role === 'Developer') && (
                                <button 
-                                 onClick={() => { if (window.confirm('Permanently delete this capital record?')) deleteCapitalEntry(e.id); }} 
+                                 onClick={(e) => { e.stopPropagation(); if (window.confirm('Permanently delete this capital record?')) deleteCapitalEntry(e.id); }} 
                                  className="p-1.5 text-slate-400 hover:text-red-500 transition-colors"
                                >
                                  <Trash2 className="w-4 h-4" />
@@ -301,7 +301,7 @@ export default function CapitalPage() {
                             <div className="flex items-center gap-2 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
                               <button onClick={() => { setEditingId(c.id); setEditForm({ name: c.name }); }} className="p-2 text-slate-400 hover:text-indigo-600"><Edit2 className="w-4 h-4" /></button>
                               {(currentUser?.role === 'Admin' || currentUser?.role === 'Developer') && (
-                                <button onClick={() => { if (confirm('Delete account and all entries?')) deleteCapitalCategory(c.id); }} className="p-2 text-slate-400 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
+                                <button onClick={(e) => { e.stopPropagation(); if (window.confirm('Delete account and all entries?')) deleteCapitalCategory(c.id); }} className="p-2 text-slate-400 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
                               )}
                             </div>
                           </td>
