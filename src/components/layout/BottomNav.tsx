@@ -1,7 +1,8 @@
 import { NavLink } from 'react-router-dom';
 import { 
   LayoutDashboard, ShoppingCart, TrendingUp, BarChart3, 
-  DollarSign, Package, AlertTriangle, Users, Settings 
+  DollarSign, Package, AlertTriangle, Users, Settings,
+  Wallet, Activity, Scale
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
@@ -14,6 +15,9 @@ const navItems = [
   { label: 'Liability', path: '/liability', icon: AlertTriangle },
   { label: 'Stock',     path: '/stock',     icon: BarChart3 },
   { label: 'Customer',  path: '/customer',  icon: Users },
+  { label: 'Capital',   path: '/capital',   icon: Wallet },
+  { label: 'PLS',       path: '/pls',       icon: Activity },
+  { label: 'Balance',   path: '/balance-sheet', icon: Scale },
   { label: 'Settings',  path: '/settings',  icon: Settings },
 ];
 

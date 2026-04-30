@@ -492,21 +492,18 @@ export default function StockPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
             {[
-              { label: 'Purchase', qty: detailTotals.in, icon: TrendingUp, color: 'blue' },
-              { label: 'Sale', qty: detailTotals.out, icon: TrendingDown, color: 'red' },
-              { label: 'Stock', qty: historyData[0]?.balance || 0, icon: Package, color: 'emerald', highlight: true },
+              { label: 'Purchase Volume', qty: detailTotals.in, icon: TrendingUp, color: 'blue', border: 'border-blue-500' },
+              { label: 'Sales Volume', qty: detailTotals.out, icon: TrendingDown, color: 'red', border: 'border-red-500' },
+              { label: 'Current Stock', qty: historyData[0]?.balance || 0, icon: Package, color: 'emerald', border: 'border-emerald-500', highlight: true },
             ].map(col => (
-              <div key={col.label} className="glass p-5 rounded-3xl border border-slate-200 dark:border-dark-700/50 shadow-sm">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <col.icon className={cn("w-4 h-4", `text-${col.color}-600`)} />
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{col.label}</span>
-                  </div>
+              <div key={col.label} className={cn("glass p-5 rounded-3xl shadow-sm border-l-4", col.border)}>
+                <div className="flex items-center justify-between mb-2">
+                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{col.label}</p>
+                   <col.icon className={cn("w-4 h-4", col.color === 'blue' ? 'text-blue-500' : col.color === 'red' ? 'text-red-500' : 'text-emerald-500')} />
                 </div>
-                <div className="flex items-baseline gap-1.5 ml-4">
-                  <span className={cn('font-black tabular-nums tracking-tighter capitalize', col.highlight ? `text-2xl text-emerald-600 dark:text-emerald-400` : 'text-xl text-slate-800 dark:text-white')}>{col.qty.toLocaleString()}</span>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">L</span>
-                </div>
+                <p className={cn("text-2xl font-black tabular-nums tracking-tighter", col.highlight ? 'text-emerald-600' : 'text-slate-900 dark:text-white')}>
+                   {col.qty.toLocaleString()} <span className="text-xs font-bold text-slate-400 ml-1">L</span>
+                </p>
               </div>
             ))}
           </div>
@@ -610,7 +607,7 @@ export default function StockPage() {
                             {(currentUser?.role === 'Admin' || currentUser?.role === 'Developer') && (
                               <button
                                 onClick={() => {
-                                  if (confirm(`Delete this ${h.type.toLowerCase()}?`)) {
+                                  if (window.confirm(`Are you sure you want to PERMANENTLY DELETE this ${h.type.toLowerCase()} record? This will also update your stock balance.`)) {
                                     if (h.type === 'Sale') deleteSale(h.id);
                                     else deletePurchase(h.id);
                                     toast('Entry deleted successfully', 'success');

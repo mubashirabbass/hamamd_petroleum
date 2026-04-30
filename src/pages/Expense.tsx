@@ -136,6 +136,9 @@ export default function ExpensePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedCat || !form.date || !form.amount) { toast('Fill required fields', 'error'); return; }
+
+    const confirmed = window.confirm(editingEntity ? 'Confirm Update: Save changes to this expense?' : 'Confirm Save: Register this new expense entry?');
+    if (!confirmed) return;
     
     const amount = parseFloat(form.amount) || 0;
     const payload = { categoryId: selectedCat, date: form.date, details: form.details, amount };
@@ -226,29 +229,29 @@ export default function ExpensePage() {
         iconClassName="!bg-red-100 !text-red-600"
       />
 
-      <div className="flex flex-col gap-3 p-4 bg-white dark:bg-dark-900/50 border-b border-slate-200 dark:border-dark-800 flex-shrink-0">
-        <div className="segmented-control overflow-x-auto no-scrollbar">
+      <div className="p-4 bg-white dark:bg-dark-900/50 border-b border-slate-200 dark:border-dark-800 flex-shrink-0">
+        <div className="pill-nav-container">
           <button
             onClick={() => setActiveTab('dashboard')}
-            className={cn("segmented-item", activeTab === 'dashboard' ? "segmented-item-active" : "segmented-item-inactive")}
+            className={cn("pill-nav-item", activeTab === 'dashboard' ? "pill-nav-item-active bg-red-600 border-red-600 shadow-red-500/30" : "hover:border-red-100")}
           >
             Analytics
           </button>
           <button
             onClick={() => setActiveTab('database')}
-            className={cn("segmented-item", activeTab === 'database' ? "segmented-item-active" : "segmented-item-inactive")}
+            className={cn("pill-nav-item", activeTab === 'database' ? "pill-nav-item-active bg-red-600 border-red-600 shadow-red-500/30" : "hover:border-red-100")}
           >
             Entries
           </button>
           <button
             onClick={() => setActiveTab('register')}
-            className={cn("segmented-item", activeTab === 'register' ? "segmented-item-active" : "segmented-item-inactive")}
+            className={cn("pill-nav-item", activeTab === 'register' ? "pill-nav-item-active bg-red-600 border-red-600 shadow-red-500/30" : "hover:border-red-100")}
           >
-            New Expense
+            New Category
           </button>
           <button
             onClick={() => setActiveTab('manage')}
-            className={cn("segmented-item", activeTab === 'manage' ? "segmented-item-active" : "segmented-item-inactive")}
+            className={cn("pill-nav-item", activeTab === 'manage' ? "pill-nav-item-active bg-red-600 border-red-600 shadow-red-500/30" : "hover:border-red-100")}
           >
             Settings
           </button>
@@ -400,16 +403,16 @@ export default function ExpensePage() {
         ) : activeTab === 'database' ? (
           <div className="flex-1 flex flex-col min-h-0 bg-slate-50 dark:bg-dark-950/20 p-4 pb-6">
             {/* Category Pill Switcher */}
-            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar mb-4 pb-2">
+            <div className="pill-nav-container mb-6">
                {expenseCategories.map(c => (
                  <button
                    key={c.id}
                    onClick={() => { setSelectedCat(c.id); setPage(1); }}
                    className={cn(
-                     "flex-shrink-0 px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all",
+                     "pill-nav-item border-2",
                      selectedCat === c.id 
-                       ? "bg-red-600 text-white shadow-lg shadow-red-500/20" 
-                       : "bg-white dark:bg-dark-900 text-slate-500 border border-slate-200 dark:border-dark-800"
+                       ? "pill-nav-item-active bg-red-600 border-red-600 shadow-red-500/30" 
+                       : "bg-white dark:bg-dark-900 border-slate-100 dark:border-dark-800 hover:border-red-200"
                    )}
                  >
                    {c.name}
@@ -457,10 +460,22 @@ export default function ExpensePage() {
                             <div className="flex items-center justify-center gap-1">
                               <button onClick={() => setViewingEntity(e)} className="p-1.5 text-slate-400 hover:text-blue-500 transition-colors" title="View"><Eye className="w-4 h-4" /></button>
                               <button onClick={() => setViewingEntity(e)} className="p-1.5 text-slate-400 hover:text-red-600 transition-colors" title="Print Receipt"><Printer className="w-4 h-4" /></button>
-                              <button onClick={() => handleEdit(e)} className="p-1.5 text-slate-400 hover:text-amber-600 transition-colors" title="Edit"><Edit2 className="w-4 h-4" /></button>
-                              {(currentUser?.role === 'Admin' || currentUser?.role === 'Developer') && (
-                                <button onClick={() => { if(confirm('Delete expense?')) deleteExpenseEntry(e.id); }} className="p-1.5 text-slate-400 hover:text-red-500 transition-colors" title="Delete"><Trash2 className="w-4 h-4" /></button>
-                              )}
+                               <button 
+                                 onClick={() => { if(window.confirm('Modify this expense entry?')) handleEdit(e); }} 
+                                 className="p-1.5 text-slate-400 hover:text-amber-600 transition-colors" 
+                                 title="Edit"
+                               >
+                                 <Edit2 className="w-4 h-4" />
+                               </button>
+                               {(currentUser?.role === 'Admin' || currentUser?.role === 'Developer') && (
+                                 <button 
+                                   onClick={() => { if(window.confirm('Permanently delete this expense?')) deleteExpenseEntry(e.id); }} 
+                                   className="p-1.5 text-slate-400 hover:text-red-500 transition-colors" 
+                                   title="Delete"
+                                 >
+                                   <Trash2 className="w-4 h-4" />
+                                 </button>
+                               )}
                             </div>
                           </td>
                         </tr>
@@ -611,10 +626,9 @@ export default function ExpensePage() {
         <Modal 
           title={editingEntity ? `Edit ${cat?.name}` : `Add ${cat?.name}`} 
           onClose={closeForm} 
-          variant="bottom-sheet"
         >
-          <form onSubmit={handleSubmit} className="flex flex-col h-full bg-slate-50 dark:bg-dark-950/20 -m-6 p-6">
-            <div className="flex-1 space-y-4 mb-20 overflow-y-auto smart-scroll no-scrollbar">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+            <div className="space-y-4 overflow-y-auto smart-scroll no-scrollbar max-h-[60vh] px-1">
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-dark-500 px-1">Entry Date</label>
                 <input type="date" className="input w-full !h-12 !bg-white dark:!bg-dark-800 shadow-sm" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required />
@@ -636,7 +650,7 @@ export default function ExpensePage() {
               </div>
             </div>
 
-            <div className="sticky-bottom-actions !bg-white/80 dark:!bg-dark-900/80 backdrop-blur-xl border-t border-slate-100 dark:border-dark-800 -mx-6 px-6 pt-4 pb-8">
+            <div className="modal-footer">
               <button type="button" onClick={closeForm} className="flex-1 py-4 text-xs font-black uppercase tracking-[0.2em] text-slate-400 dark:text-dark-500" disabled={isSaving}>Cancel</button>
               <button 
                 type="submit" 

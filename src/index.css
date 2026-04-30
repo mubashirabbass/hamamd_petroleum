@@ -137,6 +137,10 @@
            border-t border-slate-200/60 dark:border-dark-800/60 z-50 flex gap-3 max-w-[100vw] overflow-x-hidden;
     padding-bottom: calc(theme(spacing.6) + env(safe-area-inset-bottom));
   }
+  
+  .modal-footer {
+    @apply flex items-center gap-3 mt-6 pt-5 border-t border-slate-100 dark:border-dark-800/50;
+  }
 
   /* Animation Overrides */
   @keyframes slide-up {
@@ -145,18 +149,18 @@
   }
   .animate-slide-up { animation: slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
 
-  /* Segmented Controls */
-  .segmented-control {
-    @apply flex p-1 bg-slate-100 dark:bg-dark-800/50 rounded-2xl border border-slate-200 dark:border-dark-700/50 w-full;
+  /* Premium Pill Navigation (Desktop Sidebar Style) */
+  .pill-nav-container {
+    @apply flex items-center gap-2 overflow-x-auto no-scrollbar py-2 px-1;
   }
-  .segmented-item {
-    @apply flex-1 py-2 text-center text-[10px] font-black uppercase tracking-widest rounded-xl transition-all duration-200;
+  
+  .pill-nav-item {
+    @apply flex-shrink-0 px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.15em] 
+           transition-all duration-300 border-2 border-transparent text-slate-400 dark:text-dark-500;
   }
-  .segmented-item-active {
-    @apply bg-white dark:bg-dark-800 text-primary-600 dark:text-primary-400 shadow-sm border border-slate-200/50 dark:border-dark-700/50 scale-[1.02];
-  }
-  .segmented-item-inactive {
-    @apply text-slate-400 dark:text-dark-600 hover:text-slate-600 dark:hover:text-dark-400;
+  
+  .pill-nav-item-active {
+    @apply shadow-xl scale-105 text-white;
   }
 
   /* Ensures data tables can overflow horizontally without being clipped by parent cards */
@@ -373,16 +377,16 @@ html.dark .table-sticky-col {
   }
 }
 
-/* ── Mobile Full Screen Modal ───────────────────────── */
+/* ── Mobile Modal Centering ────────────────────────── */
 @media (max-width: 640px) {
   .modal-overlay {
-    @apply p-0 items-start;
+    @apply p-4 items-center justify-center; /* Center on mobile too */
   }
   .modal-box {
-    @apply rounded-none min-h-screen max-w-none m-0 pt-16 pb-20 px-4;
+    @apply rounded-[2rem] min-h-0 max-w-[95%] m-0 py-6 px-5; /* Clean centered card */
   }
   .modal-box h2 {
-    @apply text-lg;
+    @apply text-base font-black;
   }
 }
 

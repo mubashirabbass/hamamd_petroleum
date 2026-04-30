@@ -56,7 +56,17 @@ export async function runInTransaction<T>(callback: (db: Database) => Promise<T>
     releaseQueue = resolve;
   });
 
-  await waitForTurn;
+  // Safety Timeout: Don't hang the app for more than 10s waiting for a lock
+  const timeoutPromise = new Promise<never>((_, reject) => 
+    setTimeout(() => reject(new Error('DB_LOCK_TIMEOUT')), 10000)
+  );
+
+  try {
+    await Promise.race([waitForTurn, timeoutPromise]);
+  } catch (err) {
+    console.warn('[DB] Transaction queue timeout - forcing release of previous lock');
+    // If we timeout, we proceed anyway but log it
+  }
 
   try {
     let lastError: unknown;
@@ -303,11 +313,33 @@ async function initSchema(db: Database): Promise<void> {
   await db.execute(`CREATE INDEX IF NOT EXISTS idx_customer_date ON customer_entries(date)`);
   await db.execute(`CREATE INDEX IF NOT EXISTS idx_customer_id ON customer_entries(customer_id)`);
 
+  // ── Capital ───────────────────────────────────────────────────────────────
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS capital_categories (
+      id   TEXT PRIMARY KEY,
+      name TEXT NOT NULL
+    )
+  `);
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS capital_entries (
+      id          TEXT PRIMARY KEY,
+      category_id TEXT NOT NULL,
+      bill_no     TEXT NOT NULL,
+      date        TEXT NOT NULL,
+      description TEXT DEFAULT '',
+      debit       REAL NOT NULL DEFAULT 0,
+      credit      REAL NOT NULL DEFAULT 0,
+      balance     REAL NOT NULL DEFAULT 0
+    )
+  `);
+  await db.execute(`CREATE INDEX IF NOT EXISTS idx_capital_date ON capital_entries(date)`);
+  await db.execute(`CREATE INDEX IF NOT EXISTS idx_capital_cat  ON capital_entries(category_id)`);
+
   // ── Seed counters (only on first run) ─────────────────────────────────────
   await db.execute(`
     INSERT OR IGNORE INTO counters (name, value) VALUES
       ('purchase', 1), ('sale', 1),
-      ('expense', 1), ('asset', 1), ('liability', 1), ('customer', 1)
+      ('expense', 1), ('asset', 1), ('liability', 1), ('customer', 1), ('capital', 1)
   `);
 
   // ── Seed default settings ─────────────────────────────────────────────────
@@ -400,6 +432,8 @@ export interface RawDBData {
   liabilityEntries:    any[];
   customers:           any[];
   customerEntries:     any[];
+  capitalCategories:   any[];
+  capitalEntries:      any[];
   users:               any[];
   counters:            Record<string, number>;
   settings:            Record<string, string>;
@@ -414,6 +448,7 @@ export async function loadAllData(): Promise<RawDBData> {
     assetCategories, assetEntries,
     liabilityCategories, liabilityEntries,
     customers, customerEntries,
+    capitalCategories, capitalEntries,
     users,
     counterRows,
   ] = await Promise.all([
@@ -428,6 +463,8 @@ export async function loadAllData(): Promise<RawDBData> {
     db.select<any[]>('SELECT id, category_id as categoryId, bill_no as billNo, date, description, debit, credit, balance FROM liability_entries ORDER BY rowid DESC'),
     db.select<any[]>('SELECT id, name, phone FROM customers'),
     db.select<any[]>('SELECT id, customer_id as customerId, bill_no as billNo, date, description, debit, credit, balance FROM customer_entries ORDER BY rowid DESC'),
+    db.select<any[]>('SELECT id, name FROM capital_categories'),
+    db.select<any[]>('SELECT id, category_id as categoryId, bill_no as billNo, date, description, debit, credit, balance FROM capital_entries ORDER BY rowid DESC'),
     db.select<any[]>('SELECT id, name, email, password, role, created_at as createdAt FROM users'),
     db.select<{ name: string; value: number }[]>('SELECT name, value FROM counters'),
   ]);
@@ -439,11 +476,11 @@ export async function loadAllData(): Promise<RawDBData> {
 
   return {
     purchases, sales,
-
     expenseCategories, expenseEntries,
     assetCategories, assetEntries,
     liabilityCategories, liabilityEntries,
     customers, customerEntries,
+    capitalCategories, capitalEntries,
     users, counters, settings,
   };
 }

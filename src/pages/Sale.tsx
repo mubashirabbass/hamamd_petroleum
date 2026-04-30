@@ -122,6 +122,9 @@ export default function SalePage() {
     e.preventDefault();
     if (!form.date || !form.quantity || !form.rate) { toast('Fill required fields', 'error'); return; }
 
+    const confirmed = window.confirm(editingEntity ? 'Confirm Update: Save changes to this sale?' : 'Confirm Save: Register this new sale record?');
+    if (!confirmed) return;
+
     const payload = {
       type: fuelType,
       date: form.date,
@@ -381,23 +384,28 @@ export default function SalePage() {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
               <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase flex items-center gap-2">
                 <Database className="w-5 h-5 text-emerald-600" />
-                {fuelType} Transaction Entries
+                {fuelType} Records
               </h2>
-              <div className="flex items-center flex-wrap gap-3">
-                  <div className="glass px-4 py-2 rounded-xl border border-emerald-200 dark:border-dark-700 flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-                      <History className="w-4 h-4 text-emerald-600" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">{fuelType} Avg Price</p>
-                      <p className="text-lg font-black text-emerald-600 dark:text-emerald-400 tabular-nums leading-none font-mono tracking-tighter">
-                        ₨ {formatCurrency(grandTotals.qty > 0 ? grandTotals.amount / grandTotals.qty : 0)}
-                      </p>
-                    </div>
-                  </div>
+              <div className="flex items-center gap-2">
                 <button onClick={() => setShowReport(true)} className="btn-secondary !py-2.5 flex items-center gap-2"><Printer className="w-4 h-4" /> Reports</button>
                 <button onClick={() => { closeForm(); setShowForm(true); }} className="btn-primary !bg-emerald-600 flex items-center gap-2"><Plus className="w-4 h-4" /> New Entry</button>
               </div>
+            </div>
+
+            {/* Premium KPI Cards for Mobile/Desktop Entries View */}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
+               <div className="glass p-4 rounded-2xl border-l-4 border-emerald-500 shadow-sm">
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Average Rate</p>
+                  <p className="text-lg font-black text-emerald-600 dark:text-emerald-400 tabular-nums">₨ {formatCurrency(grandTotals.qty > 0 ? grandTotals.amount / grandTotals.qty : 0)}</p>
+               </div>
+               <div className="glass p-4 rounded-2xl border-l-4 border-blue-500 shadow-sm">
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Volume</p>
+                  <p className="text-lg font-black text-slate-900 dark:text-white tabular-nums">{grandTotals.qty.toLocaleString()} L</p>
+               </div>
+               <div className="glass p-4 rounded-2xl border-l-4 border-primary-500 shadow-sm col-span-2 md:col-span-1">
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Net Amount</p>
+                  <p className="text-lg font-black text-primary-600 dark:text-primary-400 tabular-nums">₨ {formatCurrency(grandTotals.amount)}</p>
+               </div>
             </div>
 
             <div className="glass rounded-xl overflow-hidden flex-1 flex flex-col mb-0">
@@ -451,8 +459,20 @@ export default function SalePage() {
                             <button onClick={() => setViewingEntity(s)} className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg transition-colors" title="View Details"><Eye className="w-4 h-4" /></button>
                             {currentUser?.role === 'Admin' && (
                               <>
-                                <button onClick={() => handleEdit(s)} className="p-1.5 text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-lg transition-colors" title="Edit Entry"><Edit2 className="w-4 h-4" /></button>
-                                <button onClick={() => { deleteSale(s.id); toast('Sale deleted', 'warning'); }} className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors" title="Delete Entry"><Trash2 className="w-4 h-4" /></button>
+                                <button 
+                                  onClick={() => { if(window.confirm('Modify this sale entry?')) handleEdit(s); }} 
+                                  className="p-1.5 text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-lg transition-colors" 
+                                  title="Edit Entry"
+                                >
+                                  <Edit2 className="w-4 h-4" />
+                                </button>
+                                <button 
+                                  onClick={() => { if(window.confirm('Permanently delete this sale record?')) { deleteSale(s.id); toast('Sale deleted', 'warning'); } }} 
+                                  className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors" 
+                                  title="Delete Entry"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
                               </>
                             )}
                           </div>

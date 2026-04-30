@@ -109,6 +109,10 @@ export default function PurchasePage() {
       toast('Please fill required fields', 'error');
       return;
     }
+
+    const confirmed = window.confirm(editingEntity ? 'Confirm Update: Save changes to this purchase?' : 'Confirm Save: Register this new fuel purchase?');
+    if (!confirmed) return;
+
     const payload = {
       type: fuelType,
       date: form.date,
@@ -477,21 +481,26 @@ export default function PurchasePage() {
                 <Database className="w-5 h-5 text-blue-600" />
                 {fuelType} Records
               </h2>
-              <div className="flex items-center flex-wrap gap-3">
-                  <div className="glass px-4 py-2 rounded-xl border border-blue-200 dark:border-dark-700 flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                      <History className="w-4 h-4 text-blue-600" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">{fuelType} Records Avg</p>
-                      <p className="text-lg font-black text-blue-600 dark:text-blue-400 tabular-nums leading-none font-mono tracking-tighter">
-                        ₨ {formatCurrency(grandTotals.qty > 0 ? grandTotals.total / grandTotals.qty : 0)}
-                      </p>
-                    </div>
-                  </div>
+              <div className="flex items-center gap-2">
                 <button onClick={() => setShowReport(true)} className="btn-secondary !py-2.5 flex items-center gap-2"><Printer className="w-4 h-4" /> Reports</button>
                 <button onClick={() => { closeForm(); setShowForm(true); }} className="btn-primary !bg-blue-600 flex items-center gap-2"><Plus className="w-4 h-4" /> New Entry</button>
               </div>
+            </div>
+
+            {/* Premium KPI Cards for Mobile/Desktop Entries View */}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
+               <div className="glass p-4 rounded-2xl border-l-4 border-blue-500 shadow-sm">
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Average rate / L</p>
+                  <p className="text-lg font-black text-blue-600 dark:text-blue-400 tabular-nums">₨ {formatCurrency(grandTotals.qty > 0 ? grandTotals.total / grandTotals.qty : 0)}</p>
+               </div>
+               <div className="glass p-4 rounded-2xl border-l-4 border-amber-500 shadow-sm">
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Quantity</p>
+                  <p className="text-lg font-black text-slate-900 dark:text-white tabular-nums">{grandTotals.qty.toLocaleString()} L</p>
+               </div>
+               <div className="glass p-4 rounded-2xl border-l-4 border-primary-500 shadow-sm col-span-2 md:col-span-1">
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Procurement Cost</p>
+                  <p className="text-lg font-black text-primary-600 dark:text-primary-400 tabular-nums">₨ {formatCurrency(grandTotals.total)}</p>
+               </div>
             </div>
 
             <div className="glass rounded-xl overflow-hidden flex-1 flex flex-col mb-0">
@@ -554,8 +563,20 @@ export default function PurchasePage() {
                             <button onClick={() => setViewingEntity(p)} className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg transition-colors" title="View Details"><Eye className="w-4 h-4" /></button>
                             {currentUser?.role === 'Admin' && (
                               <>
-                                <button onClick={() => handleEdit(p)} className="p-1.5 text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-lg transition-colors" title="Edit Entry"><Edit2 className="w-4 h-4" /></button>
-                                <button onClick={() => { deletePurchase(p.id); toast('Purchase deleted', 'warning'); }} className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors" title="Delete Entry"><Trash2 className="w-4 h-4" /></button>
+                                <button 
+                                  onClick={() => { if(window.confirm('Modify this purchase entry?')) handleEdit(p); }} 
+                                  className="p-1.5 text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-lg transition-colors" 
+                                  title="Edit Entry"
+                                >
+                                  <Edit2 className="w-4 h-4" />
+                                </button>
+                                <button 
+                                  onClick={() => { if(window.confirm('Permanently delete this purchase record?')) { deletePurchase(p.id); toast('Purchase deleted', 'warning'); } }} 
+                                  className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors" 
+                                  title="Delete Entry"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
                               </>
                             )}
                           </div>

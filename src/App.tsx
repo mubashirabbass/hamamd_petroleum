@@ -12,6 +12,9 @@ import Liability  from './pages/Liability';
 import Stock      from './pages/Stock';
 import Customer   from './pages/Customer';
 import Settings   from './pages/Settings';
+import Capital    from './pages/Capital';
+import PLS        from './pages/PLS';
+import BalanceSheet from './pages/BalanceSheet';
 import Login      from './pages/Login';
 import LoadingSplash from './components/layout/LoadingSplash';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -348,7 +351,6 @@ export default function App() {
   return (
     <ThemeProvider>
       <ToastProvider>
-        <LoadingSplash />
         <Router>
           <Routes>
             <Route path="/" element={<Layout />}>
@@ -362,6 +364,9 @@ export default function App() {
               <Route path="stock"      element={<Stock     />} />
               <Route path="stock/:type" element={<Stock    />} />
               <Route path="customer"   element={<Customer  />} />
+              <Route path="capital"    element={<Capital   />} />
+              <Route path="pls"        element={<PLS       />} />
+              <Route path="balance-sheet" element={<BalanceSheet />} />
               <Route path="settings"   element={<Settings  />} />
             </Route>
           </Routes>

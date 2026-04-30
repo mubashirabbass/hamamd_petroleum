@@ -183,7 +183,7 @@ async fn restore_from_zip(zip_path: String, app: tauri::AppHandle) -> Result<(),
 // GOOGLE OAUTH2 — Local HTTP server captures the authorization code
 // ─────────────────────────────────────────────────────────────────────────────
 
-const REDIRECT_URI: &str = "http://localhost:3001/oauth/callback";
+const REDIRECT_URI: &str = "http://127.0.0.1:3001/oauth/callback";
 
 /// Starts a local HTTP listener on port 3001, opens the OAuth URL in the
 /// system browser, waits for Google's callback, and returns the authorization code.
@@ -753,12 +753,15 @@ async fn export_data_snapshot(app: tauri::AppHandle) -> Result<String, String> {
     let (_, cust_entries)= query_rows!(conn, "SELECT c.name as customer,c.phone,ce.bill_no,ce.date,ce.description,ce.debit,ce.credit,ce.balance FROM customer_entries ce JOIN customers c ON ce.customer_id=c.id ORDER BY ce.date");
     let (_, users)        = query_rows!(conn, "SELECT name,email,role,created_at FROM users");
     let (_, settings)     = query_rows!(conn, "SELECT key,value FROM app_settings");
+    let (_, cap_cats)     = query_rows!(conn, "SELECT name FROM capital_categories");
+    let (_, cap_entries)  = query_rows!(conn, "SELECT cc.name as category,c.bill_no,c.date,c.description,c.debit,c.credit,c.balance FROM capital_entries c JOIN capital_categories cc ON c.category_id=cc.id ORDER BY c.date");
 
     root["purchases"]  = serde_json::Value::Array(purchases.clone());
     root["sales"]      = serde_json::Value::Array(sales.clone());
     root["expenses"]   = serde_json::json!({ "categories": exp_cats, "entries": exp_entries.clone() });
     root["assets"]     = serde_json::json!({ "categories": ast_cats, "entries": ast_entries.clone() });
     root["liabilities"]= serde_json::json!({ "categories": lib_cats, "entries": lib_entries.clone() });
+    root["capital"]    = serde_json::json!({ "categories": cap_cats, "entries": cap_entries.clone() });
     root["customers"]  = serde_json::json!({ "list": customers, "entries": cust_entries.clone() });
     root["users"]      = serde_json::Value::Array(users.clone());
     root["settings"]   = serde_json::Value::Array(settings.clone());
@@ -844,7 +847,16 @@ async fn export_data_snapshot(app: tauri::AppHandle) -> Result<String, String> {
         ]
     );
 
-    write_csv!(export_dir, "07_Users.csv",
+    write_csv!(export_dir, "07_Capital.csv",
+        "Category,Bill No,Date,Description,Debit,Credit,Balance",
+        cap_entries,
+        |r: &serde_json::Value| vec![
+            jstr(r,"category"),jstr(r,"bill_no"),jstr(r,"date"),jstr(r,"description"),
+            jstr(r,"debit"),jstr(r,"credit"),jstr(r,"balance")
+        ]
+    );
+
+    write_csv!(export_dir, "08_Users.csv",
         "Name,Email,Role,Created At",
         users,
         |r: &serde_json::Value| vec![
@@ -852,7 +864,7 @@ async fn export_data_snapshot(app: tauri::AppHandle) -> Result<String, String> {
         ]
     );
 
-    write_csv!(export_dir, "08_Settings.csv",
+    write_csv!(export_dir, "09_Settings.csv",
         "Key,Value",
         settings,
         |r: &serde_json::Value| vec![
@@ -873,8 +885,9 @@ FILES IN THIS FOLDER:
   04_Assets.csv       — Asset entries with categories
   05_Liabilities.csv  — Liability entries with categories
   06_Customers.csv    — Customer ledger (all transactions)
-  07_Users.csv        — Registered users and roles
-  08_Settings.csv     — Application configuration settings
+  07_Capital.csv      — Capital / Partner Equity ledger
+  08_Users.csv        — Registered users and roles
+  09_Settings.csv     — Application configuration settings
 
 HOW TO OPEN IN EXCEL:
   1. Open Microsoft Excel
@@ -980,6 +993,7 @@ pub fn run() {
             create_full_export_zip,
             activation::get_hwid_activation,
             activation::set_hwid_activation,
+            nuclear_reset,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -1022,4 +1036,42 @@ fn get_machine_id() -> Result<String, String> {
     {
         return Ok("non-windows-machine-id".to_string());
     }
+}
+#[tauri::command]
+async fn nuclear_reset(app_handle: tauri::AppHandle) -> Result<(), String> {
+    let db_path = get_db_path(&app_handle)?;
+    let mut conn = Connection::open(&db_path).map_err(|e| format!("DB Open Error: {}", e))?;
+
+    // Set a timeout so we don't hang if another connection is busy
+    conn.execute("PRAGMA busy_timeout = 5000", []).ok();
+
+    let tx = conn.transaction().map_err(|e| format!("Transaction Error: {}", e))?;
+    {
+        // Disable foreign keys for the nuclear wipe
+        tx.execute("PRAGMA foreign_keys = OFF", []).map_err(|e| e.to_string())?;
+
+        let tables = [
+            "purchases", "sales",
+            "expense_entries", "expense_categories",
+            "asset_entries", "asset_categories",
+            "liability_entries", "liability_categories",
+            "customer_entries", "customers",
+            "capital_entries", "capital_categories"
+        ];
+
+        for table in tables {
+            tx.execute(&format!("DELETE FROM {}", table), []).map_err(|e| e.to_string())?;
+        }
+
+        // Reset counters
+        tx.execute(
+            "UPDATE counters SET value = 1 WHERE name IN ('purchase','sale','expense','asset','liability','customer','capital')",
+            []
+        ).map_err(|e| e.to_string())?;
+
+        tx.execute("PRAGMA foreign_keys = ON", []).map_err(|e| e.to_string())?;
+    }
+    tx.commit().map_err(|e| e.to_string())?;
+
+    Ok(())
 }

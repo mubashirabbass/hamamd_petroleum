@@ -219,6 +219,9 @@ export default function CustomerPage() {
     e.preventDefault();
     if (!selectedCust || !form.date) { toast('Fill required fields', 'error'); return; }
 
+    const confirmed = window.confirm(editingEntity ? 'Confirm Update: Save changes to this customer record?' : 'Confirm Save: Register this new customer entry?');
+    if (!confirmed) return;
+
     const payload = {
       customerId: selectedCust,
       date: form.date,
@@ -278,29 +281,29 @@ export default function CustomerPage() {
         iconClassName="!bg-pink-100 !text-pink-600"
       />
 
-      <div className="flex flex-col gap-3 p-4 bg-white dark:bg-dark-900/50 border-b border-slate-200 dark:border-dark-800 flex-shrink-0">
-        <div className="segmented-control overflow-x-auto no-scrollbar">
+      <div className="p-4 bg-white dark:bg-dark-900/50 border-b border-slate-200 dark:border-dark-800 flex-shrink-0">
+        <div className="pill-nav-container">
           <button
             onClick={() => setActiveTab('dashboard')}
-            className={cn("segmented-item", activeTab === 'dashboard' ? "segmented-item-active" : "segmented-item-inactive")}
+            className={cn("pill-nav-item", activeTab === 'dashboard' ? "pill-nav-item-active bg-pink-600 border-pink-600 shadow-pink-500/30" : "hover:border-pink-100")}
           >
             Analytics
           </button>
           <button
             onClick={() => setActiveTab('database')}
-            className={cn("segmented-item", activeTab === 'database' ? "segmented-item-active" : "segmented-item-inactive")}
+            className={cn("pill-nav-item", activeTab === 'database' ? "pill-nav-item-active bg-pink-600 border-pink-600 shadow-pink-500/30" : "hover:border-pink-100")}
           >
             Entries
           </button>
           <button
             onClick={() => setActiveTab('register')}
-            className={cn("segmented-item", activeTab === 'register' ? "segmented-item-active" : "segmented-item-inactive")}
+            className={cn("pill-nav-item", activeTab === 'register' ? "pill-nav-item-active bg-pink-600 border-pink-600 shadow-pink-500/30" : "hover:border-pink-100")}
           >
             New Acc
           </button>
           <button
             onClick={() => setActiveTab('manage')}
-            className={cn("segmented-item", activeTab === 'manage' ? "segmented-item-active" : "segmented-item-inactive")}
+            className={cn("pill-nav-item", activeTab === 'manage' ? "pill-nav-item-active bg-pink-600 border-pink-600 shadow-pink-500/30" : "hover:border-pink-100")}
           >
             Settings
           </button>
@@ -464,16 +467,16 @@ export default function CustomerPage() {
         ) : activeTab === 'database' ? (
           <div className="flex-1 flex flex-col min-h-0 bg-slate-50 dark:bg-dark-950/20 p-4 pb-6">
             {/* Account Pill Switcher */}
-            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar mb-4 pb-2">
+            <div className="pill-nav-container mb-6">
                {customers.map(c => (
                  <button
                    key={c.id}
                    onClick={() => { setSelectedCust(c.id); setPage(1); }}
                    className={cn(
-                     "flex-shrink-0 px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all",
+                     "pill-nav-item border-2",
                      selectedCust === c.id 
-                       ? "bg-pink-600 text-white shadow-lg shadow-pink-500/20" 
-                       : "bg-white dark:bg-dark-900 text-slate-500 border border-slate-200 dark:border-dark-800"
+                       ? "pill-nav-item-active bg-pink-600 border-pink-600 shadow-pink-500/30" 
+                       : "bg-white dark:bg-dark-900 border-slate-100 dark:border-dark-800 hover:border-pink-200"
                    )}
                  >
                    {c.name}
@@ -546,10 +549,22 @@ export default function CustomerPage() {
                             <div className="flex items-center justify-center gap-1">
                               <button onClick={() => setViewingEntity(e)} className="p-1.5 text-slate-400 hover:text-blue-500 transition-colors" title="View"><Eye className="w-4 h-4" /></button>
                               <button onClick={() => setViewingEntity(e)} className="p-1.5 text-slate-400 hover:text-emerald-600 transition-colors" title="Print Receipt"><Printer className="w-4 h-4" /></button>
-                              <button onClick={() => handleEditEntry(e)} className="p-1.5 text-slate-400 hover:text-amber-600 transition-colors" title="Edit"><Edit2 className="w-4 h-4" /></button>
-                              {(currentUser?.role === 'Admin' || currentUser?.role === 'Developer') && (
-                                <button onClick={() => { if(confirm('Delete entry?')) deleteCustomerEntry(e.id); }} className="p-1.5 text-slate-400 hover:text-red-500 transition-colors" title="Delete"><Trash2 className="w-4 h-4" /></button>
-                              )}
+                              <button 
+                                 onClick={() => { if(window.confirm('Modify this customer entry?')) handleEditEntry(e); }} 
+                                 className="p-1.5 text-slate-400 hover:text-amber-600 transition-colors" 
+                                 title="Edit"
+                               >
+                                 <Edit2 className="w-4 h-4" />
+                               </button>
+                               {(currentUser?.role === 'Admin' || currentUser?.role === 'Developer') && (
+                                 <button 
+                                   onClick={() => { if(window.confirm('Permanently delete this customer record?')) deleteCustomerEntry(e.id); }} 
+                                   className="p-1.5 text-slate-400 hover:text-red-500 transition-colors" 
+                                   title="Delete"
+                                 >
+                                   <Trash2 className="w-4 h-4" />
+                                 </button>
+                               )}
                             </div>
                           </td>
                         </tr>
@@ -724,10 +739,9 @@ export default function CustomerPage() {
         <Modal 
           title={editingEntity ? `Edit ${cust?.name}` : `Add Entry — ${cust?.name}`} 
           onClose={closeEntryForm} 
-          variant="bottom-sheet"
         >
-          <form onSubmit={handleSubmitEntry} className="flex flex-col h-full bg-slate-50 dark:bg-dark-950/20 -m-6 p-6">
-            <div className="flex-1 space-y-4 mb-20 overflow-y-auto smart-scroll no-scrollbar">
+          <form onSubmit={handleSubmitEntry} className="flex flex-col gap-5">
+            <div className="space-y-4 overflow-y-auto smart-scroll no-scrollbar max-h-[60vh] px-1">
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-dark-500 px-1">Transaction Date</label>
                 <input type="date" className="input w-full !h-12 !bg-white dark:!bg-dark-800 shadow-sm" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required />
@@ -758,7 +772,7 @@ export default function CustomerPage() {
               </div>
             </div>
 
-            <div className="sticky-bottom-actions !bg-white/80 dark:!bg-dark-900/80 backdrop-blur-xl border-t border-slate-100 dark:border-dark-800 -mx-6 px-6 pt-4 pb-8">
+            <div className="modal-footer">
               <button type="button" onClick={closeEntryForm} className="flex-1 py-4 text-xs font-black uppercase tracking-[0.2em] text-slate-400 dark:text-dark-500" disabled={isSaving}>Cancel</button>
               <button 
                 type="submit" 

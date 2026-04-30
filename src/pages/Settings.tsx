@@ -693,7 +693,7 @@ function BackupPanel() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-[10px] font-black uppercase tracking-widest">
             <div className="flex items-center gap-2 p-3 bg-emerald-50 dark:bg-emerald-900/10 rounded-xl border border-emerald-100 dark:border-emerald-900/20">
               <FileSpreadsheet className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-              <span className="text-emerald-700 dark:text-emerald-300">6 CSV files — opens directly in Excel</span>
+              <span className="text-emerald-700 dark:text-emerald-300">9 CSV files — opens directly in Excel</span>
             </div>
             <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/10 rounded-xl border border-blue-100 dark:border-blue-900/20">
               <FileJson className="w-4 h-4 text-blue-600 flex-shrink-0" />
@@ -734,7 +734,7 @@ function BackupPanel() {
           <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-900/20">
             <p className="text-[10px] text-amber-800 dark:text-amber-200 font-medium leading-relaxed">
               <strong>📌 How it works:</strong> Clicking "Export All Data Now" creates a ZIP file containing:
-              6 ready-to-open <strong>Excel CSV files</strong> (one per module) +
+              9 ready-to-open <strong>Excel CSV files</strong> (one per module) +
               a <strong>JSON snapshot</strong> of everything +
               the raw <strong>SQLite database</strong>.
               If the app ever crashes or you switch to a new system, all your data is in readable form.
@@ -838,6 +838,7 @@ export default function SettingsPage() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<'general' | 'users' | 'backup' | 'developer' | 'danger' | 'shortcuts'>('general');
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
 
   // Staff can now access Settings but with restricted tabs
@@ -851,8 +852,18 @@ export default function SettingsPage() {
 
   const handleReset = async () => {
     setShowResetConfirm(false);
-    await resetAllData();
-    toast('All business data has been reset.', 'success');
+    // Safety delay to allow modal to close fully
+    await new Promise(r => setTimeout(r, 300));
+    setResetting(true);
+    try {
+      await resetAllData();
+      toast('✅ All business data has been reset.', 'success');
+      // Force reload to clear all caches and UI state
+      setTimeout(() => window.location.reload(), 1500);
+    } catch (err: any) {
+      toast(`❌ Reset failed: ${err?.message ?? err}`, 'error');
+      setResetting(false);
+    }
   };
 
   const tabs = [
@@ -1040,13 +1051,15 @@ export default function SettingsPage() {
                   <div>
                     <h4 className="text-base font-black text-slate-900 dark:text-white mb-1">Reset All Business Data</h4>
                     <p className="text-sm text-slate-600 dark:text-dark-400">
-                      Permanently delete all purchases, sales, expense, asset, liability, and customer records.
+                      Permanently delete all purchases, sales, expense, asset, liability, customer, and capital records.
                       User accounts and settings are preserved. <strong>This cannot be undone.</strong>
                     </p>
                   </div>
                   <button onClick={() => setShowResetConfirm(true)}
-                    className="flex items-center gap-2 px-6 py-3 bg-red-600 text-white rounded-xl font-black hover:bg-red-700 transition-colors whitespace-nowrap shadow-lg shadow-red-600/20">
-                    <Trash2 className="w-4 h-4" /> Reset All Data
+                    disabled={resetting}
+                    className="flex items-center gap-2 px-6 py-3 bg-red-600 text-white rounded-xl font-black hover:bg-red-700 transition-colors whitespace-nowrap shadow-lg shadow-red-600/20 disabled:opacity-50">
+                    {resetting ? <RefreshCcw className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                    {resetting ? 'Resetting...' : 'Reset All Data'}
                   </button>
                 </div>
               </div>
@@ -1060,30 +1073,51 @@ export default function SettingsPage() {
 
       {/* Reset Confirmation */}
       {showResetConfirm && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[200] p-4"
           onClick={() => setShowResetConfirm(false)}>
-          <div className="bg-white dark:bg-dark-900 rounded-2xl shadow-2xl max-w-md w-full p-6"
+          <div className="bg-white dark:bg-dark-900 rounded-2xl shadow-2xl max-w-md w-full p-6 border border-red-500/20"
             onClick={e => e.stopPropagation()}>
             <div className="w-14 h-14 bg-red-100 dark:bg-red-900/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <AlertCircle className="w-7 h-7 text-red-600" />
             </div>
-            <h3 className="text-lg font-black text-center text-slate-900 dark:text-white">⚠️ CRITICAL WARNING</h3>
+            <h3 className="text-lg font-black text-center text-slate-900 dark:text-white uppercase tracking-tighter">⚠️ Critical Reset</h3>
             <p className="text-sm text-slate-600 dark:text-dark-400 text-center mt-2 leading-relaxed">
-              This will <strong className="text-red-600">permanently delete ALL</strong> purchases, sales,
-              expenses, assets, liabilities and customer records.
-              This action <strong>cannot be undone</strong>.
+              This will <strong className="text-red-600 font-black">permanently delete EVERYTHING</strong>:
+              purchases, sales, expenses, assets, and capital records.
+              This action <strong>cannot be reversed</strong>.
             </p>
-            <div className="flex gap-3 mt-6">
+            <div className="flex gap-3 mt-8">
               <button onClick={() => setShowResetConfirm(false)}
-                className="flex-1 px-4 py-2.5 border border-slate-200 dark:border-dark-700 rounded-xl text-sm font-bold hover:bg-slate-50 dark:hover:bg-dark-800 transition-colors">
-                Cancel — Keep Data
+                className="flex-1 px-4 py-3 border border-slate-200 dark:border-dark-700 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-50 dark:hover:bg-dark-800 transition-colors">
+                Cancel
               </button>
               <button onClick={handleReset}
-                className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-xl text-sm font-black hover:bg-red-700 transition-colors">
-                Yes, Delete Everything
+                className="flex-1 px-4 py-3 bg-red-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-red-700 transition-all shadow-lg shadow-red-600/30 active:scale-95">
+                Yes, Clear All
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Global Cleaning Overlay */}
+      {resetting && (
+        <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-2xl flex flex-col items-center justify-center z-[1000] animate-in fade-in zoom-in duration-500">
+           <div className="relative mb-8">
+              <div className="absolute inset-0 bg-red-500/20 blur-3xl rounded-full animate-pulse" />
+              <RefreshCcw className="relative w-20 h-20 text-red-500 animate-[spin_3s_linear_infinite]" />
+           </div>
+           <div className="text-center space-y-2">
+              <h2 className="text-3xl font-black text-white uppercase tracking-tighter italic">System Cleaning</h2>
+              <p className="text-red-400 font-bold text-xs uppercase tracking-[0.4em] animate-pulse">Wiping database tables...</p>
+           </div>
+           <div className="mt-12 max-w-xs text-center">
+              <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest leading-relaxed">
+                We are performing a deep system reset. 
+                All financial data is being securely removed. 
+                Please do not restart the software.
+              </p>
+           </div>
         </div>
       )}
     </div>

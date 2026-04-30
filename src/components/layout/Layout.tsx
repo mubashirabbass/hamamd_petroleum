@@ -18,6 +18,9 @@ import Liability from '../../pages/Liability';
 import Stock from '../../pages/Stock';
 import Customer from '../../pages/Customer';
 import Settings from '../../pages/Settings';
+import Capital from '../../pages/Capital';
+import PLS from '../../pages/PLS';
+import BalanceSheet from '../../pages/BalanceSheet';
 
 export default function Layout() {
   const { triggerSplash } = useStore();
@@ -60,7 +63,7 @@ export default function Layout() {
 
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
 
-  const isTransactionPage = ['/purchase', '/sale', '/expense', '/asset', '/liability', '/customer'].some(p => isPath(p)) || isStock;
+  const isTransactionPage = ['/purchase', '/sale', '/expense', '/asset', '/liability', '/customer', '/capital', '/pls', '/balance-sheet'].some(p => isPath(p)) || isStock;
 
   return (
     <div 
@@ -114,6 +117,9 @@ export default function Layout() {
           <div style={{ display: isPath('/liability') ? 'block' : 'none' }} className="h-full"><Liability /></div>
           <div style={{ display: isStock ? 'block' : 'none' }} className="h-full"><Stock /></div>
           <div style={{ display: isPath('/customer') ? 'block' : 'none' }} className="h-full"><Customer /></div>
+          <div style={{ display: isPath('/capital') ? 'block' : 'none' }} className="h-full"><Capital /></div>
+          <div style={{ display: isPath('/pls') ? 'block' : 'none' }} className="h-full"><PLS /></div>
+          <div style={{ display: isPath('/balance-sheet') ? 'block' : 'none' }} className="h-full"><BalanceSheet /></div>
           <div style={{ display: isPath('/settings') ? 'block' : 'none' }} className="h-full"><Settings /></div>
         </div>
 

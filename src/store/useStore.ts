@@ -71,6 +71,17 @@ export interface AssetEntry {
   balance:     number;
 }
 
+export interface CapitalEntry {
+  id:          string;
+  categoryId:  string;
+  billNo:      string;
+  date:        string;
+  description: string;
+  debit:       number;
+  credit:      number;
+  balance:     number;
+}
+
 export interface LiabilityEntry {
   id:          string;
   categoryId:  string;
@@ -189,6 +200,17 @@ interface AppState {
   updateLiabilityEntry:   (id: string, e: Partial<LiabilityEntry>)    => Promise<void>;
   deleteLiabilityEntry:   (id: string)                                => Promise<void>;
 
+  // ─ Capital ───────────────────────────────────────────────────────────────
+  capitalCategories:    Category[];
+  capitalEntries:       CapitalEntry[];
+  nextCapitalNo:        number;
+  addCapitalCategory:   (name: string)                                 => Promise<void>;
+  updateCapitalCategory:(id: string, name: string)                     => Promise<void>;
+  deleteCapitalCategory:(id: string)                                   => Promise<void>;
+  addCapitalEntry:      (e: Omit<CapitalEntry, 'id' | 'billNo'>)       => Promise<void>;
+  updateCapitalEntry:   (id: string, e: Partial<CapitalEntry>)         => Promise<void>;
+  deleteCapitalEntry:   (id: string)                                   => Promise<void>;
+
   // ─ Customer ───────────────────────────────────────────────────────────────
   customers:           Customer[];
   customerEntries:     CustomerEntry[];
@@ -255,6 +277,9 @@ export const useStore = create<AppState>()(
         liabilityEntries:    data.liabilityEntries,
         customers:           data.customers,
         customerEntries:     data.customerEntries,
+        capitalCategories:   data.capitalCategories,
+        capitalEntries:      data.capitalEntries,
+        nextCapitalNo:       data.counters['capital']    ?? 1,
         nextPurchaseNo:      data.counters['purchase']  ?? 1,
         nextSaleNo:          data.counters['sale']       ?? 1,
 
@@ -594,6 +619,67 @@ export const useStore = create<AppState>()(
     set(s => ({ liabilityEntries: s.liabilityEntries.filter(x => x.id !== id) }));
   },
 
+  // ── Capital ───────────────────────────────────────────────────────────────
+  capitalCategories: [],
+  capitalEntries:    [],
+  nextCapitalNo:     1,
+
+  addCapitalCategory: async (name) => {
+    const db = await getDB();
+    const id = uid();
+    await db.execute('INSERT INTO capital_categories (id,name) VALUES (?,?)', [id, name]);
+    set(s => ({ capitalCategories: [...s.capitalCategories, { id, name }] }));
+  },
+  updateCapitalCategory: async (id, name) => {
+    const db = await getDB();
+    await db.execute('UPDATE capital_categories SET name=? WHERE id=?', [name, id]);
+    set(s => ({ capitalCategories: s.capitalCategories.map(c => c.id === id ? { ...c, name } : c) }));
+  },
+  deleteCapitalCategory: async (id) => {
+    await runInTransaction(async (db) => {
+      await db.execute('DELETE FROM capital_categories WHERE id=?', [id]);
+      await db.execute('DELETE FROM capital_entries WHERE category_id=?', [id]);
+    });
+    set(s => ({
+      capitalCategories: s.capitalCategories.filter(c => c.id !== id),
+      capitalEntries: s.capitalEntries.filter(e => e.categoryId !== id),
+    }));
+  },
+  addCapitalEntry: async (e) => {
+    let no = 0;
+    try {
+      await runInTransaction(async (db) => {
+        no = await getAndBumpCounter('capital', db);
+        const billNo = `CAP-${String(no).padStart(2, '0')}`;
+        const id = uid();
+        await db.execute(
+          `INSERT INTO capital_entries (id,category_id,bill_no,date,description,debit,credit,balance) VALUES (?,?,?,?,?,?,?,?)`,
+          [id, e.categoryId, billNo, e.date, e.description, e.debit, e.credit, e.balance]
+        );
+        const entry: CapitalEntry = { ...e, id, billNo };
+        set(s => ({ capitalEntries: [entry, ...s.capitalEntries], nextCapitalNo: no + 1 }));
+      });
+    } catch (err) {
+      console.error('[Store] addCapitalEntry failed:', err);
+      throw err;
+    }
+  },
+  updateCapitalEntry: async (id, data) => {
+    const db = await getDB();
+    const current = get().capitalEntries.find(x => x.id === id)!;
+    const updated = { ...current, ...data };
+    await db.execute(
+      `UPDATE capital_entries SET date=?,description=?,debit=?,credit=?,balance=? WHERE id=?`,
+      [updated.date, updated.description, updated.debit, updated.credit, updated.balance, id]
+    );
+    set(s => ({ capitalEntries: s.capitalEntries.map(x => x.id === id ? updated : x) }));
+  },
+  deleteCapitalEntry: async (id) => {
+    const db = await getDB();
+    await db.execute('DELETE FROM capital_entries WHERE id=?', [id]);
+    set(s => ({ capitalEntries: s.capitalEntries.filter(x => x.id !== id) }));
+  },
+
   // ── Customers ────────────────────────────────────────────────────────────────
   customers:       [],
   customerEntries: [],
@@ -739,34 +825,40 @@ export const useStore = create<AppState>()(
     setTimeout(() => set({ isLoading: false }), 700);
   },
 
-  // ── Reset All Data ────────────────────────────────────────────────────────────
   resetAllData: async () => {
-    await runInTransaction(async (db) => {
-      const tables = [
-        'purchases', 'sales',
-        'expense_entries', 'expense_categories',
-        'asset_entries', 'asset_categories',
-        'liability_entries', 'liability_categories',
-        'customer_entries', 'customers',
-      ];
-      for (const t of tables) await db.execute(`DELETE FROM ${t}`);
-      // Reset counters
-      await db.execute(
-        `UPDATE counters SET value=1 WHERE name IN ('purchase','sale','expense','asset','liability','customer')`
-      );
-    });
+    try {
+      // 1. Call high-performance Rust backend to wipe the database
+      await invoke('nuclear_reset');
 
-    set({
-      purchases: [], sales: [],
-      expenseCategories: [], expenseEntries: [],
-      assetCategories: [], assetEntries: [],
-      liabilityCategories: [], liabilityEntries: [],
-      customers: [], customerEntries: [],
-      nextPurchaseNo: 1, nextSaleNo: 1,
-      nextExpenseNo: 1,
-      nextAssetNo: 1, nextLiabilityNo: 1, nextCustomerNo: 1,
-      settings: get().settings,
-    });
+      // 2. Wipe the local app state immediately
+      set({
+        purchases: [],
+        sales: [],
+        expenseCategories: [],
+        expenseEntries: [],
+        assetCategories: [],
+        assetEntries: [],
+        liabilityCategories: [],
+        liabilityEntries: [],
+        customers: [],
+        customerEntries: [],
+        capitalCategories: [],
+        capitalEntries: [],
+        nextPurchaseNo: 1,
+        nextSaleNo: 1,
+        nextExpenseNo: 1,
+        nextAssetNo: 1,
+        nextLiabilityNo: 1,
+        nextCustomerNo: 1,
+        nextCapitalNo: 1,
+      });
+    } catch (err) {
+      console.error('[Store] NUCLEAR_RESET_FAILED:', err);
+      // Ensure we re-enable foreign keys if we crashed
+      const db = await getDB();
+      await db.execute('PRAGMA foreign_keys = ON');
+      throw err;
+    }
   },
 }), {
   name: 'ebs-auth-storage',

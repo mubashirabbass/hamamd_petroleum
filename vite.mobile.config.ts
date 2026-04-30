@@ -6,7 +6,7 @@ const host = process.env.TAURI_DEV_HOST;
 
 export default defineConfig(async () => ({
   plugins: [react()],
-  root: "./ebs-mobile", // This tells Vite to load the Mobile App code
+  root: ".", // This tells Vite to load the main App code from the root
   clearScreen: false,
   server: {
     port: 1421,
