@@ -357,8 +357,8 @@ Default seeded accounts (change these after first install):
 
 | Name | Email | Password | Role |
 |---|---|---|---|
-| Mubashir Abbas | mubashirabbasedu12@gmail.com | mubashir@2026 | Developer |
-| Master Admin | master@gmail.com | master | Admin |
+| Mubashir Abbas | **************** | ************* | Developer |
+| Master Admin | *************** | ********* | Admin |
 
 > ⚠️ Change default passwords immediately after installation.
 
